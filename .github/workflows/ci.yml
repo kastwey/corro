@@ -10,6 +10,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   frontend:
     runs-on: ubuntu-latest
@@ -68,3 +71,183 @@ jobs:
           name: playwright-report
           path: e2e/playwright-report/
           retention-days: 7
+
+  deploy-production:
+    name: Deploy production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [frontend, server, e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://imperio.kastwey.org
+    concurrency:
+      group: deploy-imperio-production
+      # Never interrupt an App Service deployment halfway through. Once this job gets
+      # the lock, the freshness check below skips it if a newer main commit exists.
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+      AZURE_STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
+      AZURE_PRIVATE_PACKAGES_CONTAINER: ${{ vars.AZURE_PRIVATE_PACKAGES_CONTAINER }}
+      AZURE_PRIVATE_PACKAGES_BLOB: ${{ vars.AZURE_PRIVATE_PACKAGES_BLOB }}
+      PRODUCTION_URL: https://imperio.kastwey.org
+    steps:
+      - name: Check that this is still the latest main commit
+        id: freshness
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          latest_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          if [[ "$latest_sha" == "$GITHUB_SHA" ]]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping obsolete deployment for $GITHUB_SHA; main is now $latest_sha."
+          fi
+
+      - name: Validate Azure deployment configuration
+        if: steps.freshness.outputs.deploy == 'true'
+        run: |
+          missing=0
+          for name in \
+            AZURE_CLIENT_ID \
+            AZURE_TENANT_ID \
+            AZURE_SUBSCRIPTION_ID \
+            AZURE_RESOURCE_GROUP \
+            AZURE_WEBAPP_NAME \
+            AZURE_STORAGE_ACCOUNT \
+            AZURE_PRIVATE_PACKAGES_CONTAINER \
+            AZURE_PRIVATE_PACKAGES_BLOB; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::$name is not configured in the production GitHub environment."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Check out the tested commit
+        if: steps.freshness.outputs.deploy == 'true'
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure with OIDC
+        if: steps.freshness.outputs.deploy == 'true'
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # Private, non-distributable packages are intentionally absent from Git. Fetch them
+      # directly with data-plane RBAC and never upload the resulting app as a GitHub artifact.
+      - name: Restore private packages
+        if: steps.freshness.outputs.deploy == 'true'
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/private-packages.zip"
+          az storage blob download \
+            --account-name "$AZURE_STORAGE_ACCOUNT" \
+            --container-name "$AZURE_PRIVATE_PACKAGES_CONTAINER" \
+            --name "$AZURE_PRIVATE_PACKAGES_BLOB" \
+            --file "$archive" \
+            --auth-mode login \
+            --overwrite \
+            --only-show-errors
+          unzip -tq "$archive" > /dev/null
+          unzip -q "$archive" -d server/Packages
+
+      - name: Set up Node.js
+        if: steps.freshness.outputs.deploy == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Set up .NET
+        if: steps.freshness.outputs.deploy == 'true'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install frontend dependencies
+        if: steps.freshness.outputs.deploy == 'true'
+        working-directory: frontend
+        run: npm ci
+
+      - name: Publish application
+        if: steps.freshness.outputs.deploy == 'true'
+        run: |
+          set -euo pipefail
+          publish_dir="$RUNNER_TEMP/publish"
+          dotnet publish server/CorroServer.csproj \
+            --configuration Release \
+            --output "$publish_dir" \
+            --nologo
+
+          test -f "$publish_dir/CorroServer.dll"
+          test -f "$publish_dir/wwwroot/index.html"
+          test -f "$publish_dir/wwwroot/board.html"
+
+          source_packages="$(find server/Packages -mindepth 2 -maxdepth 2 -name manifest.json -type f | wc -l)"
+          published_packages="$(find "$publish_dir/Packages" -mindepth 2 -maxdepth 2 -name manifest.json -type f | wc -l)"
+          if [[ "$source_packages" -ne "$published_packages" ]]; then
+            echo "::error::Package count mismatch: source=$source_packages, published=$published_packages."
+            exit 1
+          fi
+
+          # The marker makes the post-deployment check prove that this exact commit is live,
+          # rather than merely accepting a healthy response from the previous release.
+          printf '%s\n' "$GITHUB_SHA" > "$publish_dir/wwwroot/deployment.txt"
+          (
+            cd "$publish_dir"
+            zip -q -r "$RUNNER_TEMP/corro.zip" .
+          )
+
+      - name: Deploy to Azure App Service
+        if: steps.freshness.outputs.deploy == 'true'
+        run: |
+          set -euo pipefail
+          az webapp deploy \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_WEBAPP_NAME" \
+            --src-path "$RUNNER_TEMP/corro.zip" \
+            --type zip \
+            --clean true \
+            --restart true \
+            --track-status true \
+            --only-show-errors
+
+      - name: Verify production
+        if: steps.freshness.outputs.deploy == 'true'
+        run: |
+          set -euo pipefail
+          deployed_sha="$(curl --fail --silent --show-error --location \
+            --retry 24 --retry-delay 5 --retry-all-errors \
+            "$PRODUCTION_URL/deployment.txt")"
+          if [[ "$deployed_sha" != "$GITHUB_SHA" ]]; then
+            echo "::error::Production returned commit '$deployed_sha'; expected '$GITHUB_SHA'."
+            exit 1
+          fi
+          curl --fail --silent --show-error --retry 24 --retry-delay 5 --retry-all-errors \
+            "$PRODUCTION_URL/api/packages/shipped" > /dev/null
+
+          {
+            echo '### Production deployment'
+            echo ''
+            echo "- URL: $PRODUCTION_URL/"
+            echo "- Commit: \`$GITHUB_SHA\`"
+            echo '- Exact revision and API checks: passed'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Log out of Azure
+        if: always() && steps.freshness.outputs.deploy == 'true'
+        run: az logout

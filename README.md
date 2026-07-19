@@ -9,7 +9,8 @@ view and provides parallel visual and screen-reader presentations.
 > **New here?** Read the architecture docs in **[`docs/`](docs/README.md)** — the big
 > picture, the client, the accessibility doctrine, the server, how game families work, and
 > end-to-end flows. To make a game as a *package* (no code), see
-> [`CORRO_FORMAT.md`](CORRO_FORMAT.md).
+> [`CORRO_FORMAT.md`](CORRO_FORMAT.md). Validate, inspect and build it with the
+> [Corro Package SDK](tools/Corro.PackageCli/README.md).
 
 ## Quick start — complete development stack
 

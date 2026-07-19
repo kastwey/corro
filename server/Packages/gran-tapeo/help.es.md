@@ -4,6 +4,13 @@ Estás de tapeo con la cuadrilla y todo el mundo pide **a la vez**: cada jugador
 secreto una tapa de su bandeja, se destapan todas a la vez y las bandejas **rotan a la
 izquierda**. Se juegan **3 rondas**; gana quien más puntos acumule.
 
+## Ayuda durante la partida
+
+- **F1** abre esta guía de Gran Tapeo.
+- **Ctrl+F1** abre la lista completa de atajos disponibles en esta partida.
+- **Ctrl+Shift+F1** muestra las reglas activas, como las rondas, el tamaño de la mano y la puntuación.
+- Con una carta de la mano enfocada, **Shift+F1** abre su ayuda y explica cómo puntúa o qué efecto tiene.
+
 ## Cómo se pide
 
 1. Elige una carta de tu mano con **Intro** — tu elección es secreta y puedes **cambiarla**
@@ -38,3 +45,22 @@ izquierda**. Se juegan **3 rondas**; gana quien más puntos acumule.
 
 La **S** dice cómo vas (puntos, tu mesa y tus flanes); **Shift+S** repasa las mesas
 rivales de un tirón. Pulsa **Ctrl+F1** para ver la lista completa de atajos de teclado.
+
+## Cómo jugar con lector de pantalla
+
+### Tu bandeja
+
+- **Flecha arriba** y **Flecha abajo** recorren las cartas; **Inicio** y **Fin** van a los extremos. **Flecha derecha** entra en las acciones, **Shift+F10** abre el menú y **Escape** vuelve a la mano.
+- **Shift+F1** abre la ayuda de la tapa enfocada. **Enter** hace o cambia tu petición; mientras la elección es secreta, los demás solo oyen que ya has pedido.
+- Cuando tengas pinzas, **Ctrl+Espacio** activa la selección múltiple, **Espacio** marca dos cartas y **Enter** envía el conjunto en el orden marcado.
+
+### Consultar la mesa
+
+- **S** anuncia tu ronda, puntos, tapas servidas y flanes; **Shift+S** repasa las mesas rivales. **Ctrl+P** lleva a la lista de jugadores.
+- Peticiones, revelaciones, giro de bandejas, puntuaciones y cambios de ronda se anuncian automáticamente sin revelar manos privadas.
+
+### Moverte entre zonas y usar el chat
+
+- **F6** recorre mano, jugadores y conexión; los diálogos no modales y el chat se incorporan cuando están abiertos. **Shift+F6** recorre en sentido contrario.
+- **Ctrl+Shift+R** abre el chat y lleva el foco al cuadro de mensaje. **Ctrl+Shift+H** abre o cierra el chat.
+- Las ayudas y reglas son documentos de lectura. Recorre sus encabezados y listas con tu lector y ciérralos con **Escape** para volver al juego.

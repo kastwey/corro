@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
-    Zips a .corro package folder (manifest.json + board.json + cards.json [+ sounds/])
-    into a single uploadable <name>.corro file.
+    Validates and packs a package folder into one uploadable .corro file by calling
+    the Corro Package SDK. Kept as a compatibility wrapper for existing workflows.
 
 .EXAMPLE
     ./tools/pack-corro.ps1 packages/imperio-galactico
@@ -15,18 +15,13 @@ param(
     [string]$Out
 )
 
-if (-not (Test-Path (Join-Path $Dir 'manifest.json'))) {
-    throw "No manifest.json in '$Dir' — point at a package folder."
+$project = Join-Path $PSScriptRoot 'Corro.PackageCli/Corro.PackageCli.csproj'
+$arguments = @('run', '--project', $project, '-p:SkipFrontendBuild=true', '--', 'pack', $Dir)
+if ($Out) {
+    $arguments += @('--output', $Out)
 }
 
-$leaf = Split-Path $Dir -Leaf
-if (-not $Out) { $Out = "$leaf.corro" }
-
-# Compress-Archive only writes .zip, so build the zip then rename to .corro.
-$tmp = [System.IO.Path]::ChangeExtension($Out, '.zip')
-if (Test-Path $tmp) { Remove-Item $tmp -Force }
-if (Test-Path $Out) { Remove-Item $Out -Force }
-
-Compress-Archive -Path (Join-Path $Dir '*') -DestinationPath $tmp -Force
-Move-Item $tmp $Out -Force
-Write-Host "Created $Out"
+& dotnet @arguments
+if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+}

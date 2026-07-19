@@ -21,12 +21,29 @@ myboard.corro (zip)
 └── help.<lang>.md    # optional: the board's own rules/how-to-play (F1 / Help button)
 ```
 
+Use the [Corro Package SDK](tools/Corro.PackageCli/README.md) while authoring: `validate` runs
+the engine's real structural, family and content checks; `inspect` summarizes a folder or archive
+without exposing an unlock code; and `pack` creates and round-trips a reproducible `.corro` file.
+
 **i18n convention**: everything translatable is a **key** resolved against the package's
 own `i18n/{lang}.json` (`nameKey`, `colorName`, `textKey`, `terminology.*`,
 `building.*Key`, `currency.nameKey`…). The **only exception** is `name` (the board's
 display name), which is **inline** because the lobby shows it in the board selector
 **before** the package i18n is merged. Untranslatable symbols and codes
 (`currency.symbol`/`code`, `group.color`) are also inline.
+
+## In-game guide
+
+Every declared locale should ship a `help.<lang>.md`. The safe client renderer supports
+headings, paragraphs, lists, emphasis, code, HTTP(S) links and same-document fragment links.
+It assigns deterministic ids to headings and automatically inserts a linked table of contents
+from the guide's `##` sections, so package authors must not maintain a duplicate contents list.
+
+The guide should explain the four help layers when they apply: **F1** for the package guide,
+**Ctrl+F1** for the live shortcut list, **Ctrl+Shift+F1** for the effective rules and
+**Shift+F1** for focused-card help. It must also include a localized `## Playing with a screen
+reader` section (or equivalent) describing the package family's real focus surface, navigation,
+status queries, the **F6** panel cycle and direct chat access.
 
 ## Game families
 

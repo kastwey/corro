@@ -17,6 +17,7 @@ interest.
 | [server.md](server.md) | The backend: the SignalR hub, the command pipeline, the rulebooks, the game-family registry, hidden-information projection, persistence and bots. |
 | [game-families.md](game-families.md) | What a "family" is, what the families share and what they deliberately don't, and the design decisions about what to unify (and what NOT to — with the reasoning). |
 | [flows.md](flows.md) | Concrete end-to-end walkthroughs: playing a card, starting a game, a bot's turn, reconnecting after a restart. Follow one event from a keypress to the screen reader. |
+| [deployment.md](deployment.md) | Production delivery to `imperio.kastwey.org`: the CI gate, passwordless GitHub OIDC setup, smoke checks and rollback. |
 | [tutorial-city-board.md](tutorial-city-board.md) | **For content creators (no code):** a do-it-with-me guide to building a full 40-square property board of *your own city* as a package. |
 
 ## Who is this for? (two audiences, two doc sets)

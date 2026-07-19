@@ -10,6 +10,7 @@
 // the players-panel status line (kilómetros + state), and S speaking my own status.
 
 import { test, expect } from '../helpers/test';
+import { flushAxeAudit } from '../helpers/axeAudit';
 import {
 	createGame,
 	expectAnnouncement,
@@ -42,6 +43,70 @@ test('the lobby offers the journey deck with tokens and ITS OWN house rules (no 
 	await expect(page.locator('#package-rules [data-rule-id="journeyAllImmunitiesBonus"]')).toHaveValue('300');
 	await expect(page.locator('#package-rules')).toContainText('Puntos para ganar la partida');
 	await expect(page.locator('#seat-fieldset')).toBeHidden(); // still no race seats
+});
+
+test('journey: F1 guide discovers rules, shortcuts, card help and screen-reader play', async ({ browser }) => {
+	const ana = await newPlayerPage(browser);
+	const berto = await newPlayerPage(browser);
+
+	const code = await createGame(ana, 'Ana', BOARD);
+	await joinGame(berto, code, 'Berto');
+	await startGame(ana, [ana, berto]);
+
+	// F1 is the package guide. It teaches all three companion help routes and gives
+	// this card family a concrete screen-reader workflow rather than generic board advice.
+	await ana.keyboard.press('F1');
+	const guide = ana.locator('.game-dialog.dialog-help:has(.board-help)');
+	await expect(guide).toBeVisible();
+	await expect(guide.locator('.board-help__contents h2')).toHaveText('Contenido');
+	await expect(guide.locator('.board-help h2', { hasText: 'Ayuda durante la partida' })).toBeVisible();
+	await expect(guide.locator('.board-help h2', { hasText: 'Cómo jugar con lector de pantalla' })).toBeVisible();
+	await expect(guide.locator('.board-help')).toContainText('Ctrl+F1');
+	await expect(guide.locator('.board-help')).toContainText('Ctrl+Shift+F1');
+	await expect(guide.locator('.board-help')).toContainText('Shift+F1');
+	await expect(guide.locator('.board-help')).toContainText('Ctrl+Shift+R');
+	const screenReaderSection = guide.locator('#como-jugar-con-lector-de-pantalla');
+	await guide.getByRole('link', { name: 'Cómo jugar con lector de pantalla' }).click();
+	await expect(screenReaderSection).toBeFocused();
+	await flushAxeAudit(ana);
+	await guide.locator('.btn-primary').click();
+
+	// The new contents surface uses theme tokens; reach it in dark mode as well so the
+	// automatic Axe monitor checks its links, border and background in both palettes.
+	await ana.locator('#theme-toggle').click();
+	await ana.keyboard.press('F1');
+	await expect(guide).toBeVisible();
+	await expect(guide.locator('.board-help__contents')).toBeVisible();
+	await flushAxeAudit(ana);
+	await guide.locator('.btn-primary').click();
+
+	// The documented contextual route works from the focused card itself.
+	const firstCard = ana.locator('.hand-card:not(.hand-card--info)').first();
+	await firstCard.focus();
+	await ana.keyboard.press('Shift+F1');
+	const cardHelp = ana.locator('.game-dialog.dialog-card-help');
+	await expect(cardHelp).toBeVisible();
+	await expect(cardHelp.locator('.dialog-content')).not.toBeEmpty();
+	await flushAxeAudit(ana);
+	await cardHelp.locator('.btn-primary').click();
+
+	// Ctrl+F1 exposes the contextual card-help shortcut in the live, family-filtered table.
+	await ana.keyboard.press('Control+F1');
+	const shortcuts = ana.locator('.game-dialog.dialog-help:has(.help-shortcuts)');
+	await expect(shortcuts).toBeVisible();
+	await expect(shortcuts.locator('.help-shortcuts')).toContainText('Mayús + F1');
+	await expect(shortcuts.locator('.help-shortcuts')).toContainText('Leer la ayuda de la carta seleccionada');
+	await flushAxeAudit(ana);
+	await shortcuts.locator('.btn-primary').click();
+
+	// Ctrl+Shift+F1 is a separate reading document containing this match's effective rules.
+	await ana.keyboard.press('Control+Shift+F1');
+	const rules = ana.locator('.game-dialog.dialog-game-rules');
+	await expect(rules).toBeVisible();
+	await expect(rules.locator('.dialog-title')).toHaveText('Reglas activas');
+	await expect(rules.locator('.game-rules-list li').first()).toBeVisible();
+	await flushAxeAudit(ana);
+	await rules.locator('.btn-primary').click();
 });
 
 test('journey: the hand is home — private draw, playing an immunity, statuses and S', async ({ browser }) => {

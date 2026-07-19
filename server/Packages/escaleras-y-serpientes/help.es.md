@@ -4,9 +4,15 @@ Un clásico de mesa para 2 a 8 jugadores: una única pista de 100 casillas plega
 en serpentina. No hay decisiones que tomar — se tira el dado, la ficha avanza, y
 el tablero decide el resto. Gana quien llega primero a la casilla 100.
 
+## Ayuda durante la partida
+
+- **F1** abre esta guía de Escaleras y serpientes.
+- **Ctrl+F1** abre la lista completa de atajos disponibles en esta partida.
+- **Ctrl+Shift+F1** muestra las reglas activas, como el tamaño del tablero, la tirada extra y la llegada exacta.
+
 ## Cómo se juega
 
-- En tu turno, tira el dado (Enter o el botón **Tirar dado**). Tu ficha avanza
+- En tu turno, tira el dado (Espacio o el botón **Tirar dado**). Tu ficha avanza
   tantas casillas como indique.
 - Las fichas empiezan **fuera del tablero** (la salida): la primera tirada entra
   por la casilla 1 en adelante.
@@ -27,7 +33,20 @@ el tablero decide el resto. Gana quien llega primero a la casilla 100.
 - **Números**: teclear un número va directo a esa casilla (por ejemplo, 4 y 7
   seguidos van a la casilla 47).
 - **M**: ir a tu ficha. **N / Shift+N**: recorrer las casillas con fichas.
-- **Inicio del tablero**: la tecla de inicio de fila del navegador no se usa;
-  la salida (fuera del tablero) está a la izquierda de la casilla 1.
+- **Inicio**: ir a la salida, fuera del tablero y justo antes de la casilla 1.
 - Cada casilla anuncia su número, si es boca de serpiente o base de escalera
   (y a dónde lleva), y qué fichas hay en ella.
+
+## Cómo jugar con lector de pantalla
+
+### Explorar y jugar
+
+- **Escape** devuelve el foco al tablero. Las flechas, los números, **M** y **N** mueven solo el cursor de exploración; no desplazan tu ficha.
+- **Espacio** tira el dado. El recorrido de la ficha, la escalera o serpiente, el rebote y la clasificación se anuncian automáticamente.
+- **C** anuncia tu ficha y color, **T** indica de quién es el turno y **Ctrl+P** lleva a la lista de jugadores.
+
+### Moverte entre zonas y usar el chat
+
+- **F6** recorre tablero, acciones, jugadores y conexión. **Shift+F6** lo hace en sentido contrario.
+- **Ctrl+Shift+R** abre el chat y lleva el foco al cuadro de mensaje. **Ctrl+Shift+H** abre o cierra el chat.
+- Esta guía, los atajos y las reglas activas son documentos de lectura. Recorre sus encabezados y listas con tu lector y ciérralos con **Escape** para volver al juego.

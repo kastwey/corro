@@ -2,12 +2,17 @@
 
 A road-trip card game: be the first to complete **exactly 1,000 kilometres**. Several hands are played; the first player past **5,000 points** wins the match.
 
+## Help during play
+
+- **F1** opens this guide, with The Great Route's rules and how to play.
+- **Ctrl+F1** opens the complete list of shortcuts available in this game.
+- **Ctrl+Shift+F1** shows the active rules chosen for the game, such as the journey distance, target score and bonuses.
+- With a card in your hand focused, **Shift+F1** opens its help and explains what it does and when it can be played.
+
 ## Your turn
 
 1. **Draw** a card (Space).
 2. **Play** one card (Enter) **or discard** one (Delete).
-
-Your hand is your command post: arrows walk the cards, Shift+F10 sorts or filters to the playable ones, and Escape brings you back to it from anywhere. **S** tells you how you are doing (kilometres, state, immunities); **C** does the same. **Shift+S** runs through the rivals in one go (your own you already get with S), and the players panel speaks each one's state.
 
 ## The cards
 
@@ -30,6 +35,25 @@ You start each hand **stopped**: you need a Green light (or Right of way) to get
 
 In a team game your team shares **one car**: kilometres, hazards, immunities and points are common. Each member draws and plays **their own cards** (your hand is secret even from your partner) and turns always alternate between teams. If your team is attacked and your PARTNER holds the shield, the coup fourré is theirs.
 
----
+## Playing with a screen reader
 
-Coup fourré sound: "FGHTImpt_Punch Sounds Strong" by posdesigndesom (freesound.org), CC BY 4.0 licence.
+### Your hand
+
+Your hand is the main play surface, and each card is a single focus stop containing all of its information:
+
+- **Up Arrow** and **Down Arrow** move through the cards; **Home** and **End** go to the first and last card.
+- **Right Arrow** enters the card's actions. **Escape** moves back one level and, from another panel, returns to the hand.
+- **Shift+F10** opens the card menu, where you can also play, discard, ask for help, sort the hand or show only playable cards.
+- **Space** draws, **Enter** plays the focused card and **Delete** offers to discard it. If an action needs a decision, a dialog opens with the available choices.
+
+### Checking the game state
+
+- **S** announces your kilometres, state, immunities and score. **Shift+S** reviews your rivals' status.
+- **Ctrl+P** moves to the players panel, where each row summarizes that person or team's status.
+- Draws, played cards, attacks, remedies and turn changes are announced automatically; you do not need to leave the hand to follow them.
+
+### Moving between areas and using chat
+
+- **F6** cycles through the available game areas, such as the hand, players and connection; non-modal dialogs and chat join the cycle while open. **Shift+F6** moves through the areas in reverse.
+- **Ctrl+Shift+R** opens chat and moves focus directly to the message box. **Ctrl+Shift+H** opens or closes chat.
+- The guides, active rules and each card's help open as reading documents. Use your screen reader's usual heading and list commands to move through them, then close them with **Escape** to return to where you were.

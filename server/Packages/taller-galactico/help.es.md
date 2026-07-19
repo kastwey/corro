@@ -5,6 +5,13 @@ los cuatro sistemas de su nave**: el **reactor**, el **soporte vital**, el **nú
 datos** y el **chasis**. Los rivales intentarán averiártelos; tú puedes reparar, blindar
 y devolver el golpe.
 
+## Ayuda durante la partida
+
+- **F1** abre esta guía de Taller Galáctico.
+- **Ctrl+F1** abre la lista completa de atajos disponibles en esta partida.
+- **Ctrl+Shift+F1** muestra las reglas activas, como el tamaño de mano y los sistemas necesarios para ganar.
+- Con una carta de la mano enfocada, **Shift+F1** abre su ayuda y explica qué hace y qué objetivos admite.
+
 ## Tu turno
 
 1. Juega **una** carta de tu mano, **o** descarta de 1 a 3 boca abajo.
@@ -43,3 +50,22 @@ Si te quedas sin cartas y no puedes hacer nada, tu turno es un «paso» y robas 
 
 La **S** dice cómo va tu taller; **Shift+S** repasa los talleres rivales de un tirón (el
 tuyo ya te lo da la S). Pulsa **Ctrl+F1** para ver la lista completa de atajos de teclado.
+
+## Cómo jugar con lector de pantalla
+
+### Tu mano
+
+- **Flecha arriba** y **Flecha abajo** recorren las cartas; **Inicio** y **Fin** van a los extremos. **Flecha derecha** entra en las acciones, **Shift+F10** abre el menú y **Escape** vuelve a la mano.
+- **Shift+F1** abre la ayuda de la carta enfocada. **Enter** la juega y **Suprimir** propone descartarla; la mano se repone automáticamente al terminar el turno.
+- Si una carta necesita elegir sistema o rival, se abre un diálogo con las opciones legales y el motivo de la elección.
+
+### Consultar el taller
+
+- **S** anuncia tus cuatro sistemas y su estado; **Shift+S** repasa los talleres rivales. **Ctrl+P** lleva a la lista de jugadores.
+- Instalaciones, averías, reparaciones, blindajes, certificaciones, descartes y robos privados se anuncian automáticamente.
+
+### Moverte entre zonas y usar el chat
+
+- **F6** recorre mano, jugadores y conexión; los diálogos no modales y el chat se incorporan cuando están abiertos. **Shift+F6** recorre en sentido contrario.
+- **Ctrl+Shift+R** abre el chat y lleva el foco al cuadro de mensaje. **Ctrl+Shift+H** abre o cierra el chat.
+- Las ayudas y reglas son documentos de lectura. Recorre sus encabezados y listas con tu lector y ciérralos con **Escape** para volver al juego.

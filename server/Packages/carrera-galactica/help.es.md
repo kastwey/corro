@@ -5,6 +5,12 @@ mecánica clásica de los juegos de recorrido. Cada jugador comanda un escuadró
 **4 naves** que deben despegar, dar la vuelta completa al circuito de **68 sectores**
 y aterrizar todas en su **hangar de meta**. El primer escuadrón que lo consiga gana.
 
+## Ayuda durante la partida
+
+- **F1** abre esta guía de Carrera Galáctica.
+- **Ctrl+F1** abre la lista completa de atajos disponibles en esta partida.
+- **Ctrl+Shift+F1** muestra las reglas activas, incluidos el dado, las barreras, los bonus y el juego por equipos.
+
 ## Objetivo
 
 Llevar tus 4 naves desde tu **base** hasta la **meta**: salir al circuito, completar
@@ -65,7 +71,7 @@ Cada nave recorre 63 casillas de pista (de su salida a su desvío) y las 4 casil
 quedan "a su espalda" no las pisa nunca — para los demás escuadrones son casillas
 normales. El desvío solo funciona para su dueño: si pasas por el desvío de un rival,
 sigues de largo. Tu cursor de exploración empieza en **tu casilla de salida**, y
-**S** siempre te devuelve a ella.
+**S** recorre las salidas y entradas de corredor de todos los escuadrones en juego.
 
 ## Explorar el tablero con el teclado
 
@@ -75,9 +81,28 @@ sigues de largo. Tu cursor de exploración empieza en **tu casilla de salida**, 
   circuito, el cursor recuerda dónde estabas.
 - **M / Shift+M** saltan por tus naves, adelante y atrás, estén donde estén. **N /
   Shift+N** hacen lo mismo con todas las casillas que tengan naves, de quien sean.
-- **S / Shift+S** recorren tus dos hitos: tu sector de despegue y tu entrada al
-  corredor final.
+- **S / Shift+S** recorren, hacia delante y hacia atrás, las salidas y entradas de
+  corredor de todos los escuadrones en juego.
 - **Inicio** va al principio del carril actual: la casilla 1 en el circuito, o la base
   de la zona que estés explorando.
 - Cada sector anuncia lo que contiene: seguro, salidas, entradas de corredor, y las
   naves o escudos presentes.
+
+## Cómo jugar con lector de pantalla
+
+### Explorar y jugar
+
+- **Escape** devuelve el foco al tablero. Usa las flechas, **M**, **N**, **S** e **Inicio** como se explica en la sección anterior; cada movimiento del cursor anuncia el sector completo.
+- **Espacio** tira el dado. Si hay varias naves que pueden moverse, se abre un diálogo no modal con una opción por nave; **Enter** activa la opción enfocada.
+- Desde ese diálogo, **Escape** vuelve al tablero sin cancelar la elección, para que puedas explorar los destinos resaltados. **Ctrl+D** devuelve el foco al diálogo pendiente.
+
+### Consultar la partida
+
+- **C** anuncia tu escuadrón y **T** indica de quién es el turno. **Ctrl+P** lleva a la lista de jugadores.
+- Tiradas, movimientos, derribos, bonus, barreras y cambios de turno se anuncian automáticamente y en el orden en que ocurren.
+
+### Moverte entre zonas y usar el chat
+
+- **F6** recorre tablero, acciones, jugadores y conexión; los diálogos no modales y el chat se incorporan cuando están abiertos. **Shift+F6** recorre las zonas en sentido contrario.
+- **Ctrl+Shift+R** abre el chat y lleva el foco al cuadro de mensaje. **Ctrl+Shift+H** abre o cierra el chat.
+- Esta guía, los atajos y las reglas activas son documentos de lectura. Recorre sus encabezados y listas con tu lector y ciérralos con **Escape** para volver al juego.

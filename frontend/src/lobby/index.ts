@@ -428,10 +428,15 @@ class UnifiedLobbyUI {
 
 	/** Stages the chosen shipped board and applies it; the picker stays visible (no Remove button). */
 	private async selectShippedBoard(id: string): Promise<void> {
-		const status = getElement('board-upload-status');
+		// Arrowing through the picker can stage several boards in quick succession. This status is
+		// deliberately outside any live region and aria-hidden: the select already voices each
+		// option, so announcing "Loading game board" after every Arrow press only interrupts it.
+		const status = getElement('board-loading-status');
+		const uploadStatus = getElement('board-upload-status');
 		const ticket = this.staging.begin();
 		this.uploadedPackage = null;
 		getElement('create-form')?.setAttribute('aria-busy', 'true');
+		if (uploadStatus) uploadStatus.textContent = '';
 		if (status) status.textContent = t('game.loading_board', 'Loading game…');
 		try {
 			const pkg = await gameClient.stageShippedBoard(id);

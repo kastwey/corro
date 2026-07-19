@@ -13,6 +13,7 @@ namespace CorroServer.Services.Corro;
 /// </summary>
 public sealed class CorroPackageLoader
 {
+	public const long MaxUploadBytes = 10L * 1024 * 1024;
 	public const int MaxZipEntries = 2_048;
 	public const long MaxEntryUncompressedBytes = 25L * 1024 * 1024;
 	public const long MaxTotalUncompressedBytes = 50L * 1024 * 1024;

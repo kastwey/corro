@@ -392,6 +392,10 @@
 	opacity: 0.85;
 }
 
+.board-upload-status:empty {
+	display: none;
+}
+
 .board-upload-remove {
 	margin-top: 0.5rem;
 }

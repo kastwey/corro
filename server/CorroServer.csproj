@@ -33,14 +33,14 @@
     <!-- Package files the SDK treats as None rather than Content (e.g. help.*.md guides) also need to
          travel to the output / publish artifact, so copy those too. -->
     <None Update="Packages\**" CopyToOutputDirectory="PreserveNewest" />
-    <!-- The canonical board keymap: embedded so the server is its single source of truth (served to
-         the client, and the validator derives the reserved keys from it). Embedded (not Content) so
-         it's available identically in prod and in the test assembly. -->
-    <Content Remove="Config\keymap.json" />
-    <EmbeddedResource Include="Config\keymap.json" />
   </ItemGroup>
 
   <ItemGroup>
+        <!-- The canonical board keymap: embedded so the server is its single source of truth (served to
+          the client, and the validator derives the reserved keys from it). Embedded (not Content) so
+           it's available identically in prod and in the test assembly. -->
+        <Content Remove="Config\keymap.json" />
+        <EmbeddedResource Include="Config\keymap.json" />
     <InternalsVisibleTo Include="CorroServer.Tests" />
   </ItemGroup>
 

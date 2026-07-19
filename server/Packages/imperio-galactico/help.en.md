@@ -4,6 +4,12 @@ Welcome to the **Galactic Empire**, a space-themed take on the classic
 property-trading game. Conquer star systems, charge tolls to anyone who lands on
 them, and drive your rivals into bankruptcy. The last solvent player wins.
 
+## Help during play
+
+- **F1** opens this Galactic Empire guide.
+- **Ctrl+F1** opens the complete list of shortcuts available in this game.
+- **Ctrl+Shift+F1** shows the active economy, building, auction and Black Hole rules.
+
 ## Goal
 
 Be the only player who hasn't gone bankrupt. Buy planets, build colonies, and
@@ -50,6 +56,22 @@ Sell buildings or mortgage planets if you need credits to settle a debt.
 
 The game ends when only one solvent player remains. May the galaxy be yours!
 
-## Keyboard shortcuts
+## Playing with a screen reader
 
-Press **Ctrl+F1** to see the full list of keyboard shortcuts.
+### Exploring the board
+
+- **Escape** returns focus to the board. The arrows walk the squares without moving your ship; each square announces its name, type, price, owner, buildings and occupants.
+- **M** jumps to your ship and **Home** to the Launch Pad. **N** cycles occupied squares, **H** your properties and **U** unowned properties; add **Shift** to those three cycles to move in reverse.
+- **I** announces who is on the square and **Shift+I** opens its information and available actions.
+
+### Playing and checking state
+
+- **Space** rolls the dice. **C** announces your credits, **T** says whose turn it is, **W** reads the owner and **E** the square's price or tax.
+- Rolls, movement, cards, income, payments, purchases and auctions are announced automatically. The action bar offers only what can be done now and explains why an action is unavailable.
+- **Ctrl+P** moves to the players list and **Ctrl+D** to any open non-modal dialog.
+
+### Moving between areas and using chat
+
+- **F6** cycles through the board, actions, players and connection; non-modal dialogs and chat join while open. **Shift+F6** moves through the areas in reverse.
+- **Ctrl+Shift+R** opens chat and focuses the message box. **Ctrl+Shift+H** opens or closes chat.
+- This guide, the shortcuts and the active rules are reading documents. Use your screen reader's heading and list commands, then close them with **Escape** to return to play.

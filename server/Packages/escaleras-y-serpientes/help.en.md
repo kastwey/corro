@@ -4,9 +4,15 @@ A tabletop classic for 2 to 8 players: a single 100-square track folded into a
 serpentine. There are no decisions to make — you roll the die, your piece
 advances, and the board does the rest. First to reach square 100 wins.
 
+## Help during play
+
+- **F1** opens this Snakes and Ladders guide.
+- **Ctrl+F1** opens the complete list of shortcuts available in this game.
+- **Ctrl+Shift+F1** shows the active rules, such as board size, extra rolls and exact finishing.
+
 ## How to play
 
-- On your turn, roll the die (Enter or the **Roll dice** button). Your piece
+- On your turn, roll the die (Space or the **Roll dice** button). Your piece
   advances that many squares.
 - Pieces start **off the board** (the start tray): the first roll enters the
   track at square 1 onwards.
@@ -27,6 +33,20 @@ advances, and the board does the rest. First to reach square 100 wins.
 - **Digits**: typing a number jumps straight to that square (for example, 4
   then 7 goes to square 47).
 - **M**: go to your piece. **N / Shift+N**: cycle the squares holding pieces.
-- The start tray (off the board) sits left of square 1.
+- **Home**: go to the start tray, off the board and just before square 1.
 - Every square announces its number, whether it is a snake's mouth or a
   ladder's foot (and where it leads), and which pieces stand on it.
+
+## Playing with a screen reader
+
+### Exploring and playing
+
+- **Escape** returns focus to the board. The arrows, number keys, **M** and **N** move only the exploration cursor; they do not move your piece.
+- **Space** rolls the die. Your piece's journey, ladder or snake, bounce and placing are announced automatically.
+- **C** announces your piece and colour, **T** says whose turn it is and **Ctrl+P** moves to the players list.
+
+### Moving between areas and using chat
+
+- **F6** cycles through the board, actions, players and connection. **Shift+F6** moves in reverse.
+- **Ctrl+Shift+R** opens chat and focuses the message box. **Ctrl+Shift+H** opens or closes chat.
+- This guide, the shortcuts and the active rules are reading documents. Use your screen reader's heading and list commands, then close them with **Escape** to return to play.

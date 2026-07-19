@@ -8,6 +8,7 @@ import { zipSync, strToU8 } from 'fflate';
 import { test, expect } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
 import {
+	appI18n,
 	createGame,
 	expectAnnouncement,
 	gotoLobbyHome,
@@ -47,6 +48,37 @@ async function waitForDefaultPackage(page: import('../helpers/test').Page): Prom
 	const firstToken = packageManifest(boardId).tokens[0].id as string;
 	await expect(page.locator(`#create-form input.token-radio[value="${firstToken}"]`)).toBeAttached();
 }
+
+test('switching shipped games keeps the loading feedback visual-only', async ({ browser }) => {
+	const page = await newPlayerPage(browser);
+	await gotoLobbyHome(page);
+	await page.locator('#go-create-btn').click();
+	await waitForDefaultPackage(page);
+
+	// Keep the request pending so both the transient visual state and its accessibility semantics
+	// can be asserted. Arrowing a native select fires the same change path as selectOption().
+	await page.route(`**/api/packages/shipped/${TRACK_BOARD}`, async route => {
+		await new Promise(resolve => setTimeout(resolve, 400));
+		await route.continue();
+	});
+	await page.evaluate(() => { ((window as any).__announcements as string[]).length = 0; });
+	await page.locator('#board-selector').selectOption(TRACK_BOARD);
+
+	const loading = appI18n('es').game.loading_board as string;
+	const visualStatus = page.locator('#board-loading-status');
+	await expect(visualStatus).toHaveText(loading);
+	await expect(visualStatus).toBeVisible();
+	await expect(visualStatus).toHaveAttribute('aria-hidden', 'true');
+	await expect(visualStatus).not.toHaveAttribute('role', /.+/);
+	await expect(visualStatus).not.toHaveAttribute('aria-live', /.+/);
+	await flushAxeAudit(page);
+
+	const firstToken = packageManifest(TRACK_BOARD).tokens[0].id as string;
+	await expect(page.locator(`#create-form input.token-radio[value="${firstToken}"]`)).toBeAttached();
+	await expect(visualStatus).toBeEmpty();
+	const heard = await page.evaluate(() => (window as any).__announcements as string[]);
+	expect(heard).not.toContain(loading);
+});
 
 test('home, dark theme, runtime language and create/join validation states are Axe-clean', async ({ browser }) => {
 	const host = await newPlayerPage(browser);

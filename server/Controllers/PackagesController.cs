@@ -15,8 +15,6 @@ namespace CorroServer.Controllers;
 [Route("api/[controller]")]
 public class PackagesController : ControllerBase
 {
-	private const long MaxUploadBytes = 10 * 1024 * 1024; // 10 MB
-
 	private readonly CorroPackageStore _store;
 	private readonly ShippedPackageProvider _shipped;
 	private readonly IPackageBlobStore _blob;
@@ -44,7 +42,7 @@ public class PackagesController : ControllerBase
 	/// skip that (a trusted/draft upload; the board may then show raw keys).
 	/// </summary>
 	[HttpPost]
-	[RequestSizeLimit(MaxUploadBytes)]
+	[RequestSizeLimit(CorroPackageLoader.MaxUploadBytes)]
 	public async Task<ActionResult<PackageUploadResponse>> Upload(IFormFile package, [FromQuery] bool validate = true)
 	{
 		if (package is null || package.Length == 0)
@@ -52,7 +50,7 @@ public class PackagesController : ControllerBase
 			return BadRequest("No package uploaded.");
 		}
 
-		if (package.Length > MaxUploadBytes)
+		if (package.Length > CorroPackageLoader.MaxUploadBytes)
 		{
 			return BadRequest("Package is too large.");
 		}

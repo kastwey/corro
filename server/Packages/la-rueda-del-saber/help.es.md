@@ -2,6 +2,12 @@
 
 Responde preguntas de seis categorías, gana un quesito en cada casa de color y vuelve al centro para la pregunta final.
 
+## Ayuda durante la partida
+
+- **F1** abre esta guía de La Rueda del Saber.
+- **Ctrl+F1** abre la lista completa de atajos disponibles en esta partida.
+- **Ctrl+Shift+F1** muestra las reglas activas, incluidos el tipo de juez, la dificultad y las condiciones de victoria.
+
 ## Tu turno
 - **Espacio**: tira el dado.
 - Tras tirar se abre la lista de destinos posibles (puedes **arrastrarla** por su título o **minimizarla** para ver todo el tablero): confirma uno ahí, o pulsa **Escape** para ir al tablero —las casillas alcanzables quedan resaltadas—, recórrelas con **D** (**Mayús+D** hacia atrás) y pulsa **Enter** en la que quieras. Con el ratón, basta con **hacer clic en la casilla resaltada**.
@@ -19,3 +25,22 @@ Responde preguntas de seis categorías, gana un quesito en cada casa de color y 
 - **C**: anuncia tu ficha y color.
 
 Pulsa **Ctrl+F1** para la lista completa de teclas.
+
+## Cómo jugar con lector de pantalla
+
+### Explorar y elegir destino
+
+- **Escape** devuelve el foco a la rueda. Las flechas, **E**, **L**, las letras de color, **M** y **N** mueven el cursor de exploración y anuncian cada nodo sin mover tu ficha.
+- **Espacio** tira el dado. Cuando se abra la elección de destino, puedes usar sus botones o pulsar **Escape**, recorrer los destinos resaltados con **D** y **Shift+D**, y confirmar con **Enter**. **Ctrl+D** vuelve al diálogo pendiente.
+- Al escribir una respuesta, el cuadro de texto conserva las letras para que ningún atajo del juego interfiera.
+
+### Consultar la partida
+
+- **S** anuncia tus quesitos, **Shift+S** los de los demás, **C** tu ficha y color, y **T** indica de quién es el turno. **Ctrl+P** lleva a la lista de jugadores.
+- Preguntas, respuestas, decisiones del juez, quesitos y cambios de turno se anuncian automáticamente.
+
+### Moverte entre zonas y usar el chat
+
+- **F6** recorre rueda, acciones, jugadores y conexión; los diálogos no modales y el chat se incorporan cuando están abiertos. **Shift+F6** recorre las zonas en sentido contrario.
+- **Ctrl+Shift+R** abre el chat y lleva el foco al cuadro de mensaje. **Ctrl+Shift+H** abre o cierra el chat.
+- Esta guía, los atajos y las reglas activas son documentos de lectura. Recorre sus encabezados y listas con tu lector y ciérralos con **Escape** para volver al juego.

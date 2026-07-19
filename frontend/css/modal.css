@@ -585,6 +585,7 @@
 .board-help h1, .board-help h2, .board-help h3, .board-help h4 {
 	margin: 1em 0 0.4em;
 	line-height: 1.25;
+	scroll-margin-top: 0.5rem;
 }
 .board-help h1 { font-size: 1.4rem; }
 .board-help h2 { font-size: 1.2rem; }
@@ -593,6 +594,15 @@
 .board-help p { margin: 0.6em 0; }
 .board-help ul, .board-help ol { margin: 0.6em 0; padding-left: 1.5em; }
 .board-help li { margin: 0.2em 0; }
+.board-help__contents {
+	margin: 0.9rem 0 1.1rem;
+	padding: 0.75rem 1rem;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: var(--surface-2);
+}
+.board-help__contents h2 { margin-top: 0; }
+.board-help__contents ul { margin-bottom: 0; }
 .board-help hr { border: none; border-top: 1px solid var(--border-color, #ccc); margin: 1em 0; }
 .board-help code {
 	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;

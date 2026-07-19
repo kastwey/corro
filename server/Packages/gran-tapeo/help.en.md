@@ -4,6 +4,13 @@ You are out for tapas with the crew and everyone orders **at the same time**: ea
 secretly picks one tapa from their tray, all picks are flipped at once, and the trays
 **rotate to the left**. The game lasts **3 rounds**; the most points wins.
 
+## Help during play
+
+- **F1** opens this Grand Tapeo guide.
+- **Ctrl+F1** opens the complete list of shortcuts available in this game.
+- **Ctrl+Shift+F1** shows the active rules, such as rounds, hand size and scoring.
+- With a card in your hand focused, **Shift+F1** opens its help and explains its score or effect.
+
 ## How ordering works
 
 1. Pick a card from your hand with **Enter** — your pick is secret and you can **change
@@ -38,3 +45,22 @@ secretly picks one tapa from their tray, all picks are flipped at once, and the 
 
 Press **S** for how you are doing (points, your table and your flans); **Shift+S** sweeps
 the rival tables in one go. Press **Ctrl+F1** for the full keyboard shortcut list.
+
+## Playing with a screen reader
+
+### Your tray
+
+- **Up Arrow** and **Down Arrow** move through the cards; **Home** and **End** go to the ends. **Right Arrow** enters the actions, **Shift+F10** opens the menu and **Escape** returns to the hand.
+- **Shift+F1** opens the focused tapa's help. **Enter** makes or changes your pick; while it remains secret, rivals hear only that you have ordered.
+- When you have serving tongs, **Ctrl+Space** enables multi-select, **Space** marks two cards and **Enter** sends the set in marked order.
+
+### Checking the table
+
+- **S** announces your round, score, served tapas and flans; **Shift+S** reviews rival tables. **Ctrl+P** moves to the players list.
+- Picks, reveals, tray rotation, scoring and round changes are announced automatically without exposing private hands.
+
+### Moving between areas and using chat
+
+- **F6** cycles through the hand, players and connection; non-modal dialogs and chat join while open. **Shift+F6** moves in reverse.
+- **Ctrl+Shift+R** opens chat and focuses the message box. **Ctrl+Shift+H** opens or closes chat.
+- Help and rules are reading documents. Use your screen reader's heading and list commands, then close them with **Escape** to return to play.

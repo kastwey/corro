@@ -384,14 +384,24 @@ committing anything** — it's your private board until you decide to share it.
 2. Open the app, go to **Create game**, and pick **My City** from the board list.
 3. Choose your token, add a friend or a bot, and start. That's your city on the board.
 
-To hand the board to someone else as a single file, zip it into a `.corro` (there's a
-`tools/pack-corro.ps1` helper) and they upload it in the lobby.
+Before playing, validate the folder with the same rules as the server. To hand the board to
+someone else, pack it into a single `.corro`; the pack command validates it again and reloads the
+archive through the secure upload path before writing it:
+
+```bash
+dotnet run --project tools/Corro.PackageCli -p:SkipFrontendBuild=true -- validate path/to/my-city
+dotnet run --project tools/Corro.PackageCli -p:SkipFrontendBuild=true -- pack path/to/my-city --output my-city.corro
+```
+
+The existing `tools/pack-corro.ps1` command remains as a wrapper around this SDK for PowerShell
+workflows. Your friend can upload the resulting file in the lobby.
 
 ---
 
 ## Step 9 — If something doesn't work
 
-The server **validates** your package when it loads and rejects it with a clear message.
+Run `validate` while editing rather than waiting until the server starts. The CLI and server use
+the same loader and validators, and reject the package with a clear message.
 The common ones:
 
 - **"square N (type 'property') has no name"** — a property/transit/utility/tax square is

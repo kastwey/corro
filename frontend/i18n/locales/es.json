@@ -1206,6 +1206,7 @@
     "help_cmd_board_help": "Abrir la guía de juego (reglas y cómo jugar)",
     "help_cmd_game_rules": "Mostrar las reglas activas de la partida",
     "help_board_title": "Guía de juego",
+    "help_contents": "Contenido",
     "help_board_open": "Guía de juego (reglas y cómo jugar)",
     "help_board_none": "Este tablero no incluye una guía.",
     "help_cmd_toggle_sound": "Activar o desactivar los efectos de sonido",

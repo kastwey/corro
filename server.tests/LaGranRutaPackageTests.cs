@@ -83,4 +83,45 @@ public class LaGranRutaPackageTests
 		// 0 must stay a LEGAL choice for the target score: it means "a single hand".
 		Assert.Equal(0, rules.Single(r => r.Id == "journeyTargetScore").Min);
 	}
+
+	[Theory]
+	[InlineData("es", "## Ayuda durante la partida", "## Cómo jugar con lector de pantalla", "**Flecha arriba**")]
+	[InlineData("en", "## Help during play", "## Playing with a screen reader", "**Up Arrow**")]
+	public void The_guide_explains_every_help_route_and_screen_reader_play(
+		string language,
+		string helpHeading,
+		string screenReaderHeading,
+		string handNavigation)
+	{
+		var path = Path.Combine(CorroTestPaths.PackageDir("la-gran-ruta"), $"help.{language}.md");
+		var guide = File.ReadAllText(path);
+
+		Assert.Contains(helpHeading, guide);
+		Assert.Contains(screenReaderHeading, guide);
+		Assert.Contains(handNavigation, guide);
+		Assert.DoesNotContain("freesound.org", guide, StringComparison.OrdinalIgnoreCase);
+		Assert.DoesNotContain("CC BY", guide, StringComparison.OrdinalIgnoreCase);
+
+		// These are the four distinct help layers the guide must make discoverable:
+		// package guide, current shortcut table, active rules and focused-card help.
+		foreach (var shortcut in new[] { "**F1**", "**Ctrl+F1**", "**Ctrl+Shift+F1**", "**Shift+F1**" })
+		{
+			Assert.Contains(shortcut, guide);
+		}
+
+		// The screen-reader primer must also cover cross-panel movement and direct chat access.
+		foreach (var shortcut in new[] { "**F6**", "**Shift+F6**", "**Ctrl+Shift+R**", "**Escape**" })
+		{
+			Assert.Contains(shortcut, guide);
+		}
+	}
+
+	[Fact]
+	public void Sound_attribution_lives_in_the_package_credits_not_the_player_guide()
+	{
+		var credits = File.ReadAllText(Path.Combine(CorroTestPaths.PackageDir("la-gran-ruta"), "CREDITS.md"));
+
+		Assert.Contains("sounds/low-blow.ogg", credits);
+		Assert.Contains("ChrisButler99", credits);
+	}
 }

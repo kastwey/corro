@@ -79,6 +79,9 @@
 					<label for="board-upload" data-i18n="lobby.uploadBoard">Or upload a game (.corro):</label>
 					<input type="file" id="board-upload" accept=".corro,.zip,application/zip"
 						data-i18n-attr:aria-label="lobby.uploadBoard" aria-label="Upload a game package">
+					<!-- Switching the picker can happen on every Arrow press. Keep its transient
+						 loading feedback visual-only so it never interrupts the selected option. -->
+					<p id="board-loading-status" class="board-upload-status" aria-hidden="true"></p>
 					<p id="board-upload-status" class="board-upload-status" role="status" aria-live="polite"></p>
 					<button type="button" id="board-upload-remove" class="btn btn-secondary board-upload-remove hidden"
 						data-i18n="lobby.uploadRemove">Remove uploaded game</button>

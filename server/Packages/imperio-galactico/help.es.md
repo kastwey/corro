@@ -4,6 +4,12 @@ Bienvenido al **Imperio Galáctico**, una variante espacial del clásico juego d
 compraventa de propiedades. Conquista sistemas, cobra peajes a quien aterrice en
 ellos y lleva a tus rivales a la bancarrota. El último jugador solvente gana.
 
+## Ayuda durante la partida
+
+- **F1** abre esta guía de Imperio Galáctico.
+- **Ctrl+F1** abre la lista completa de atajos disponibles en esta partida.
+- **Ctrl+Shift+F1** muestra las reglas activas de economía, construcción, subastas y Agujero Negro.
+
 ## Objetivo
 
 Ser el único jugador que no haya caído en bancarrota. Para lograrlo, compra
@@ -51,6 +57,22 @@ créditos para pagar una deuda.
 
 La partida termina cuando solo queda un jugador solvente. ¡Que el Imperio sea tuyo!
 
-## Atajos de teclado
+## Cómo jugar con lector de pantalla
 
-Pulsa **Ctrl+F1** para ver la lista completa de atajos de teclado.
+### Explorar el tablero
+
+- **Escape** devuelve el foco al tablero. Las flechas recorren las casillas sin mover tu nave; cada casilla anuncia su nombre, tipo, precio, propietario, construcciones y ocupantes.
+- **M** salta a tu nave e **Inicio** a la Plataforma de Lanzamiento. **N** recorre las casillas ocupadas, **H** tus propiedades y **U** las propiedades libres; añade **Shift** a esos tres ciclos para recorrerlos en sentido contrario.
+- **I** anuncia quién está en la casilla y **Shift+I** abre su información y las acciones disponibles.
+
+### Jugar y consultar el estado
+
+- **Espacio** tira los dados. **C** anuncia tus créditos, **T** indica de quién es el turno, **W** lee el propietario y **E** el precio o impuesto de la casilla.
+- Tiradas, desplazamientos, cartas, cobros, pagos, compras y subastas se anuncian automáticamente. La barra de acciones ofrece solo lo que puede hacerse ahora y explica por qué una acción no está disponible.
+- **Ctrl+P** lleva a la lista de jugadores y **Ctrl+D** al diálogo no modal que esté abierto.
+
+### Moverte entre zonas y usar el chat
+
+- **F6** recorre tablero, acciones, jugadores y conexión; los diálogos no modales y el chat se incorporan cuando están abiertos. **Shift+F6** recorre las zonas en sentido contrario.
+- **Ctrl+Shift+R** abre el chat y lleva el foco al cuadro de mensaje. **Ctrl+Shift+H** abre o cierra el chat.
+- Esta guía, los atajos y las reglas activas son documentos de lectura. Recorre sus encabezados y listas con tu lector y ciérralos con **Escape** para volver al juego.

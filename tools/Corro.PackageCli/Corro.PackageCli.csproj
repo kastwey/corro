@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>corro-package</AssemblyName>
+    <RootNamespace>Corro.PackageCli</RootNamespace>
+    <IsPackable>false</IsPackable>
+        <!-- The SDK already carries its engine dependency with content-copying disabled. Do not
+          rediscover the web project as a transitive reference with deploy defaults. -->
+        <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\sdk\Corro.PackageSdk\Corro.PackageSdk.csproj" />
+  </ItemGroup>
+
+  <Target Name="StripAndRejectServerContent" AfterTargets="Build">
+    <ItemGroup>
+      <_ServerStaticAssets Include="$(TargetDir)*staticwebassets*" />
+    </ItemGroup>
+    <RemoveDir Directories="$(TargetDir)Packages;$(TargetDir)Assets/Sounds;$(TargetDir)wwwroot" />
+    <Delete Files="@(_ServerStaticAssets)" />
+    <ItemGroup>
+      <_LeakedStaticAssets Include="$(TargetDir)*staticwebassets*" />
+    </ItemGroup>
+    <Error Condition="Exists('$(TargetDir)Packages')"
+           Text="CLI output contains server Packages; private package content must never be distributed." />
+    <Error Condition="Exists('$(TargetDir)Assets/Sounds')"
+           Text="CLI output contains server sound assets; deployable content must not flow into the CLI." />
+    <Error Condition="'@(_LeakedStaticAssets)' != ''"
+           Text="CLI output contains server static-web-assets metadata." />
+  </Target>
+
+  <Target Name="StripAndRejectPublishedServerContent" AfterTargets="Publish">
+    <ItemGroup>
+      <_PublishedServerStaticAssets Include="$(PublishDir)*staticwebassets*" />
+    </ItemGroup>
+    <RemoveDir Directories="$(PublishDir)Packages;$(PublishDir)Assets/Sounds;$(PublishDir)wwwroot" />
+    <Delete Files="@(_PublishedServerStaticAssets)" />
+    <ItemGroup>
+      <_LeakedPublishedStaticAssets Include="$(PublishDir)*staticwebassets*" />
+    </ItemGroup>
+    <Error Condition="Exists('$(PublishDir)Packages')"
+           Text="Published CLI contains server Packages; private package content must never be distributed." />
+    <Error Condition="Exists('$(PublishDir)Assets/Sounds')"
+           Text="Published CLI contains server sound assets." />
+    <Error Condition="'@(_LeakedPublishedStaticAssets)' != ''"
+           Text="Published CLI contains server static-web-assets metadata." />
+  </Target>
+</Project>

@@ -5,6 +5,12 @@ race-game mechanics. Each player commands a squadron of **4 ships** that must ta
 off, complete the full lap around the **68-sector circuit** and land them all in
 their **goal hangar**. The first full squadron home wins.
 
+## Help during play
+
+- **F1** opens this Galactic Race guide.
+- **Ctrl+F1** opens the complete list of shortcuts available in this game.
+- **Ctrl+Shift+F1** shows the active rules, including the die, barriers, bonuses and team play.
+
 ## Objective
 
 Bring your 4 ships from your **base** to the **goal**: launch onto the circuit,
@@ -64,7 +70,7 @@ Each ship walks 63 track squares (from its start to its turn-off); the 4 squares
 "behind its back" are never stepped on by it — for every other squadron they are
 ordinary squares. A turn-off only works for its owner: passing a rival's turn-off, you
 sail straight on. Your exploration cursor starts on **your start square**, and
-**S** always returns you to it.
+**S** cycles the starts and corridor entries of every squadron in play.
 
 ## Exploring the board with the keyboard
 
@@ -74,9 +80,28 @@ sail straight on. Your exploration cursor starts on **your start square**, and
   remembers where you were.
 - **M / Shift+M** cycle through your ships, forward and backward, wherever they stand.
   **N / Shift+N** do the same over every square holding ships, whoever they belong to.
-- **S / Shift+S** walk your two landmarks: your launch sector and your final-corridor
-  entrance.
+- **S / Shift+S** cycle forward and backward through every active squadron's start
+  and final-corridor entrance.
 - **Home** goes to the beginning of the current lane: square 1 on the circuit, or the
   base of the zone you are exploring.
 - Every sector announces what it holds: safe, starts, corridor entrances, and the
   ships or shields present.
+
+## Playing with a screen reader
+
+### Exploring and playing
+
+- **Escape** returns focus to the board. Use the arrows, **M**, **N**, **S** and **Home** as described above; every cursor move announces the full sector.
+- **Space** rolls the die. If several ships can move, a non-modal dialog opens with one option per ship; **Enter** activates the focused option.
+- From that dialog, **Escape** returns to the board without cancelling the choice so you can inspect the highlighted destinations. **Ctrl+D** returns focus to the pending dialog.
+
+### Checking the game
+
+- **C** announces your squadron and **T** says whose turn it is. **Ctrl+P** moves to the players list.
+- Rolls, moves, shoot-downs, bonuses, barriers and turn changes are announced automatically in the order they happen.
+
+### Moving between areas and using chat
+
+- **F6** cycles through the board, actions, players and connection; non-modal dialogs and chat join while open. **Shift+F6** moves through the areas in reverse.
+- **Ctrl+Shift+R** opens chat and focuses the message box. **Ctrl+Shift+H** opens or closes chat.
+- This guide, the shortcuts and the active rules are reading documents. Use your screen reader's heading and list commands, then close them with **Escape** to return to play.

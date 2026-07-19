@@ -20,6 +20,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\server\CorroServer.csproj" />
+    <ProjectReference Include="..\sdk\Corro.PackageSdk\Corro.PackageSdk.csproj" />
+    <ProjectReference Include="..\tools\Corro.PackageCli\Corro.PackageCli.csproj" />
   </ItemGroup>
 
 </Project>
