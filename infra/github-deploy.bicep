@@ -21,6 +21,9 @@ param githubOwner string = 'kastwey'
 @description('GitHub repository name trusted by the federated credential.')
 param githubRepository string = 'corro'
 
+@description('Effective OIDC subject prefix returned by the repository OIDC customization endpoint.')
+param githubSubjectPrefix string = 'repo:kastwey@7586708/corro@1305386218'
+
 @description('Protected GitHub environment trusted by the federated credential.')
 param githubEnvironment string = 'production'
 
@@ -43,7 +46,7 @@ resource githubCredential 'Microsoft.ManagedIdentity/userAssignedIdentities/fede
   name: 'github-production'
   properties: {
     issuer: 'https://token.actions.githubusercontent.com'
-    subject: 'repo:${githubOwner}/${githubRepository}:environment:${githubEnvironment}'
+    subject: '${githubSubjectPrefix}:environment:${githubEnvironment}'
     audiences: [
       'api://AzureADTokenExchange'
     ]

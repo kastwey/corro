@@ -13,6 +13,8 @@ It creates:
 - `Storage Blob Data Reader` scoped only to that container.
 
 No client secret, publish profile, storage key or Cosmos credential is stored in GitHub.
+The federated subject uses the repository's immutable owner/repository IDs, as returned by
+GitHub's OIDC customization endpoint, rather than relying only on renameable display names.
 
 ## Provision or update
 
@@ -71,6 +73,13 @@ gh variable set AZURE_PRIVATE_PACKAGES_BLOB --repo $repository --env $environmen
 
 The environment restriction and the OIDC subject are both required: the subject names
 the environment, while the branch policy ensures that only `main` can use it.
+
+If the repository is transferred or recreated, inspect its effective prefix before applying
+the template and pass the returned `sub_claim_prefix` as `githubSubjectPrefix`:
+
+```powershell
+gh api repos/kastwey/corro/actions/oidc/customization/sub
+```
 
 ## Private package bundle
 

@@ -250,4 +250,5 @@ jobs:
 
       - name: Log out of Azure
         if: always() && steps.freshness.outputs.deploy == 'true'
-        run: az logout
+        # Login failures leave no account to log out. Cleanup must not hide the real error.
+        run: az logout || true
