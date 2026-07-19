@@ -1,0 +1,24 @@
+# Keep the Docker build context small and reproducible. Only frontend/ and server/ are COPYed by
+# server/Dockerfile; everything below is either a build output, IDE/VCS noise, or not needed in the image.
+**/node_modules
+**/bin
+**/obj
+**/dist
+server/wwwroot
+.azurite
+publish
+
+.git
+.gitignore
+.github
+.vs
+.vscode
+**/*.user
+
+# Not part of the runtime app image
+server.tests
+e2e
+docs
+sound-commons
+tools
+.claude

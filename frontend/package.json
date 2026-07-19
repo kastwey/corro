@@ -1,0 +1,34 @@
+{
+  "name": "corro-online-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Accessibility-first browser client for Corro Online",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node build.js",
+    "dev": "npm run build && node serve.js",
+    "compile": "npx tsc",
+    "watch": "node watch.js",
+    "watch:ts": "tsc --watch --preserveWatchOutput",
+    "test": "node --import tsx --test test/**/*.test.ts"
+  },
+  "keywords": [
+    "accessible",
+    "board-game",
+    "signalr"
+  ],
+  "author": "kastwey and contributors",
+  "license": "AGPL-3.0-only",
+  "devDependencies": {
+    "chokidar": "^4.0.3",
+    "jsdom": "^29.1.1",
+    "tsx": "^4.22.4",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@microsoft/signalr": "^9.0.6",
+    "i18next": "^25.5.2"
+  }
+}

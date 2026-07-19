@@ -1,0 +1,10 @@
+{
+  "packId": "default",
+  "events": {
+    "error": "error.ogg",
+    "connect": "connect.ogg",
+    "disconnect": "disconnect.ogg",
+    "message.send": "message-sent.ogg",
+    "message.receive": "message-received.ogg"
+  }
+}

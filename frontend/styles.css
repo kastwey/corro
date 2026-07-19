@@ -1,0 +1,479 @@
+/* The announcer owns this off-screen live region; it must never affect visual layout. */
+#sr-live {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* styles.css — board page visuals (consumes design tokens from theme.css).
+ * Accessibility (ARIA/labels/keyboard) lives in the TS; this is purely visual.
+ */
+
+:root {
+  /* Responsive square size: shrinks on small screens, caps on large.
+	 Floor raised so the longest names (nombres largos de casilla
+	 del Monte…) fit on up to 3 lines while still leaving room for the price. */
+  --square-size: clamp(56px, 7.5vw, 80px);
+}
+
+/* Screen-reader-only text (the board page does not load global.css, which has the lobby's
+ * copy): without this, aria-describedby helper spans render as visible stray text. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Board container ---------- */
+.board-frame {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: clamp(8px, 1.5vw, 16px);
+  box-shadow: var(--shadow-md);
+  width: max-content;
+  max-width: 100%;
+}
+
+#board {
+  display: grid;
+  grid-template-columns: repeat(11, var(--square-size));
+  grid-auto-rows: var(--square-size);
+  gap: 5px;
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto;
+  outline: none;
+}
+/* The board container holds the single real focus; show a ring for sighted
+   keyboard users when it is active (the cursor square is marked via .focused). */
+#board:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+/* ---------- Squares ---------- */
+.square {
+  position: relative;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 3px 3px;
+  overflow: hidden;
+  outline: none;
+  /* Squares are <button>s (so a touch screen reader can activate them for info);
+	 strip the native button chrome so they look like board cells. */
+  font: inherit;
+  color: var(--text);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.square:hover { border-color: var(--border-strong); }
+
+/* Presence rings (live-play request): find every token's square at a glance. MY square
+   rings in the accent; squares holding rivals get a softer neutral ring. Steady on
+   purpose — no blinking — so they read calmly and are reduced-motion-safe. */
+.square--other-here {
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 2px var(--border-strong);
+  z-index: 1;
+}
+.square--me-here {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 2px var(--accent);
+  z-index: 2;
+}
+
+/* Exploration cursor: the square the player is currently inspecting (beats the rings). */
+.square.focused {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+  z-index: 3;
+}
+
+.square .label {
+  font-size: 9.5px;
+  line-height: 1.12;
+  text-align: center;
+  color: var(--text);
+  font-weight: 600;
+  /* Force the label to the cell width so long single-word names
+	 (Guadalajara, Ponferrada…) wrap/break instead of being clipped. */
+  width: 100%;
+  /* Don't let the flex column squash the label below its wrapped height,
+	 otherwise multi-line names get clipped down to a single line. */
+  flex-shrink: 0;
+  max-height: 3.36em; /* up to 3 lines */
+  overflow: hidden;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+}
+.square .price {
+  font-size: 9px;
+  color: var(--good);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-top: 1px;
+  /* Never let a long multi-line name squeeze the price out of the cell. */
+  flex-shrink: 0;
+}
+
+/* Color band along the top edge of property squares */
+.square__band {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 9px;
+  background: var(--border-strong);
+}
+.square.has-band { padding-top: 12px; }
+
+.square__band.group-brown      { background: var(--group-brown); }
+.square__band.group-lightblue  { background: var(--group-lightblue); }
+.square__band.group-pink       { background: var(--group-pink); }
+.square__band.group-orange     { background: var(--group-orange); }
+.square__band.group-red        { background: var(--group-red); }
+.square__band.group-yellow     { background: var(--group-yellow); }
+.square__band.group-green      { background: var(--group-green); }
+.square__band.group-darkblue   { background: var(--group-darkblue); }
+
+/* Special square tints (subtle) */
+.square--corner    { background: var(--surface-3); }
+.square--railroad  { background: linear-gradient(180deg, var(--surface-2), var(--surface-3)); }
+.square--utility   { background: linear-gradient(180deg, var(--surface-2), var(--surface-3)); }
+.square--tax       { background: var(--danger-soft); }
+.square--chance,
+.square--community { background: var(--accent-soft); }
+
+/* ---------- Board center: Free Parking pot (decorative) ---------- */
+.board-center {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(6px, 1vw, 14px);
+  padding: clamp(8px, 1.5vw, 20px);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  pointer-events: none;
+  color: #2a2a28;
+  /* Classic board centre: warm ivory print, theme-independent on purpose so it
+	 reads like a real board in both light and dark app themes. */
+  background:
+	radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, 0.5), transparent 60%),
+	linear-gradient(160deg, #f7f1e4 0%, #efe6d3 55%, #e7dcc4 100%);
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  box-shadow:
+	inset 0 1px 0 rgba(255, 255, 255, 0.6),
+	inset 0 -18px 40px rgba(0, 0, 0, 0.08),
+	0 6px 18px rgba(0, 0, 0, 0.18);
+}
+
+/* The bold brand logo running across the centre diagonal, like the
+   printed board. A white outline keeps it legible over the ivory and the cash. */
+.board-center__brand {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  font-size: clamp(24px, 4.8vw, 64px);
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  color: #d4202f;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  -webkit-text-stroke: 2px #fff;
+  paint-order: stroke fill;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.18);
+}
+
+.free-parking {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(4px, 0.8vw, 10px);
+  /* A soft ivory chip floats the cash above the red logo so both stay legible. */
+  padding: clamp(6px, 1vw, 12px) clamp(10px, 1.6vw, 20px);
+  border-radius: 14px;
+  background: rgba(247, 241, 228, 0.82);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+}
+
+/* Fan of cash bills */
+.free-parking__bills {
+  position: relative;
+  width: clamp(70px, 13vw, 150px);
+  height: clamp(40px, 7vw, 78px);
+  margin-bottom: clamp(2px, 0.6vw, 8px);
+}
+.bill {
+  position: absolute;
+  left: 50%;
+  top: 12%;
+  width: clamp(40px, 7.5vw, 86px);
+  height: clamp(24px, 4.6vw, 52px);
+  margin-left: calc(clamp(40px, 7.5vw, 86px) / -2);
+  border-radius: 5px;
+  background: linear-gradient(160deg, #bdf0c8 0%, #6fd089 55%, #3fae64 100%);
+  border: 1px solid rgba(0, 0, 0, 0.28);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  transform-origin: bottom center;
+  opacity: 0.55;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+/* The "€" emblem on each bill */
+.bill::after {
+  content: "€";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: clamp(11px, 2vw, 22px);
+  color: rgba(15, 77, 48, 0.65);
+}
+.bill--a { transform: rotate(-26deg) translateY(2px); }
+.bill--b { transform: rotate(-13deg) translateY(-2px); }
+.bill--c { transform: rotate(0deg)   translateY(-4px); z-index: 2; }
+.bill--d { transform: rotate(13deg)  translateY(-2px); }
+.bill--e { transform: rotate(26deg)  translateY(2px); }
+
+.free-parking__label {
+  font-size: clamp(11px, 2.1vw, 22px);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #b32430;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.free-parking__amount {
+  font-size: clamp(15px, 3vw, 34px);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: #15603a;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* When there is money in the pot, make it pop */
+.board-center--has-pot .bill { opacity: 1; }
+.board-center--has-pot .free-parking__amount {
+  color: #157a3e;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15), 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bill { transition: none; }
+}
+
+/* ---------- Center-board toast (transient, visual-only) ----------
+   A short message that fades in over the felt for salient game moments a sighted
+   player would otherwise miss (money in/out, holding, milestones). aria-hidden: a
+   screen-reader user already hears the spoken announcement, so this never enters
+   the live region nor steals focus. Colour-coded by tone so a gain (green) or a
+   loss (red) reads at a glance. It sits above the decorative Free Parking pot. */
+.board-toast {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0.92);
+  max-width: 84%;
+  padding: clamp(8px, 1.6vw, 16px) clamp(12px, 2.4vw, 24px);
+  border-radius: var(--radius-lg);
+  background: rgba(8, 32, 20, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-left: 5px solid rgba(255, 255, 255, 0.55);
+  color: #eafff0;
+  font-size: clamp(14px, 2.4vw, 24px);
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 5;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.board-toast--show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+/* Tones: a gain is green, a loss is red, an acquisition is neutral gold. */
+.board-toast--gain {
+  background: rgba(8, 40, 22, 0.86);
+  border-color: rgba(120, 255, 170, 0.45);
+  border-left-color: #56e08a;
+  color: #d6ffe6;
+}
+.board-toast--loss {
+  background: rgba(48, 12, 14, 0.86);
+  border-color: rgba(255, 150, 150, 0.45);
+  border-left-color: #ff6b6b;
+  color: #ffe3e3;
+}
+.board-toast--neutral {
+  background: rgba(40, 32, 8, 0.86);
+  border-color: rgba(255, 226, 140, 0.45);
+  border-left-color: #f2c14e;
+  color: #fff4d6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-toast { transition: opacity 0.25s ease; transform: translate(-50%, -50%); }
+  .board-toast--show { transform: translate(-50%, -50%); }
+}
+
+/* ---------- Player tokens on the board ---------- */
+.square .tokens {
+  position: absolute;
+  top: 11px; right: 3px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  max-width: 60%;
+  justify-content: flex-end;
+}
+.player-token {
+  position: relative;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--surface), var(--shadow-sm);
+  line-height: 0;
+}
+.player-token .token-icon { width: 13px; height: 13px; }
+
+/* A held token (sent to holding, locked up until they pay / use a card / roll doubles) is
+   shown behind bars: a high-contrast danger ring plus vertical bars overlaid on the token.
+   "Just visiting" tokens are plain — being on the holding square is not the same as being in it. */
+.player-token--held {
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--danger, #c0392b);
+}
+.player-token--held::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+	90deg,
+	rgba(0, 0, 0, 0.7) 0, rgba(0, 0, 0, 0.7) 1.5px,
+	transparent 1.5px, transparent 4px
+  );
+}
+
+/* While a token walks to its destination it grows and hops from square to square,
+   making multi-step moves easy to follow at a glance. The element is re-created on
+   every step (renderPlayers), so this single-iteration animation replays once per
+   hop; on the final landing render the class is gone and the token sits naturally.
+   The raised z-index keeps the enlarged, jumping token above its neighbours. */
+.player-token--moving {
+  z-index: 5;
+  animation: token-hop 0.22s ease-in-out;
+  transform-origin: center bottom;
+}
+@keyframes token-hop {
+  0%   { transform: scale(1.3) translateY(0); }
+  45%  { transform: scale(1.55) translateY(-9px); }
+  100% { transform: scale(1.3) translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Respect a reduced-motion preference: no hop or scaling, just the plain token. */
+  .player-token--moving { animation: none; transform: none; }
+}
+
+/* Owner badge: small chip in the bottom-left corner */
+.owner-badge {
+  position: absolute;
+  bottom: 3px; left: 3px;
+  width: 16px; height: 16px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--text-faint);
+  box-shadow: 0 0 0 1.5px var(--surface);
+  z-index: 2;
+}
+
+/* Buildings: houses (green chips) / hotel (red bar) along the top edge */
+.buildings {
+  position: absolute;
+  top: 1px; left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 1.5px;
+  z-index: 4;
+  pointer-events: none;
+}
+.building {
+  width: 6px; height: 6px;
+  border-radius: 1px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+.building--small { background: var(--group-green); }
+.building--big {
+  width: 16px; height: 7px;
+  background: var(--group-red);
+}
+
+/* Mortgaged property: dim the square and add a corner marker */
+.square--mortgaged { opacity: 0.6; }
+.square--mortgaged::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.12) 0 6px, transparent 6px 12px);
+  pointer-events: none;
+}
+.mortgage-badge {
+  position: absolute;
+  bottom: 3px; right: 3px;
+  width: 16px; height: 16px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--group-red);
+  box-shadow: 0 0 0 1.5px var(--surface);
+  z-index: 4;
+}
+
+/* ---------- A11y helpers ---------- */
+.visually-hidden { position: absolute !important; height: 1px; width: 1px; overflow: hidden; clip: rect(1px, 1px, 1px, 1px); white-space: nowrap; }
+.sr-live { position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden; clip: rect(1px, 1px, 1px, 1px); white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+

@@ -1,0 +1,106 @@
+{
+  "squares": {
+    "1": "Calle 1",
+    "3": "Calle 3",
+    "4": "Impuesto 4",
+    "5": "Estación 5",
+    "6": "Calle 6",
+    "8": "Calle 8",
+    "9": "Calle 9",
+    "11": "Calle 11",
+    "12": "Servicio 12",
+    "13": "Calle 13",
+    "14": "Calle 14",
+    "15": "Estación 15",
+    "16": "Calle 16",
+    "18": "Calle 18",
+    "19": "Calle 19",
+    "21": "Calle 21",
+    "23": "Calle 23",
+    "24": "Calle 24",
+    "25": "Estación 25",
+    "26": "Calle 26",
+    "27": "Calle 27",
+    "28": "Servicio 28",
+    "29": "Calle 29",
+    "31": "Calle 31",
+    "32": "Calle 32",
+    "34": "Calle 34",
+    "35": "Estación 35",
+    "37": "Calle 37",
+    "38": "Impuesto 38",
+    "39": "Calle 39"
+  },
+  "cards": {
+    "chance_advance_go": "Avanza hasta la Salida y cobra.",
+    "chance_advance_11": "Avanza hasta la casilla 11. Cobra al pasar por la Salida.",
+    "chance_advance_24": "Avanza hasta la casilla 24. Cobra al pasar por la Salida.",
+    "chance_advance_39": "Avanza hasta la casilla 39.",
+    "chance_nearest_railway": "Avanza hasta la estación más cercana. Si tiene dueño, paga el doble.",
+    "chance_nearest_utility": "Avanza hasta el servicio más cercano. Si tiene dueño, paga 10 veces los dados.",
+    "chance_bank_dividend": "El banco te paga 50 €.",
+    "chance_release_pass": "Pase de liberación. Guarda esta carta hasta que la necesites.",
+    "chance_go_back_3": "Retrocede tres casillas.",
+    "chance_send_to_holding": "Ve a la zona de retención. No cobres al pasar por la Salida.",
+    "chance_general_repairs": "Reparaciones: paga 25 € por casa y 100 € por hotel.",
+    "chance_poor_tax": "Paga 15 €.",
+    "chance_chairman": "Paga 50 € a cada jugador.",
+    "chance_building_loan": "Cobra 150 €.",
+    "chance_crossword": "Cobra 100 €.",
+    "community_advance_go": "Avanza hasta la Salida y cobra.",
+    "community_bank_error": "Cobra 200 €.",
+    "community_doctor_fee": "Paga 50 €.",
+    "community_stock_sale": "Cobra 50 €.",
+    "community_release_pass": "Pase de liberación. Guarda esta carta hasta que la necesites.",
+    "community_send_to_holding": "Ve a la zona de retención. No cobres al pasar por la Salida.",
+    "community_holiday_fund": "Cobra 100 €.",
+    "community_tax_refund": "Cobra 20 €.",
+    "community_birthday": "Cobra 10 € de cada jugador.",
+    "community_life_insurance": "Cobra 100 €.",
+    "community_hospital": "Paga 100 €.",
+    "community_school": "Paga 50 €.",
+    "community_consultancy": "Cobra 25 €.",
+    "community_street_repairs": "Obras: paga 40 € por casa y 115 € por hotel.",
+    "community_beauty": "Cobra 10 €.",
+    "community_inherit": "Cobra 100 €."
+  },
+  "currency": {
+    "name": "euros"
+  },
+  "terminology": {
+    "start": "Salida",
+    "holding": "Retención / Visita",
+    "freeparking": "Parking Gratis",
+    "sendtoholding": "Ir a Retención"
+  },
+  "building": {
+    "small": "casa",
+    "smallPlural": "casas",
+    "big": "hotel"
+  },
+  "groupMember": {
+    "default": "calle",
+    "transit": "estación",
+    "utility": "compañía"
+  },
+  "groupMemberPlural": {
+    "default": "calles",
+    "transit": "estaciones",
+    "utility": "compañías"
+  },
+  "groupMemberGender": {
+    "default": "f",
+    "transit": "f",
+    "utility": "f"
+  },
+  "tokens": {
+    "disc": "Disco",
+    "square": "Cuadrado",
+    "triangle": "Triángulo",
+    "star": "Estrella",
+    "diamond": "Rombo",
+    "ring": "Anillo",
+    "heart": "Corazón",
+    "cross": "Cruz"
+  }
+}

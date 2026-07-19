@@ -1,0 +1,126 @@
+/* assembly-board.css — the assembly family's surface: the aria-hidden rack
+ * echoes for sighted players + the hand mount. Same design language as the journey board:
+ * theme tokens for chrome, light card-table feel, seat colours on the edges. */
+
+#board.assembly-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  outline: none;
+}
+
+/* The hand keeps its list semantics but lays out as a wrapping row of cards, exactly
+ * like the journey hand (the .hand-card base look is shared). */
+.assembly-hand .hand-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+
+.assembly-visual { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1rem; }
+
+.assembly-racks { display: flex; flex-direction: column; gap: 0.5rem; }
+
+/* One player's workshop: their name, their module slots, progress and hand size. */
+.assembly-rack {
+  --seat-color: #888;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.45rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 6px solid var(--seat-color);
+}
+.assembly-rack__name { font-weight: 700; min-width: 7rem; }
+.assembly-rack__slots { display: flex; flex-wrap: wrap; gap: 0.5rem; flex: 1; align-items: stretch; }
+.assembly-rack__empty { color: var(--text-faint); }
+.assembly-rack__progress {
+  font-weight: 800;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.assembly-rack__cards { color: var(--text-muted); white-space: nowrap; }
+
+/* One installed system: a MODULE card, tinted and bordered in its system colour, with its name
+ * and (when not healthy) a state tag. The state colour overrides the border so the condition
+ * reads at a glance: red = broken, blue = shielded, gold = immunized. */
+.assembly-module {
+  --slot-color: #9e9e9e;
+  position: relative;
+  width: 6rem;
+  min-height: 3.4rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.3rem 0.4rem;
+  text-align: center;
+  border-radius: 0.55rem;
+  overflow: hidden; /* clip the affliction hazard stripes to the rounded corners */
+  background: color-mix(in srgb, var(--slot-color) 20%, var(--surface));
+  border: 2px solid var(--slot-color); /* the system colour is ALWAYS the border (its identity) */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+/* Text sits above the affliction overlay. */
+.assembly-module__name { position: relative; z-index: 1; font-weight: 700; font-size: 0.85rem; line-height: 1.05; color: var(--text); }
+.assembly-module__tag { position: relative; z-index: 1; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+
+/* States are layered ON TOP of the system colour (hue-independent, so a red-system module never
+ * reads as "broken" just for being red): broken = red hazard stripes, shielded = blue ring,
+ * immunized = gold frame + glow. */
+.assembly-module--afflicted::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: repeating-linear-gradient(45deg, rgba(198, 40, 40, 0.32) 0 6px, transparent 6px 12px);
+  pointer-events: none;
+}
+.assembly-module--afflicted .assembly-module__tag { color: #c62828; }
+/* A white separator ring sits between the system-colour border and the state ring, so the state
+ * reads clearly even when its colour matches the system's (blue shield on a blue system, etc.). */
+.assembly-module--shielded { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #1565c0, 0 1px 3px rgba(0, 0, 0, 0.25); }
+.assembly-module--shielded .assembly-module__tag { color: #1565c0; }
+.assembly-module--locked {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 5px #c99700, 0 0 10px rgba(201, 151, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+.assembly-module--locked .assembly-module__tag { color: #8a6d00; }
+
+/* An empty bay: a dashed placeholder, so progress toward the goal (assemble N systems) shows. */
+.assembly-bay {
+  width: 6rem;
+  min-height: 3.4rem;
+  box-sizing: border-box;
+  border: 2px dashed var(--border);
+  border-radius: 0.55rem;
+  opacity: 0.6;
+}
+
+/* A retired seat stays on the board as history: dimmed, no counters. */
+.assembly-rack--retired { opacity: 0.55; }
+
+/* A rack whose afflictions just grew takes a visible hit (journey's shake language). */
+.assembly-rack--hit { animation: assembly-shake 0.6s; }
+@keyframes assembly-shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-3px); }
+  40%, 60% { transform: translateX(3px); }
+}
+
+.assembly-hand { margin-top: 0.5rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .assembly-rack--hit { animation: none; }
+}

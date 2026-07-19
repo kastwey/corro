@@ -1,0 +1,36 @@
+{
+  "format": "corro/v1",
+  "gameType": "track",
+  "engineVersion": "^1.0",
+  "id": "hidden",
+  "name": {
+    "es": "Hidden (prueba E2E)",
+    "en": "Hidden (E2E test)"
+  },
+  "author": "Corro E2E",
+  "version": "0.1.0",
+  "locales": [
+    "es",
+    "en"
+  ],
+  "players": {
+    "min": 2,
+    "max": 2
+  },
+  "trackRules": {
+    "exactFinish": "bounce",
+    "rollAgainOnMax": false
+  },
+  "tokens": [
+    {
+      "id": "circle",
+      "nameKey": "tokens.circle"
+    },
+    {
+      "id": "triangle",
+      "nameKey": "tokens.triangle"
+    }
+  ],
+  "unlockCode": "e2e-hidden",
+  "warning": "notice.hidden"
+}

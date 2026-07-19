@@ -1,0 +1,121 @@
+/* race-board.css — the race (parcheesi-style) board: a circuit ring around per-seat zones. */
+
+.race-board {
+	display: grid;
+	grid-template-columns: repeat(var(--race-cols), minmax(0, 1fr));
+	grid-template-rows: repeat(var(--race-rows), minmax(0, 1fr));
+	gap: 2px;
+	width: min(92vmin, 900px);
+	aspect-ratio: 1;
+	margin: 0 auto;
+	padding: 6px;
+	background: var(--surface-2);
+	border-radius: 12px;
+}
+
+.race-cell {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 2px;
+	background: var(--surface);
+	border: 1px solid var(--surface-3);
+	border-radius: 4px;
+	min-width: 0;
+	min-height: 0;
+}
+
+/* Safe squares carry a subtle diamond so sighted players spot them at a glance. */
+.race-cell--safe::before {
+	content: '◆';
+	position: absolute;
+	font-size: 0.55rem;
+	color: var(--text-muted);
+	top: 1px;
+	right: 2px;
+}
+
+/* A seat's start square wears its seat colour as a band. */
+.race-cell--start {
+	box-shadow: inset 0 0 0 2px var(--seat-color, transparent);
+}
+
+.race-cell.focused {
+	outline: 3px solid var(--accent);
+	outline-offset: 1px;
+	z-index: 1;
+}
+
+/* Direct manipulation: highlight valid move destinations. color-mix, not
+   rgba(var(--accent-rgb…)): that rgba() syntax was invalid, so the whole box-shadow
+   computed to none and non-focused destinations lost their ring (same fix as the
+	other destination-selection surfaces). */
+.race-cell--highlight {
+	background: color-mix(in srgb, var(--accent) 20%, var(--surface)) !important;
+	box-shadow: inset 0 0 0 2px var(--accent), 0 0 8px color-mix(in srgb, var(--accent) 40%, transparent);
+	cursor: pointer;
+	transition: all 150ms ease-out;
+}
+
+.race-cell--highlight:hover {
+	background: color-mix(in srgb, var(--accent) 30%, var(--surface)) !important;
+	box-shadow: inset 0 0 0 2px var(--accent), 0 0 12px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+/* The ring's hollow centre hosts one zone strip per seat: home → corridor → goal. */
+.race-center {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-evenly;
+	gap: 4px;
+	padding: 4%;
+}
+
+.race-zone {
+	display: flex;
+	align-items: stretch;
+	gap: 3px;
+	min-height: 0;
+	flex: 0 1 18%;
+}
+
+.race-zone .race-cell {
+	flex: 1;
+	border-color: var(--seat-color);
+}
+
+.race-zone__home,
+.race-zone__goal {
+	flex: 1.6 !important;
+	background: color-mix(in srgb, var(--seat-color) 18%, var(--surface));
+	font-weight: 700;
+}
+
+/* Pieces are seat-coloured token beads (white ring + a soft top highlight, like the other
+   families' chips); a barrier — two of a seat's pieces walling a square — gets a gold ring. */
+.race-piece {
+	width: 38%;
+	aspect-ratio: 1;
+	max-width: 18px;
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, 0.9);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45), inset 0 2px 2px rgba(255, 255, 255, 0.35);
+}
+
+.race-piece--barrier {
+	box-shadow: 0 0 0 2px #d4a017, 0 1px 3px rgba(0, 0, 0, 0.45), inset 0 2px 2px rgba(255, 255, 255, 0.35);
+}
+
+.race-count {
+	font-size: 0.8rem;
+	font-weight: 700;
+	color: var(--text);
+}
+
+/* The destination whose dialog option holds focus: a stronger ring than its siblings, so
+   focus in the dialog and the board tell the same story. */
+.race-cell--highlight-focus {
+	box-shadow: 0 0 0 3px var(--accent), 0 0 14px var(--accent);
+	z-index: 1;
+}

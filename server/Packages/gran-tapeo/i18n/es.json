@@ -1,0 +1,42 @@
+{
+  "game": {
+    "draft_picked": "{{player}} ya ha pedido",
+    "draft_picked_self": "Pides $t({{card}}). Esperando al resto de la mesa.",
+    "draft_repicked_self": "Cambias tu petición a $t({{card}}).",
+    "draft_picked_two_self": "Pides $t({{card}}) y $t({{card2}}). Esperando al resto de la mesa.",
+    "draft_repicked_two_self": "Cambias tu petición a $t({{card}}) y $t({{card2}}).",
+    "draft_extra_returned": "{{player}} gasta sus $t({{extra}}): vuelven a la bandeja que pasa",
+    "draft_extra_returned_self": "Gastas tus $t({{extra}}): vuelven a la bandeja que pasas",
+    "draft_all_picked": "¡Toda la mesa ha pedido!",
+    "draft_revealed": "{{player}} se sirve $t({{card}})",
+    "draft_revealed_self": "Te sirves $t({{card}})",
+    "draft_revealed_boosted": "{{player}} se sirve $t({{card}}) con su $t({{multiplier}}) (por {{factor}})",
+    "draft_revealed_boosted_self": "Te sirves $t({{card}}) con tu $t({{multiplier}}) (por {{factor}})",
+    "draft_hands_passed": "Gira la cinta de bandejas: {{count}} tapas en cada una.",
+    "draft_dessert_bonus": "{{player}} suma {{points}} por acumular más postres ({{count}}): {{total}} en total",
+    "draft_dessert_bonus_self": "Sumas {{points}} por acumular más postres ({{count}}): {{total}} en total",
+    "draft_dessert_penalty": "{{player}} pierde {{points}} por quedarse con menos postres ({{count}}): {{total}} en total",
+    "draft_dessert_penalty_self": "Pierdes {{points}} por quedarte con menos postres ({{count}}): {{total}} en total"
+  },
+  "tokens": {
+    "palillo": "Palillo",
+    "tenedor": "Tenedor",
+    "servilleta": "Servilleta",
+    "copa": "Copa de vino",
+    "aceituna": "Aceituna"
+  },
+  "cards": {
+    "banderilla": "Banderilla",
+    "tortilla": "Pincho de tortilla",
+    "gamba": "Pincho de gamba",
+    "salsa_brava": "Salsa brava",
+    "pinzas": "Pinzas de servir",
+    "croqueta": "Croqueta",
+    "montadito": "Montadito",
+    "aceitunas": "Cuenco de aceitunas",
+    "racion_1": "Bandeja de tapas sencilla",
+    "racion_2": "Bandeja de tapas doble",
+    "racion_3": "Bandeja de tapas triple",
+    "flan": "Flan casero"
+  }
+}

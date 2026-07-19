@@ -1,0 +1,109 @@
+/* tokens.css - Estilos para la selección de tokens */
+
+.token-fieldset {
+	border: 2px solid var(--border);
+	border-radius: var(--radius-sm);
+	padding: 1rem;
+	margin: 1rem 0;
+}
+
+.token-fieldset legend {
+	font-weight: 500;
+	color: var(--text);
+	padding: 0 0.5rem;
+}
+
+.token-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 0.5rem;
+}
+
+.token-item {
+	position: relative;
+}
+
+.token-radio {
+	position: absolute;
+	opacity: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	cursor: pointer;
+}
+
+.token-label {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 1rem 0.5rem;
+	border: 2px solid var(--border);
+	border-radius: var(--radius-sm);
+	text-align: center;
+	cursor: pointer;
+	transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+	background: var(--surface);
+	color: var(--text);
+	min-height: 80px;
+	gap: 0.25rem;
+}
+
+.token-emoji {
+	font-size: 1.5rem;
+	line-height: 1;
+}
+
+/* Inline SVG token icon (decorative). Inherits color via currentColor. */
+.token-icon {
+	width: 1.5rem;
+	height: 1.5rem;
+	display: inline-block;
+	vertical-align: middle;
+	flex: 0 0 auto;
+}
+
+.token-name {
+	font-size: 0.75rem;
+	font-weight: 500;
+	line-height: 1.2;
+}
+
+/* The radio is a visually-hidden overlay nested INSIDE its label, so state styles must target
+   the label that contains it. The old `.token-radio + .token-label` sibling selectors never
+   matched this structure — which is why the selected token was not highlighted. */
+.token-label:not(.disabled):hover {
+	border-color: var(--accent);
+	transform: translateY(-2px);
+}
+
+.token-label:has(.token-radio:checked) {
+	background: var(--accent-grad);
+	color: var(--on-accent);
+	border-color: transparent;
+	box-shadow: var(--shadow-glow);
+}
+
+.token-label.disabled {
+	background: var(--surface-3);
+	color: var(--text-faint);
+	cursor: not-allowed;
+	opacity: 0.6;
+}
+
+.token-label:focus-within {
+	outline: none;
+	box-shadow: var(--focus-ring);
+}
+
+/* Race seat picker: the swatch shows the squadron colour; identity stays in the text. */
+.seat-swatch {
+	width: 1.5rem;
+	height: 1.5rem;
+	border-radius: 50%;
+	border: 2px solid var(--border);
+	flex: 0 0 auto;
+}

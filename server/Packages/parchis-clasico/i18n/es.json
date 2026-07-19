@@ -1,0 +1,14 @@
+{
+  "seats": {
+    "rojo": "Rojas",
+    "azul": "Azules",
+    "amarillo": "Amarillas",
+    "verde": "Verdes"
+  },
+  "tokens": {
+    "ficha": "Ficha",
+    "caballo": "Caballo",
+    "dado": "Dado",
+    "cubilete": "Cubilete"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "format": "corro/v1",
+  "gameType": "race",
+  "engineVersion": "^1.0",
+  "id": "parchis-clasico",
+  "name": {
+    "es": "Parchís clásico",
+    "en": "Parchís (classic Pachisi)"
+  },
+  "author": "kastwey",
+  "version": "0.1.0",
+  "locales": ["es", "en"],
+  "players": { "min": 2, "max": 4 },
+  "raceRules": {
+    "exitOn": 5,
+    "extraRollOn": 6,
+    "threeSixesPenalty": true,
+    "captureBonus": 20,
+    "goalBonus": 10,
+    "sixWorthSevenWhenNoneHome": true,
+    "barriers": true
+  },
+  "tokens": [
+    { "id": "ficha", "nameKey": "tokens.ficha" },
+    { "id": "caballo", "nameKey": "tokens.caballo" },
+    { "id": "dado", "nameKey": "tokens.dado" },
+    { "id": "cubilete", "nameKey": "tokens.cubilete" }
+  ]
+}

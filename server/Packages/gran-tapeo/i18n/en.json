@@ -1,0 +1,42 @@
+{
+  "game": {
+    "draft_picked": "{{player}} has ordered",
+    "draft_picked_self": "You order $t({{card}}). Waiting for the rest of the table.",
+    "draft_repicked_self": "You change your order to $t({{card}}).",
+    "draft_picked_two_self": "You order $t({{card}}) and $t({{card2}}). Waiting for the rest of the table.",
+    "draft_repicked_two_self": "You change your order to $t({{card}}) and $t({{card2}}).",
+    "draft_extra_returned": "{{player}} spends their $t({{extra}}): they rejoin the passing tray",
+    "draft_extra_returned_self": "You spend your $t({{extra}}): they rejoin the tray you pass",
+    "draft_all_picked": "The whole table has ordered!",
+    "draft_revealed": "{{player}} helps themselves to $t({{card}})",
+    "draft_revealed_self": "You help yourself to $t({{card}})",
+    "draft_revealed_boosted": "{{player}} helps themselves to $t({{card}}) with their $t({{multiplier}}) (times {{factor}})",
+    "draft_revealed_boosted_self": "You help yourself to $t({{card}}) with your $t({{multiplier}}) (times {{factor}})",
+    "draft_hands_passed": "The tray belt turns: {{count}} tapas on each.",
+    "draft_dessert_bonus": "{{player}} gains {{points}} for hoarding the most desserts ({{count}}): {{total}} overall",
+    "draft_dessert_bonus_self": "You gain {{points}} for hoarding the most desserts ({{count}}): {{total}} overall",
+    "draft_dessert_penalty": "{{player}} loses {{points}} for ending with the fewest desserts ({{count}}): {{total}} overall",
+    "draft_dessert_penalty_self": "You lose {{points}} for ending with the fewest desserts ({{count}}): {{total}} overall"
+  },
+  "tokens": {
+    "palillo": "Cocktail stick",
+    "tenedor": "Fork",
+    "servilleta": "Napkin",
+    "copa": "Wine glass",
+    "aceituna": "Olive"
+  },
+  "cards": {
+    "banderilla": "Olive skewer",
+    "tortilla": "Potato omelette bite",
+    "gamba": "Garlic prawn skewer",
+    "salsa_brava": "Brava sauce",
+    "pinzas": "Serving tongs",
+    "croqueta": "Croquette",
+    "montadito": "Montadito",
+    "aceitunas": "Bowl of olives",
+    "racion_1": "Single tapas tray",
+    "racion_2": "Double tapas tray",
+    "racion_3": "Triple tapas tray",
+    "flan": "Homemade flan"
+  }
+}

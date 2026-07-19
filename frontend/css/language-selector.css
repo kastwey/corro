@@ -1,0 +1,109 @@
+/* language-selector.css - Estilos para el selector de idioma */
+
+.language-selector {
+	position: absolute;
+	top: 20px;
+	right: 20px;
+	z-index: 1000;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 8px;
+	background: var(--surface-elevated);
+	border: 1px solid var(--border);
+	padding: 12px;
+	border-radius: var(--radius);
+	box-shadow: var(--shadow-md);
+	backdrop-filter: blur(8px);
+}
+
+.language-selector label {
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--text-muted);
+	margin-bottom: 0;
+	text-align: right;
+}
+
+.language-controls {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.language-selector select {
+	padding: 8px 12px;
+	border: 2px solid var(--accent);
+	border-radius: var(--radius-sm);
+	background: var(--surface);
+	color: var(--text);
+	font-size: 14px;
+	cursor: pointer;
+	outline: none;
+	transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+	min-width: 100px;
+	width: auto;
+}
+
+.language-selector select:hover {
+	border-color: var(--accent-2);
+}
+
+.language-selector select:focus {
+	border-color: var(--accent);
+	box-shadow: var(--focus-ring);
+}
+
+.language-apply-btn {
+	width: auto;
+	padding: 8px 12px;
+	border: none;
+	border-radius: var(--radius-sm);
+	background: var(--accent-grad);
+	color: var(--on-accent);
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	outline: none;
+	box-shadow: none;
+	transition: transform 0.08s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.language-apply-btn:hover {
+	transform: translateY(-1px);
+}
+
+.language-apply-btn:focus-visible {
+	box-shadow: var(--focus-ring);
+}
+
+/* Theme toggle sized to match the compact language controls. */
+.language-controls .icon-btn {
+	width: 38px;
+	height: 38px;
+	padding: 0;
+	flex: 0 0 auto;
+}
+
+.language-controls .icon-btn svg {
+	width: 18px;
+	height: 18px;
+}
+
+/*
+ * On narrow screens the card fills almost the whole width, so the absolutely-positioned
+ * selector (pinned top-right, out of flow) overlaps the lobby heading and the games list
+ * beneath it. Return it to normal flow so the rest of the page flows below it instead.
+ */
+@media (max-width: 600px) {
+	.language-selector {
+		position: static;
+		margin-bottom: 1rem;
+		align-items: stretch;
+		backdrop-filter: none;
+	}
+
+	.language-selector label {
+		text-align: left;
+	}
+}

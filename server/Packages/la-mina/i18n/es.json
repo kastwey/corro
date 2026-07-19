@@ -1,0 +1,41 @@
+{
+  "tokens": {
+    "casco": "Casco",
+    "pico": "Pico",
+    "vagoneta": "Vagoneta",
+    "farol": "Farol",
+    "pala": "Pala"
+  },
+  "cards": {
+    "grisu": "Grisú",
+    "cortar_mecha": "Cortar la mecha",
+    "salir_pozo": "Salir del pozo",
+    "derrumbe": "Derrumbe",
+    "canario": "El canario",
+    "revuelto": "Revuelto de galería",
+    "pico_prestado": "Pico prestado",
+    "ni_hablar": "¡Ni hablar!",
+    "rata": "Rata de mina",
+    "murcielago": "Murciélago",
+    "topo": "Topo",
+    "lombriz": "Lombriz",
+    "escarabajo": "Escarabajo pelotero"
+  },
+  "game": {
+    "exploding_game_started": "Repartidas {{count}} cartas. Hay {{bombs}} bolsas de grisú escondidas en la galería.",
+    "exploding_exploded": "¡Estalla el grisú! {{player}} queda sepultado y sale de la mina.",
+    "exploding_exploded_self": "¡Estalla el grisú y quedas sepultado! Fuera de la mina.",
+    "exploding_drew_bomb_defused": "{{player}} destapa grisú, pero corta la mecha a tiempo.",
+    "exploding_drew_bomb_defused_self": "Destapas grisú, pero cortas la mecha a tiempo.",
+    "exploding_tucked_self": "Escondes el grisú de vuelta en la galería, a {{depth}} cartas de la boca.",
+    "exploding_skipped": "{{player}} sale del pozo sin picar.",
+    "exploding_skipped_self": "Sales del pozo sin picar.",
+    "exploding_attacked": "{{player}} provoca un derrumbe: el siguiente pica de más.",
+    "exploding_attacked_self": "Provocas un derrumbe: el siguiente pica de más.",
+    "exploding_shuffled": "{{player}} revuelve la galería.",
+    "exploding_shuffled_self": "Revuelves la galería.",
+    "exploding_saw_future": "{{player}} suelta al canario y observa las próximas vetas.",
+    "exploding_noped": "{{player}} responde «¡ni hablar!».",
+    "exploding_noped_self": "Respondes «¡ni hablar!»."
+  }
+}

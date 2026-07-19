@@ -1,0 +1,762 @@
+/* modal.css - Estilos para modales */
+
+/* Overlay del modal */
+.modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+	backdrop-filter: blur(2px);
+}
+
+/* Contenido del modal */
+.modal-content {
+	background: white;
+	border-radius: 12px;
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+	max-width: 480px;
+	width: 90%;
+	max-height: 90vh;
+	overflow-y: auto;
+	position: relative;
+	animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+	from {
+		opacity: 0;
+		transform: translateY(-20px) scale(0.95);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+/* Header del modal */
+.modal-header {
+	padding: 24px 24px 0 24px;
+	border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h2 {
+	margin: 0 0 16px 0;
+	font-size: 1.5rem;
+	color: #1f2937;
+	font-weight: 600;
+}
+
+/* Cuerpo del modal */
+.modal-body {
+	padding: 24px;
+}
+
+.modal-body p {
+	margin: 0 0 20px 0;
+	color: #4b5563;
+	line-height: 1.6;
+}
+
+/* Información del juego en el modal de reconexión */
+.reconnect-game-info {
+	background: #f9fafb;
+	border: 1px solid #e5e7eb;
+	border-radius: 8px;
+	padding: 16px;
+	margin-top: 16px;
+}
+
+.reconnect-game-info dt {
+	color: #6b7280;
+	font-size: 0.9rem;
+	margin-bottom: 4px;
+	font-weight: 500;
+}
+
+.reconnect-game-info dd {
+	color: #1f2937;
+	font-weight: 600;
+	margin: 0 0 12px 0;
+}
+
+.reconnect-game-info dd:last-child {
+	margin-bottom: 0;
+}
+
+#reconnect-player-token {
+	font-size: 1.2rem;
+}
+
+/* Mantener compatibilidad con estructura anterior */
+.game-detail {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 8px;
+}
+
+.game-detail:last-child {
+	margin-bottom: 0;
+}
+
+.game-detail span:first-child {
+	color: #6b7280;
+	font-size: 0.9rem;
+}
+
+.game-detail strong {
+	color: #1f2937;
+	font-weight: 600;
+}
+
+/* Footer del modal */
+.modal-footer {
+	padding: 0 24px 24px 24px;
+	display: flex;
+	gap: 12px;
+	justify-content: flex-end;
+}
+
+.modal-footer button {
+	padding: 10px 20px;
+	border-radius: 6px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	border: none;
+	font-size: 0.9rem;
+}
+
+.primary-button {
+	background: var(--accent);
+	color: var(--on-accent);
+}
+
+.primary-button:hover {
+	background: var(--accent-hover);
+	transform: translateY(-1px);
+}
+
+.secondary-button {
+	background: #f3f4f6;
+	color: #374151;
+	border: 1px solid #d1d5db;
+}
+
+.secondary-button:hover {
+	background: #e5e7eb;
+	transform: translateY(-1px);
+}
+
+/* Estados de focus para accesibilidad */
+.modal-content:focus {
+	outline: none;
+}
+
+.modal-footer button:focus {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+	.modal-content {
+		width: 95%;
+		margin: 20px;
+	}
+
+	.modal-header,
+	.modal-body,
+	.modal-footer {
+		padding-left: 16px;
+		padding-right: 16px;
+	}
+
+	.modal-footer {
+		flex-direction: column;
+	}
+
+	.modal-footer button {
+		width: 100%;
+	}
+
+	.game-detail {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 4px;
+	}
+
+	.reconnect-game-info dt {
+		margin-bottom: 2px;
+	}
+
+	.reconnect-game-info dd {
+		margin-bottom: 8px;
+	}
+}
+
+/* Animación de salida */
+.modal-overlay.closing {
+	animation: modalFadeOut 0.2s ease-in forwards;
+}
+
+.modal-overlay.closing .modal-content {
+	animation: modalSlideOut 0.2s ease-in forwards;
+}
+
+@keyframes modalFadeOut {
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
+}
+
+@keyframes modalSlideOut {
+	from {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+	to {
+		opacity: 0;
+		transform: translateY(-20px) scale(0.95);
+	}
+}
+
+/* ==========================================
+   DIALOG MANAGER - Sistema unificado de diálogos
+   ========================================== */
+
+.game-dialog {
+	border: none;
+	border-radius: 12px;
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+	background: var(--surface);
+	color: var(--text);
+	padding: 0;
+	min-width: 320px;
+	max-width: 90%;
+	max-height: 90vh;
+	overflow: hidden;
+	animation: dialogSlideUp 0.3s ease-out;
+}
+
+.game-dialog::backdrop {
+	background: rgba(0, 0, 0, 0.5);
+	backdrop-filter: blur(2px);
+}
+
+/* A NON-modal dialog (the race piece choice) must not hide the board it asks about:
+   it docks at the bottom-right corner instead of centering over the page, and the
+   player can move freely between it and the board (F6 / Ctrl+D). */
+.game-dialog[data-modal="false"][open] {
+	position: fixed;
+	inset: auto 16px 16px auto;
+	margin: 0;
+	z-index: 1000;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+/* Floating dialog: a minimize toggle in the top-right corner. Collapsed, only the title bar
+   shows, so the whole board is visible — the destination options stay clickable on it. */
+.dialog-minimize {
+	position: absolute;
+	top: 6px;
+	right: 8px;
+	width: 26px;
+	height: 26px;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	border: none;
+	border-radius: 6px;
+	background: transparent;
+	color: inherit;
+	font-size: 20px;
+	line-height: 1;
+	cursor: pointer;
+	z-index: 1;
+}
+
+.game-dialog[data-modal="false"] .dialog-minimize {
+	display: inline-flex;
+}
+
+.game-dialog[data-modal="false"] .dialog-title {
+	padding-right: 34px; /* clear of the minimize button */
+}
+
+.dialog-minimize:hover {
+	background: rgba(127, 127, 127, 0.18);
+}
+
+.game-dialog.dialog--minimized {
+	min-width: 0; /* shrink to the title bar */
+}
+
+.game-dialog.dialog--minimized .dialog-content,
+.game-dialog.dialog--minimized .dialog-buttons {
+	display: none;
+}
+
+@keyframes dialogSlideUp {
+	from {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.game-dialog .dialog-title {
+	margin: 0;
+	padding: 20px 24px 0;
+	font-size: 1.4rem;
+	color: var(--text);
+	font-weight: 600;
+}
+
+.game-dialog .dialog-content {
+	padding: 16px 24px 20px;
+	color: var(--text-muted);
+	line-height: 1.6;
+}
+
+.game-dialog .dialog-content p {
+	margin: 0 0 12px;
+}
+
+.game-dialog .dialog-content p:last-child {
+	margin-bottom: 0;
+}
+
+/* The judge dialog leads with the QUESTION — make it read as the heading of the card so a
+   sighted judge sees "what was asked" first, above the answer given and the correct one. */
+.game-dialog .dialog-content p.trivia-judge-question {
+	font-size: 1.05em;
+	color: var(--text);
+	margin-bottom: 16px;
+}
+
+.game-dialog .dialog-buttons {
+	display: flex;
+	gap: 10px;
+	padding: 0 24px 20px;
+}
+
+.game-dialog .dialog-buttons .btn {
+	flex: 1;
+	padding: 12px 20px;
+	font-size: 1rem;
+	border-radius: 8px;
+	cursor: pointer;
+	border: none;
+	font-weight: 600;
+	transition: background-color 0.2s;
+}
+
+.game-dialog .dialog-buttons .btn-primary {
+	background: var(--good);
+	color: var(--on-good);
+}
+
+.game-dialog .dialog-buttons .btn-primary:hover:not([aria-disabled="true"]) {
+	background: var(--good-hover);
+}
+
+.game-dialog .dialog-buttons .btn-primary[aria-disabled="true"] {
+	background: var(--surface-3);
+	color: var(--text-muted);
+	border: 1px solid var(--border-strong);
+	cursor: not-allowed;
+}
+
+.game-dialog .dialog-buttons .btn-secondary {
+	background: var(--surface-3);
+	color: var(--text);
+	border: 1px solid var(--border-strong);
+}
+
+.game-dialog .dialog-buttons .btn-secondary:hover {
+	background: var(--border-strong);
+}
+
+.game-dialog .dialog-buttons .btn-danger {
+	background: var(--danger);
+	color: var(--on-danger);
+}
+
+.game-dialog .dialog-buttons .btn-danger:hover:not([aria-disabled="true"]) {
+	background: var(--danger-hover);
+}
+
+/* Variante: compra de propiedad */
+.game-dialog.dialog-purchase .dialog-property-info {
+	font-size: 1.1rem;
+	font-weight: 500;
+	color: var(--text);
+}
+
+.game-dialog.dialog-purchase .dialog-group-status {
+	margin-top: 12px;
+	padding: 12px;
+	background: var(--accent-soft);
+	border: 1px solid var(--accent);
+	border-radius: 8px;
+	font-size: 0.95rem;
+	color: var(--text);
+	line-height: 1.5;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+	.game-dialog {
+		min-width: 90%;
+	}
+
+	.game-dialog .dialog-buttons {
+		flex-direction: column;
+	}
+}
+
+/* ==========================================
+   AUCTION DIALOG (native <dialog>, accessible modal)
+   ========================================== */
+
+.game-dialog.auction-dialog {
+	min-width: 360px;
+	max-width: 460px;
+}
+
+.auction-dialog-content {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.auction-dialog-desc {
+	margin: 0;
+	font-size: 1rem;
+	color: var(--text);
+	line-height: 1.5;
+}
+
+.auction-dialog-stats {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.auction-dlg-stat {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 8px;
+	padding: 10px 12px;
+	background: var(--surface-2);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+}
+
+.auction-dlg-stat-label {
+	font-weight: 500;
+	color: var(--text-muted);
+}
+
+.auction-dlg-bid {
+	font-size: 1.3rem;
+	font-weight: 700;
+	color: var(--good);
+}
+
+.auction-dlg-bidder {
+	color: var(--good);
+	font-size: 0.95rem;
+	font-weight: 600;
+}
+
+.auction-dlg-money {
+	font-weight: 600;
+	color: var(--accent);
+}
+
+.auction-dlg-timer {
+	justify-content: center;
+	background: var(--danger-soft);
+	border-color: var(--danger);
+}
+
+.auction-dlg-timer-value {
+	font-size: 1.8rem;
+	font-weight: 700;
+	color: var(--danger);
+}
+
+.auction-dlg-input-row {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.auction-dlg-input-row label {
+	font-weight: 500;
+	color: var(--text);
+}
+
+.auction-dlg-input {
+	padding: 12px;
+	font-size: 1.2rem;
+	color: var(--text);
+	background: var(--surface);
+	border: 2px solid var(--border-strong);
+	border-radius: 6px;
+	text-align: center;
+	font-weight: 600;
+}
+
+.auction-dlg-input:focus {
+	border-color: var(--accent);
+	outline: none;
+	box-shadow: var(--focus-ring);
+}
+
+.auction-dlg-input[aria-disabled="true"] {
+	background: var(--surface-3);
+	color: var(--text-muted);
+	cursor: not-allowed;
+}
+
+.auction-bid-hint {
+	margin: 0;
+	font-size: 0.85rem;
+	color: var(--danger);
+}
+
+/* ==========================================
+   UNLOCK DIALOG - Código de desbloqueo
+   ========================================== */
+
+.dialog-unlock-input {
+	width: 100%;
+	padding: 12px;
+	font-size: 1.1rem;
+	border: 2px solid #d1d5db;
+	border-radius: 6px;
+}
+
+.dialog-unlock-input:focus {
+	border-color: #3b82f6;
+	outline: none;
+	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* ==========================================
+   HELP DIALOG - Atajos de teclado
+   ========================================== */
+
+.game-dialog.dialog-help {
+	min-width: 380px;
+	max-width: 560px;
+}
+
+.game-dialog.dialog-help .dialog-content {
+	max-height: 65vh;
+	overflow-y: auto;
+}
+
+/* The board guide (rendered Markdown). Kept readable with comfortable spacing; inherits the
+   dialog's scroll area so long guides scroll within the modal. */
+.board-help {
+	font-size: 0.97rem;
+	line-height: 1.5;
+}
+.board-help h1, .board-help h2, .board-help h3, .board-help h4 {
+	margin: 1em 0 0.4em;
+	line-height: 1.25;
+}
+.board-help h1 { font-size: 1.4rem; }
+.board-help h2 { font-size: 1.2rem; }
+.board-help h3 { font-size: 1.05rem; }
+.board-help > :first-child { margin-top: 0; }
+.board-help p { margin: 0.6em 0; }
+.board-help ul, .board-help ol { margin: 0.6em 0; padding-left: 1.5em; }
+.board-help li { margin: 0.2em 0; }
+.board-help hr { border: none; border-top: 1px solid var(--border-color, #ccc); margin: 1em 0; }
+.board-help code {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 0.9em;
+	padding: 0.1em 0.35em;
+	border-radius: 4px;
+	background: var(--surface-2, rgba(127, 127, 127, 0.15));
+}
+.board-help a { color: var(--link-color, #2563eb); }
+
+.help-shortcuts {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.95rem;
+}
+
+.help-shortcuts thead th {
+	text-align: left;
+	padding: 8px 12px;
+	font-size: 0.8rem;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--text-muted);
+	border-bottom: 2px solid var(--border);
+}
+
+.help-shortcuts tbody tr:nth-child(odd) {
+	background: var(--surface-2);
+}
+
+.help-shortcuts th,
+.help-shortcuts td {
+	padding: 8px 12px;
+	vertical-align: middle;
+}
+
+.help-shortcuts__key {
+	white-space: nowrap;
+	width: 1%;
+}
+
+.help-shortcuts__key kbd {
+	display: inline-block;
+	padding: 3px 8px;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: var(--text);
+	background: var(--surface-2);
+	border: 1px solid var(--border-strong);
+	border-bottom-width: 2px;
+	border-radius: 6px;
+}
+
+.help-shortcuts td {
+	color: var(--text);
+}
+
+/* ==========================================
+   FIN DEL ARCHIVO
+   ========================================== */
+
+/* Draggable floating dialogs: the title bar is the handle. touch-action:none lets touch
+   drags produce pointermove events instead of scrolling the page. */
+.dialog--draggable .dialog-title {
+	cursor: move;
+	user-select: none;
+	touch-action: none;
+}
+
+/* ── In-game chat panel (floating, draggable) ─────────────────────────────── */
+.chat-panel {
+	width: min(26rem, 90vw);
+	max-height: 70vh;
+}
+
+/* Only the OPEN panel lays out as a column — an unconditional display would override the
+   UA's dialog:not([open]) { display: none } and leave the closed panel visible. */
+.chat-panel[open] {
+	display: flex;
+	flex-direction: column;
+}
+
+.chat-application {
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+	max-height: 70vh;
+}
+
+.chat-disclaimer {
+	font-size: 0.75rem;
+	color: var(--text-muted);
+	margin: 0.25rem 0 0.5rem;
+}
+
+.chat-messages {
+	list-style: none;
+	margin: 0 0 0.5rem;
+	padding: 0.25rem;
+	overflow-y: auto;
+	flex: 1 1 auto;
+	min-height: 6rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+}
+
+.chat-messages li {
+	padding: 0.15rem 0.35rem;
+	border-radius: var(--radius-sm);
+	overflow-wrap: anywhere;
+}
+
+.chat-messages li:focus {
+	outline: none;
+	box-shadow: var(--focus-ring);
+}
+
+.chat-compose {
+	display: flex;
+	gap: 0.5rem;
+	align-items: flex-end;
+}
+
+.chat-compose textarea {
+	flex: 1 1 auto;
+	resize: vertical;
+	min-height: 2.5rem;
+}
+
+/* The mention suggestions float over the compose row. */
+.chat-mention-list {
+	list-style: none;
+	margin: 0.25rem 0 0;
+	padding: 0.25rem;
+	border: 1px solid var(--accent);
+	border-radius: var(--radius-sm);
+	background: var(--surface);
+	box-shadow: var(--shadow-glow, 0 2px 10px rgba(0 0 0 / 0.35));
+	max-height: 10rem;
+	overflow-y: auto;
+}
+
+.chat-mention-list li {
+	padding: 0.2rem 0.4rem;
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+}
+
+.chat-mention-list li:focus {
+	outline: none;
+	background: var(--accent);
+	color: var(--on-accent);
+}
+
+/* Unobtrusive license footer: last in the DOM (reachable, never in the way). */
+.app-footer {
+	text-align: center;
+	padding: 0.75rem 0 0.5rem;
+	font-size: 0.72rem;
+	color: var(--text-muted);
+}
+
+.app-footer a {
+	color: inherit;
+	text-decoration: underline;
+}

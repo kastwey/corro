@@ -1,0 +1,35 @@
+{
+  "packId": "imperio-galactico",
+  "events": {
+    "dice.roll": "dice-roll.ogg",
+    "property.buy": "property-buy.ogg",
+    "property.build": "property-build.ogg",
+    "property.built": "property-built.ogg",
+    "property.sell": "property-sell.ogg",
+    "group.complete": "group-complete.ogg",
+    "money.pay": [
+      "money-pay-1.ogg",
+      "money-pay-2.ogg",
+      "money-pay-3.ogg",
+      "money-pay-4.ogg"
+    ],
+    "money.receive": [
+      "money-receive-1.ogg",
+      "money-receive-2.ogg",
+      "money-receive-3.ogg"
+    ],
+    "tax.pay": "tax.ogg",
+    "money.salary": "salary.ogg",
+    "rest.zone": "rest-zone.ogg",
+    "rest.zone.empty": "rest-zone-empty.ogg",
+    "transit": "transit.ogg",
+    "holding.enter": "holding-enter.ogg",
+    "holding.leave": "holding-leave.ogg",
+    "auction.start": "auction-start.ogg",
+    "auction.tick": "auction-tick.ogg",
+    "auction.end": "auction-end.ogg",
+    "turn.you": "turn-you.ogg",
+    "game.over": "game-over.ogg",
+    "bankruptcy": "bankruptcy.ogg"
+  }
+}

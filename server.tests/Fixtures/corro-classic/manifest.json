@@ -1,0 +1,174 @@
+{
+  "format": "corro/v1",
+  "gameType": "property",
+  "engineVersion": "^1.0",
+  "id": "corro-classic",
+  "name": {
+    "es": "Clásico (Madrid)",
+    "en": "Classic (Madrid)"
+  },
+  "author": "test fixture",
+  "version": "0.1.0",
+  "locales": [
+    "es",
+    "en"
+  ],
+  "currency": {
+    "symbol": "€",
+    "code": "EUR",
+    "nameKey": "currency.name"
+  },
+  "centerBrand": "CLÁSICO",
+  "terminology": {
+    "start": "terminology.start",
+    "holding": "terminology.holding",
+    "freeparking": "terminology.freeparking",
+    "sendtoholding": "terminology.sendtoholding"
+  },
+  "groups": [
+    {
+      "id": "brown",
+      "color": "brown",
+      "colorName": "game.color_brown",
+      "key": "b"
+    },
+    {
+      "id": "lightblue",
+      "color": "lightblue",
+      "colorName": "game.color_lightblue",
+      "key": "l"
+    },
+    {
+      "id": "pink",
+      "color": "pink",
+      "colorName": "game.color_pink",
+      "key": "p"
+    },
+    {
+      "id": "orange",
+      "color": "orange",
+      "colorName": "game.color_orange",
+      "key": "o"
+    },
+    {
+      "id": "red",
+      "color": "red",
+      "colorName": "game.color_red",
+      "key": "r"
+    },
+    {
+      "id": "yellow",
+      "color": "yellow",
+      "colorName": "game.color_yellow",
+      "key": "y"
+    },
+    {
+      "id": "green",
+      "color": "green",
+      "colorName": "game.color_green",
+      "key": "g"
+    },
+    {
+      "id": "darkblue",
+      "color": "darkblue",
+      "colorName": "game.color_darkblue",
+      "key": "d"
+    },
+    {
+      "id": "transit",
+      "color": "transit",
+      "icon": "transit",
+      "key": "s"
+    },
+    {
+      "id": "utility",
+      "color": "utility",
+      "icon": "utility",
+      "key": "k"
+    }
+  ],
+  "decks": [
+    {
+      "id": "chance",
+      "nameKey": "game.card_deck_chance",
+      "icon": "question"
+    },
+    {
+      "id": "community",
+      "nameKey": "game.card_deck_community",
+      "icon": "chest"
+    }
+  ],
+  "rules": {
+    "startingMoney": 1500,
+    "passStartBonus": 200,
+    "rentStrategies": {
+      "property": "buildingTable",
+      "transit": "ownedCountScale",
+      "utility": "diceMultiplier"
+    },
+    "transitRent": [
+      25,
+      50,
+      100,
+      200
+    ],
+    "utilityMultiplier": {
+      "single": 4,
+      "all": 10
+    },
+    "holding": {
+      "releaseCost": 50,
+      "maxTurns": 3
+    },
+    "mortgageInterestRate": 10,
+    "buildingShortage": true,
+    "evenBuildRule": true,
+    "auctionOnDecline": true,
+    "freeParkingJackpot": false
+  },
+  "players": {
+    "min": 2,
+    "max": 8
+  },
+  "building": {
+    "levels": 4,
+    "smallKey": "building.small",
+    "smallPluralKey": "building.smallPlural",
+    "bigKey": "building.big"
+  },
+  "tokens": [
+    {
+      "id": "disc",
+      "nameKey": "tokens.disc"
+    },
+    {
+      "id": "square",
+      "nameKey": "tokens.square"
+    },
+    {
+      "id": "triangle",
+      "nameKey": "tokens.triangle"
+    },
+    {
+      "id": "star",
+      "nameKey": "tokens.star"
+    },
+    {
+      "id": "diamond",
+      "nameKey": "tokens.diamond"
+    },
+    {
+      "id": "ring",
+      "nameKey": "tokens.ring"
+    },
+    {
+      "id": "heart",
+      "nameKey": "tokens.heart"
+    },
+    {
+      "id": "cross",
+      "nameKey": "tokens.cross"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+# EditorConfig — shared code-style baseline (https://editorconfig.org).
+# Indentation is TABS (one tab per level — cleaner for screen-reader navigation than N spaces).
+# The one actively-enforced rule is "braces on every control block" (see [*.cs]); the rest are safe
+# cross-editor conventions. The .NET build surfaces the rules via <EnforceCodeStyleInBuild>
+# (Directory.Build.props) and `dotnet format` applies them — no manual reformatting.
+root = true
+
+[*]
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = tab
+tab_width = 4
+
+# Data/markup files stay on spaces: YAML forbids tabs for indentation, and JSON/MSBuild are
+# conventionally 2-space.
+[*.{json,jsonc,yml,yaml,csproj,props,targets}]
+indent_style = space
+indent_size = 2
+
+[*.md]
+# Markdown uses trailing spaces for hard line breaks — don't strip them.
+trim_trailing_whitespace = false
+
+[*.cs]
+# Braces on EVERY control block (if/else/for/while/…), even single statements. Enforced (warning);
+# `dotnet format` adds them automatically.
+csharp_prefer_braces = true:warning
+dotnet_diagnostic.IDE0011.severity = warning

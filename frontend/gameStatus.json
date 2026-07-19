@@ -1,0 +1,81 @@
+{
+  "players": [
+    { 
+      "id": "kastwey", 
+      "name": "kastwey", 
+      "token": "star", 
+      "position": 0, 
+      "isMe": true,
+      "money": 1420,
+      "properties": [12],
+      "releasePasses": 1
+    },
+    { 
+      "id": "p2", 
+      "name": "Amaterasu", 
+      "token": "diamond", 
+      "position": 3,
+      "money": 1380,
+      "properties": [1],
+      "releasePasses": 0
+    },
+    { 
+      "id": "p3", 
+      "name": "Eric", 
+      "token": "disc", 
+      "position": 7,
+      "money": 1320,
+      "properties": [3],
+      "releasePasses": 2
+    },
+    { 
+      "id": "p4", 
+      "name": "Jugador 4", 
+      "token": "cross", 
+      "position": 12,
+      "money": 1280,
+      "properties": [7],
+      "releasePasses": 0
+    },
+    { 
+      "id": "p5", 
+      "name": "Jugador 5", 
+      "token": "heart", 
+      "position": 18,
+      "money": 1240,
+      "properties": [18],
+      "releasePasses": 0
+    },
+    { 
+      "id": "p6", 
+      "name": "Jugador 6", 
+      "token": "triangle", 
+      "position": 25,
+      "money": 1200,
+      "properties": [25],
+      "releasePasses": 0
+    },
+    { 
+      "id": "p7", 
+      "name": "Jugador 7", 
+      "token": "square", 
+      "position": 33,
+      "money": 1160,
+      "properties": [33],
+      "releasePasses": 0
+    }
+  ],
+  "ownership": [
+    { "index": 1, "ownerId": "p2" },
+    { "index": 3, "ownerId": "p3" },
+    { "index": 7, "ownerId": "p4" },
+    { "index": 12, "ownerId": "kastwey" },
+    { "index": 18, "ownerId": "p5" },
+    { "index": 25, "ownerId": "p6" },
+    { "index": 33, "ownerId": "p7" }
+  ],
+  "currentTurn": "kastwey",
+  "bank": {
+    "money": 15140
+  }
+}

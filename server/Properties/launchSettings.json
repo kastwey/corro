@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "CorroServer": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:60518;http://0.0.0.0:5000"
+    }
+  }
+}

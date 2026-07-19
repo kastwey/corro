@@ -1,0 +1,386 @@
+/* player-panel.css — side panel listing players (money, position, holding).
+ * Visual mirror of game state for sighted players; screen-reader users keep
+ * using the existing key shortcuts, so this region is NOT an aria-live region.
+ */
+
+.players-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 14px;
+  position: sticky;
+  top: 16px;
+}
+
+.players-panel__title {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.players-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.player-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+	"token name money"
+	"token meta meta";
+  align-items: center;
+  gap: 2px 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  transition: border-color 0.15s ease, box-shadow 0.2s ease, transform 0.1s ease;
+}
+/* The row holding the TURN: an unmistakable accent edge + glow (live-play bug: the old
+ * glow alone was too subtle to tell who plays), plus the 🎲 glyph next to the name. */
+.player-card.is-current {
+  border-color: var(--accent);
+  border-left-width: 5px;
+  background: var(--surface);
+  box-shadow: var(--shadow-glow);
+}
+.player-card__turn {
+  margin-left: 4px;
+  font-size: 0.95em;
+}
+
+.player-card__token {
+  grid-area: token;
+  width: 38px; height: 38px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: var(--accent);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+.player-card__token .token-icon { width: 22px; height: 22px; }
+
+.player-card__name {
+  grid-area: name;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.player-card__name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.player-card__you {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--on-accent);
+  background: var(--accent-grad);
+  padding: 2px 6px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.player-card__money {
+  grid-area: money;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--good);
+  white-space: nowrap;
+}
+
+/* Non-property identities (race squadron, journey status line) can be LONG: the row
+   stacks — name on top, the identity wrapping on its own full-width line (nowrap in the
+   money corner is for € figures). */
+.player-card--seat {
+  grid-template-areas:
+	"token name name"
+	"token money money"
+	"token meta meta";
+}
+
+.player-card__money.player-card__seat {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  color: var(--text);
+  border-inline-start: 0.25rem solid var(--seat-color, var(--border-strong));
+  padding-inline-start: 0.4rem;
+}
+
+/* A player in debt shows their negative net balance in a distinctive "danger" colour,
+   so the debt reads at a glance. It auto-reverts to the normal colour once cleared. */
+.player-card__money--debt {
+  color: var(--danger, #d32f2f);
+}
+
+.player-card__meta {
+  grid-area: meta;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.player-card__pos { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+
+.player-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.player-tag--holding { color: var(--danger); background: var(--danger-soft); }
+.player-tag--card { color: var(--accent); background: var(--accent-soft); }
+.player-tag--turn { color: var(--on-accent); background: var(--accent-grad); }
+.player-tag--bankrupt { color: var(--on-accent); background: var(--danger); text-transform: uppercase; letter-spacing: 0.04em; }
+/* No live connection: muted (informational, not alarming — they may be right back). */
+.player-tag--offline { color: var(--text-muted); background: var(--surface-3); font-style: italic; }
+
+@media (max-width: 960px) {
+  .players-panel { position: static; }
+}
+
+/* ---- Interactive rows (roving tabindex + per-row action toolbar) -------- */
+/* Each player card is a single focus stop; Right arrow / Shift+F10 reach its
+ * action toolbar, mirroring the manage-properties / notifications model. */
+.player-card:focus,
+.player-card:focus-visible {
+  outline: 3px solid var(--focus, #ffd24d);
+  outline-offset: 2px;
+}
+
+.player-card__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.player-card__btn {
+  padding: 0.3rem 0.7rem;
+  font: inherit;
+  font-size: 0.78rem;
+  color: var(--on-accent, #fff);
+  background: var(--accent);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.player-card__btn:hover { background: var(--accent-hover, #3b7af0); }
+.player-card__btn:focus-visible {
+  outline: 3px solid var(--focus, #ffd24d);
+  outline-offset: 2px;
+}
+
+/* Accessible context menu (Shift+F10 / Applications key) mirroring a row's actions. */
+.player-context-menu {
+  position: fixed;
+  z-index: 1100;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  background: var(--panel, #1b2030);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+.player-context-menu-item {
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  color: var(--text);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.player-context-menu-item:hover,
+.player-context-menu-item:focus-visible {
+  background: var(--accent);
+  color: var(--on-accent);
+  outline: none;
+}
+
+/* ---- Player detail modal (native <dialog>) ------------------------------ */
+#player-detail-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 92vw);
+  max-height: 90vh;
+  padding: 0;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+#player-detail-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.player-detail-application,
+.property-info-application {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 90vh;
+}
+
+.player-detail-panel__header,
+.player-detail-panel__footer {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.player-detail-panel__footer {
+  border-bottom: 0;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+.player-detail-panel__title { margin: 0; font-size: 1.2rem; }
+.player-detail-panel__subtitle {
+  margin: 0;
+  padding: 0.5rem 1rem 0;
+  font-size: 0.95rem;
+}
+
+.player-detail-summary {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.player-detail-summary__line {
+  padding: 0.2rem 0.35rem;
+  border-radius: 4px;
+}
+.player-detail-summary__line:focus,
+.player-detail-summary__line:focus-visible {
+  outline: 3px solid var(--focus, #ffd24d);
+  outline-offset: -2px;
+}
+
+.player-detail-panel__empty {
+  margin: 0;
+  padding: 0.75rem 1rem 1rem;
+}
+
+.player-detail-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+}
+
+.player-detail-item {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.player-detail-item:last-child { border-bottom: 0; }
+.player-detail-item:focus,
+.player-detail-item:focus-visible {
+  outline: 3px solid var(--focus, #ffd24d);
+  outline-offset: -2px;
+}
+
+.player-detail-panel__trade,
+.player-detail-panel__close {
+  padding: 0.4rem 0.85rem;
+  font: inherit;
+  color: var(--on-accent);
+  background: var(--accent);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.player-detail-panel__trade:hover,
+.player-detail-panel__close:hover { background: var(--accent-hover, #3b7af0); }
+.player-detail-panel__trade:focus-visible,
+.player-detail-panel__close:focus-visible {
+  outline: 3px solid var(--focus, #ffd24d);
+  outline-offset: 2px;
+}
+
+/* ---- Property info modal (native <dialog>) ------------------------------ */
+#property-info-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(480px, 92vw);
+  max-height: 90vh;
+  padding: 0;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+#property-info-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+.property-info-panel__header,
+.property-info-panel__footer {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.property-info-panel__footer {
+  border-bottom: 0;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+}
+.property-info-panel__title { margin: 0; font-size: 1.2rem; }
+.property-info-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 0;
+  overflow-y: auto;
+}
+.property-info-item {
+  padding: 0.45rem 1rem;
+}
+.property-info-item:focus,
+.property-info-item:focus-visible {
+  outline: 3px solid var(--focus, #ffd24d);
+  outline-offset: -2px;
+}
+.property-info-panel__close {
+  padding: 0.4rem 0.85rem;
+  font: inherit;
+  color: var(--on-accent);
+  background: var(--accent);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.property-info-panel__close:hover { background: var(--accent-hover, #3b7af0); }
+.property-info-panel__close:focus-visible {
+  outline: 3px solid var(--focus, #ffd24d);
+  outline-offset: 2px;
+}

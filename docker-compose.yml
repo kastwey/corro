@@ -1,0 +1,65 @@
+# Local Corro stack. Two ways to use it:
+#
+#   docker compose up -d                 # infra only: Cosmos emulator + Azurite (blobs).
+#                                        # Then run/debug the server on the HOST (F5, or dotnet run).
+#   docker compose --profile full up -d  # EVERYTHING in Docker, incl. the app (no local SDK/Node).
+#
+#   docker compose down                  # stop (add -v to also wipe the Azurite volume).
+#
+# The server auto-detects the emulator (localhost/127.0.0.1 or the emulator key) and switches the
+# CosmosClient to Gateway mode. Runs the same on Windows, macOS and Linux (incl. Apple Silicon).
+name: corro
+
+services:
+  # Azure Cosmos DB emulator — game persistence. vnext-preview: Linux, gateway-only over HTTP on 8081
+  # (data explorer on 1234), native on x64 AND arm64. Data lives in-container: games survive app
+  # restarts while this container is up; recreating it resets them (the emulator has no durable volume).
+  cosmos:
+    image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview
+    container_name: corro-cosmos
+    ports:
+      - "8081:8081"   # NoSQL gateway
+      - "1234:1234"   # data explorer (http://localhost:1234)
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8081/"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 20s
+
+  # Azurite — blob storage for uploaded .corro packages (so package games survive a restart).
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: corro-azurite
+    command: ["azurite-blob", "--blobHost", "0.0.0.0", "--blobPort", "10000", "--skipApiVersionCheck", "--location", "/data"]
+    ports:
+      - "10000:10000"   # blob service
+    volumes:
+      - azurite-data:/data
+
+  # The Corro server itself — only started by the `full` profile. Built from server/Dockerfile.
+  # Talks to the emulators by their SERVICE names (cosmos / azurite), not localhost. Runs in the
+  # Development environment so it auto-creates the Cosmos database + container on first boot, and only
+  # after Cosmos reports healthy so that one-time init cannot race the emulator's slow first start.
+  app:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    image: corro-app
+    container_name: corro-app
+    depends_on:
+      cosmos:
+        condition: service_healthy
+      azurite:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_URLS: "http://+:5000"
+      ConnectionStrings__CosmosDB: "AccountEndpoint=http://cosmos:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
+      ConnectionStrings__PackageBlobs: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
+    ports:
+      - "5000:5000"
+
+volumes:
+  azurite-data:

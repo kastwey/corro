@@ -1,0 +1,384 @@
+/* ==========================================================================
+   Card Reveal — themed, animated the card decks card overlay
+   Non-modal, decorative (aria-hidden). Keeps focus where it is.
+   ========================================================================== */
+
+/* Treasure-chest emblem for the Treasury deck and its draw flight. Defined
+   once here so the inline SVG data URI lives in exactly one place. */
+:root {
+	--chest-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='9' y='30' width='46' height='24' rx='3' fill='%23e0a44a' stroke='%235e3a12' stroke-width='3'/%3E%3Cpath d='M9 32 Q9 15 32 15 Q55 15 55 32 Z' fill='%23f0c070' stroke='%235e3a12' stroke-width='3'/%3E%3Crect x='6' y='30' width='52' height='6' fill='%238a5a22'/%3E%3Crect x='28' y='31' width='8' height='12' rx='1.5' fill='%23ffe08a' stroke='%235e3a12' stroke-width='2'/%3E%3Ccircle cx='32' cy='36' r='1.9' fill='%235e3a12'/%3E%3C/svg%3E");
+}
+
+.card-reveal-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 1200;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 1.5rem;
+	background: rgba(8, 12, 24, 0);
+	transition: background 0.25s ease;
+	pointer-events: none;
+}
+
+.card-reveal-overlay.is-visible {
+	background: rgba(8, 12, 24, 0.55);
+	pointer-events: auto;
+	cursor: pointer;
+}
+
+/* --- Card shell ---------------------------------------------------------- */
+
+.card-reveal {
+	--deck-accent: #f5b700;
+	--deck-accent-soft: #fff4cc;
+	--deck-ink: #3a2c00;
+	position: relative;
+	width: min(420px, 92vw);
+	aspect-ratio: 5 / 7;
+	max-height: 78vh;
+	perspective: 1400px;
+	cursor: default;
+	transform: translateY(18px) scale(0.9);
+	opacity: 0;
+	transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2), opacity 0.3s ease;
+}
+
+.card-reveal-overlay.is-visible .card-reveal {
+	transform: translateY(0) scale(1);
+	opacity: 1;
+}
+
+.card-reveal--chance {
+	--deck-accent: #f5b700;
+	--deck-accent-soft: #fff7da;
+	--deck-ink: #4a3700;
+}
+
+.card-reveal--community {
+	--deck-accent: #2f7fd4;
+	--deck-accent-soft: #e2f0ff;
+	--deck-ink: #103253;
+}
+
+/* --- 3D flip ------------------------------------------------------------- */
+
+.card-reveal__inner {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	transform-style: preserve-3d;
+	transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+	transform: rotateY(180deg);
+}
+
+.card-reveal.is-flipped .card-reveal__inner {
+	transform: rotateY(0deg);
+}
+
+.card-reveal__face {
+	position: absolute;
+	inset: 0;
+	backface-visibility: hidden;
+	-webkit-backface-visibility: hidden;
+	border-radius: 18px;
+	box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+	overflow: hidden;
+}
+
+.card-reveal__back {
+	transform: rotateY(180deg);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background:
+		repeating-linear-gradient(45deg,
+			color-mix(in srgb, var(--deck-accent) 85%, #000 0%) 0 14px,
+			color-mix(in srgb, var(--deck-accent) 70%, #000 12%) 14px 28px);
+	border: 6px solid var(--deck-accent-soft);
+}
+
+.card-reveal__back-icon {
+	font-size: 4.5rem;
+	filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35));
+}
+
+.card-reveal__front {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 1.75rem 1.5rem;
+	text-align: center;
+	background: linear-gradient(160deg, #ffffff 0%, var(--deck-accent-soft) 100%);
+	border: 6px solid var(--deck-accent);
+	color: var(--deck-ink);
+}
+
+.card-reveal__deck {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.3rem 0.9rem;
+	border-radius: 999px;
+	background: var(--deck-accent);
+	color: #fff;
+	font-weight: 700;
+	font-size: 0.85rem;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.card-reveal__deck-icon {
+	font-size: 1rem;
+}
+
+.card-reveal__icon {
+	font-size: 3.2rem;
+	line-height: 1;
+}
+
+.card-reveal__title {
+	margin: 0.25rem 0 0;
+	font-size: 1.5rem;
+	font-weight: 800;
+	line-height: 1.2;
+}
+
+.card-reveal__desc {
+	margin: 0;
+	font-size: 1.1rem;
+	line-height: 1.45;
+	color: color-mix(in srgb, var(--deck-ink) 88%, #000 0%);
+}
+
+/* --- Progress / read-time bar ------------------------------------------- */
+
+.card-reveal__progress {
+	position: absolute;
+	left: 6%;
+	right: 6%;
+	bottom: -14px;
+	height: 5px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.3);
+	overflow: hidden;
+}
+
+.card-reveal__progress-bar {
+	display: block;
+	height: 100%;
+	border-radius: inherit;
+	background: var(--deck-accent);
+	transform-origin: left center;
+	transform: scaleX(1);
+}
+
+.card-reveal.is-paused .card-reveal__progress {
+	opacity: 0.5;
+}
+
+/* --- Reduced motion ------------------------------------------------------ */
+
+.card-reveal--static {
+	transition: opacity 0.2s ease;
+	transform: none;
+}
+
+.card-reveal--static .card-reveal__inner {
+	transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.card-reveal,
+	.card-reveal__inner,
+	.card-reveal-overlay {
+		transition: opacity 0.2s ease;
+	}
+
+	.card-reveal {
+		transform: none;
+	}
+
+	.card-reveal__inner {
+		transition: none;
+	}
+}
+
+/* ==========================================================================
+   Center deck piles — the two card stacks (the card decks) shown in the
+   middle of the board. Purely decorative (aria-hidden); they are also the
+   visual launch point of the card-draw flight (see .card-flight below).
+   ========================================================================== */
+
+.deck {
+	--deck-accent: #f5b700;
+	--deck-accent-dark: #b88600;
+	--deck-accent-soft: #fff7da;
+	--deck-emblem: "?";
+	position: absolute;
+	z-index: 2;
+	width: clamp(58px, 9vw, 104px);
+	aspect-ratio: 5 / 7;
+	border-radius: clamp(5px, 1vw, 9px);
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	overflow: hidden;
+	/* The pile reads as the top card of a real deck: a white card face with a
+	   coloured name banner and a big emblem in the window below it. */
+	background: #fffdf5;
+	border: 2px solid var(--deck-accent);
+	/* Two cards fanned behind the top one give the stack its depth. */
+	box-shadow:
+		2px 3px 0 0 var(--deck-accent-soft),
+		4px 6px 0 0 var(--deck-accent-dark),
+		6px 9px 14px rgba(0, 0, 0, 0.4);
+}
+
+/* Coloured name banner across the top of the card (SUERTE / CAJA DE COMUNIDAD). */
+.deck__label {
+	order: -1;
+	pointer-events: none;
+	padding: clamp(2px, 0.55vw, 5px) 2px;
+	text-align: center;
+	line-height: 1.05;
+	color: #fff;
+	font-weight: 900;
+	font-size: clamp(6px, 1.05vw, 11px);
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+	background: linear-gradient(160deg, var(--deck-accent) 0%, var(--deck-accent-dark) 100%);
+	border-bottom: 1px solid var(--deck-accent-dark);
+}
+
+/* The emblem sits in the white "window" below the banner: a "?" for Chance and a
+   little treasure chest (drawn as an inline SVG) for Treasury. */
+.deck::before {
+	content: var(--deck-emblem);
+	flex: 1 1 auto;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: clamp(20px, 3.6vw, 42px);
+	font-weight: 900;
+	line-height: 1;
+	color: var(--deck-accent-dark);
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: clamp(26px, 4.6vw, 52px);
+	pointer-events: none;
+}
+
+/* Mirrors the classic board: Treasury in the north-west corner, Chance in
+   the south-east, both tilted gently so the name banners stay readable (the old
+   45° spin made them hard to read). Colours follow the real cards — the first deck is
+   orange, Treasury a warm gold. */
+.deck--community {
+	--deck-accent: #e8b80e;
+	--deck-accent-dark: #b88a07;
+	--deck-accent-soft: #fff3c9;
+	--deck-emblem: ""; /* the chest is drawn via background-image below */
+	top: clamp(8px, 2.4vw, 26px);
+	left: clamp(8px, 2.4vw, 26px);
+	transform: rotate(-15deg);
+}
+
+.deck--chance {
+	--deck-accent: #ec7d1a;
+	--deck-accent-dark: #b85610;
+	--deck-accent-soft: #ffe0c2;
+	--deck-emblem: "?";
+	bottom: clamp(8px, 2.4vw, 26px);
+	right: clamp(8px, 2.4vw, 26px);
+	transform: rotate(-15deg);
+}
+
+.deck--community::before {
+	background-image: var(--chest-icon);
+}
+
+/* ==========================================================================
+   Card-draw flight — a single card that tumbles out of its deck pile toward
+   the drawing player's token. Purely visual (aria-hidden); the JS animates the
+   transform via the Web Animations API, so this is just the card's look.
+   ========================================================================== */
+
+.card-flight {
+	--deck-accent: #f5b700;
+	--deck-accent-dark: #b88600;
+	--deck-accent-soft: #fff7da;
+	--deck-emblem: "?";
+	position: fixed;
+	left: 0;
+	top: 0;
+	z-index: 1150;
+	pointer-events: none;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-end;
+	text-align: center;
+	padding: 10px;
+	border-radius: 12px;
+	transform-origin: center center;
+	will-change: transform, opacity;
+	color: #fff;
+	font-weight: 800;
+	font-size: 1.1rem;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+	background:
+		repeating-linear-gradient(45deg,
+			rgba(0, 0, 0, 0.16) 0 16px,
+			rgba(255, 255, 255, 0.10) 16px 32px),
+		linear-gradient(160deg, var(--deck-accent) 0%, var(--deck-accent-dark) 100%);
+	border: 6px solid var(--deck-accent-soft);
+	box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
+}
+
+.card-flight::before {
+	content: var(--deck-emblem);
+	flex: 1 1 auto;
+	align-self: stretch;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 2.6rem;
+	font-weight: 900;
+	line-height: 1;
+	color: rgba(255, 255, 255, 0.95);
+	text-shadow: 0 2px 5px rgba(0, 0, 0, 0.55);
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: 3.4rem;
+}
+
+.card-flight--chance {
+	--deck-accent: #f5b700;
+	--deck-accent-dark: #b88600;
+	--deck-accent-soft: #fff7da;
+	--deck-emblem: "?";
+}
+
+.card-flight--community {
+	--deck-accent: #2f7fd4;
+	--deck-accent-dark: #1d5897;
+	--deck-accent-soft: #e2f0ff;
+	--deck-emblem: "";
+}
+
+.card-flight--community::before {
+	background-image: var(--chest-icon);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	/* Belt-and-suspenders: the caller already skips the flight under reduced motion. */
+	.card-flight {
+		display: none;
+	}
+}
+

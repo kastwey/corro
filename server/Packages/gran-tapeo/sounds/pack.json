@@ -1,0 +1,6 @@
+{
+  "packId": "gran-tapeo",
+  "events": {
+    "game.over": "game-over.ogg"
+  }
+}

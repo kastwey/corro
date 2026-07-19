@@ -1,0 +1,145 @@
+/* trivia-board.css — the wheel: a centre hub, six spokes and one ring, laid out from the
+ * nodes' polar positions (triviaBoard.ts sets each cell's left/top in %). The visual is for
+ * sighted players; the exploration cursor (.focused) + the announcer carry the board for a
+ * screen reader. */
+
+.trivia-board {
+  position: relative;
+  width: min(80vmin, 620px);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+}
+
+/* The wheel backdrop (SVG built in triviaBoard.ts): faint colour sectors, the ring track and the
+ * six spokes drawn from the hub out to each headquarters. It sits behind the cells and pieces;
+ * the screen reader ignores it (aria-hidden). This is what makes the board read as a wheel. */
+.trivia-wheel-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.trivia-sectors path {
+  fill-opacity: 0.16;
+}
+
+.trivia-ring-track,
+.trivia-hub-ring {
+  fill: none;
+  stroke: rgba(120, 144, 156, 0.6);
+  stroke-width: 0.7;
+}
+
+.trivia-spokes line {
+  stroke: rgba(96, 125, 139, 0.9);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+}
+
+.trivia-cell {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 3.4%;
+  height: 3.4%;
+  min-width: 14px;
+  min-height: 14px;
+  border-radius: 50%;
+  background: #cfd8dc;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+}
+
+.trivia-cell--center {
+  width: 12%;
+  height: 12%;
+  background: #eceff1;
+  border: 2px solid #90a4ae;
+}
+
+.trivia-cell--wedge {
+  width: 5.6%;
+  height: 5.6%;
+  border-width: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+.trivia-cell--roll-again {
+  border-style: dashed;
+  border-width: 2px;
+}
+
+.trivia-cell.focused {
+  outline: 3px solid #1565c0;
+  outline-offset: 2px;
+  z-index: 3; /* the outline rings the cell's perimeter; pieces (z-index 4) sit on top of it */
+}
+
+/* A legal landing for the current roll (direct-manipulation destination choice): highlighted and
+ * clickable, so a sighted player can just click the square instead of using the dialog. */
+.trivia-cell--option {
+  box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.65);
+  cursor: pointer;
+  z-index: 2;
+}
+
+/* Category colours: index → colour, matching the client colour-letter jumps
+ * (0 blue/B, 1 pink/P, 2 yellow/Y, 3 brown/R, 4 green/G, 5 orange/O). */
+.trivia-cat-0 { background: #2f6fb0; }
+.trivia-cat-1 { background: #d24d86; }
+.trivia-cat-2 { background: #d8b42e; }
+.trivia-cat-3 { background: #8d6e63; }
+.trivia-cat-4 { background: #2f9e5f; }
+.trivia-cat-5 { background: #d97a2b; }
+
+/* A player's board piece: the themed token disc wrapped by its quesito holder ring. It is a
+ * board-level overlay positioned at its node (left/top set inline); --dx/--dy fan co-located
+ * pieces apart (in piece-widths). pointer-events:none so clicks still reach the cell beneath. */
+.trivia-piece {
+  position: absolute;
+  width: 6.2%;
+  height: 6.2%;
+  transform: translate(
+	calc(-50% + var(--dx, 0) * 100%),
+	calc(-50% + var(--dy, 0) * 100%)
+  );
+  /* The animator moves a piece one node per hop; gliding left/top between hops turns the walk
+   * into continuous travel instead of a jump. Matches the ~220 ms step cadence. */
+  transition: left 0.22s linear, top 0.22s linear;
+  z-index: 4;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trivia-piece { transition: none; } /* the animator also snaps when motion is off */
+}
+
+/* The quesito holder: a full-size segmented ring (conic gradient of the six categories, earned
+ * slices in colour, the rest neutral — set inline). The chip covers its centre, so the earned
+ * wedges read as a ring around the token, as in Trivial Pursuit. */
+.trivia-piece__holder {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.4); /* define the ring even when empty (all-neutral) */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* The token chip: the player's colour disc carrying the themed icon (atom, mask, compass…). */
+.trivia-piece__chip {
+  position: absolute;
+  inset: 24%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.85);
+}
+
+.trivia-piece__icon {
+  width: 78%;
+  height: 78%;
+  display: block;
+}

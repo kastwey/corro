@@ -1,0 +1,175 @@
+/* css/turn-indicator.css - Visual turn indicator styles.
+ *
+ * Colors come from the THEME tokens (theme.css: --surface/--text/--border/--good/…),
+ * never from a private --color-* palette: an earlier version referenced undefined
+ * --color-surface/--color-text-muted variables whose dark fallbacks (#1e1e1e / #888)
+ * painted the off-turn banner black-on-gray in the LIGHT theme (live-play bug).
+ * The status tints are background-IMAGE overlays so the themed background-color
+ * underneath is never replaced. */
+
+.turn-indicator {
+	display: none;
+	background-color: var(--surface);
+	border: 2px solid var(--border-strong);
+	border-radius: 12px;
+	padding: 0.75rem 1rem;
+	margin-bottom: 1rem;
+	transition: all 0.3s ease;
+}
+
+.turn-indicator--visible {
+	display: block;
+}
+
+/* My turn - highlight */
+.turn-indicator--my-turn {
+	border-color: var(--good);
+	background-image: linear-gradient(135deg, rgba(40, 167, 69, 0.1) 0%, rgba(40, 167, 69, 0.05) 100%);
+	animation: pulse-border 2s ease-in-out infinite;
+}
+
+@keyframes pulse-border {
+	0%, 100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4); }
+	50% { box-shadow: 0 0 0 8px rgba(40, 167, 69, 0); }
+}
+
+/* Other player's turn */
+.turn-indicator--other {
+	border-color: var(--accent);
+}
+
+/* Waiting for debt resolution */
+.turn-indicator--waiting {
+	border-color: var(--warning);
+	background-image: linear-gradient(135deg, rgba(255, 193, 7, 0.12) 0%, rgba(255, 193, 7, 0.05) 100%);
+}
+
+.turn-indicator__main {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+
+.turn-indicator__label {
+	color: var(--text-muted);
+	font-size: 0.9rem;
+}
+
+.turn-indicator__player {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.25rem 0.75rem;
+	background: var(--player-color, #888);
+	border-radius: 20px;
+	color: var(--player-foreground, #fff);
+	font-weight: bold;
+}
+
+/* "Your turn!" badge — only rendered when it is the local player's turn. */
+.turn-indicator__you {
+	padding: 0.2rem 0.6rem;
+	border-radius: 20px;
+	background: var(--good);
+	color: var(--on-good);
+	font-weight: bold;
+	font-size: 0.85rem;
+}
+
+/* Current player has no live connection — the table is waiting for them to come back. */
+.turn-indicator__offline {
+	padding: 0.2rem 0.6rem;
+	border-radius: 20px;
+	background: var(--surface-3);
+	color: var(--text-muted);
+	font-style: italic;
+	font-size: 0.85rem;
+}
+
+.turn-indicator__token {
+	font-size: 1.1rem;
+	display: inline-flex;
+	align-items: center;
+}
+
+.turn-indicator__token .token-icon {
+	width: 1.2rem;
+	height: 1.2rem;
+}
+
+.turn-indicator__name {
+	font-size: 0.95rem;
+}
+
+.turn-indicator__badge {
+	font-size: 1.5rem;
+	animation: bounce 1s ease infinite;
+}
+
+@keyframes bounce {
+	0%, 100% { transform: translateY(0); }
+	50% { transform: translateY(-4px); }
+}
+
+/* Debt waiting status */
+.turn-indicator__debt-status {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin-top: 0.5rem;
+	padding-top: 0.5rem;
+	border-top: 1px solid var(--border);
+	color: var(--warning);
+	font-size: 0.9rem;
+}
+
+.turn-indicator__debt-icon {
+	font-size: 1.2rem;
+	animation: hourglass 2s ease-in-out infinite;
+}
+
+@keyframes hourglass {
+	0%, 100% { transform: rotate(0deg); }
+	50% { transform: rotate(180deg); }
+}
+
+.turn-indicator__debt-text {
+	flex: 1;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+	.turn-indicator {
+		padding: 0.5rem 0.75rem;
+		font-size: 0.85rem;
+	}
+
+	.turn-indicator__player {
+		padding: 0.2rem 0.5rem;
+	}
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+	.turn-indicator--my-turn {
+		border-width: 3px;
+	}
+
+	.turn-indicator__player {
+		border: 2px solid white;
+	}
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+	.turn-indicator--my-turn {
+		animation: none;
+		box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.4);
+	}
+
+	.turn-indicator__badge,
+	.turn-indicator__debt-icon {
+		animation: none;
+	}
+}

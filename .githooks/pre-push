@@ -1,0 +1,61 @@
+#!/bin/sh
+# pre-push — refuse to push (to ANY branch) when the test suites are red.
+#
+# Runs ALWAYS: the frontend (build + node:test) and backend (build + dotnet test) suites.
+# Runs ONLY when RUN_E2E is set to 1/true/yes: the Playwright E2E suite — it needs a built
+# server and installed browsers and takes minutes, so it is opt-in per the project convention
+# (AGENTS.md: unit/integration every change, E2E when the change touches a flow it covers).
+#
+# Shared via core.hooksPath=.githooks (install once: tools/install-hooks.ps1). This is a LOCAL
+# safety net; the real, unbypassable gate is CI / branch protection. Emergency bypass for a
+# genuine reason: `git push --no-verify`.
+
+set -u
+
+ROOT="$(git rev-parse --show-toplevel)" || exit 1
+
+fail() {
+	echo ""
+	echo "✖ pre-push: $1 FAILED — push aborted."
+	echo "  Fix the tests, or (only with a real reason) bypass with: git push --no-verify"
+	exit 1
+}
+
+# Run a labelled step in a subshell, capturing its output; print only a one-line OK on success,
+# or the tail of the output plus an abort on failure (so a green push isn't buried in 1000 TAP lines).
+step() {
+	label="$1"
+	cmd="$2"
+	printf '▶ pre-push: %s… ' "$label"
+	if out="$(sh -c "$cmd" 2>&1)"; then
+		echo "OK"
+	else
+		echo "FAILED"
+		echo "---------------------------------------------------------------"
+		printf '%s\n' "$out" | tail -n 60
+		echo "---------------------------------------------------------------"
+		fail "$label"
+	fi
+}
+
+step "frontend build + tests" "cd '$ROOT/frontend' && npm run build && npm test"
+
+# Release the .NET build lock: a running dev server holds CorroServer.dll (best-effort).
+if command -v powershell >/dev/null 2>&1; then
+	powershell -NoProfile -Command "Get-Process -Name CorroServer -ErrorAction SilentlyContinue | Stop-Process -Force" >/dev/null 2>&1 || true
+fi
+
+step "backend build" "dotnet build '$ROOT/server/CorroServer.csproj' -p:SkipFrontendBuild=true --nologo"
+step "backend tests" "dotnet test '$ROOT/server.tests/CorroServer.Tests.csproj' -p:SkipFrontendBuild=true --nologo"
+
+case "${RUN_E2E:-}" in
+	1|true|yes|TRUE|YES)
+		step "e2e (RUN_E2E set)" "cd '$ROOT/e2e' && npm test"
+		;;
+	*)
+		echo "▷ pre-push: E2E skipped (set RUN_E2E=1 to include it)"
+		;;
+esac
+
+echo "✔ pre-push: all suites green — pushing."
+exit 0

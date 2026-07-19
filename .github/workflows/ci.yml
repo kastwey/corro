@@ -1,0 +1,70 @@
+# CI: the three test layers on every push/PR.
+#  * frontend — TypeScript build + node:test suites (incl. translation parity)
+#  * server   — .NET build + xUnit suites (unit + integration playthroughs)
+#  * e2e      — Playwright against the real server in its deterministic E2E mode
+#               (scripted dice, in-memory persistence; no external services needed)
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test emulator startup planner
+        shell: pwsh
+        run: ./tools/tests/emulator-startup.tests.ps1
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v4 # the server build compiles the frontend into wwwroot
+        with:
+          node-version: 22
+      - run: dotnet build server/CorroServer.csproj --nologo
+      - run: dotnet test server.tests/CorroServer.Tests.csproj --nologo
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - run: npm ci
+        working-directory: e2e
+      - run: npx playwright install --with-deps chromium
+        working-directory: e2e
+      # The Playwright webServer starts the game server itself (dotnet run, E2E env).
+      - run: npm test
+        working-directory: e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          retention-days: 7

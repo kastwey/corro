@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <!--
+            Plain data models / DTOs hold no business logic worth covering.
+            Excluding the namespace keeps the global coverage number meaningful
+            without polluting the source with [ExcludeFromCodeCoverage] attributes.
+
+            The Cosmos DB persistence layer is infrastructure glue around the Azure
+            SDK: it cannot be exercised by unit tests without a live emulator, so it
+            is excluded too to keep the coverage number focused on game logic.
+
+            ConfigController only serves static config (board list, languages, board
+            JSON files) with no decision logic worth covering. GameController stays
+            measured because JoinGame carries real validation branches.
+
+            Filter format: [Assembly]Namespace.Class (comma-separated)
+          -->
+          <Exclude>[CorroServer]CorroServer.Models.*,[CorroServer]CorroServer.Services.CosmosGameRepository,[CorroServer]CorroServer.Services.SystemTextJsonCosmosSerializer,[CorroServer]CorroServer.Controllers.ConfigController</Exclude>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

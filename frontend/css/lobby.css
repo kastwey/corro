@@ -1,0 +1,405 @@
+/* lobby.css - Estilos específicos del lobby y estados */
+
+/* Top-level lobby views: only one is shown at a time (the rest carry .hidden +
+   the hidden attribute). The waiting room therefore never shows the games list. */
+.lobby-view {
+	display: block;
+}
+
+/* Home entry buttons (create / join), shown above the games list. */
+.home-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	margin-bottom: 1.5rem;
+}
+
+.home-actions .home-action-btn {
+	flex: 1 1 auto;
+}
+
+/* "Back to home" buttons on the create / join / waiting views. */
+.lobby-back-btn {
+	margin-bottom: 1rem;
+}
+
+/* Empty-state hint shown in the home view when there are no saved games. */
+.your-games-empty {
+	color: var(--text-muted);
+	margin: 0 0 1.5rem;
+}
+
+.rules-details {
+	margin-bottom: 1.5rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--surface-2);
+}
+
+.rules-details > summary {
+	padding: 0.75rem 1rem;
+	cursor: pointer;
+	font-weight: 600;
+	color: var(--text);
+}
+
+.rules-details > summary:focus-visible {
+	outline: none;
+	box-shadow: var(--focus-ring);
+	border-radius: var(--radius-sm);
+}
+
+.rules-hint {
+	margin: 0 1rem 1rem;
+	color: var(--text-muted);
+	font-size: 0.9rem;
+}
+
+.rules-fieldset {
+	margin: 0 1rem 1rem;
+	padding: 1rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+}
+
+.rules-fieldset legend {
+	padding: 0 0.5rem;
+	font-weight: 600;
+	color: var(--text);
+}
+
+/* A "choice" house rule: its options as a vertical radio group under the rule's name. */
+.rule-choice {
+	margin: 0 0 1rem;
+	padding: 0.5rem 0.75rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+}
+.rule-choice legend {
+	padding: 0 0.35rem;
+	font-weight: 600;
+	color: var(--text);
+}
+.rule-choice__option {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5rem;
+	padding: 0.25rem 0;
+	color: var(--text);
+}
+.rule-choice__option input[type="radio"] { width: auto; margin-top: 0.2rem; }
+
+.form-check {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5rem;
+	margin-bottom: 1rem;
+}
+
+.form-check input[type="checkbox"] {
+	width: auto;
+	margin-top: 0.2rem;
+	flex: 0 0 auto;
+}
+
+.form-check label {
+	margin-bottom: 0;
+	font-weight: 400;
+}
+
+.lobby-info {
+	background: var(--surface-2);
+	border: 1px solid var(--border);
+	padding: 1.5rem;
+	border-radius: var(--radius);
+	margin-top: 1rem;
+}
+
+#lobby-details {
+	background: var(--surface-2);
+	border: 1px solid var(--border);
+	padding: 1rem;
+	border-radius: var(--radius-sm);
+	margin-bottom: 1rem;
+	list-style: none;
+	padding-left: 1rem;
+}
+
+.detail-item {
+	display: flex;
+	justify-content: space-between;
+	margin-bottom: 0.5rem;
+}
+
+.detail-item:last-child {
+	margin-bottom: 0;
+}
+
+.invite-link {
+	background: var(--accent-soft);
+	border: 1px solid var(--border);
+	padding: 1rem;
+	border-radius: var(--radius-sm);
+	margin: 1rem 0;
+	word-break: break-all;
+	font-family: monospace;
+	color: var(--text);
+}
+
+.invite-code {
+	background: var(--accent-soft);
+	border: 1px solid var(--border);
+	padding: 1rem;
+	border-radius: var(--radius-sm);
+	margin: 1rem 0;
+	color: var(--text);
+}
+
+.invite-code h3 {
+	margin: 0 0 0.5rem;
+}
+
+.invite-code__value {
+	font-family: monospace;
+	font-size: 1.5rem;
+	font-weight: 700;
+	letter-spacing: 0.15em;
+	word-break: break-all;
+	margin-bottom: 0.5rem;
+}
+
+.player-list ul {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+#host-player-list,
+#joined-player-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.player-list {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	padding: 1rem;
+	margin: 1rem 0;
+}
+
+/* Journey team mode: the host arranges the teams in the waiting room. */
+.team-panel {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	padding: 1rem;
+	margin: 1rem 0;
+}
+
+.team-box {
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	margin: 0.5rem 0;
+	padding: 0.5rem 0.75rem;
+}
+
+.team-box ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.team-box li {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	padding: 0.2rem 0;
+}
+
+.team-pool {
+	font-style: italic;
+	opacity: 0.85;
+}
+
+/* The name-your-bot dialog: label, box and the random-name hat, stacked. */
+.bot-name-form {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.bot-name-form input {
+	padding: 0.45rem 0.6rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	font-size: 1rem;
+}
+
+.player-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.5rem 0;
+	border-bottom: 1px solid var(--border);
+}
+
+.player-item:last-child {
+	border-bottom: none;
+}
+
+.player-info {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+
+.player-info .token-icon {
+	width: 1.3rem;
+	height: 1.3rem;
+}
+
+.player-status {
+	color: var(--text-muted);
+	font-size: 0.85rem;
+}
+
+.player-token-name {
+	color: var(--accent);
+	font-size: 0.85rem;
+}
+
+.player-name {
+	font-weight: 500;
+	color: var(--text);
+}
+
+.player-token {
+	background: var(--accent);
+	color: var(--on-accent);
+	padding: 0.25rem 0.5rem;
+	border-radius: var(--radius-sm);
+	font-size: 0.8rem;
+}
+
+.host-badge {
+	background: var(--warning);
+	color: #ffffff;
+	padding: 0.25rem 0.5rem;
+	border-radius: var(--radius-sm);
+	font-size: 0.8rem;
+}
+
+/* Estados de la aplicación */
+.error {
+	background: var(--danger-soft);
+	color: var(--danger);
+	padding: 1rem;
+	border-radius: var(--radius-sm);
+	margin: 1rem 0;
+}
+
+.success {
+	background: var(--good-soft);
+	color: var(--good);
+	padding: 1rem;
+	border-radius: var(--radius-sm);
+	margin: 1rem 0;
+}
+
+.loading {
+	text-align: center;
+	color: var(--text-muted);
+}
+
+/* Saved games ("your games") list */
+.saved-game-list {
+	list-style: none;
+	padding: 0;
+	margin: 0 0 1.5rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.saved-game-item {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	padding: 0.85rem 1rem;
+	background: var(--surface-2);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+}
+
+.saved-game-info {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.6rem;
+	min-width: 0;
+}
+
+.saved-game-icon .token-icon {
+	width: 1.4rem;
+	height: 1.4rem;
+}
+
+.saved-game-name {
+	font-weight: 600;
+	color: var(--text);
+	text-transform: capitalize;
+}
+
+.saved-game-status {
+	color: var(--accent);
+	font-size: 0.85rem;
+}
+
+.saved-game-connected {
+	color: var(--text-muted);
+	font-size: 0.85rem;
+}
+
+.saved-game-created {
+	color: var(--text-muted);
+	font-size: 0.85rem;
+}
+
+.saved-game-actions {
+	display: flex;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+
+/* === Board package upload === */
+
+/* With an uploaded package active, the board picker is hidden and replaced by this label so
+   there's no stale built-in board on show. */
+.board-uploaded-name {
+	margin: 0;
+	font-weight: 600;
+}
+
+.board-upload-status {
+	margin: 0.35rem 0 0;
+	font-size: 0.9rem;
+	font-style: italic;
+	opacity: 0.85;
+}
+
+.board-upload-remove {
+	margin-top: 0.5rem;
+}
+
+/* While an uploaded package drives the rules, its declared rules render in #package-rules and
+   the built-in fieldsets are hidden. Scope the hide to the panel's DIRECT-child fieldsets (the
+   built-in ones) so it doesn't also hide the package's own rendered fieldsets nested in
+   #package-rules — those reuse the same .rules-fieldset class. */
+.rules-details--package > .rules-fieldset { display: none; }
+.package-rules fieldset { margin-top: 0.5rem; }
+

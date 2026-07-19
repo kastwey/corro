@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Corro</title>
+  <script>
+	// Apply the saved/system theme before first paint to avoid a flash.
+	(function () {
+	  try {
+		var t = localStorage.getItem('corro-theme');
+		if (t !== 'dark' && t !== 'light') {
+		  t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+		}
+		document.documentElement.setAttribute('data-theme', t);
+	  } catch (e) { /* ignore */ }
+	})();
+  </script>
+  <link rel="stylesheet" href="css/theme.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="css/modal.css" />
+  <link rel="stylesheet" href="css/trade.css" />
+  <link rel="stylesheet" href="css/turn-indicator.css" />
+  <link rel="stylesheet" href="css/player-panel.css" />
+  <link rel="stylesheet" href="css/connection-panel.css" />
+  <link rel="stylesheet" href="css/dice.css" />
+  <link rel="stylesheet" href="css/cards.css" />
+  <link rel="stylesheet" href="css/action-bar.css" />
+  <link rel="stylesheet" href="css/end-screen.css" />
+  <link rel="stylesheet" href="css/race-board.css" />
+  <link rel="stylesheet" href="css/track-board.css" />
+  <link rel="stylesheet" href="css/journey-board.css" />
+  <link rel="stylesheet" href="css/assembly-board.css" />
+  <link rel="stylesheet" href="css/draft-board.css" />
+  <link rel="stylesheet" href="css/shedding-board.css" />
+  <link rel="stylesheet" href="css/exploding-board.css" />
+  <link rel="stylesheet" href="css/trivia-board.css" />
+</head>
+<body>
+  <div class="app-main">
+	<header class="app-header">
+	  <h1 class="app-title">Corro</h1>
+	  <div class="app-header__controls" id="app-controls"></div>
+	</header>
+	<main>
+	<p class="app-intro" data-i18n="game.board_intro">Use Tab to enter the board, then use the arrow keys to move. Your screen reader will announce the active square.</p>
+
+	<div class="game-layout">
+	  <div class="game-layout__board">
+		<div class="board-frame">
+		  <!-- The turn indicator is inserted dynamically above the board. -->
+		  <div id="board" role="application" tabindex="0" aria-label="Board" data-i18n-attr:aria-label="game.panels.board">
+			<!-- Squares are rendered by the application. -->
+		  </div>
+		</div>
+	  </div>
+
+	  <div id="players-panel-mount"></div>
+
+	  <div id="connection-panel-mount"></div>
+	</div>
+
+	<!-- DialogManager creates dialogs dynamically. -->
+
+	<!-- Live region for accessibility announcements. -->
+	<div id="sr-live" aria-live="polite" aria-atomic="true"></div>
+	</main>
+  </div>
+
+	<!-- Dependencies -->
+  <script src="libs/i18next.min.js"></script>
+  <script src="libs/signalr.min.js"></script>
+
+	<!-- Scripts load from relative paths inside dist. -->
+  <script type="module" src="app.js"></script>
+
+	<footer class="app-footer">
+		<p>
+			<span data-i18n="footer.poweredBy">Powered by</span>
+			<strong>Corro Online</strong>
+			&middot;
+			<a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="license noopener">AGPL-3.0</a>
+		</p>
+	</footer>
+</body>
+</html>

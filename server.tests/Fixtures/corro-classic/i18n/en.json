@@ -1,0 +1,79 @@
+{
+  "squares": {
+    "4": "Tax 4",
+    "5": "Station 5",
+    "12": "Utility 12",
+    "15": "Station 15",
+    "25": "Station 25",
+    "28": "Utility 28",
+    "35": "Station 35",
+    "38": "Tax 38"
+  },
+  "cards": {
+    "chance_advance_go": "Advance to Start and collect.",
+    "chance_advance_11": "Advance to space 11. Collect if you pass Start.",
+    "chance_advance_24": "Advance to space 24. Collect if you pass Start.",
+    "chance_advance_39": "Advance to space 39.",
+    "chance_nearest_railway": "Advance to the nearest station. If owned, pay double.",
+    "chance_nearest_utility": "Advance to the nearest utility. If owned, pay 10× the dice.",
+    "chance_bank_dividend": "The bank pays you 50 €.",
+    "chance_release_pass": "Release pass. Keep this card until you need it.",
+    "chance_go_back_3": "Go back three spaces.",
+    "chance_send_to_holding": "Go to holding. Do not collect at Start.",
+    "chance_general_repairs": "Repairs: pay 25 € per house and 100 € per hotel.",
+    "chance_poor_tax": "Pay 15 €.",
+    "chance_chairman": "Pay 50 € to each player.",
+    "chance_building_loan": "Collect 150 €.",
+    "chance_crossword": "Collect 100 €.",
+    "community_advance_go": "Advance to Start and collect.",
+    "community_bank_error": "Collect 200 €.",
+    "community_doctor_fee": "Pay 50 €.",
+    "community_stock_sale": "Collect 50 €.",
+    "community_release_pass": "Release pass. Keep this card until you need it.",
+    "community_send_to_holding": "Go to holding. Do not collect at Start.",
+    "community_holiday_fund": "Collect 100 €.",
+    "community_tax_refund": "Collect 20 €.",
+    "community_birthday": "Collect 10 € from each player.",
+    "community_life_insurance": "Collect 100 €.",
+    "community_hospital": "Pay 100 €.",
+    "community_school": "Pay 50 €.",
+    "community_consultancy": "Collect 25 €.",
+    "community_street_repairs": "Roadworks: pay 40 € per house and 115 € per hotel.",
+    "community_beauty": "Collect 10 €.",
+    "community_inherit": "Collect 100 €."
+  },
+  "currency": {
+    "name": "euros"
+  },
+  "terminology": {
+    "start": "Go",
+    "holding": "Holding / Just Visiting",
+    "freeparking": "Free Parking",
+    "sendtoholding": "Go To Holding"
+  },
+  "building": {
+    "small": "house",
+    "smallPlural": "houses",
+    "big": "hotel"
+  },
+  "groupMember": {
+    "default": "street",
+    "transit": "station",
+    "utility": "company"
+  },
+  "groupMemberPlural": {
+    "default": "streets",
+    "transit": "stations",
+    "utility": "companies"
+  },
+  "tokens": {
+    "disc": "Disc",
+    "square": "Square",
+    "triangle": "Triangle",
+    "star": "Star",
+    "diamond": "Diamond",
+    "ring": "Ring",
+    "heart": "Heart",
+    "cross": "Cross"
+  }
+}

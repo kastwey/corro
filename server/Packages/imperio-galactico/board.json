@@ -1,0 +1,476 @@
+[
+  {
+    "id": 0,
+    "type": "start"
+  },
+  {
+    "id": 1,
+    "type": "property",
+    "group": "g1",
+    "price": 60,
+    "buildCost": 50,
+    "rent": [
+      2,
+      10,
+      30,
+      90,
+      160,
+      205,
+      250
+    ],
+    "nameKey": "squares.1"
+  },
+  {
+    "id": 2,
+    "type": "deck",
+    "deck": "blackmarket"
+  },
+  {
+    "id": 3,
+    "type": "property",
+    "group": "g1",
+    "price": 60,
+    "buildCost": 50,
+    "rent": [
+      4,
+      20,
+      60,
+      180,
+      320,
+      385,
+      450
+    ],
+    "nameKey": "squares.3"
+  },
+  {
+    "id": 4,
+    "type": "tax",
+    "amount": 200,
+    "nameKey": "squares.4"
+  },
+  {
+    "id": 5,
+    "type": "transit",
+    "group": "transit",
+    "price": 200,
+    "nameKey": "squares.5"
+  },
+  {
+    "id": 6,
+    "type": "property",
+    "group": "g2",
+    "price": 100,
+    "buildCost": 50,
+    "rent": [
+      6,
+      30,
+      90,
+      270,
+      400,
+      475,
+      550
+    ],
+    "nameKey": "squares.6"
+  },
+  {
+    "id": 7,
+    "type": "deck",
+    "deck": "fortune"
+  },
+  {
+    "id": 8,
+    "type": "property",
+    "group": "g2",
+    "price": 100,
+    "buildCost": 50,
+    "rent": [
+      6,
+      30,
+      90,
+      270,
+      400,
+      475,
+      550
+    ],
+    "nameKey": "squares.8"
+  },
+  {
+    "id": 9,
+    "type": "property",
+    "group": "g2",
+    "price": 120,
+    "buildCost": 50,
+    "rent": [
+      8,
+      40,
+      100,
+      300,
+      450,
+      525,
+      600
+    ],
+    "nameKey": "squares.9"
+  },
+  {
+    "id": 10,
+    "type": "holding"
+  },
+  {
+    "id": 11,
+    "type": "property",
+    "group": "g3",
+    "price": 140,
+    "buildCost": 100,
+    "rent": [
+      10,
+      50,
+      150,
+      450,
+      625,
+      688,
+      750
+    ],
+    "nameKey": "squares.11"
+  },
+  {
+    "id": 12,
+    "type": "utility",
+    "group": "utility",
+    "price": 150,
+    "nameKey": "squares.12"
+  },
+  {
+    "id": 13,
+    "type": "property",
+    "group": "g3",
+    "price": 140,
+    "buildCost": 100,
+    "rent": [
+      10,
+      50,
+      150,
+      450,
+      625,
+      688,
+      750
+    ],
+    "nameKey": "squares.13"
+  },
+  {
+    "id": 14,
+    "type": "property",
+    "group": "g3",
+    "price": 160,
+    "buildCost": 100,
+    "rent": [
+      12,
+      60,
+      180,
+      500,
+      700,
+      800,
+      900
+    ],
+    "nameKey": "squares.14"
+  },
+  {
+    "id": 15,
+    "type": "transit",
+    "group": "transit",
+    "price": 200,
+    "nameKey": "squares.15"
+  },
+  {
+    "id": 16,
+    "type": "property",
+    "group": "g4",
+    "price": 180,
+    "buildCost": 100,
+    "rent": [
+      14,
+      70,
+      200,
+      550,
+      750,
+      850,
+      950
+    ],
+    "nameKey": "squares.16"
+  },
+  {
+    "id": 17,
+    "type": "deck",
+    "deck": "blackmarket"
+  },
+  {
+    "id": 18,
+    "type": "property",
+    "group": "g4",
+    "price": 180,
+    "buildCost": 100,
+    "rent": [
+      14,
+      70,
+      200,
+      550,
+      750,
+      850,
+      950
+    ],
+    "nameKey": "squares.18"
+  },
+  {
+    "id": 19,
+    "type": "property",
+    "group": "g4",
+    "price": 200,
+    "buildCost": 100,
+    "rent": [
+      16,
+      80,
+      220,
+      600,
+      800,
+      900,
+      1000
+    ],
+    "nameKey": "squares.19"
+  },
+  {
+    "id": 20,
+    "type": "freeparking"
+  },
+  {
+    "id": 21,
+    "type": "property",
+    "group": "g5",
+    "price": 220,
+    "buildCost": 150,
+    "rent": [
+      18,
+      90,
+      250,
+      700,
+      875,
+      962,
+      1050
+    ],
+    "nameKey": "squares.21"
+  },
+  {
+    "id": 22,
+    "type": "deck",
+    "deck": "fortune"
+  },
+  {
+    "id": 23,
+    "type": "property",
+    "group": "g5",
+    "price": 220,
+    "buildCost": 150,
+    "rent": [
+      18,
+      90,
+      250,
+      700,
+      875,
+      962,
+      1050
+    ],
+    "nameKey": "squares.23"
+  },
+  {
+    "id": 24,
+    "type": "property",
+    "group": "g5",
+    "price": 240,
+    "buildCost": 150,
+    "rent": [
+      20,
+      100,
+      300,
+      750,
+      925,
+      1012,
+      1100
+    ],
+    "nameKey": "squares.24"
+  },
+  {
+    "id": 25,
+    "type": "transit",
+    "group": "transit",
+    "price": 200,
+    "nameKey": "squares.25"
+  },
+  {
+    "id": 26,
+    "type": "property",
+    "group": "g6",
+    "price": 260,
+    "buildCost": 150,
+    "rent": [
+      22,
+      110,
+      330,
+      800,
+      975,
+      1062,
+      1150
+    ],
+    "nameKey": "squares.26"
+  },
+  {
+    "id": 27,
+    "type": "property",
+    "group": "g6",
+    "price": 260,
+    "buildCost": 150,
+    "rent": [
+      22,
+      110,
+      330,
+      800,
+      975,
+      1062,
+      1150
+    ],
+    "nameKey": "squares.27"
+  },
+  {
+    "id": 28,
+    "type": "utility",
+    "group": "utility",
+    "price": 150,
+    "nameKey": "squares.28"
+  },
+  {
+    "id": 29,
+    "type": "property",
+    "group": "g6",
+    "price": 280,
+    "buildCost": 150,
+    "rent": [
+      24,
+      120,
+      360,
+      850,
+      1025,
+      1112,
+      1200
+    ],
+    "nameKey": "squares.29"
+  },
+  {
+    "id": 30,
+    "type": "sendtoholding"
+  },
+  {
+    "id": 31,
+    "type": "property",
+    "group": "g7",
+    "price": 300,
+    "buildCost": 200,
+    "rent": [
+      26,
+      130,
+      390,
+      900,
+      1100,
+      1188,
+      1275
+    ],
+    "nameKey": "squares.31"
+  },
+  {
+    "id": 32,
+    "type": "property",
+    "group": "g7",
+    "price": 300,
+    "buildCost": 200,
+    "rent": [
+      26,
+      130,
+      390,
+      900,
+      1100,
+      1188,
+      1275
+    ],
+    "nameKey": "squares.32"
+  },
+  {
+    "id": 33,
+    "type": "deck",
+    "deck": "blackmarket"
+  },
+  {
+    "id": 34,
+    "type": "property",
+    "group": "g7",
+    "price": 320,
+    "buildCost": 200,
+    "rent": [
+      28,
+      150,
+      450,
+      1000,
+      1200,
+      1300,
+      1400
+    ],
+    "nameKey": "squares.34"
+  },
+  {
+    "id": 35,
+    "type": "transit",
+    "group": "transit",
+    "price": 200,
+    "nameKey": "squares.35"
+  },
+  {
+    "id": 36,
+    "type": "deck",
+    "deck": "fortune"
+  },
+  {
+    "id": 37,
+    "type": "property",
+    "group": "g8",
+    "price": 350,
+    "buildCost": 200,
+    "rent": [
+      35,
+      175,
+      500,
+      1100,
+      1300,
+      1400,
+      1500
+    ],
+    "nameKey": "squares.37"
+  },
+  {
+    "id": 38,
+    "type": "tax",
+    "amount": 100,
+    "nameKey": "squares.38"
+  },
+  {
+    "id": 39,
+    "type": "property",
+    "group": "g8",
+    "price": 400,
+    "buildCost": 200,
+    "rent": [
+      50,
+      200,
+      600,
+      1400,
+      1700,
+      1850,
+      2000
+    ],
+    "nameKey": "squares.39"
+  }
+]

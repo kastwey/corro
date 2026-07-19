@@ -1,0 +1,55 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            // Zero-infra: games live in memory (lost on restart). Nothing to install but the .NET SDK.
+            "name": "Debug CorroServer (in-memory)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/server/bin/Debug/net10.0/CorroServer.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/server",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+                "uriFormat": "%s"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
+            // Persistent, like production: the preLaunchTask brings the Cosmos + Azurite emulators up in
+            // Docker (and waits for Cosmos to be healthy) before the app starts. The app runs on the HOST
+            // and reaches the emulators on localhost, so breakpoints are native — no in-container debugging.
+            "name": "Debug CorroServer (Docker emulators)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "dev-up",
+            "program": "${workspaceFolder}/server/bin/Debug/net10.0/CorroServer.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/server",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+                "uriFormat": "%s"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ConnectionStrings__CosmosDB": "AccountEndpoint=http://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==",
+                "ConnectionStrings__PackageBlobs": "UseDevelopmentStorage=true"
+            }
+        },
+        {
+            "name": "Attach to CorroServer",
+            "type": "coreclr",
+            "request": "attach",
+            "processId": "${command:pickProcess}"
+        }
+    ]
+}

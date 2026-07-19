@@ -1,0 +1,18 @@
+{
+  "tokens": {
+    "brujula": "Compass",
+    "libro": "Book",
+    "pincel": "Brush",
+    "atomo": "Atom",
+    "balon": "Ball",
+    "mascara": "Mask"
+  },
+  "game": {
+    "trivia_cat_a": "Geography",
+    "trivia_cat_b": "Entertainment",
+    "trivia_cat_c": "History",
+    "trivia_cat_d": "Arts & Literature",
+    "trivia_cat_e": "Science",
+    "trivia_cat_f": "Sports"
+  }
+}

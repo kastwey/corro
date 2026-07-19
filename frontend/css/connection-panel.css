@@ -1,0 +1,75 @@
+/* connection-panel.css — side panel showing the live connection status and the
+ * "Leave game" / "Disconnect" escape hatches. The status text is an aria-live
+ * region so screen-reader users hear reconnect/disconnect transitions.
+ */
+
+.connection-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 14px;
+  margin-top: 16px;
+}
+
+.connection-panel:focus {
+  outline: 2px solid var(--focus, #4c9aff);
+  outline-offset: 2px;
+}
+
+.connection-panel__title {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.connection-panel__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+
+.connection-panel__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex: none;
+}
+.connection-panel[data-status="connected"] .connection-panel__dot { background: #2e9e5b; }
+.connection-panel[data-status="reconnecting"] .connection-panel__dot { background: #d9a106; }
+.connection-panel[data-status="disconnected"] .connection-panel__dot { background: #c0392b; }
+
+.connection-panel__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.connection-panel__btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 9px 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.connection-panel__btn:hover { background: var(--surface); }
+.connection-panel__btn:focus-visible {
+  outline: 2px solid var(--focus, #4c9aff);
+  outline-offset: 2px;
+}
+.connection-panel__btn--leave {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.connection-panel__btn--leave:hover { background: var(--danger-soft); }

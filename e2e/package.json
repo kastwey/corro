@@ -1,0 +1,20 @@
+{
+  "name": "corro-e2e",
+  "private": true,
+  "author": "kastwey and contributors",
+  "license": "AGPL-3.0-only",
+  "description": "Playwright end-to-end suite: drives real browsers against the server in its deterministic E2E mode (scripted dice, unshuffled decks, join-order turns).",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.53.0",
+    "axe-core": "^4.12.1",
+    "fflate": "^0.8.3"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "tokens": {
+    "circle": "Círculo",
+    "triangle": "Triángulo"
+  },
+  "notice": {
+    "hidden": "Este juego oculto solo existe para probar el flujo completo de desbloqueo de paquetes."
+  }
+}

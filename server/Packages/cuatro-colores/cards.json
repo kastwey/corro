@@ -1,0 +1,418 @@
+[
+  {
+    "id": "rojo-0",
+    "type": "number",
+    "color": "rojo",
+    "value": 0,
+    "count": 1,
+    "nameKey": "cards.rojo_0"
+  },
+  {
+    "id": "rojo-2",
+    "type": "number",
+    "color": "rojo",
+    "value": 2,
+    "count": 2,
+    "nameKey": "cards.rojo_2"
+  },
+  {
+    "id": "rojo-3",
+    "type": "number",
+    "color": "rojo",
+    "value": 3,
+    "count": 2,
+    "nameKey": "cards.rojo_3"
+  },
+  {
+    "id": "rojo-4",
+    "type": "number",
+    "color": "rojo",
+    "value": 4,
+    "count": 2,
+    "nameKey": "cards.rojo_4"
+  },
+  {
+    "id": "rojo-6",
+    "type": "number",
+    "color": "rojo",
+    "value": 6,
+    "count": 2,
+    "nameKey": "cards.rojo_6"
+  },
+  {
+    "id": "rojo-7",
+    "type": "number",
+    "color": "rojo",
+    "value": 7,
+    "count": 2,
+    "nameKey": "cards.rojo_7"
+  },
+  {
+    "id": "rojo-8",
+    "type": "number",
+    "color": "rojo",
+    "value": 8,
+    "count": 2,
+    "nameKey": "cards.rojo_8"
+  },
+  {
+    "id": "rojo-9",
+    "type": "number",
+    "color": "rojo",
+    "value": 9,
+    "count": 2,
+    "nameKey": "cards.rojo_9"
+  },
+  {
+    "id": "rojo-reversa",
+    "type": "reverse",
+    "color": "rojo",
+    "count": 2,
+    "nameKey": "cards.rojo_reversa"
+  },
+  {
+    "id": "rojo-roba2",
+    "type": "drawTwo",
+    "color": "rojo",
+    "count": 2,
+    "nameKey": "cards.rojo_roba2"
+  },
+  {
+    "id": "amarillo-1",
+    "type": "number",
+    "color": "amarillo",
+    "value": 1,
+    "count": 2,
+    "nameKey": "cards.amarillo_1"
+  },
+  {
+    "id": "amarillo-2",
+    "type": "number",
+    "color": "amarillo",
+    "value": 2,
+    "count": 2,
+    "nameKey": "cards.amarillo_2"
+  },
+  {
+    "id": "amarillo-3",
+    "type": "number",
+    "color": "amarillo",
+    "value": 3,
+    "count": 2,
+    "nameKey": "cards.amarillo_3"
+  },
+  {
+    "id": "amarillo-4",
+    "type": "number",
+    "color": "amarillo",
+    "value": 4,
+    "count": 2,
+    "nameKey": "cards.amarillo_4"
+  },
+  {
+    "id": "amarillo-5",
+    "type": "number",
+    "color": "amarillo",
+    "value": 5,
+    "count": 2,
+    "nameKey": "cards.amarillo_5"
+  },
+  {
+    "id": "amarillo-6",
+    "type": "number",
+    "color": "amarillo",
+    "value": 6,
+    "count": 2,
+    "nameKey": "cards.amarillo_6"
+  },
+  {
+    "id": "amarillo-8",
+    "type": "number",
+    "color": "amarillo",
+    "value": 8,
+    "count": 2,
+    "nameKey": "cards.amarillo_8"
+  },
+  {
+    "id": "amarillo-9",
+    "type": "number",
+    "color": "amarillo",
+    "value": 9,
+    "count": 2,
+    "nameKey": "cards.amarillo_9"
+  },
+  {
+    "id": "amarillo-salta",
+    "type": "skip",
+    "color": "amarillo",
+    "count": 2,
+    "nameKey": "cards.amarillo_salta"
+  },
+  {
+    "id": "amarillo-reversa",
+    "type": "reverse",
+    "color": "amarillo",
+    "count": 2,
+    "nameKey": "cards.amarillo_reversa"
+  },
+  {
+    "id": "amarillo-roba2",
+    "type": "drawTwo",
+    "color": "amarillo",
+    "count": 2,
+    "nameKey": "cards.amarillo_roba2"
+  },
+  {
+    "id": "verde-0",
+    "type": "number",
+    "color": "verde",
+    "value": 0,
+    "count": 1,
+    "nameKey": "cards.verde_0"
+  },
+  {
+    "id": "verde-1",
+    "type": "number",
+    "color": "verde",
+    "value": 1,
+    "count": 2,
+    "nameKey": "cards.verde_1"
+  },
+  {
+    "id": "verde-3",
+    "type": "number",
+    "color": "verde",
+    "value": 3,
+    "count": 2,
+    "nameKey": "cards.verde_3"
+  },
+  {
+    "id": "verde-4",
+    "type": "number",
+    "color": "verde",
+    "value": 4,
+    "count": 2,
+    "nameKey": "cards.verde_4"
+  },
+  {
+    "id": "verde-5",
+    "type": "number",
+    "color": "verde",
+    "value": 5,
+    "count": 2,
+    "nameKey": "cards.verde_5"
+  },
+  {
+    "id": "verde-6",
+    "type": "number",
+    "color": "verde",
+    "value": 6,
+    "count": 2,
+    "nameKey": "cards.verde_6"
+  },
+  {
+    "id": "verde-8",
+    "type": "number",
+    "color": "verde",
+    "value": 8,
+    "count": 2,
+    "nameKey": "cards.verde_8"
+  },
+  {
+    "id": "verde-9",
+    "type": "number",
+    "color": "verde",
+    "value": 9,
+    "count": 2,
+    "nameKey": "cards.verde_9"
+  },
+  {
+    "id": "verde-salta",
+    "type": "skip",
+    "color": "verde",
+    "count": 2,
+    "nameKey": "cards.verde_salta"
+  },
+  {
+    "id": "verde-reversa",
+    "type": "reverse",
+    "color": "verde",
+    "count": 2,
+    "nameKey": "cards.verde_reversa"
+  },
+  {
+    "id": "verde-roba2",
+    "type": "drawTwo",
+    "color": "verde",
+    "count": 2,
+    "nameKey": "cards.verde_roba2"
+  },
+  {
+    "id": "azul-0",
+    "type": "number",
+    "color": "azul",
+    "value": 0,
+    "count": 1,
+    "nameKey": "cards.azul_0"
+  },
+  {
+    "id": "azul-1",
+    "type": "number",
+    "color": "azul",
+    "value": 1,
+    "count": 2,
+    "nameKey": "cards.azul_1"
+  },
+  {
+    "id": "azul-3",
+    "type": "number",
+    "color": "azul",
+    "value": 3,
+    "count": 2,
+    "nameKey": "cards.azul_3"
+  },
+  {
+    "id": "azul-4",
+    "type": "number",
+    "color": "azul",
+    "value": 4,
+    "count": 2,
+    "nameKey": "cards.azul_4"
+  },
+  {
+    "id": "azul-6",
+    "type": "number",
+    "color": "azul",
+    "value": 6,
+    "count": 2,
+    "nameKey": "cards.azul_6"
+  },
+  {
+    "id": "azul-7",
+    "type": "number",
+    "color": "azul",
+    "value": 7,
+    "count": 2,
+    "nameKey": "cards.azul_7"
+  },
+  {
+    "id": "azul-8",
+    "type": "number",
+    "color": "azul",
+    "value": 8,
+    "count": 2,
+    "nameKey": "cards.azul_8"
+  },
+  {
+    "id": "azul-9",
+    "type": "number",
+    "color": "azul",
+    "value": 9,
+    "count": 2,
+    "nameKey": "cards.azul_9"
+  },
+  {
+    "id": "azul-salta",
+    "type": "skip",
+    "color": "azul",
+    "count": 2,
+    "nameKey": "cards.azul_salta"
+  },
+  {
+    "id": "azul-reversa",
+    "type": "reverse",
+    "color": "azul",
+    "count": 2,
+    "nameKey": "cards.azul_reversa"
+  },
+  {
+    "id": "comodin",
+    "type": "wild",
+    "count": 4,
+    "nameKey": "cards.comodin"
+  },
+  {
+    "id": "comodin-roba4",
+    "type": "wildDrawFour",
+    "count": 4,
+    "nameKey": "cards.comodin_roba4"
+  },
+  {
+    "id": "rojo-1",
+    "type": "number",
+    "color": "rojo",
+    "value": 1,
+    "count": 2,
+    "nameKey": "cards.rojo_1"
+  },
+  {
+    "id": "azul-2",
+    "type": "number",
+    "color": "azul",
+    "value": 2,
+    "count": 2,
+    "nameKey": "cards.azul_2"
+  },
+  {
+    "id": "amarillo-0",
+    "type": "number",
+    "color": "amarillo",
+    "value": 0,
+    "count": 1,
+    "nameKey": "cards.amarillo_0"
+  },
+  {
+    "id": "amarillo-7",
+    "type": "number",
+    "color": "amarillo",
+    "value": 7,
+    "count": 2,
+    "nameKey": "cards.amarillo_7"
+  },
+  {
+    "id": "verde-2",
+    "type": "number",
+    "color": "verde",
+    "value": 2,
+    "count": 2,
+    "nameKey": "cards.verde_2"
+  },
+  {
+    "id": "azul-roba2",
+    "type": "drawTwo",
+    "color": "azul",
+    "count": 2,
+    "nameKey": "cards.azul_roba2"
+  },
+  {
+    "id": "verde-7",
+    "type": "number",
+    "color": "verde",
+    "value": 7,
+    "count": 2,
+    "nameKey": "cards.verde_7"
+  },
+  {
+    "id": "azul-5",
+    "type": "number",
+    "color": "azul",
+    "value": 5,
+    "count": 2,
+    "nameKey": "cards.azul_5"
+  },
+  {
+    "id": "rojo-salta",
+    "type": "skip",
+    "color": "rojo",
+    "count": 2,
+    "nameKey": "cards.rojo_salta"
+  },
+  {
+    "id": "rojo-5",
+    "type": "number",
+    "color": "rojo",
+    "value": 5,
+    "count": 2,
+    "nameKey": "cards.rojo_5"
+  }
+]

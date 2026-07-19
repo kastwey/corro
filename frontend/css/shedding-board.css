@@ -1,0 +1,142 @@
+/* shedding-board.css — the shedding family's surface: the aria-hidden table
+ * echo (top card with its colour band, direction, rival counters) + the hand mount.
+ * Same design language as the other card families. */
+
+#board.shedding-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  outline: none;
+}
+
+.shedding-hand .hand-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+
+.shedding-visual { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1rem; }
+
+/* The table centre: the discards' top card (a real card tile in the colour in force) beside the
+ * draw-pile card-back stack, with the play direction between them. */
+.shedding-piles {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  padding: 0.4rem 0.2rem 0.2rem;
+}
+
+.shedding-discard,
+.shedding-draw {
+  position: relative;
+  width: 4.6rem;
+  height: 6.6rem;
+  border-radius: 0.6rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.3rem;
+  text-align: center;
+  color: #fff;
+}
+
+/* The discard: filled with the colour in force, name centred, offset layers behind it read as a
+ * pile of played cards. */
+.shedding-discard {
+  --in-force: #9e9e9e;
+  --in-force-ink: #000;
+  background: var(--in-force);
+  color: var(--in-force-ink);
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35),
+			  6px 6px 0 -2px color-mix(in srgb, var(--in-force) 72%, #000),
+			  10px 10px 0 -4px color-mix(in srgb, var(--in-force) 55%, #000);
+}
+.shedding-discard__name { font-weight: 800; font-size: 0.95rem; line-height: 1.05; }
+.shedding-discard__color { font-size: 0.72rem; font-weight: 700; }
+
+/* The draw pile: a patterned card back, stacked. */
+.shedding-draw {
+  background: repeating-linear-gradient(45deg, #37474f 0 7px, #4a5b66 7px 14px);
+  border: 3px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 5px 5px 0 -2px #263238, 9px 9px 0 -4px #1b2429;
+}
+.shedding-draw__count { font-weight: 800; font-size: 0.9rem; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55); }
+
+/* The play direction, between the two piles. */
+.shedding-direction {
+  font-size: 1.9rem;
+  line-height: 1;
+  color: var(--text-muted);
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+}
+
+.shedding-seats { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+/* One player's chip: a seat-colour ring with cards left and match score; the active seat fills. */
+.shedding-seat {
+  --seat-color: #888;
+  --seat-ink: #000;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 2px solid var(--seat-color);
+}
+.shedding-seat__name { font-weight: 700; }
+.shedding-seat__cards { color: var(--text-muted); white-space: nowrap; }
+.shedding-seat__score {
+  font-weight: 800;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.shedding-seat--turn {
+  background: var(--seat-color);
+  color: var(--seat-ink);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--seat-color) 35%, transparent);
+}
+.shedding-seat--turn .shedding-seat__cards { color: var(--seat-ink); }
+.shedding-seat--turn .shedding-seat__score {
+  background: transparent;
+  color: var(--seat-ink);
+  border: 1px solid currentColor;
+}
+.shedding-seat--retired { opacity: 0.5; }
+
+.shedding-hand { margin-top: 0.5rem; }
+
+/* The "active rules" affordance: a small toolbar with the Rules button (R mirrors it). */
+.shedding-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* The active-rules reading dialog (Ctrl+Shift+F1): a plain, browseable list of the rules
+ * in force. Generic — shared by any family that lists rules. */
+.game-rules-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  line-height: 1.4;
+}
+.game-rules-list li { color: var(--text); }

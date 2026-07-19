@@ -1,0 +1,8 @@
+{
+    // Recommended extensions for this repo. VS Code prompts to install them on first open.
+    "recommendations": [
+        "ms-dotnettools.csdevkit",        // C# Dev Kit — .NET build + coreclr debugging (F5)
+        "ms-dotnettools.csharp",          // C# language service (OmniSharp/Roslyn)
+        "ms-azuretools.vscode-docker"     // Docker/compose: manage the emulators, attach to the app container
+    ]
+}

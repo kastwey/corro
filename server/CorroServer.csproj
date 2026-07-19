@@ -1,0 +1,69 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>766a2cc0-48fc-4298-aeb5-0c717071525e</UserSecretsId>
+    <!-- Disable the Cosmos SDK Newtonsoft.Json compatibility check; this app provides its own System.Text.Json serializer. -->
+    <AzureCosmosDisableNewtonsoftJsonCheck>true</AzureCosmosDisableNewtonsoftJsonCheck>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.29.1" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.53.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Exclude archived .old files from compilation. -->
+    <Compile Remove="**/*.old" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Bundled default sound pack: copy to output so it is available at runtime/publish.
+         pack.json is already an implicit Content item, so only adjust its copy behaviour;
+         the audio files are added as copied None items. -->
+    <Content Update="Assets\Sounds\pack.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Assets\Sounds\*.mp3;Assets\Sounds\*.ogg;Assets\Sounds\*.wav" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Shipped, approved .corro board packages (the engine's built-in boards live here as
+         packages, not as a separate infra). Copied to output so the server can read + stage them
+         at runtime and they travel inside the publish artifact. -->
+    <Content Update="Packages\**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Package files the SDK treats as None rather than Content (e.g. help.*.md guides) also need to
+         travel to the output / publish artifact, so copy those too. -->
+    <None Update="Packages\**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The canonical board keymap: embedded so the server is its single source of truth (served to
+         the client, and the validator derives the reserved keys from it). Embedded (not Content) so
+         it's available identically in prod and in the test assembly. -->
+    <Content Remove="Config\keymap.json" />
+    <EmbeddedResource Include="Config\keymap.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CorroServer.Tests" />
+  </ItemGroup>
+
+    <!-- Build the frontend before the backend and copy it to wwwroot so it ships in the
+      publish artifact (Azure App Service serves the client from wwwroot). -->
+  <Target Name="BuildFrontend" BeforeTargets="Build" Condition="('$(BuildingInsideVisualStudio)' != 'true' Or '$(BuildFrontendAlways)' == 'true') And '$(SkipFrontendBuild)' != 'true'">
+    <Message Importance="high" Text="Building frontend..." />
+    <Exec Command="npm run build" WorkingDirectory="../frontend" />
+    <ItemGroup>
+      <_FrontendDist Include="..\frontend\dist\**\*" />
+    </ItemGroup>
+    <!-- Wipe wwwroot first so it stays an exact mirror of frontend/dist: the copy below never
+         deletes (SkipUnchangedFiles), so without this a file removed from the frontend would
+         linger here forever and ship inside the publish artifact. wwwroot is gitignored and
+         rebuilt from dist on every build, so removing it is safe. -->
+    <RemoveDir Directories="$(MSBuildProjectDirectory)\wwwroot" />
+    <Copy SourceFiles="@(_FrontendDist)" DestinationFiles="@(_FrontendDist->'$(MSBuildProjectDirectory)\wwwroot\%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Message Importance="high" Text="Frontend built and copied to a clean wwwroot." />
+  </Target>
+
+  <!-- Install frontend dependencies when node_modules does not exist. -->
+  <Target Name="NpmInstall" BeforeTargets="BuildFrontend" Condition="!Exists('../frontend/node_modules') And '$(SkipFrontendBuild)' != 'true'">
+    <Message Importance="high" Text="Installing frontend dependencies..." />
+    <Exec Command="npm install" WorkingDirectory="../frontend" />
+  </Target>
+</Project>

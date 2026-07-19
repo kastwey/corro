@@ -1,0 +1,229 @@
+/* theme.css — Design system & theming for the game board page.
+ *
+ * Goals: modern, clean, slightly futuristic (subtle glows + gradients),
+ * never noisy. Full light/dark support via [data-theme] on <html>.
+ * Accessibility is untouched: this file only adds the visual layer.
+ * All colors aim for WCAG AA contrast for text on their surfaces.
+ */
+
+/* ---------- Design tokens: LIGHT (default) ---------- */
+:root {
+  color-scheme: light;
+
+  --bg: #eef1f8;
+  --bg-glow: radial-gradient(1200px 600px at 80% -10%, rgba(91, 108, 255, 0.12), transparent 60%),
+			 radial-gradient(900px 500px at -10% 110%, rgba(0, 194, 255, 0.10), transparent 60%);
+  --surface: #ffffff;
+  --surface-2: #f3f5fb;
+  --surface-3: #e7ecf7;
+  --surface-elevated: #ffffff;
+
+  --text: #18203a;
+  --text-muted: #5b6680;
+  --text-faint: #8a93ab;
+
+  --border: #d9e0ef;
+  --border-strong: #c2cbe0;
+
+  --accent: #4b5fdd;
+  --accent-hover: #4052cc;
+  --accent-2: #00c2ff;
+  --accent-grad: linear-gradient(135deg, #5b6cff 0%, #00c2ff 100%);
+  --accent-soft: rgba(91, 108, 255, 0.12);
+  --on-accent: #ffffff;
+
+  --good: #116b35;
+  --good-soft: rgba(17, 107, 53, 0.14);
+  --on-good: #ffffff;
+  --good-hover: #0e5f2f;
+  --danger: #b4233a;
+  --danger-soft: rgba(180, 35, 58, 0.14);
+  --on-danger: #ffffff;
+  --danger-hover: #981c31;
+  --warning: #8a5200;
+
+  --focus-ring: 0 0 0 3px rgba(91, 108, 255, 0.45);
+  --shadow-sm: 0 1px 2px rgba(20, 30, 60, 0.06), 0 1px 3px rgba(20, 30, 60, 0.08);
+  --shadow-md: 0 6px 18px rgba(20, 30, 60, 0.10);
+  --shadow-glow: 0 0 0 1px var(--accent-soft), 0 8px 28px rgba(91, 108, 255, 0.22);
+
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+
+  --font: system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+
+  /* Property group colors (canonical colour palette, tuned for both themes) */
+  --group-brown: #8d5a3b;
+  --group-lightblue: #56b6e6;
+  --group-pink: #d6469b;
+  --group-orange: #ef8b2c;
+  --group-red: #e23b3b;
+  --group-yellow: #f2c200;
+  --group-green: #2f9e57;
+  --group-darkblue: #2f5bd6;
+}
+
+/* ---------- Design tokens: DARK ---------- */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0a0e1a;
+  --bg-glow: radial-gradient(1200px 600px at 80% -10%, rgba(91, 108, 255, 0.18), transparent 60%),
+			 radial-gradient(900px 500px at -10% 110%, rgba(0, 194, 255, 0.14), transparent 60%);
+  --surface: #131a2c;
+  --surface-2: #1a2236;
+  --surface-3: #232e48;
+  --surface-elevated: #18203a;
+
+  --text: #e8edfb;
+  --text-muted: #9aa6c4;
+  --text-faint: #707b9b;
+
+  --border: #2a3450;
+  --border-strong: #3a466a;
+
+  --accent: #7c8bff;
+  --accent-hover: #8e9bff;
+  --accent-2: #3fd8ff;
+  --accent-grad: linear-gradient(135deg, #7c8bff 0%, #3fd8ff 100%);
+  --accent-soft: rgba(124, 139, 255, 0.18);
+  --on-accent: #0a0e1a;
+
+  --good: #36c97f;
+  --good-soft: rgba(54, 201, 127, 0.16);
+  --on-good: #08140d;
+  --good-hover: #4bd68e;
+  --danger: #ff5d74;
+  --danger-soft: rgba(255, 93, 116, 0.16);
+  --on-danger: #0a0e1a;
+  --danger-hover: #ff788b;
+  --warning: #ffb13d;
+
+  --focus-ring: 0 0 0 3px rgba(124, 139, 255, 0.55);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-glow: 0 0 0 1px var(--accent-soft), 0 10px 32px rgba(124, 139, 255, 0.28);
+
+  --group-brown: #a26a44;
+  --group-lightblue: #6ec6ef;
+  --group-pink: #e860ad;
+  --group-orange: #ff9d3f;
+  --group-red: #ff5a5a;
+  --group-yellow: #ffd633;
+  --group-green: #41b66c;
+  --group-darkblue: #5a7dff;
+}
+
+/* ---------- Base ---------- */
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--text);
+  background-color: var(--bg);
+  background-image: var(--bg-glow);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app-main { padding: 20px clamp(12px, 4vw, 40px) 48px; max-width: 1400px; margin: 0 auto; }
+
+/* ---------- App header ---------- */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.app-title {
+  margin: 0;
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: var(--accent-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.app-header__controls { display: flex; align-items: center; gap: 12px; }
+.app-intro { color: var(--text-muted); margin: 0 0 20px; max-width: 70ch; }
+
+/* ---------- Buttons (shared) ---------- */
+.btn {
+  font: inherit;
+  font-weight: 600;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  padding: 10px 18px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.btn:hover { border-color: var(--accent); }
+.btn:active { transform: translateY(1px); }
+.btn--primary {
+  border: none;
+  background: var(--accent-grad);
+  color: var(--on-accent);
+  box-shadow: var(--shadow-glow);
+}
+.btn--primary[aria-disabled="true"],
+.btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none; }
+
+/* Icon-only button (theme toggle, etc.) */
+.icon-btn {
+  width: 44px; height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.icon-btn:hover { border-color: var(--accent); }
+.icon-btn svg { width: 22px; height: 22px; }
+
+/* Sound toggle while the browser is still blocking audio (iOS/Safari before a direct
+   tap): draw attention with an amber tint and a gentle pulse so the player notices the
+   "tap to enable sound" affordance. The button stays fully focusable and operable. */
+.icon-btn.is-sound-blocked {
+  border-color: #d98a00;
+  color: #d98a00;
+  animation: sound-blocked-pulse 1.8s ease-in-out infinite;
+}
+.icon-btn.is-sound-blocked:hover { border-color: #b87400; }
+@keyframes sound-blocked-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(217, 138, 0, 0.0); }
+  50% { box-shadow: 0 0 0 3px rgba(217, 138, 0, 0.35); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .icon-btn.is-sound-blocked { animation: none; }
+}
+
+/* Visible focus for keyboard users (accessibility) */
+:where(.btn, .icon-btn, [tabindex], button, a):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-color: var(--accent);
+}
+
+/* ---------- Game layout: board + side panel ---------- */
+.game-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(260px, 24vw, 340px);
+  gap: 24px;
+  align-items: start;
+}
+.game-layout__board { min-width: 0; }
+@media (max-width: 960px) {
+  .game-layout { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

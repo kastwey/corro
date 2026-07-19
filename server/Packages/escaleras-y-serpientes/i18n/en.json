@@ -1,0 +1,22 @@
+{
+  "tokens": {
+    "estrella": "Star",
+    "luna": "Moon",
+    "sol": "Sun",
+    "rombo": "Diamond",
+    "corazon": "Heart",
+    "rayo": "Lightning",
+    "campana": "Bell",
+    "flor": "Flower"
+  },
+  "effects": {
+    "ladder": "Ladder",
+    "snake": "Snake"
+  },
+  "game": {
+    "track_effect_up": "{{player}} finds a ladder and climbs from square {{from}} to {{to}}!",
+    "track_effect_up_self": "You find a ladder and climb from square {{from}} to {{to}}!",
+    "track_effect_down": "A snake swallows {{player}}! They slide from square {{from}} down to {{to}}",
+    "track_effect_down_self": "A snake swallows you! You slide from square {{from}} down to {{to}}"
+  }
+}

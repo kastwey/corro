@@ -1,0 +1,86 @@
+{
+  "trackLength": 100,
+  "gridWidth": 10,
+  "effects": [
+    {
+      "from": 4,
+      "to": 14,
+      "kind": "ladder"
+    },
+    {
+      "from": 9,
+      "to": 31,
+      "kind": "ladder"
+    },
+    {
+      "from": 20,
+      "to": 38,
+      "kind": "ladder"
+    },
+    {
+      "from": 28,
+      "to": 84,
+      "kind": "ladder"
+    },
+    {
+      "from": 40,
+      "to": 59,
+      "kind": "ladder"
+    },
+    {
+      "from": 51,
+      "to": 67,
+      "kind": "ladder"
+    },
+    {
+      "from": 63,
+      "to": 81,
+      "kind": "ladder"
+    },
+    {
+      "from": 71,
+      "to": 91,
+      "kind": "ladder"
+    },
+    {
+      "from": 17,
+      "to": 7,
+      "kind": "snake"
+    },
+    {
+      "from": 54,
+      "to": 34,
+      "kind": "snake"
+    },
+    {
+      "from": 62,
+      "to": 19,
+      "kind": "snake"
+    },
+    {
+      "from": 64,
+      "to": 60,
+      "kind": "snake"
+    },
+    {
+      "from": 87,
+      "to": 24,
+      "kind": "snake"
+    },
+    {
+      "from": 93,
+      "to": 73,
+      "kind": "snake"
+    },
+    {
+      "from": 95,
+      "to": 75,
+      "kind": "snake"
+    },
+    {
+      "from": 98,
+      "to": 79,
+      "kind": "snake"
+    }
+  ]
+}

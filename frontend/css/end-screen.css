@@ -1,0 +1,76 @@
+/* End screen: final standings + awards shown inside the game dialog when the game ends. */
+
+.end-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: min(34rem, 90vw);
+}
+
+.end-screen__banner {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.end-screen__banner--win {
+  color: var(--good);
+}
+
+.end-screen__standings-heading,
+.end-screen__awards-heading {
+  margin: 0.25rem 0 0;
+  font-size: 1rem;
+}
+
+.end-screen__standings {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.end-screen__standings th,
+.end-screen__standings td {
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.end-screen__standings td:nth-child(1),
+.end-screen__standings th:nth-child(1) {
+  text-align: center;
+  width: 2.5rem;
+}
+
+.end-screen__standings td:nth-child(3),
+.end-screen__standings td:nth-child(4),
+.end-screen__standings td:nth-child(5),
+.end-screen__standings th:nth-child(3),
+.end-screen__standings th:nth-child(4),
+.end-screen__standings th:nth-child(5) {
+  text-align: right;
+}
+
+.end-screen__winner-row {
+  font-weight: 700;
+  background: rgba(255, 215, 0, 0.18);
+}
+
+.end-screen__you {
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.end-screen__bankrupt {
+  font-size: 0.8em;
+  text-transform: uppercase;
+  color: var(--danger);
+}
+
+.end-screen__awards {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}

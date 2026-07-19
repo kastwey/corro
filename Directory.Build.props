@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <!-- Surface the .editorconfig code-style rules (e.g. IDE0011 "add braces") as build warnings,
+         so the shared style baseline is enforced by `dotnet build`, not only in the IDE. Applies to
+         every .NET project under the repo root (server, server.tests, tools). -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <Authors>kastwey and contributors</Authors>
+    <Copyright>Copyright © 2026 kastwey and contributors</Copyright>
+    <PackageLicenseExpression>AGPL-3.0-only</PackageLicenseExpression>
+  </PropertyGroup>
+</Project>

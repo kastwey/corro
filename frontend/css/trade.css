@@ -1,0 +1,172 @@
+/* trade.css — Layout for the player-to-player trade modals.
+ * Base chrome (backdrop, title, buttons) comes from .game-dialog in modal.css; this file
+ * only adds the trade-specific two-column layout and the property checklists. No inline
+ * styles are used anywhere in tradeDialog.ts. */
+
+.trade-dialog {
+  max-width: 640px;
+}
+
+/* Keep the native dialog as the semantic container. The inner application surface hands
+ * arrow keys to the roving-checkbox interaction model and preserves the existing visual
+ * title/content/actions stack. Only the content scrolls, so actions remain easy to reach. */
+.trade-application {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+.trade-application > .dialog-content {
+  overflow-y: auto;
+}
+
+.trade-builder-content .trade-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.trade-builder-content .trade-row label {
+  flex: 0 0 auto;
+  font-weight: 600;
+}
+
+.trade-target-select,
+.trade-money-input,
+.trade-holding-input {
+  flex: 1 1 auto;
+  min-width: 4rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 1rem;
+}
+
+.trade-sides {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.trade-side {
+  flex: 1 1 240px;
+  border: 1px solid var(--border-color, #444);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.trade-side > legend {
+  font-weight: 700;
+  padding: 0 0.4rem;
+}
+
+.trade-prop-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color, #444);
+  border-radius: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.trade-prop-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.15rem 0;
+}
+
+.trade-prop-row label {
+  cursor: pointer;
+}
+
+.trade-no-props {
+  margin: 0;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+/* The property lists are a single roving-tabindex tab stop; make the focused checkbox
+   clearly visible since only one is tabbable at a time. */
+.trade-prop-check:focus-visible {
+  outline: 3px solid var(--focus, #ffd24d);
+  outline-offset: 2px;
+}
+
+/* Inline amount errors (over the cap / malformed): visible next to the offending input and
+   spoken via role="alert" + aria-describedby. The input itself also turns danger-coloured. */
+.trade-input-error {
+  margin: -0.4rem 0 0.75rem;
+  color: var(--danger, #c0392b);
+  font-weight: 600;
+}
+
+.trade-money-input.trade-input-invalid,
+.trade-holding-input.trade-input-invalid {
+  border-color: var(--danger, #c0392b);
+  outline: 2px solid var(--danger, #c0392b);
+  outline-offset: 1px;
+}
+
+/* The plain-language "what I give / what I receive" summary in the builder: a focusable line
+   the proposer can Tab to and hear, instead of re-scanning every checkbox. */
+.trade-summary {
+  margin: 0.4rem 0 0;
+  line-height: 1.4;
+}
+.trade-summary:focus,
+.trade-summary:focus-visible {
+  outline: 3px solid var(--focus, #ffd24d);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* The live "monetary justice" estimate shown before the Propose button. */
+.trade-valuation {
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  background: var(--surface-2, rgba(255, 255, 255, 0.05));
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.trade-valuation:focus-visible {
+  outline: 3px solid var(--focus, #ffd24d);
+  outline-offset: 2px;
+}
+
+.trade-review-line {
+  margin: 0.4rem 0;
+  line-height: 1.4;
+}
+.trade-review-line:focus,
+.trade-review-line:focus-visible {
+  outline: 3px solid var(--focus, #ffd24d);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Colour-group swatch shown next to a traded property (purely visual; aria-hidden).
+ * Lets a sighted player see which colour street is changing hands at a glance. Reuses the
+ * board's canonical group palette (--group-*). A property with no colour (railroad/utility)
+ * falls back to a neutral chip. */
+.trade-prop-swatch {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  flex: 0 0 auto;
+  margin-right: 0.3em;
+  border: 1px solid var(--border-color, #444);
+  border-radius: 3px;
+  background: var(--surface-3, #888);
+  vertical-align: middle;
+}
+.trade-prop-swatch.group-brown      { background: var(--group-brown); }
+.trade-prop-swatch.group-lightblue  { background: var(--group-lightblue); }
+.trade-prop-swatch.group-pink       { background: var(--group-pink); }
+.trade-prop-swatch.group-orange     { background: var(--group-orange); }
+.trade-prop-swatch.group-red        { background: var(--group-red); }
+.trade-prop-swatch.group-yellow     { background: var(--group-yellow); }
+.trade-prop-swatch.group-green      { background: var(--group-green); }
+.trade-prop-swatch.group-darkblue   { background: var(--group-darkblue); }

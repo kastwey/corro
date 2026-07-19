@@ -1,0 +1,614 @@
+/* journey-board.css — the journey family's surface inside #board: the ROAD strip with one
+ * car per seat, the per-seat dashboards, the table centre (draw/discard piles) and the hand
+ * as a fan of real CARDS. The visual region is aria-hidden (its information is spoken via
+ * the players panel, S/C and the announcer); the HAND is the interactive surface. */
+
+#board.journey-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.journey-visual {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+/* ── Engine-rendered card faces (see journeyCardArt.ts) ────────────────────── */
+.jcard {
+  --jcard-accent: #78909c;
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 92px;
+  height: 128px;
+  padding: 8px 6px 6px;
+  border: 3px solid var(--jcard-accent);
+  border-radius: 10px;
+  background: #fffdf5;
+  color: #263238;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+}
+
+.jcard--distance { --jcard-accent: #1565c0; }
+.jcard--attack   { --jcard-accent: #c62828; }
+.jcard--remedy   { --jcard-accent: #2e7d32; }
+.jcard--immunity {
+  --jcard-accent: #f9a825;
+  background: linear-gradient(160deg, #fffdf5 60%, #fff3d6 100%);
+}
+
+.jcard__face {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.jcard__face svg {
+  width: 52px;
+  height: 52px;
+}
+
+.jcard__value {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--jcard-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.jcard__unit {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--jcard-accent);
+  text-transform: uppercase;
+}
+
+.jcard__name {
+  width: 100%;
+  min-height: 2.1em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #37474f;
+}
+
+/* The card BACK: a deep blue with diagonal pinstripes (and an optional big label). */
+.jcard--back {
+  --jcard-accent: #0d2a52;
+  background: #16407e;
+  border-color: #0d2a52;
+  justify-content: center;
+}
+
+.jcard__back-pattern {
+  position: absolute;
+  inset: 5px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 6px;
+  background: repeating-linear-gradient(
+	45deg,
+	rgba(255, 255, 255, 0.10) 0 6px,
+	transparent 6px 12px
+  );
+}
+
+.jcard__back-label {
+  position: relative;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+
+.jcard--empty {
+  background: transparent;
+  border: 2px dashed var(--border-color, #78909c);
+  box-shadow: none;
+}
+
+/* ── The hand: a fan of cards (rows keep their list semantics underneath) ──── */
+.journey-hand .hand-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+
+/* Base row look (families without card art keep the plain list rows). */
+.hand-card {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.4rem;
+  border: 2px solid var(--border-color, var(--border-strong));
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* With a rendered face, the row IS the card: the face carries the visuals, the text name
+ * hides (it is printed on the face), and the action buttons float over it on demand. */
+.hand-card--visual {
+  position: relative;
+  padding: 0;
+  border: none;
+  background: transparent;
+  flex-direction: column;
+  transition: transform 0.12s ease-out;
+}
+
+.hand-card--visual:hover { transform: translateY(-4px); }
+
+.hand-card--visual .hand-card__name { display: none; }
+
+.hand-card--visual .hand-card__actions {
+  position: absolute;
+  left: 50%;
+  bottom: 38px; /* clear of the printed name strip */
+  transform: translateX(-50%);
+  display: none;
+  gap: 0.25rem;
+  z-index: 5;
+}
+
+.hand-card--visual:hover .hand-card__actions,
+.hand-card--visual:focus-within .hand-card__actions {
+  display: flex;
+}
+
+.hand-card--visual .hand-card__btn {
+  font-size: 0.68rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 0.35rem;
+  border: 1px solid #37474f;
+  background: #fffdf5;
+  color: #263238;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.hand-card:focus {
+  outline: 3px solid var(--focus-color, #1e88e5);
+  outline-offset: 2px;
+}
+
+.hand-card--unplayable:not(.hand-card--visual) {
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--surface-2) 68%, var(--surface-3));
+  border-style: dashed;
+}
+.hand-card--visual.hand-card--unplayable .jcard {
+  filter: grayscale(0.85) saturate(0.55) brightness(0.94);
+  border-style: dashed;
+}
+
+/* Read-only info rows: as a CARD (the deck counter is a face-down card in your hand). */
+.hand-card--info:not(.hand-card--visual) {
+  background: transparent;
+  border-style: dashed;
+}
+
+.hand-card__name { flex: 1; }
+
+.hand-card__art { display: contents; }
+
+/* Multi-select: the checkbox glyph only exists while the mode is on (empty otherwise),
+ * and a marked card wears the accent border — sighted players see checkboxes and a Send
+ * button appear, not a "mode". */
+.hand-card__check { font-size: 1.05rem; line-height: 1; }
+.hand-card__check:empty { display: none; }
+.hand-card--marked {
+  border-color: var(--focus-color, #1e88e5);
+  box-shadow: 0 0 0 2px var(--focus-color, #1e88e5);
+}
+.hand-card--visual .hand-card__check {
+  position: absolute;
+  top: 0.3rem;
+  left: 0.3rem;
+  z-index: 6;
+  background: #fffdf5;
+  border-radius: 0.25rem;
+  padding: 0 0.15rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.hand-card__actions { display: flex; gap: 0.35rem; }
+
+.hand-card__btn {
+  padding: 0.25rem 0.55rem;
+  font: inherit;
+  font-size: 0.78rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.35rem;
+  cursor: pointer;
+}
+
+.hand-card__btn:hover:not([aria-disabled="true"]) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.hand-card--visual .hand-card__btn:hover:not([aria-disabled="true"]) {
+  color: #263238;
+  background: #ece8dc;
+  border-color: #263238;
+}
+
+.hand-card__btn[aria-disabled="true"] {
+  color: var(--text-muted);
+  background: var(--surface-3);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
+/* The list-level tools (sort + filter), painted once above the list. */
+.hand-panel__list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.5rem 0;
+}
+
+.hand-panel__list-actions .hand-card__btn[aria-pressed="true"] {
+  /* The applied sort/filter: a solid accent chip readable in BOTH themes. */
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.hand-panel__empty { font-style: italic; opacity: 0.8; }
+
+/* ── Table centre: the draw pile (stacked backs) and the top discard ───────── */
+.journey-centre {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  align-items: flex-start;
+  font-weight: 600;
+}
+
+.journey-centre__pile {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.journey-centre__stack .jcard {
+  box-shadow:
+	3px 3px 0 0 #0d2a52,
+	6px 6px 0 0 #081c38,
+	8px 8px 8px rgba(0, 0, 0, 0.3);
+}
+
+.journey-centre__pile-label {
+  font-size: 0.75rem;
+  opacity: 0.85;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.journey-centre__round {
+  align-self: center;
+  padding: 0.3rem 0.7rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border-color, #666);
+  background: var(--square-bg, #f4f1e8);
+  color: #263238; /* light chip in both themes: pin its ink dark */
+  font-size: 0.85rem;
+}
+
+/* ── The ROAD (0 → goal), one car per seat ─────────────────────────────────── */
+.journey-strip {
+  --journey-lanes: 1;
+  position: relative;
+  /* One lane per seat: the road grows so no two cars share a line (min keeps the 1–2 player look). */
+  height: max(3.6rem, calc(var(--journey-lanes) * 1.7rem + 0.5rem));
+  border-radius: 0.6rem;
+  background: linear-gradient(#3e5460, #37474f 30%, #2f3d46);
+  border: 2px solid #263238;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+  overflow: visible;
+  margin: 0.9rem 0.5rem 0.2rem;
+}
+
+/* The dashed centre line. */
+.journey-strip::before {
+  content: '';
+  position: absolute;
+  left: 2%;
+  right: 4%;
+  top: 50%;
+  height: 3px;
+  transform: translateY(-50%);
+  background: repeating-linear-gradient(
+	90deg,
+	rgba(255, 255, 255, 0.85) 0 18px,
+	transparent 18px 34px
+  );
+  border-radius: 2px;
+}
+
+.journey-road__mark {
+  position: absolute;
+  bottom: 2px;
+  transform: translateX(-50%);
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.75);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.journey-road__mark::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  width: 2px;
+  height: 2.1rem;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+/* The chequered finish at 100%. */
+.journey-road__finish {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  border-radius: 0 0.45rem 0.45rem 0;
+  background:
+	repeating-conic-gradient(#eceff1 0% 25%, #263238 0% 50%)
+	0 0 / 14px 14px;
+  opacity: 0.95;
+}
+
+.journey-car {
+  position: absolute;
+  /* Evenly spaced lane centres: (lane + 0.5) / lanes down the road. */
+  top: calc((var(--lane, 0) + 0.5) / var(--journey-lanes, 1) * 100%);
+  transform: translate(-50%, -50%);
+  width: 46px;
+  transition: left 0.18s linear, top 0.18s ease;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.45));
+  z-index: 2;
+}
+
+.journey-car svg { display: block; width: 100%; }
+
+/* The car wears its troubles: mini-signs floating above it. */
+.journey-car__badges {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 2px);
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+}
+
+.journey-car__badges svg {
+  width: 17px;
+  height: 17px;
+  background: #fffdf5;
+  border-radius: 50%;
+  padding: 1px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Per-seat dashboards ───────────────────────────────────────────────────── */
+.journey-dashboards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.journey-dash {
+  --seat-color: #888;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 0.45rem;
+  background: var(--square-bg, #f4f1e8);
+  border: 1px solid var(--border-color, #666);
+  border-left: 7px solid var(--seat-color);
+  /* The dashboard keeps a LIGHT face in both themes: pin its ink dark, or the dark
+	 theme's white --text vanishes on it. */
+  color: #263238;
+}
+
+.journey-dash__name {
+  font-weight: 700;
+  min-width: 8rem;
+}
+
+/* The odometer: dark counter with per-digit cells. */
+.journey-dash__odo {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: #1c262b;
+}
+
+.journey-dash__digit {
+  display: inline-block;
+  min-width: 0.95em;
+  padding: 1px 2px;
+  border-radius: 3px;
+  background: #263238;
+  border: 1px solid #10181c;
+  color: #e8f5e9;
+  font-family: ui-monospace, Consolas, monospace;
+  font-weight: 700;
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.journey-dash__odo-unit {
+  margin-left: 4px;
+  font-size: 0.65rem;
+  color: #90a4ae;
+  text-transform: uppercase;
+}
+
+.journey-dash--stopped .journey-dash__odo {
+  filter: saturate(0.35);
+  border: 1px dashed #90a4ae;
+}
+
+/* The battle-state chip: one readable, colour-coded answer to "can I move right now, and
+ * why not?" (live-play request — the mini hazard icons alone were too small). Red while
+ * stopped, amber under a speed limit, green while rolling; the text carries the meaning
+ * for colour-blind players. Inside the aria-hidden visual: journeyStatusText speaks it. */
+.journey-dash__flag {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: #fff;
+}
+.journey-dash__flag--stopped { background: #b71c1c; }
+.journey-dash__flag--limited { background: #b26a00; }
+.journey-dash__flag--rolling { background: #1b5e20; }
+
+.journey-dash__state {
+  display: inline-flex;
+  gap: 3px;
+  min-width: 4.5rem;
+}
+
+.journey-dash__icon svg {
+  width: 21px;
+  height: 21px;
+  background: #fffdf5;
+  border-radius: 50%;
+  padding: 1px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.journey-dash__score {
+  margin-left: auto;
+  padding: 0.15rem 0.6rem;
+  border-radius: 1rem;
+  background: var(--seat-color);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+
+.journey-dash__cards { font-variant-numeric: tabular-nums; }
+
+/* ── Juice (all of it skipped under reduced motion — see motionDisabled too) ── */
+.jcard-flight {
+  position: fixed;
+  z-index: 90;
+  margin: 0;
+  pointer-events: none;
+  transition: transform 0.5s cubic-bezier(0.3, 0.7, 0.4, 1), opacity 0.5s ease-in;
+}
+
+@keyframes journey-shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-3px); }
+  40%, 60% { transform: translateX(3px); }
+}
+
+.journey-dash--hit { animation: journey-shake 0.6s; }
+.journey-car--hit svg { animation: journey-shake 0.6s; }
+
+/* The attack banner: pops over the victim's dashboard NAMING what just hit them (the
+ * hazard's traffic sign + the attack card's name); journeyBoard removes it after a beat.
+ * Decorative (aria-hidden): the server's _victim line is the spoken channel. Shown even
+ * under reduced motion — it is information, not motion (only the pop is animated). */
+.journey-dash { position: relative; }
+.journey-dash__hitflash {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.45rem;
+  background: #b71c1c;
+  color: #fff;
+  font-weight: 800;
+  z-index: 2;
+  animation: journey-hitflash-pop 0.25s ease-out;
+}
+.journey-dash__hitflash svg { width: 26px; height: 26px; }
+.journey-dash__hitflash-name {
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+@keyframes journey-hitflash-pop {
+  0% { transform: scale(0.7); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jcard-flight { display: none; }
+  .journey-dash--hit,
+  .journey-car--hit svg { animation: none; }
+  .journey-dash__hitflash { animation: none; }
+  .hand-card--visual,
+  .journey-car { transition: none; }
+}
+
+/* The Shift+F10 context menu mirrors the manage dialog's menu look. */
+.hand-context-menu {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  min-width: 12rem;
+  padding: 0.25rem;
+  border-radius: 0.4rem;
+  border: 2px solid var(--border-color, #666);
+  background: var(--dialog-bg, #fffdf5);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.hand-context-menu-item {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border: none;
+  background: transparent;
+  border-radius: 0.3rem;
+  cursor: pointer;
+}
+
+.hand-context-menu-item:focus {
+  outline: 2px solid var(--focus-color, #1e88e5);
+  background: var(--square-band-bg, #e4efff);
+}

@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title data-i18n="page.title">Corro - Create/Join Game</title>
+
+	<script>
+		// Apply the saved/system theme before first paint to avoid a flash.
+		(function () {
+			try {
+				var t = localStorage.getItem('corro-theme');
+				if (t !== 'dark' && t !== 'light') {
+					t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+				}
+				document.documentElement.setAttribute('data-theme', t);
+			} catch (e) { /* ignore */ }
+		})();
+	</script>
+
+	<!-- CSS Styles -->
+	<link rel="stylesheet" href="css/theme.css">
+	<link rel="stylesheet" href="css/global.css">
+	<link rel="stylesheet" href="css/forms.css">
+	<link rel="stylesheet" href="css/tokens.css">
+	<link rel="stylesheet" href="css/language-selector.css">
+	<link rel="stylesheet" href="css/lobby.css">
+	<link rel="stylesheet" href="css/modal.css">
+</head>
+<body>
+	<main class="container">
+		<!-- Language selector -->
+		<div class="language-selector">
+			<label for="language-selector" data-i18n="language.selectLabel">Select language</label>
+			<div class="language-controls">
+				<select id="language-selector" data-i18n-attr:aria-label="language.selectLabel" aria-label="Select language">
+					<option value="en">English</option>
+					<option value="es">Español</option>
+				</select>
+				<button type="button" id="language-apply-btn" class="language-apply-btn" data-i18n="language.applyButton">Apply</button>
+				<span id="theme-toggle-mount"></span>
+			</div>
+		</div>
+
+		<h1 data-i18n="lobby.title">Corro</h1>
+
+		<!-- VIEW: HOME — list of your games + entry points to create / join -->
+		<section id="view-home" class="lobby-view" aria-labelledby="home-heading">
+			<h2 id="home-heading" data-view-heading tabindex="-1" data-i18n="lobby.savedGames.heading">Your games</h2>
+			<div class="home-actions">
+				<button type="button" id="go-create-btn" class="home-action-btn" data-i18n="lobby.home.createButton">Create game</button>
+				<button type="button" id="go-join-btn" class="home-action-btn secondary-button" data-i18n="lobby.home.joinButton">Join with a code</button>
+			</div>
+			<ul id="your-games-list" class="saved-game-list"></ul>
+			<p id="your-games-empty" class="your-games-empty hidden" data-i18n="lobby.savedGames.empty">You don't have any games yet. Create a new one or join with a code.</p>
+		</section>
+
+		<!-- VIEW: CREATE — the create-game form -->
+		<section id="view-create" class="lobby-view hidden" aria-labelledby="create-heading" hidden>
+			<button type="button" id="create-back-btn" class="secondary-button lobby-back-btn" data-i18n="lobby.backToHome">Back to home</button>
+			<h2 id="create-heading" data-view-heading tabindex="-1" data-i18n="lobby.createGame">Create New Game</h2>
+
+			<form id="create-form">
+				<!-- The board comes first: it conditions everything below (tokens, player count and
+					 rules are all populated from the staged package once a board is chosen). -->
+				<div class="form-group" id="board-selector-group">
+					<label for="board-selector" data-i18n="lobby.selectBoard">Select game:</label>
+					<select id="board-selector" data-i18n-attr:aria-label="lobby.selectBoard" aria-label="Select game">
+						<!-- Board options will be generated dynamically -->
+					</select>
+				</div>
+
+				<!-- Replaces the board picker while an uploaded package is active. -->
+				<div class="form-group hidden" id="board-uploaded-group">
+					<p id="board-uploaded-name" class="board-uploaded-name" role="status" aria-live="polite"></p>
+				</div>
+
+				<div class="form-group">
+					<label for="board-upload" data-i18n="lobby.uploadBoard">Or upload a game (.corro):</label>
+					<input type="file" id="board-upload" accept=".corro,.zip,application/zip"
+						data-i18n-attr:aria-label="lobby.uploadBoard" aria-label="Upload a game package">
+					<p id="board-upload-status" class="board-upload-status" role="status" aria-live="polite"></p>
+					<button type="button" id="board-upload-remove" class="btn btn-secondary board-upload-remove hidden"
+						data-i18n="lobby.uploadRemove">Remove uploaded game</button>
+				</div>
+
+				<div class="form-group">
+					<label for="host-name" data-i18n="lobby.playerName">Your name:</label>
+					<input type="text" id="host-name" required maxlength="20" data-i18n-attr-placeholder="lobby.playerNamePlaceholder" placeholder="Enter your name">
+				</div>
+
+				<fieldset class="token-fieldset">
+					<legend data-i18n="lobby.selectToken">Choose your piece:</legend>
+					<ul class="token-list">
+
+						<!-- Generated dynamically -->
+					</ul>
+				</fieldset>
+
+				<!-- Race boards only: pick your seat (squadron colour). Hidden for property boards. -->
+				<fieldset class="token-fieldset hidden" id="seat-fieldset">
+					<legend data-i18n="lobby.selectSeat">Choose your colour:</legend>
+					<ul class="token-list seat-list" id="seat-list">
+						<!-- Generated dynamically -->
+					</ul>
+				</fieldset>
+
+				<!-- Race boards with four seats only: classic pairs (opposite seats team up). -->
+				<div class="form-group hidden" id="teams-group">
+					<label>
+						<input type="checkbox" id="race-teams">
+						<span data-i18n="lobby.teamsMode">Pairs (opposite seats are partners)</span>
+					</label>
+				</div>
+
+				<div class="form-group">
+					<label for="max-players" data-i18n="lobby.maxPlayers">Maximum players:</label>
+					<!-- Options are generated from the staged board's min..max range. -->
+					<select id="max-players"></select>
+				</div>
+
+				<!-- Journey boards only: team mode. Options are the divisors of the chosen
+					 player count that give equal teams of at least two; with teams, the
+					 player count is EXACT and the host arranges the teams while waiting. -->
+				<div class="form-group hidden" id="team-count-group">
+					<label for="team-count" data-i18n="lobby.teamCount">Teams:</label>
+					<select id="team-count"></select>
+				</div>
+
+				<details id="rules-details" class="rules-details">
+					<summary id="rules-summary" data-i18n="lobby.rules.heading">Game rules</summary>
+					<p class="rules-hint" data-i18n="lobby.rules.hint">Tune the rules for this game. The defaults match the standard rules.</p>
+
+					<!-- An uploaded package renders its own declared rules here; the built-in
+						 fieldsets below are hidden (via .rules-details--package) while it is active. -->
+					<div id="package-rules" class="package-rules hidden"></div>
+
+					<fieldset class="rules-fieldset">
+						<legend data-i18n="lobby.rules.moneyGroup">Money &amp; GO</legend>
+						<div class="form-group">
+							<label for="rule-starting-money" data-i18n="lobby.rules.startingMoney">Starting money:</label>
+							<input type="number" id="rule-starting-money" min="0" max="100000" step="50" value="1500">
+						</div>
+						<div class="form-group">
+							<label for="rule-go-bonus" data-i18n="lobby.rules.goBonus">GO salary:</label>
+							<input type="number" id="rule-go-bonus" min="0" max="10000" step="10" value="200">
+						</div>
+						<div class="form-check">
+							<input type="checkbox" id="rule-double-go">
+							<label for="rule-double-go" data-i18n="lobby.rules.doubleGoSalary">Double salary when landing exactly on GO</label>
+						</div>
+					</fieldset>
+
+					<fieldset class="rules-fieldset">
+						<legend data-i18n="lobby.rules.propertyGroup">Properties &amp; building</legend>
+						<div class="form-check">
+							<input type="checkbox" id="rule-auction-on-decline" checked>
+							<label for="rule-auction-on-decline" data-i18n="lobby.rules.auctionOnDecline">Auction a property when the buyer declines it</label>
+						</div>
+						<div class="form-check">
+							<input type="checkbox" id="rule-building-shortage" checked>
+							<label for="rule-building-shortage" data-i18n="lobby.rules.buildingShortage">Limited bank stock of houses and hotels</label>
+						</div>
+						<div class="form-check">
+							<input type="checkbox" id="rule-even-build" checked>
+							<label for="rule-even-build" data-i18n="lobby.rules.evenBuildRule">Build houses evenly across a colour group</label>
+						</div>
+						<div class="form-check">
+							<input type="checkbox" id="rule-no-build-first-lap">
+							<label for="rule-no-build-first-lap" data-i18n="lobby.rules.noBuildingFirstLap">No building until you complete your first lap</label>
+						</div>
+						<div class="form-group">
+							<label for="rule-mortgage-interest" data-i18n="lobby.rules.mortgageInterestRate">Mortgage interest rate (%):</label>
+							<input type="number" id="rule-mortgage-interest" min="0" max="100" step="1" value="10">
+						</div>
+					</fieldset>
+
+					<fieldset class="rules-fieldset">
+						<legend data-i18n="lobby.rules.holdingGroup">Holding</legend>
+						<div class="form-group">
+							<label for="rule-holding-release-cost" data-i18n="lobby.rules.holdingReleaseCost">ReleaseCost to leave holding:</label>
+							<input type="number" id="rule-holding-release-cost" min="0" max="10000" step="10" value="50">
+						</div>
+						<div class="form-group">
+							<label for="rule-max-holding-turns" data-i18n="lobby.rules.maxHoldingTurns">Maximum turns in holding:</label>
+							<input type="number" id="rule-max-holding-turns" min="1" max="10" step="1" value="3">
+						</div>
+						<div class="form-check">
+							<input type="checkbox" id="rule-collect-rent-holding" checked>
+							<label for="rule-collect-rent-holding" data-i18n="lobby.rules.collectRentWhileHeld">Collect rent while in holding</label>
+						</div>
+					</fieldset>
+
+					<fieldset class="rules-fieldset">
+						<legend data-i18n="lobby.rules.houseRulesGroup">House rules</legend>
+						<div class="form-check">
+							<input type="checkbox" id="rule-free-parking">
+							<label for="rule-free-parking" data-i18n="lobby.rules.freeParkingJackpot">Free Parking jackpot (taxes and fines go to the pot)</label>
+						</div>
+					</fieldset>
+
+					<fieldset class="rules-fieldset">
+						<legend data-i18n="lobby.rules.auctionGroup">Auctions</legend>
+						<div class="form-group">
+							<label for="rule-auction-timeout" data-i18n="lobby.rules.auctionBidTimeout">Time to bid before passing (seconds):</label>
+							<input type="number" id="rule-auction-timeout" min="5" max="120" step="1" value="20">
+						</div>
+					</fieldset>
+				</details>
+
+				<button type="submit" id="create-button" data-i18n="lobby.createGame">Create New Game</button>
+			</form>
+		</section>
+
+		<!-- VIEW: JOIN — enter a code, then pick name and piece -->
+		<section id="view-join" class="lobby-view hidden" aria-labelledby="join-heading" hidden>
+			<button type="button" id="join-back-btn" class="secondary-button lobby-back-btn" data-i18n="lobby.backToHome">Back to home</button>
+			<h2 id="join-heading" data-view-heading tabindex="-1" data-i18n="lobby.joinGame">Join Existing Game</h2>
+
+			<!-- Step 1: Enter code -->
+			<form id="join-step1-form">
+				<div class="form-group">
+					<label for="lobby-code-input" data-i18n="lobby.gameCode">Game code:</label>
+					<input type="text" id="lobby-code-input" required maxlength="8"
+						   data-i18n-attr-placeholder="lobby.gameCodePlaceholder" placeholder="e.g., ABC123" class="uppercase">
+				</div>
+
+				<button type="submit" id="validate-code-button" data-i18n="lobby.next">Next</button>
+			</form>
+
+			<!-- A RE-ENTRY code was typed: confirm before reclaiming the seat (initially hidden) -->
+			<div id="rejoin-confirm" class="hidden">
+				<div class="lobby-info">
+					<h3 id="rejoin-confirm-title" tabindex="-1"></h3>
+					<p id="rejoin-confirm-desc"></p>
+					<p id="rejoin-confirm-warning" class="hidden warning"></p>
+					<div class="form-actions">
+						<button type="button" id="rejoin-confirm-enter" class="primary-button"></button>
+						<button type="button" id="rejoin-confirm-cancel" class="secondary-button"></button>
+					</div>
+				</div>
+			</div>
+
+			<!-- Step 2: Select piece and name (initially hidden) -->
+			<div id="join-step2" class="hidden">
+				<div class="lobby-info">
+					<h3 data-i18n="lobby.gameFound">Game found</h3>
+					<ul id="lobby-details">
+						<!-- Filled dynamically -->
+					</ul>
+
+					<form id="join-step2-form">
+						<div class="form-group">
+							<label for="player-name-step2" data-i18n="lobby.playerName">Your name:</label>
+							<input type="text" id="player-name-step2" required maxlength="20" data-i18n-attr-placeholder="lobby.playerNamePlaceholder" placeholder="Enter your name">
+						</div>
+
+						<fieldset class="token-fieldset">
+							<legend data-i18n="lobby.selectToken">Choose your piece:</legend>
+							<ul class="token-list" id="join-token-list">
+								<!-- Generated dynamically -->
+							</ul>
+						</fieldset>
+
+						<!-- Race boards only: pick your seat; taken seats say who holds them. -->
+						<fieldset class="token-fieldset hidden" id="join-seat-fieldset">
+							<legend data-i18n="lobby.selectSeat">Choose your colour:</legend>
+							<ul class="token-list seat-list" id="join-seat-list">
+								<!-- Generated dynamically -->
+							</ul>
+						</fieldset>
+
+						<div class="form-buttons">
+							<button type="button" id="back-button" class="secondary-button" data-i18n="lobby.back">Back</button>
+							<button type="submit" id="join-final-button" data-i18n="lobby.joinGame">Join Game</button>
+						</div>
+					</form>
+				</div>
+			</div>
+
+		</section>
+
+		<!-- VIEW: WAITING — the created/joined waiting room; hides the rest of the page -->
+		<section id="view-waiting" class="lobby-view hidden" aria-labelledby="waiting-heading" hidden>
+			<h2 id="waiting-heading" class="sr-only" data-i18n="lobby.waitingRoom">Waiting room</h2>
+			<button type="button" id="waiting-back-btn" class="secondary-button lobby-back-btn" data-i18n="lobby.backToHome">Back to home</button>
+
+			<!-- Host's room -->
+			<div id="lobby-created" class="hidden">
+				<div id="game-created-message" class="success" data-i18n="lobby.gameCreatedSuccess" tabindex="-1" aria-live="polite">Game created successfully!</div>
+				<div class="lobby-info">
+					<div class="invite-code">
+						<h3 data-i18n="lobby.gameCode">Game code</h3>
+						<div id="lobby-code" class="invite-code__value"></div>
+						<button class="copy-button" id="copy-code-btn" data-i18n="lobby.copyCode">Copy code</button>
+					</div>
+					<div class="invite-link">
+						<div data-i18n="lobby.inviteLink">Invite link:</div>
+						<div id="invite-url"></div>
+						<button class="copy-button" id="copy-link-btn" data-i18n="lobby.copyLink">Copy Link</button>
+					</div>
+					<div id="created-rejoin-mount"></div>
+
+					<div class="player-list">
+						<h4 data-i18n="lobby.playersInRoom">Players in room:</h4>
+						<ul id="host-player-list"></ul>
+					</div>
+
+					<!-- Journey team mode: the host arranges the teams here while waiting. -->
+					<div id="host-team-panel" class="team-panel hidden"></div>
+
+					<!-- Bot seats (families with a bot brain): the host fills empty chairs. -->
+					<button type="button" id="add-bot-btn" class="secondary-button hidden" data-i18n="lobby.addBot">Add a bot</button>
+
+					<button id="start-game-btn" data-i18n="lobby.startGame">Start Game</button>
+				</div>
+			</div>
+
+			<!-- Guest's room -->
+			<div id="lobby-joined" class="hidden">
+				<div id="game-joined-message" class="success" data-i18n="lobby.joinedSuccess" tabindex="-1" aria-live="polite">Successfully joined the game!</div>
+				<div class="lobby-info">
+					<h3 data-i18n="lobby.waitingRoom">Waiting room</h3>
+
+					<div id="joined-rejoin-mount"></div>
+					<div class="player-list">
+						<h4 data-i18n="lobby.playersInRoom">Players in room:</h4>
+						<ul id="joined-player-list"></ul>
+					</div>
+
+					<!-- Journey team mode: the room watches the host's arrangement (read-only). -->
+					<div id="joined-team-panel" class="team-panel hidden"></div>
+
+					<div class="loading" data-i18n="lobby.waitingForHost">Waiting for host to start the game...</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- Spoken lobby events (unlock feedback and waiting-room team moves). It must remain
+			 outside the mutually hidden views so announcements work from every lobby screen. -->
+		<div id="lobby-live" class="sr-only" aria-live="polite"></div>
+		<div id="error-message" class="error hidden" aria-live="assertive" tabindex="-1"></div>
+		<div id="loading" class="loading hidden" data-i18n="lobby.processing" aria-live="polite">Processing...</div>
+	</main>
+
+	<!-- Los diálogos se crean dinámicamente por DialogManager -->
+
+	<!-- Scripts -->
+	<script src="libs/i18next.min.js"></script>
+	<script src="libs/signalr.min.js"></script>
+	<script type="module" src="lobby/index.js"></script>
+
+	<footer class="app-footer">
+		<p>
+			<span data-i18n="footer.poweredBy">Powered by</span>
+			<strong>Corro Online</strong>
+			&middot;
+			<a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="license noopener">AGPL-3.0</a>
+		</p>
+	</footer>
+</body>
+</html>

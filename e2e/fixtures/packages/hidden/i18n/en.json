@@ -1,0 +1,9 @@
+{
+  "tokens": {
+    "circle": "Circle",
+    "triangle": "Triangle"
+  },
+  "notice": {
+    "hidden": "This hidden game exists only to test the complete package-unlock flow."
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "tokens": {
+    "brujula": "Brújula",
+    "libro": "Libro",
+    "pincel": "Pincel",
+    "atomo": "Átomo",
+    "balon": "Balón",
+    "mascara": "Máscara"
+  },
+  "game": {
+    "trivia_cat_a": "Geografía",
+    "trivia_cat_b": "Espectáculos",
+    "trivia_cat_c": "Historia",
+    "trivia_cat_d": "Arte y Literatura",
+    "trivia_cat_e": "Ciencia",
+    "trivia_cat_f": "Deportes"
+  }
+}

@@ -1,0 +1,59 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/server/CorroServer.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "compose-up",
+            "detail": "Reuse healthy Cosmos/Azurite endpoints; start only missing emulators and wait for Cosmos health",
+            "command": "pwsh",
+            "type": "process",
+            "args": ["-NoProfile", "-File", "${workspaceFolder}/tools/start-emulators.ps1"],
+            "problemMatcher": []
+        },
+        {
+            "label": "dev-up",
+            "detail": "Emulators in Docker + build — the preLaunchTask for 'Debug CorroServer (Docker emulators)'",
+            "dependsOn": ["compose-up", "build"],
+            "problemMatcher": []
+        },
+        {
+            "label": "publish",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "publish",
+                "${workspaceFolder}/server/CorroServer.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "watch",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "watch",
+                "run",
+                "--project",
+                "${workspaceFolder}/server/CorroServer.csproj"
+            ],
+            "problemMatcher": "$msCompile"
+        }
+    ]
+}

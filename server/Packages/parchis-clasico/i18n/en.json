@@ -1,0 +1,14 @@
+{
+  "seats": {
+    "rojo": "Red",
+    "azul": "Blue",
+    "amarillo": "Yellow",
+    "verde": "Green"
+  },
+  "tokens": {
+    "ficha": "Counter",
+    "caballo": "Horse",
+    "dado": "Die",
+    "cubilete": "Dice cup"
+  }
+}

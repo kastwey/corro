@@ -1,0 +1,9 @@
+{
+  "packId": "corro-classic",
+  "events": {
+    "holding.enter": "blackhole.ogg"
+  },
+  "announcements": {
+    "cards.pinchazo_played": "journey.flat"
+  }
+}
