@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/kastwey/corro/main/sdk/Corro.PackageSdk/Schemas/cards.schema.json",
+  "title": "Corro card catalog",
+  "oneOf": [
+    { "$ref": "#/$defs/propertyDeck" },
+    { "$ref": "#/$defs/journeyDeck" },
+    { "$ref": "#/$defs/assemblyDeck" },
+    { "$ref": "#/$defs/draftDeck" },
+    { "$ref": "#/$defs/sheddingDeck" },
+    { "$ref": "#/$defs/explodingDeck" }
+  ],
+  "$defs": {
+    "propertyDeck": { "type": "array", "items": { "$ref": "#/$defs/propertyCard" } },
+    "journeyDeck": { "type": "array", "items": { "$ref": "#/$defs/journeyCard" } },
+    "assemblyDeck": { "type": "array", "items": { "$ref": "#/$defs/assemblyCard" } },
+    "draftDeck": { "type": "array", "items": { "$ref": "#/$defs/draftCard" } },
+    "sheddingDeck": { "type": "array", "items": { "$ref": "#/$defs/sheddingCard" } },
+    "explodingDeck": { "type": "array", "items": { "$ref": "#/$defs/explodingCard" } },
+    "propertyCard": {
+      "title": "Property card",
+      "type": "object",
+      "required": ["id", "deck", "textKey", "effect"],
+      "properties": {
+        "id": { "type": "string" },
+        "deck": { "type": "string" },
+        "textKey": { "type": "string" },
+        "effect": {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": { "enum": ["moveTo", "moveBy", "money", "collectFromEach", "payEach", "payPerBuilding", "sendToHolding", "grantReleasePass"] },
+            "target": { "oneOf": [{ "type": "string" }, { "type": "integer" }] },
+            "collectPass": { "type": "boolean" },
+            "steps": { "type": "integer" },
+            "amount": { "type": "integer" },
+            "perSmallBuilding": { "type": "integer" },
+            "perBigBuilding": { "type": "integer" },
+            "rentMultiplier": { "type": "integer", "minimum": 1 },
+            "utilityTimesDice": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "journeyCard": {
+      "title": "Journey card",
+      "type": "object",
+      "required": ["id", "type", "count", "nameKey"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "enum": ["distance", "attack", "remedy", "immunity"] },
+        "value": { "type": "integer", "minimum": 0 },
+        "kind": { "type": "string" },
+        "hazardClass": { "enum": ["stopper", "limiter"] },
+        "shieldsKinds": { "type": "array", "items": { "type": "string" } },
+        "count": { "type": "integer", "minimum": 1 },
+        "maxPlaysPerHand": { "type": "integer", "minimum": 1 },
+        "premium": { "type": "boolean" },
+        "nameKey": { "type": "string" },
+        "playedKey": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "assemblyCard": {
+      "title": "Assembly card",
+      "type": "object",
+      "required": ["id", "type", "count", "nameKey"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "enum": ["piece", "attack", "remedy", "special"] },
+        "color": { "type": "string" },
+        "specialKind": { "enum": ["swapPiece", "stealPiece", "plague", "scrapHands", "fullSwap"] },
+        "count": { "type": "integer", "minimum": 1 },
+        "nameKey": { "type": "string" },
+        "playedKey": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "draftCard": {
+      "title": "Draft card",
+      "type": "object",
+      "required": ["id", "type", "count", "nameKey"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "enum": ["points", "multiplier", "set", "scale", "majority", "dessert", "extra"] },
+        "count": { "type": "integer", "minimum": 1 },
+        "nameKey": { "type": "string" },
+        "value": { "type": "integer" },
+        "factor": { "type": "integer" },
+        "setSize": { "type": "integer" },
+        "setPoints": { "type": "integer" },
+        "scale": { "type": "array", "items": { "type": "integer", "minimum": 0 } },
+        "icons": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "sheddingCard": {
+      "title": "Shedding card",
+      "type": "object",
+      "required": ["id", "type", "count", "nameKey"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "enum": ["number", "skip", "reverse", "drawTwo", "wild", "wildDrawFour"] },
+        "color": { "type": ["string", "null"] },
+        "value": { "type": "integer", "minimum": 0 },
+        "count": { "type": "integer", "minimum": 1 },
+        "nameKey": { "type": "string" },
+        "points": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "explodingCard": {
+      "title": "Exploding card",
+      "type": "object",
+      "required": ["id", "type", "count", "nameKey"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "enum": ["bomb", "defuse", "skip", "attack", "seeFuture", "shuffle", "favor", "nope", "cat"] },
+        "count": { "type": "integer", "minimum": 1 },
+        "nameKey": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

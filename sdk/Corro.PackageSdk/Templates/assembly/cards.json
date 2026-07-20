@@ -1,0 +1,8 @@
+[
+  { "id": "amber-piece", "type": "piece", "color": "amber", "count": 4, "nameKey": "cards.amberPiece" },
+  { "id": "blue-piece", "type": "piece", "color": "blue", "count": 4, "nameKey": "cards.bluePiece" },
+  { "id": "amber-damage", "type": "attack", "color": "amber", "count": 2, "nameKey": "cards.amberDamage" },
+  { "id": "blue-damage", "type": "attack", "color": "blue", "count": 2, "nameKey": "cards.blueDamage" },
+  { "id": "amber-repair", "type": "remedy", "color": "amber", "count": 2, "nameKey": "cards.amberRepair" },
+  { "id": "blue-repair", "type": "remedy", "color": "blue", "count": 2, "nameKey": "cards.blueRepair" }
+]

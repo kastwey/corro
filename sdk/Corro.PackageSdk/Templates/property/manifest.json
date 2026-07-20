@@ -1,0 +1,56 @@
+{
+  "format": "corro/v1",
+  "gameType": "property",
+  "engineVersion": "^1.0",
+  "id": "starter-property",
+  "name": {
+    "en": "Starter Property Game",
+    "es": "Juego inicial de propiedades"
+  },
+  "author": "Your name",
+  "version": "0.1.0",
+  "locales": ["en", "es"],
+  "currency": {
+    "symbol": "◇",
+    "code": "UNIT",
+    "nameKey": "currency.name"
+  },
+  "centerBrand": "STARTER",
+  "terminology": {
+    "start": "terminology.start",
+    "holding": "terminology.holding",
+    "freeparking": "terminology.freeparking",
+    "sendtoholding": "terminology.sendtoholding"
+  },
+  "groups": [
+    { "id": "amber", "color": "#a66b2b", "colorName": "groups.amber" },
+    { "id": "blue", "color": "#3d7edb", "colorName": "groups.blue" },
+    { "id": "green", "color": "#388a58", "colorName": "groups.green" },
+    { "id": "violet", "color": "#7b55b5", "colorName": "groups.violet" }
+  ],
+  "decks": [],
+  "rules": {
+    "startingMoney": 500,
+    "passStartBonus": 100,
+    "rentStrategies": { "property": "buildingTable" },
+    "transitRent": [],
+    "utilityMultiplier": { "single": 0, "all": 0 },
+    "holding": { "releaseCost": 50, "maxTurns": 3, "walk": false },
+    "mortgageInterestRate": 10,
+    "buildingShortage": false,
+    "evenBuildRule": true,
+    "auctionOnDecline": true,
+    "freeParkingJackpot": false
+  },
+  "players": { "min": 2, "max": 2 },
+  "building": {
+    "levels": 2,
+    "smallKey": "building.small",
+    "smallPluralKey": "building.smallPlural",
+    "bigKey": "building.big"
+  },
+  "tokens": [
+    { "id": "circle", "nameKey": "tokens.circle" },
+    { "id": "diamond", "nameKey": "tokens.diamond" }
+  ]
+}

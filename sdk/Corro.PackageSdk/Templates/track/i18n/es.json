@@ -1,0 +1,4 @@
+{
+  "tokens": { "circle": "Círculo", "diamond": "Rombo" },
+  "effects": { "boost": "Impulso", "setback": "Retroceso" }
+}

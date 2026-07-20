@@ -1,0 +1,10 @@
+{
+  "tokens": { "circle": "Círculo", "diamond": "Rombo" },
+  "cards": {
+    "step25": "Avanza 25 unidades",
+    "step50": "Avanza 50 unidades",
+    "stop": "Parada",
+    "continue": "Continuar",
+    "shield": "Escudo permanente contra paradas"
+  }
+}

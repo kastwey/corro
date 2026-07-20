@@ -1,0 +1,7 @@
+[
+  { "id": "step25", "type": "distance", "value": 25, "count": 8, "nameKey": "cards.step25" },
+  { "id": "step50", "type": "distance", "value": 50, "count": 4, "nameKey": "cards.step50" },
+  { "id": "stop", "type": "attack", "kind": "stop", "hazardClass": "stopper", "count": 2, "nameKey": "cards.stop" },
+  { "id": "continue", "type": "remedy", "kind": "stop", "count": 4, "nameKey": "cards.continue" },
+  { "id": "shield", "type": "immunity", "shieldsKinds": ["stop"], "count": 1, "nameKey": "cards.shield" }
+]

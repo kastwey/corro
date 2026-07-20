@@ -1,0 +1,9 @@
+[
+  { "id": "amber-zero", "type": "number", "color": "amber", "value": 0, "count": 2, "nameKey": "cards.amberZero" },
+  { "id": "amber-one", "type": "number", "color": "amber", "value": 1, "count": 3, "nameKey": "cards.amberOne" },
+  { "id": "amber-skip", "type": "skip", "color": "amber", "count": 2, "nameKey": "cards.amberSkip" },
+  { "id": "blue-zero", "type": "number", "color": "blue", "value": 0, "count": 2, "nameKey": "cards.blueZero" },
+  { "id": "blue-one", "type": "number", "color": "blue", "value": 1, "count": 3, "nameKey": "cards.blueOne" },
+  { "id": "blue-reverse", "type": "reverse", "color": "blue", "count": 2, "nameKey": "cards.blueReverse" },
+  { "id": "wild", "type": "wild", "count": 2, "nameKey": "cards.wild" }
+]

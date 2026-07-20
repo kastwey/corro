@@ -1,0 +1,13 @@
+{
+  "currency": { "name": "unidades" },
+  "terminology": { "start": "Salida", "holding": "Pausa", "freeparking": "Descanso", "sendtoholding": "Ve a Pausa" },
+  "groups": { "amber": "Grupo ámbar", "blue": "Grupo azul", "green": "Grupo verde", "violet": "Grupo violeta" },
+  "building": { "small": "marcador", "smallPlural": "marcadores", "big": "centro" },
+  "tokens": { "circle": "Círculo", "diamond": "Rombo" },
+  "squares": {
+    "1": "Casilla 1", "2": "Casilla 2", "3": "Casilla 3", "4": "Casilla 4", "5": "Casilla 5", "6": "Casilla 6", "7": "Casilla 7", "8": "Casilla 8", "9": "Casilla 9",
+    "11": "Casilla 11", "12": "Casilla 12", "13": "Casilla 13", "14": "Casilla 14", "15": "Casilla 15", "16": "Casilla 16", "17": "Casilla 17", "18": "Casilla 18", "19": "Casilla 19",
+    "21": "Casilla 21", "22": "Casilla 22", "23": "Casilla 23", "24": "Casilla 24", "25": "Casilla 25", "26": "Casilla 26", "27": "Casilla 27", "28": "Casilla 28", "29": "Casilla 29",
+    "31": "Casilla 31", "32": "Casilla 32", "33": "Casilla 33", "34": "Casilla 34", "35": "Casilla 35", "36": "Casilla 36", "37": "Casilla 37", "38": "Casilla 38", "39": "Casilla 39"
+  }
+}

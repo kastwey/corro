@@ -4,6 +4,17 @@ A step-by-step, do-it-with-me guide to making a **complete 40-square property bo
 `.corro` package — themed around the streets of *your* city. No coding: a package is
 just data (a few text files). You'll end with a real board you can load and play.
 
+The quickest starting point is the neutral property template:
+
+```bash
+dotnet run --project tools/Corro.PackageCli -p:SkipFrontendBuild=true -- \
+  new property games/my-city --id my-city --name-en "My City" --name-es "Mi ciudad"
+```
+
+It is already valid and includes editor schemas, two original tokens, both locales and a complete
+40-square board. The steps below explain every file so you can replace the neutral content with
+your own design rather than treating the template as a black box.
+
 > This is the friendly walkthrough. The full reference for every field is
 > [CORRO_FORMAT.md](../CORRO_FORMAT.md) — keep it open in another tab for the details.
 > If a word here is new ("group", "transit", "deck"), the format spec defines it.

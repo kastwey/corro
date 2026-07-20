@@ -29,9 +29,10 @@ There are two very different kinds of contributor, and they need different docs:
    they explain the shapes and flows so you know *which* code.
 
 2. **Package / content creators** — people who make new games as **data** (a theme, a
-   deck, a board), without touching code. **These docs are NOT your entry point.** Start
-   with the hands-on [tutorial-city-board.md](tutorial-city-board.md) (build a board of
-   your own city, step by step), then keep [`../CORRO_FORMAT.md`](../CORRO_FORMAT.md)
+  deck, a board), without touching code. **These docs are NOT your entry point.** Start
+  with a neutral project from the [Corro Package SDK](../tools/Corro.PackageCli/README.md)
+  or the hands-on [tutorial-city-board.md](tutorial-city-board.md), then keep
+  [`../CORRO_FORMAT.md`](../CORRO_FORMAT.md)
    — the `.corro` format spec — as your reference for every field. Neither mentions
    SignalR or projection, because a package author never touches the wire.
 

@@ -57,6 +57,7 @@ public static class CliApplication
 		{
 			return command.Name switch
 			{
+				"new" => await NewAsync(command, output, cancellationToken),
 				"validate" => await ValidateAsync(sdk, command, output, cancellationToken),
 				"inspect" => await InspectAsync(sdk, command, output, cancellationToken),
 				"pack" => await PackAsync(sdk, command, output, cancellationToken),
@@ -85,6 +86,42 @@ public static class CliApplication
 			await WriteFailureAsync(command, exception.Message, InvalidPackage, output, error);
 			return InvalidPackage;
 		}
+	}
+
+	private static async Task<int> NewAsync(
+		ParsedCommand command,
+		TextWriter output,
+		CancellationToken cancellationToken)
+	{
+		var result = await new PackageTemplateService().CreateAsync(
+			command.Family!,
+			command.Path,
+			command.TemplateOptions,
+			cancellationToken);
+		if (command.Json)
+		{
+			await WriteJsonAsync(output, new
+			{
+				command = command.Name,
+				success = true,
+				path = result.Path,
+				family = result.Family,
+				id = result.Id,
+				names = result.Names,
+				valid = result.Validation.IsValid,
+			});
+		}
+		else
+		{
+			await output.WriteLineAsync("CREATED: " + result.Path);
+			await output.WriteLineAsync("Family: " + result.Family);
+			await output.WriteLineAsync("Id: " + result.Id);
+			await output.WriteLineAsync("Names: " + string.Join(
+				"; ", result.Names.Select(pair => $"{pair.Key}={pair.Value}")));
+			await output.WriteLineAsync("Validation: passed");
+			await output.WriteLineAsync($"Next: corro-package validate \"{result.Path}\"");
+		}
+		return Success;
 	}
 
 	private static async Task<int> ValidateAsync(
@@ -242,7 +279,7 @@ public static class CliApplication
 	private static ParsedCommand Parse(IReadOnlyList<string> arguments)
 	{
 		var name = arguments[0].ToLowerInvariant();
-		if (name is not ("validate" or "inspect" or "pack"))
+		if (name is not ("new" or "validate" or "inspect" or "pack"))
 		{
 			throw new ArgumentException($"Unknown command '{arguments[0]}'.");
 		}
@@ -250,6 +287,10 @@ public static class CliApplication
 		var paths = new List<string>();
 		var json = false;
 		string? outputPath = null;
+		string? id = null;
+		string? nameEn = null;
+		string? nameEs = null;
+		string? author = null;
 		for (var index = 1; index < arguments.Count; index++)
 		{
 			var argument = arguments[index];
@@ -269,6 +310,18 @@ public static class CliApplication
 					}
 					outputPath = arguments[index];
 					break;
+				case "--id":
+					id = ReadOptionValue(arguments, ref index, argument, name, "new");
+					break;
+				case "--name-en":
+					nameEn = ReadOptionValue(arguments, ref index, argument, name, "new");
+					break;
+				case "--name-es":
+					nameEs = ReadOptionValue(arguments, ref index, argument, name, "new");
+					break;
+				case "--author":
+					author = ReadOptionValue(arguments, ref index, argument, name, "new");
+					break;
 				default:
 					if (argument.StartsWith("-", StringComparison.Ordinal))
 					{
@@ -279,11 +332,49 @@ public static class CliApplication
 			}
 		}
 
+		if (name == "new")
+		{
+			if (paths.Count != 2)
+			{
+				throw new ArgumentException("The new command requires a family and a destination folder.");
+			}
+			if (!PackageTemplateCatalog.IsSupported(paths[0]))
+			{
+				throw new ArgumentException(
+					$"Unknown game family '{paths[0]}'. Supported families: {string.Join(", ", PackageTemplateCatalog.SupportedFamilies)}.");
+			}
+			return new ParsedCommand(
+				name,
+				paths[1],
+				json,
+				null,
+				paths[0].ToLowerInvariant(),
+				new PackageTemplateOptions { Id = id, NameEn = nameEn, NameEs = nameEs, Author = author });
+		}
+
 		if (paths.Count != 1)
 		{
 			throw new ArgumentException($"The {name} command requires exactly one package path.");
 		}
-		return new ParsedCommand(name, paths[0], json, outputPath);
+		return new ParsedCommand(name, paths[0], json, outputPath, null, null);
+	}
+
+	private static string ReadOptionValue(
+		IReadOnlyList<string> arguments,
+		ref int index,
+		string option,
+		string command,
+		string allowedCommand)
+	{
+		if (command != allowedCommand)
+		{
+			throw new ArgumentException($"{option} is only valid with the {allowedCommand} command.");
+		}
+		if (++index >= arguments.Count)
+		{
+			throw new ArgumentException($"{option} requires a value.");
+		}
+		return arguments[index];
 	}
 
 	private static string Version()
@@ -292,12 +383,20 @@ public static class CliApplication
 			?? typeof(CliApplication).Assembly.GetName().Version?.ToString()
 			?? "unknown";
 
-	private sealed record ParsedCommand(string Name, string Path, bool Json, string? OutputPath);
+	private sealed record ParsedCommand(
+		string Name,
+		string Path,
+		bool Json,
+		string? OutputPath,
+		string? Family,
+		PackageTemplateOptions? TemplateOptions);
 
 	private const string HelpText = """
 Corro Package SDK
 
 Usage:
+	corro-package new      <family> <folder> [--id <id>] [--name-en <name>]
+												 [--name-es <name>] [--author <name>] [--json]
   corro-package validate <folder-or-file.corro> [--json]
   corro-package inspect  <folder-or-file.corro> [--json]
   corro-package pack     <folder> [-o|--output <file.corro>] [--json]
@@ -305,6 +404,7 @@ Usage:
   corro-package --help
 
 Commands:
+	new       Create and validate a neutral starter package for one game family.
   validate  Run the server's structural, family and content validation.
   inspect   Validate and print safe package metadata (unlock codes are never shown).
   pack      Validate, create a deterministic archive, reload it through the secure

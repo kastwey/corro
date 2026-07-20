@@ -6,14 +6,18 @@ the operations that must never drift from the engine:
 - validate a folder or `.corro` archive with the production loader and every family validator;
 - inspect safe metadata without exposing hidden-package unlock codes;
 - create deterministic, upload-compatible archives and round-trip them through secure extraction.
+- generate a neutral, bilingual and valid starter project for every supported family;
+- provide local JSON schemas and VS Code associations for early authoring feedback.
 
 The .NET API lives in [Corro.PackageSdk](Corro.PackageSdk/) and the command-line interface in
 [tools/Corro.PackageCli](../tools/Corro.PackageCli/README.md).
+Schema scope and limitations are documented in
+[Corro.PackageSdk/Schemas](Corro.PackageSdk/Schemas/README.md).
 
-## Reference packages by family
+## Starter templates and reference packages
 
-Until neutral starter templates are added, these distributable packages are the executable examples
-for each supported interaction model:
+Run `corro-package new <family> <folder>` to create the neutral starter. These distributable packages
+remain richer executable examples of each supported interaction model:
 
 | Family | Reference package |
 | --- | --- |
@@ -27,9 +31,9 @@ for each supported interaction model:
 | `exploding` | [La Mina](../server/Packages/la-mina/) |
 | `trivia` | [La Rueda del Saber](../server/Packages/la-rueda-del-saber/) |
 
-These examples supplement, but do not replace, the normative [package format](../CORRO_FORMAT.md).
-Neutral templates and editor schemas belong in the next author-experience milestone; validation
-remains authoritative even after schemas are introduced.
+Templates and examples supplement, but do not replace, the normative
+[package format](../CORRO_FORMAT.md). Schemas provide completion and early feedback; validation
+remains authoritative because it executes the current engine and family rules.
 
 ## Security boundary
 

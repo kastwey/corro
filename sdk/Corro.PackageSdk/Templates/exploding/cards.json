@@ -1,0 +1,9 @@
+[
+  { "id": "spark", "type": "bomb", "count": 1, "nameKey": "cards.spark" },
+  { "id": "extinguish", "type": "defuse", "count": 2, "nameKey": "cards.extinguish" },
+  { "id": "skip", "type": "skip", "count": 4, "nameKey": "cards.skip" },
+  { "id": "attack", "type": "attack", "count": 2, "nameKey": "cards.attack" },
+  { "id": "preview", "type": "seeFuture", "count": 2, "nameKey": "cards.preview" },
+  { "id": "shuffle", "type": "shuffle", "count": 2, "nameKey": "cards.shuffle" },
+  { "id": "nope", "type": "nope", "count": 2, "nameKey": "cards.nope" }
+]

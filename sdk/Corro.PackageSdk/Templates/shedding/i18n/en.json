@@ -1,0 +1,13 @@
+{
+  "tokens": { "circle": "Circle", "diamond": "Diamond" },
+  "colors": { "amber": "amber", "blue": "blue" },
+  "cards": {
+    "amberZero": "Amber zero",
+    "amberOne": "Amber one",
+    "amberSkip": "Amber skip",
+    "blueZero": "Blue zero",
+    "blueOne": "Blue one",
+    "blueReverse": "Blue reverse",
+    "wild": "Wild"
+  }
+}

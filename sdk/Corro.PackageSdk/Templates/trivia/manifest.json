@@ -1,0 +1,22 @@
+{
+  "format": "corro/v1",
+  "gameType": "trivia",
+  "engineVersion": "^1.0",
+  "id": "starter-trivia",
+  "name": { "en": "Starter Knowledge Wheel", "es": "Rueda inicial del saber" },
+  "author": "Your name",
+  "version": "0.1.0",
+  "locales": ["en", "es"],
+  "players": { "min": 2, "max": 2 },
+  "triviaRules": {
+    "answerMode": "choice",
+    "judgeMode": "rotating",
+    "exactFinish": false,
+    "centerWild": true,
+    "answerSeconds": 0
+  },
+  "tokens": [
+    { "id": "circle", "nameKey": "tokens.circle" },
+    { "id": "diamond", "nameKey": "tokens.diamond" }
+  ]
+}

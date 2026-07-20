@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/kastwey/corro/main/sdk/Corro.PackageSdk/Schemas/i18n.schema.json",
+  "title": "Corro package translations",
+  "$ref": "#/$defs/translationObject",
+  "$defs": {
+    "translationObject": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          { "type": "string" },
+          { "$ref": "#/$defs/translationObject" }
+        ]
+      }
+    }
+  }
+}

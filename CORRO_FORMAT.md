@@ -23,7 +23,9 @@ myboard.corro (zip)
 
 Use the [Corro Package SDK](tools/Corro.PackageCli/README.md) while authoring: `validate` runs
 the engine's real structural, family and content checks; `inspect` summarizes a folder or archive
-without exposing an unlock code; and `pack` creates and round-trips a reproducible `.corro` file.
+without exposing an unlock code; `pack` creates and round-trips a reproducible `.corro` file; and
+`new` creates a valid neutral starter for any supported family. Generated projects carry local JSON
+schemas for completion, but the engine-backed `validate` command remains authoritative.
 
 **i18n convention**: everything translatable is a **key** resolved against the package's
 own `i18n/{lang}.json` (`nameKey`, `colorName`, `textKey`, `terminology.*`,

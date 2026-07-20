@@ -1,0 +1,12 @@
+{
+  "tokens": { "circle": "Círculo", "diamond": "Rombo" },
+  "cards": {
+    "spark": "Chispa inestable",
+    "extinguish": "Extinguir",
+    "skip": "Saltar el robo",
+    "attack": "Robo adicional",
+    "preview": "Prever el mazo",
+    "shuffle": "Barajar",
+    "nope": "Cancelar"
+  }
+}

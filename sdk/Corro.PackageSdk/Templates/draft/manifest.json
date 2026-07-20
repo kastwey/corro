@@ -1,0 +1,23 @@
+{
+  "format": "corro/v1",
+  "gameType": "draft",
+  "engineVersion": "^1.0",
+  "id": "starter-draft",
+  "name": { "en": "Starter Draft", "es": "Draft inicial" },
+  "author": "Your name",
+  "version": "0.1.0",
+  "locales": ["en", "es"],
+  "players": { "min": 2, "max": 2 },
+  "draftRules": {
+    "rounds": 1,
+    "handSizeBase": 5,
+    "majorityFirst": 4,
+    "majoritySecond": 2,
+    "dessertBonus": 3,
+    "dessertPenalty": 0
+  },
+  "tokens": [
+    { "id": "circle", "nameKey": "tokens.circle" },
+    { "id": "diamond", "nameKey": "tokens.diamond" }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "spokeLength": 1,
+  "ring": [
+    { "category": 0, "wedge": true, "rollAgain": false },
+    { "category": 1, "wedge": true, "rollAgain": false },
+    { "category": 2, "wedge": true, "rollAgain": false },
+    { "category": 3, "wedge": true, "rollAgain": false },
+    { "category": 4, "wedge": true, "rollAgain": false },
+    { "category": 5, "wedge": true, "rollAgain": false }
+  ]
+}

@@ -86,14 +86,16 @@ above applies only to boards meant to ship in the public repository.
 Before sharing or testing a package in the lobby, run the same validation as the server:
 
 ```bash
+dotnet run --project tools/Corro.PackageCli -p:SkipFrontendBuild=true -- new property path/to/my-game
 dotnet run --project tools/Corro.PackageCli -p:SkipFrontendBuild=true -- validate path/to/my-game
 dotnet run --project tools/Corro.PackageCli -p:SkipFrontendBuild=true -- inspect path/to/my-game
 dotnet run --project tools/Corro.PackageCli -p:SkipFrontendBuild=true -- pack path/to/my-game --output my-game.corro
 ```
 
-`pack` validates first, creates a reproducible archive and reloads it through the secure upload
-path before writing the result. See the [Package SDK guide](tools/Corro.PackageCli/README.md) for
-JSON output and exit codes, and [`CORRO_FORMAT.md`](CORRO_FORMAT.md) for the format itself.
+`new` offers neutral bilingual starters for every family, with local editor schemas. `pack`
+validates first, creates a reproducible archive and reloads it through the secure upload path before
+writing the result. See the [Package SDK guide](tools/Corro.PackageCli/README.md) for JSON output
+and exit codes, and [`CORRO_FORMAT.md`](CORRO_FORMAT.md) for the format itself.
 
 ## License of contributions
 

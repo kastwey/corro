@@ -12,6 +12,12 @@ view and provides parallel visual and screen-reader presentations.
 > [`CORRO_FORMAT.md`](CORRO_FORMAT.md). Validate, inspect and build it with the
 > [Corro Package SDK](tools/Corro.PackageCli/README.md).
 
+Create a valid starter for any supported family:
+
+```bash
+dotnet run --project tools/Corro.PackageCli -p:SkipFrontendBuild=true -- new journey games/my-journey
+```
+
 ## Quick start — complete development stack
 
 This is the recommended first-run path. It starts or reuses the **Cosmos DB emulator** and

@@ -1,0 +1,8 @@
+{
+  "trackLength": 20,
+  "gridWidth": 5,
+  "effects": [
+    { "from": 3, "to": 8, "kind": "boost" },
+    { "from": 17, "to": 12, "kind": "setback" }
+  ]
+}

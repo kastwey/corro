@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.IO.Compression;
 using Corro.PackageCli;
 using Corro.PackageSdk;
 
@@ -11,6 +12,9 @@ namespace CorroServer.Tests;
 /// </summary>
 public class CorroPackageSdkTests
 {
+	public static IEnumerable<object[]> TemplateFamilies()
+		=> PackageTemplateCatalog.SupportedFamilies.Select(family => new object[] { family });
+
 	[Fact]
 	public async Task Validate_accepts_a_real_package_folder_in_text_and_json_modes()
 	{
@@ -184,6 +188,7 @@ public class CorroPackageSdkTests
 	{
 		var help = await RunCli();
 		Assert.Equal(CliApplication.Success, help.ExitCode);
+		Assert.Contains("new", help.Output);
 		Assert.Contains("validate", help.Output);
 		Assert.Contains("inspect", help.Output);
 		Assert.Contains("pack", help.Output);
@@ -191,6 +196,153 @@ public class CorroPackageSdkTests
 		var unknown = await RunCli("launch");
 		Assert.Equal(CliApplication.InvalidArguments, unknown.ExitCode);
 		Assert.Contains("Unknown command", unknown.Error);
+	}
+
+	[Theory]
+	[MemberData(nameof(TemplateFamilies))]
+	public async Task Every_neutral_template_creates_validates_and_packs(string family)
+	{
+		using var root = new TemporaryDirectory();
+		var destination = Path.Combine(root.Path, family);
+		var template = await new PackageTemplateService().CreateAsync(
+			family,
+			destination,
+			new PackageTemplateOptions
+			{
+				Id = $"test-{family}",
+				NameEn = $"Test {family}",
+				NameEs = $"Prueba {family}",
+				Author = "Template tests",
+			});
+
+		Assert.True(template.Validation.IsValid);
+		Assert.Equal(family, template.Family);
+		Assert.Equal(destination, template.Path);
+		Assert.Equal(destination, template.Validation.InputPath);
+
+		using (var manifest = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(destination, "manifest.json"))))
+		{
+			Assert.Equal($"test-{family}", manifest.RootElement.GetProperty("id").GetString());
+			Assert.Equal(family, manifest.RootElement.GetProperty("gameType").GetString());
+			Assert.Equal($"Test {family}", manifest.RootElement.GetProperty("name").GetProperty("en").GetString());
+			Assert.Equal("Template tests", manifest.RootElement.GetProperty("author").GetString());
+		}
+
+		var helpEn = await File.ReadAllTextAsync(Path.Combine(destination, "help.en.md"));
+		Assert.StartsWith($"# Test {family}", helpEn);
+		Assert.DoesNotContain("Customize this guide", helpEn);
+		var helpEs = await File.ReadAllTextAsync(Path.Combine(destination, "help.es.md"));
+		Assert.StartsWith($"# Prueba {family}", helpEs);
+		foreach (var shortcut in new[] { "**F1**", "**Ctrl+F1**", "**Ctrl+Shift+F1**", "**F6**", "**Ctrl+Shift+R**" })
+		{
+			Assert.Contains(shortcut, helpEn);
+			Assert.Contains(shortcut, helpEs);
+		}
+		if (family is "journey" or "assembly" or "draft" or "shedding" or "exploding")
+		{
+			Assert.Contains("**Shift+F1**", helpEn);
+			Assert.Contains("**Shift+F1**", helpEs);
+		}
+		Assert.True(File.Exists(Path.Combine(destination, "README.md")));
+		var settingsPath = Path.Combine(destination, ".vscode", "settings.json");
+		Assert.True(File.Exists(settingsPath));
+		var settings = await File.ReadAllTextAsync(settingsPath);
+		if (family is "property" or "race" or "track" or "trivia")
+		{
+			Assert.Contains($"{family}Board", settings);
+		}
+		if (family is "property" or "journey" or "assembly" or "draft" or "shedding" or "exploding")
+		{
+			Assert.Contains($"{family}Deck", settings);
+		}
+
+		var schemaDirectory = Path.Combine(destination, ".vscode", "schemas");
+		var schemaFiles = Directory.GetFiles(schemaDirectory, "*.json");
+		Assert.Equal(5, schemaFiles.Length);
+		foreach (var schema in schemaFiles)
+		{
+			using var parsed = JsonDocument.Parse(await File.ReadAllTextAsync(schema));
+			Assert.Equal(JsonValueKind.Object, parsed.RootElement.ValueKind);
+		}
+
+		var definition = await new CorroServer.Services.Corro.CorroPackageLoader().LoadAsync(destination);
+		var players = definition.Manifest.Tokens.Take(2).Select((token, index) => new CorroServer.Models.Player
+		{
+			Id = "player-" + index,
+			Name = "Player " + (index + 1),
+			Token = token.Id,
+		}).ToList();
+		var started = CorroServer.Services.Corro.Families.GameFamilies.For(family).CreateGame(
+			new CorroServer.Services.Corro.Families.FamilyStartContext
+			{
+				Definition = definition,
+				Players = players,
+				Lang = "en",
+			});
+		Assert.Equal(2, started.State.Players.Count);
+
+		var archivePath = Path.Combine(root.Path, family + ".corro");
+		var packed = await new PackageAuthoringService().PackAsync(destination, archivePath);
+		Assert.True(packed.Succeeded, string.Join(Environment.NewLine, packed.Validation.Problems));
+		using (var archive = ZipFile.OpenRead(archivePath))
+		{
+			Assert.DoesNotContain(archive.Entries, entry => entry.FullName.StartsWith(".vscode/", StringComparison.OrdinalIgnoreCase));
+			Assert.Contains(archive.Entries, entry => entry.FullName == "manifest.json");
+		}
+
+		var roundTrip = await new PackageAuthoringService().ValidateAsync(archivePath);
+		Assert.True(roundTrip.IsValid, string.Join(Environment.NewLine, roundTrip.Problems));
+	}
+
+	[Fact]
+	public async Task New_command_supports_JSON_and_derives_a_safe_default_identity()
+	{
+		using var root = new TemporaryDirectory();
+		var destination = Path.Combine(root.Path, "Mi Juego Ágil");
+		Directory.CreateDirectory(destination);
+
+		var result = await RunCli(
+			"new", "track", destination,
+			"--name-en", "Agile Track",
+			"--name-es", "Pista ágil",
+			"--author", "Ada",
+			"--json");
+
+		Assert.Equal(CliApplication.Success, result.ExitCode);
+		Assert.Empty(result.Error);
+		using var output = JsonDocument.Parse(result.Output);
+		Assert.True(output.RootElement.GetProperty("success").GetBoolean());
+		Assert.Equal("mi-juego-agil", output.RootElement.GetProperty("id").GetString());
+		using var manifest = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(destination, "manifest.json")));
+		Assert.Equal("Ada", manifest.RootElement.GetProperty("author").GetString());
+
+		var punctuationDestination = Path.Combine(root.Path, "!!!");
+		var punctuation = await RunCli("new", "track", punctuationDestination, "--json");
+		Assert.Equal(CliApplication.Success, punctuation.ExitCode);
+		using var punctuationOutput = JsonDocument.Parse(punctuation.Output);
+		Assert.Equal("new-game", punctuationOutput.RootElement.GetProperty("id").GetString());
+	}
+
+	[Fact]
+	public async Task New_command_rejects_unknown_families_invalid_ids_and_nonempty_destinations()
+	{
+		using var root = new TemporaryDirectory();
+		var unknown = await RunCli("new", "unknown", Path.Combine(root.Path, "unknown"));
+		Assert.Equal(CliApplication.InvalidArguments, unknown.ExitCode);
+		Assert.Contains("Unknown game family", unknown.Error);
+
+		var invalidId = await RunCli(
+			"new", "track", Path.Combine(root.Path, "invalid"), "--id", "Not valid!");
+		Assert.Equal(CliApplication.InvalidArguments, invalidId.ExitCode);
+		Assert.Contains("Package id", invalidId.Error);
+
+		var occupied = Path.Combine(root.Path, "occupied");
+		Directory.CreateDirectory(occupied);
+		await File.WriteAllTextAsync(Path.Combine(occupied, "keep.txt"), "keep me");
+		var nonempty = await RunCli("new", "track", occupied);
+		Assert.Equal(CliApplication.InputOutputError, nonempty.ExitCode);
+		Assert.Equal("keep me", await File.ReadAllTextAsync(Path.Combine(occupied, "keep.txt")));
+		Assert.False(File.Exists(Path.Combine(occupied, "manifest.json")));
 	}
 
 	private static async Task<CliResult> RunCli(params string[] arguments)

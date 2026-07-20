@@ -1,0 +1,13 @@
+{
+  "tokens": { "circle": "Círculo", "diamond": "Rombo" },
+  "colors": { "amber": "ámbar", "blue": "azul" },
+  "cards": {
+    "amberZero": "Cero ámbar",
+    "amberOne": "Uno ámbar",
+    "amberSkip": "Salto ámbar",
+    "blueZero": "Cero azul",
+    "blueOne": "Uno azul",
+    "blueReverse": "Reversa azul",
+    "wild": "Comodín"
+  }
+}

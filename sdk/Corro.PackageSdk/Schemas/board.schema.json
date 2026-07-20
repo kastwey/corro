@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/kastwey/corro/main/sdk/Corro.PackageSdk/Schemas/board.schema.json",
+  "title": "Corro board definition",
+  "oneOf": [
+    { "$ref": "#/$defs/propertyBoard" },
+    { "$ref": "#/$defs/raceBoard" },
+    { "$ref": "#/$defs/trackBoard" },
+    { "$ref": "#/$defs/triviaBoard" }
+  ],
+  "$defs": {
+    "propertyBoard": {
+      "title": "Property-family board",
+      "type": "array",
+      "minItems": 40,
+      "maxItems": 40,
+      "items": {
+        "type": "object",
+        "required": ["id", "type"],
+        "properties": {
+          "id": { "type": "integer", "minimum": 0, "maximum": 39 },
+          "type": { "enum": ["start", "property", "transit", "utility", "deck", "tax", "holding", "freeparking", "sendtoholding"] },
+          "group": { "type": "string" },
+          "deck": { "type": "string" },
+          "nameKey": { "type": "string" },
+          "price": { "type": "integer", "minimum": 0 },
+          "buildCost": { "type": "integer", "minimum": 0 },
+          "rent": { "type": "array", "items": { "type": "integer", "minimum": 0 } },
+          "amount": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "raceBoard": {
+      "title": "Race-family circuit",
+      "type": "object",
+      "required": ["circuitLength", "corridorLength", "piecesPerPlayer", "safeSquares", "seats"],
+      "properties": {
+        "circuitLength": { "type": "integer", "minimum": 4 },
+        "corridorLength": { "type": "integer", "minimum": 1 },
+        "piecesPerPlayer": { "type": "integer", "minimum": 1 },
+        "safeSquares": { "type": "array", "uniqueItems": true, "items": { "type": "integer", "minimum": 1 } },
+        "seats": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["id", "color", "nameKey", "startSquare", "corridorEntry"],
+            "properties": {
+              "id": { "type": "string" },
+              "color": { "type": "string" },
+              "nameKey": { "type": "string" },
+              "startSquare": { "type": "integer", "minimum": 1 },
+              "corridorEntry": { "type": "integer", "minimum": 1 }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "trackBoard": {
+      "title": "Track-family path",
+      "type": "object",
+      "required": ["trackLength", "gridWidth", "effects"],
+      "properties": {
+        "trackLength": { "type": "integer", "minimum": 10 },
+        "gridWidth": { "type": "integer", "minimum": 2 },
+        "effects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to", "kind"],
+            "properties": {
+              "from": { "type": "integer", "minimum": 1 },
+              "to": { "type": "integer", "minimum": 1 },
+              "kind": { "type": "string", "minLength": 1 }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "triviaBoard": {
+      "title": "Trivia-family wheel",
+      "type": "object",
+      "required": ["spokeLength", "ring"],
+      "properties": {
+        "spokeLength": { "type": "integer", "minimum": 1 },
+        "ring": {
+          "type": "array",
+          "minItems": 6,
+          "items": {
+            "type": "object",
+            "required": ["category", "wedge", "rollAgain"],
+            "properties": {
+              "category": { "type": "integer", "minimum": 0, "maximum": 5 },
+              "wedge": { "type": "boolean" },
+              "rollAgain": { "type": "boolean" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "tokens": { "circle": "Circle", "diamond": "Diamond" },
+  "cards": {
+    "step25": "Advance 25 units",
+    "step50": "Advance 50 units",
+    "stop": "Stop",
+    "continue": "Continue",
+    "shield": "Permanent stop shield"
+  }
+}

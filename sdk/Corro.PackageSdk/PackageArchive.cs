@@ -18,6 +18,7 @@ internal static class PackageArchive
 		var sourceRoot = Path.GetFullPath(sourceDirectory);
 		var files = EnumerateFiles(sourceRoot)
 			.Select(path => new ArchiveSource(path, ArchiveName(sourceRoot, path), new FileInfo(path).Length))
+			.Where(file => !IsAuthoringMetadata(file.EntryName))
 			.OrderBy(file => file.EntryName, StringComparer.Ordinal)
 			.ToArray();
 
@@ -124,6 +125,10 @@ internal static class PackageArchive
 
 		return relative.Replace(Path.DirectorySeparatorChar, '/');
 	}
+
+	private static bool IsAuthoringMetadata(string entryName)
+		=> entryName.Equals(".vscode", StringComparison.OrdinalIgnoreCase)
+			|| entryName.StartsWith(".vscode/", StringComparison.OrdinalIgnoreCase);
 
 	private static void ValidateLimits(IReadOnlyCollection<ArchiveSource> files)
 	{

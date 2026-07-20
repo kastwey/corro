@@ -1,0 +1,16 @@
+{
+  "format": "corro/v1",
+  "gameType": "assembly",
+  "engineVersion": "^1.0",
+  "id": "starter-assembly",
+  "name": { "en": "Starter Assembly", "es": "Montaje inicial" },
+  "author": "Your name",
+  "version": "0.1.0",
+  "locales": ["en", "es"],
+  "players": { "min": 2, "max": 2 },
+  "assemblyRules": { "handSize": 2, "slotsToWin": 2, "maxDiscard": 2 },
+  "tokens": [
+    { "id": "circle", "nameKey": "tokens.circle" },
+    { "id": "diamond", "nameKey": "tokens.diamond" }
+  ]
+}

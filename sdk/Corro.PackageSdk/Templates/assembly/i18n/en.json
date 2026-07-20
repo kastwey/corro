@@ -1,0 +1,11 @@
+{
+  "tokens": { "circle": "Circle", "diamond": "Diamond" },
+  "cards": {
+    "amberPiece": "Amber unit",
+    "bluePiece": "Blue unit",
+    "amberDamage": "Amber damage",
+    "blueDamage": "Blue damage",
+    "amberRepair": "Amber repair",
+    "blueRepair": "Blue repair"
+  }
+}

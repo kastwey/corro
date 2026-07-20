@@ -1,0 +1,4 @@
+{
+  "tokens": { "circle": "Circle", "diamond": "Diamond" },
+  "seats": { "sun": "Sun route", "moon": "Moon route" }
+}

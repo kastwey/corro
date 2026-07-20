@@ -1,0 +1,10 @@
+{
+  "tokens": { "circle": "Circle", "diamond": "Diamond" },
+  "cards": {
+    "pointOne": "One-point token",
+    "pointTwo": "Two-point token",
+    "pair": "Pair token",
+    "signal": "Signal token",
+    "memory": "End-game memory"
+  }
+}

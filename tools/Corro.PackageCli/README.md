@@ -6,6 +6,27 @@ here follows the same rules as an upload.
 
 Requires the [.NET 10 SDK](https://dot.net/download).
 
+## Create a starter package
+
+```powershell
+dotnet run --project tools/Corro.PackageCli -p:SkipFrontendBuild=true -- new journey games/my-journey --id my-journey --name-en "My Journey" --name-es "Mi viaje" --author "Your name"
+```
+
+`new` supports `property`, `race`, `track`, `journey`, `assembly`, `draft`, `shedding`,
+`exploding` and `trivia`. Every template is neutral, original, bilingual and immediately valid.
+The destination must be absent or empty; the command never overwrites an author's files.
+
+The generated project contains:
+
+- the smallest useful board/deck for its family;
+- two original geometric tokens;
+- English and Spanish translations and help guides;
+- local JSON schemas plus VS Code associations;
+- an authoring README.
+
+The package id defaults to a safe slug derived from the destination folder. Use `--json` for a
+machine-readable result.
+
 ## Validate
 
 ```powershell

@@ -1,0 +1,12 @@
+{
+  "tokens": { "circle": "Circle", "diamond": "Diamond" },
+  "cards": {
+    "spark": "Unstable spark",
+    "extinguish": "Extinguish",
+    "skip": "Skip the draw",
+    "attack": "Extra draw",
+    "preview": "Preview the pile",
+    "shuffle": "Shuffle",
+    "nope": "Cancel"
+  }
+}

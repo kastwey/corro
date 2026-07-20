@@ -1,0 +1,10 @@
+{
+  "circuitLength": 20,
+  "corridorLength": 4,
+  "piecesPerPlayer": 2,
+  "safeSquares": [1, 6, 11, 16],
+  "seats": [
+    { "id": "sun", "color": "#c97912", "nameKey": "seats.sun", "startSquare": 1, "corridorEntry": 20 },
+    { "id": "moon", "color": "#386cb0", "nameKey": "seats.moon", "startSquare": 11, "corridorEntry": 10 }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "format": "corro/v1",
+  "gameType": "journey",
+  "engineVersion": "^1.0",
+  "id": "starter-journey",
+  "name": { "en": "Starter Journey", "es": "Viaje inicial" },
+  "author": "Your name",
+  "version": "0.1.0",
+  "locales": ["en", "es"],
+  "players": { "min": 2, "max": 2 },
+  "journeyRules": {
+    "goalKm": 100,
+    "targetScore": 0,
+    "handSize": 3,
+    "stackHazards": false,
+    "limitCap": 25,
+    "initialHazard": "stop"
+  },
+  "tokens": [
+    { "id": "circle", "nameKey": "tokens.circle" },
+    { "id": "diamond", "nameKey": "tokens.diamond" }
+  ]
+}

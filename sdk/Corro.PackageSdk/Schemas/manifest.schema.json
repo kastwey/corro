@@ -1,0 +1,339 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/kastwey/corro/main/sdk/Corro.PackageSdk/Schemas/manifest.schema.json",
+  "title": "Corro package manifest",
+  "type": "object",
+  "required": ["format", "gameType", "engineVersion", "id", "name", "locales", "players", "tokens"],
+  "properties": {
+    "format": { "const": "corro/v1", "description": "Corro package format version." },
+    "gameType": {
+      "enum": ["property", "race", "track", "journey", "assembly", "draft", "shedding", "exploding", "trivia"],
+      "description": "The engine family that owns this package's interaction model."
+    },
+    "engineVersion": { "type": "string", "minLength": 1 },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{1,62}[a-z0-9]$" },
+    "name": { "$ref": "#/$defs/localizedText" },
+    "author": { "type": "string" },
+    "version": { "type": "string" },
+    "locales": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9-]*$" }
+    },
+    "players": { "$ref": "#/$defs/players" },
+    "tokens": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "#/$defs/token" }
+    },
+    "currency": { "$ref": "#/$defs/currency" },
+    "centerBrand": { "type": "string" },
+    "terminology": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "groups": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/group" }
+    },
+    "decks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/deck" }
+    },
+    "building": { "$ref": "#/$defs/building" },
+    "rules": { "$ref": "#/$defs/propertyRules" },
+    "raceRules": { "$ref": "#/$defs/raceRules" },
+    "trackRules": { "$ref": "#/$defs/trackRules" },
+    "journeyRules": { "$ref": "#/$defs/journeyRules" },
+    "assemblyRules": { "$ref": "#/$defs/assemblyRules" },
+    "draftRules": { "$ref": "#/$defs/draftRules" },
+    "sheddingRules": { "$ref": "#/$defs/sheddingRules" },
+    "explodingRules": { "$ref": "#/$defs/explodingRules" },
+    "triviaRules": { "$ref": "#/$defs/triviaRules" },
+    "ruleGroups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "nameKey"],
+        "properties": {
+          "id": { "type": "string" },
+          "nameKey": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "houseRules": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/houseRule" }
+    },
+    "unlockCode": { "type": "string", "description": "Optional self-hosting visibility code. Never a security boundary." },
+    "warning": { "type": "string", "description": "Package i18n key shown before creating a game." }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "gameType": { "const": "property" } }, "required": ["gameType"] },
+      "then": { "required": ["currency", "terminology", "groups", "decks", "building", "rules"] }
+    },
+    {
+      "if": { "properties": { "gameType": { "const": "race" } }, "required": ["gameType"] },
+      "then": { "required": ["raceRules"] }
+    },
+    {
+      "if": { "properties": { "gameType": { "const": "track" } }, "required": ["gameType"] },
+      "then": { "required": ["trackRules"] }
+    },
+    {
+      "if": { "properties": { "gameType": { "const": "journey" } }, "required": ["gameType"] },
+      "then": { "required": ["journeyRules"] }
+    },
+    {
+      "if": { "properties": { "gameType": { "const": "assembly" } }, "required": ["gameType"] },
+      "then": { "required": ["assemblyRules"] }
+    },
+    {
+      "if": { "properties": { "gameType": { "const": "draft" } }, "required": ["gameType"] },
+      "then": { "required": ["draftRules"] }
+    },
+    {
+      "if": { "properties": { "gameType": { "const": "shedding" } }, "required": ["gameType"] },
+      "then": { "required": ["sheddingRules"] }
+    },
+    {
+      "if": { "properties": { "gameType": { "const": "exploding" } }, "required": ["gameType"] },
+      "then": { "required": ["explodingRules"] }
+    },
+    {
+      "if": { "properties": { "gameType": { "const": "trivia" } }, "required": ["gameType"] },
+      "then": { "required": ["triviaRules"] }
+    }
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "localizedText": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "players": {
+      "type": "object",
+      "required": ["min", "max"],
+      "properties": {
+        "min": { "type": "integer", "minimum": 2, "maximum": 8 },
+        "max": { "type": "integer", "minimum": 2, "maximum": 8 }
+      },
+      "additionalProperties": false
+    },
+    "token": {
+      "type": "object",
+      "required": ["id", "nameKey"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+        "nameKey": { "type": "string" },
+        "svg": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "currency": {
+      "type": "object",
+      "required": ["symbol", "code", "nameKey"],
+      "properties": {
+        "symbol": { "type": "string" },
+        "code": { "type": "string" },
+        "nameKey": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "group": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string" },
+        "color": { "type": "string" },
+        "colorName": { "type": "string" },
+        "icon": { "type": "string" },
+        "key": { "type": "string", "pattern": "^[a-zA-Z]$" }
+      },
+      "additionalProperties": false
+    },
+    "deck": {
+      "type": "object",
+      "required": ["id", "nameKey"],
+      "properties": {
+        "id": { "type": "string" },
+        "nameKey": { "type": "string" },
+        "icon": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "building": {
+      "type": "object",
+      "required": ["levels", "smallKey", "smallPluralKey", "bigKey"],
+      "properties": {
+        "levels": { "type": "integer", "minimum": 1 },
+        "smallKey": { "type": "string" },
+        "smallPluralKey": { "type": "string" },
+        "bigKey": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "propertyRules": {
+      "type": "object",
+      "properties": {
+        "startingMoney": { "type": "integer", "minimum": 0 },
+        "passStartBonus": { "type": "integer", "minimum": 0 },
+        "rentStrategies": { "type": "object", "additionalProperties": { "type": "string" } },
+        "transitRent": { "type": "array", "items": { "type": "integer", "minimum": 0 } },
+        "utilityMultiplier": {
+          "type": "object",
+          "properties": {
+            "single": { "type": "integer", "minimum": 0 },
+            "all": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "holding": {
+          "type": "object",
+          "properties": {
+            "releaseCost": { "type": "integer", "minimum": 0 },
+            "maxTurns": { "type": "integer", "minimum": 0 },
+            "walk": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        "mortgageInterestRate": { "type": "integer", "minimum": 0 },
+        "buildingShortage": { "type": "boolean" },
+        "evenBuildRule": { "type": "boolean" },
+        "auctionOnDecline": { "type": "boolean" },
+        "freeParkingJackpot": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "raceRules": {
+      "type": "object",
+      "properties": {
+        "exitOn": { "type": "integer", "minimum": 1 },
+        "extraRollOn": { "type": "integer", "minimum": 1 },
+        "threeSixesPenalty": { "type": "boolean" },
+        "captureBonus": { "type": "integer", "minimum": 0 },
+        "goalBonus": { "type": "integer", "minimum": 0 },
+        "sixWorthSevenWhenNoneHome": { "type": "boolean" },
+        "barriers": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "trackRules": {
+      "type": "object",
+      "properties": {
+        "exactFinish": { "enum": ["bounce", "stay"] },
+        "rollAgainOnMax": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "journeyRules": {
+      "type": "object",
+      "properties": {
+        "goalKm": { "type": "integer", "minimum": 1 },
+        "targetScore": { "type": "integer", "minimum": 0 },
+        "handSize": { "type": "integer", "minimum": 1 },
+        "stackHazards": { "type": "boolean" },
+        "limitCap": { "type": "integer", "minimum": 1 },
+        "initialHazard": { "type": "string" },
+        "pointsPerKm": { "type": "integer", "minimum": 0 },
+        "immunityPoints": { "type": "integer", "minimum": 0 },
+        "allImmunitiesBonus": { "type": "integer", "minimum": 0 },
+        "coupFourreBonus": { "type": "integer", "minimum": 0 },
+        "tripCompleteBonus": { "type": "integer", "minimum": 0 },
+        "safeTripBonus": { "type": "integer", "minimum": 0 },
+        "deckExhaustedBonus": { "type": "integer", "minimum": 0 },
+        "capotBonus": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "assemblyRules": {
+      "type": "object",
+      "properties": {
+        "handSize": { "type": "integer", "minimum": 1 },
+        "slotsToWin": { "type": "integer", "minimum": 1 },
+        "maxDiscard": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "draftRules": {
+      "type": "object",
+      "properties": {
+        "rounds": { "type": "integer", "minimum": 1 },
+        "handSizeBase": { "type": "integer", "minimum": 1 },
+        "majorityFirst": { "type": "integer", "minimum": 1 },
+        "majoritySecond": { "type": "integer", "minimum": 0 },
+        "dessertBonus": { "type": "integer", "minimum": 0 },
+        "dessertPenalty": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "sheddingRules": {
+      "type": "object",
+      "properties": {
+        "handSize": { "type": "integer", "minimum": 1 },
+        "targetScore": { "type": "integer", "minimum": 0 },
+        "drawnCardPlayable": { "type": "boolean" },
+        "wildDrawRequiresNoMatch": { "type": "boolean" },
+        "allowDoubles": { "type": "boolean" },
+        "stacking": { "enum": ["none", "sameType", "cross"] },
+        "lastCardCall": { "type": "boolean" },
+        "lastCardPenalty": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "explodingRules": {
+      "type": "object",
+      "properties": {
+        "handSize": { "type": "integer", "minimum": 1 },
+        "defusesPerPlayer": { "type": "integer", "minimum": 1 },
+        "seeFutureCount": { "type": "integer", "minimum": 1 },
+        "attackDraws": { "type": "integer", "minimum": 1 },
+        "nopeWindowMillis": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "triviaRules": {
+      "type": "object",
+      "properties": {
+        "answerMode": { "enum": ["judge", "choice", "typed"] },
+        "judgeMode": { "enum": ["rotating", "fixed"] },
+        "exactFinish": { "type": "boolean" },
+        "centerWild": { "type": "boolean" },
+        "answerSeconds": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "houseRule": {
+      "type": "object",
+      "required": ["id", "type", "default", "nameKey"],
+      "properties": {
+        "id": { "type": "string" },
+        "group": { "type": "string" },
+        "type": { "enum": ["toggle", "number", "choice"] },
+        "default": {},
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "step": { "type": "number" },
+        "editableByHost": { "type": "boolean" },
+        "nameKey": { "type": "string" },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "nameKey"],
+            "properties": {
+              "id": { "type": "string" },
+              "nameKey": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

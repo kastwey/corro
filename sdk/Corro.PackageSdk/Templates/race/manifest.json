@@ -1,0 +1,24 @@
+{
+  "format": "corro/v1",
+  "gameType": "race",
+  "engineVersion": "^1.0",
+  "id": "starter-race",
+  "name": { "en": "Starter Race", "es": "Carrera inicial" },
+  "author": "Your name",
+  "version": "0.1.0",
+  "locales": ["en", "es"],
+  "players": { "min": 2, "max": 2 },
+  "raceRules": {
+    "exitOn": 5,
+    "extraRollOn": 6,
+    "threeSixesPenalty": true,
+    "captureBonus": 10,
+    "goalBonus": 5,
+    "sixWorthSevenWhenNoneHome": false,
+    "barriers": true
+  },
+  "tokens": [
+    { "id": "circle", "nameKey": "tokens.circle" },
+    { "id": "diamond", "nameKey": "tokens.diamond" }
+  ]
+}

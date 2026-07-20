@@ -12,6 +12,23 @@
     <ProjectReference Include="..\..\server\CorroServer.csproj" PrivateAssets="all" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Embedded rather than copied from server/Packages: published authoring tools contain only
+         neutral, reviewed starter data and can never pick up local gitignored packages. Slashes in
+         the logical names preserve a safe virtual directory tree for TemplateAuthoringService. -->
+    <EmbeddedResource Include="Templates\**\*.json;Templates\**\*.svg"
+                      LogicalName="Corro.PackageSdk/Templates/%(RecursiveDir)%(Filename)%(Extension)"
+                      WithCulture="false" />
+    <EmbeddedResource Include="Templates\_shared\README.md"
+              LogicalName="Corro.PackageSdk/Templates/_shared/README.md"
+              WithCulture="false" />
+    <EmbeddedResource Include="Templates\**\help.*.md"
+              LogicalName="Corro.PackageSdk/Templates/%(RecursiveDir)%(Filename)%(Extension)"
+              WithCulture="false" />
+    <EmbeddedResource Include="Schemas\*.json"
+                      LogicalName="Corro.PackageSdk/Schemas/%(Filename)%(Extension)" />
+  </ItemGroup>
+
   <Target Name="StripAndRejectServerContent" AfterTargets="Build">
     <ItemGroup>
       <_ServerStaticAssets Include="$(TargetDir)*staticwebassets*" />

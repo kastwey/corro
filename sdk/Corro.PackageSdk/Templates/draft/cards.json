@@ -1,0 +1,7 @@
+[
+  { "id": "point-one", "type": "points", "count": 4, "nameKey": "cards.pointOne", "value": 1 },
+  { "id": "point-two", "type": "points", "count": 4, "nameKey": "cards.pointTwo", "value": 2 },
+  { "id": "pair", "type": "set", "count": 4, "nameKey": "cards.pair", "setSize": 2, "setPoints": 5 },
+  { "id": "signal", "type": "majority", "count": 4, "nameKey": "cards.signal", "icons": 1 },
+  { "id": "memory", "type": "dessert", "count": 2, "nameKey": "cards.memory" }
+]

@@ -1,0 +1,25 @@
+{
+  "format": "corro/v1",
+  "gameType": "shedding",
+  "engineVersion": "^1.0",
+  "id": "starter-shedding",
+  "name": { "en": "Starter Shedding Game", "es": "Juego inicial de descarte" },
+  "author": "Your name",
+  "version": "0.1.0",
+  "locales": ["en", "es"],
+  "players": { "min": 2, "max": 2 },
+  "sheddingRules": {
+    "handSize": 3,
+    "targetScore": 0,
+    "drawnCardPlayable": true,
+    "wildDrawRequiresNoMatch": true,
+    "allowDoubles": false,
+    "stacking": "none",
+    "lastCardCall": false,
+    "lastCardPenalty": 2
+  },
+  "tokens": [
+    { "id": "circle", "nameKey": "tokens.circle" },
+    { "id": "diamond", "nameKey": "tokens.diamond" }
+  ]
+}

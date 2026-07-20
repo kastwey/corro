@@ -1,0 +1,8 @@
+[
+  { "id": "logic-1", "category": 0, "prompt": "Which value is even?", "answer": "2", "accept": ["two"], "choices": ["2", "3", "5"], "difficulty": 1 },
+  { "id": "pattern-1", "category": 1, "prompt": "What comes next: A, B, C?", "answer": "D", "accept": ["d"], "choices": ["D", "A", "Z"], "difficulty": 1 },
+  { "id": "shape-1", "category": 2, "prompt": "How many sides does a triangle have?", "answer": "3", "accept": ["three"], "choices": ["3", "4", "5"], "difficulty": 1 },
+  { "id": "sequence-1", "category": 3, "prompt": "What follows 1, 2, 3?", "answer": "4", "accept": ["four"], "choices": ["4", "2", "6"], "difficulty": 1 },
+  { "id": "symbol-1", "category": 4, "prompt": "Which symbol means addition?", "answer": "+", "accept": ["plus"], "choices": ["+", "-", "="], "difficulty": 1 },
+  { "id": "puzzle-1", "category": 5, "prompt": "Which is larger: one or two?", "answer": "two", "accept": ["2"], "choices": ["two", "one", "equal"], "difficulty": 1 }
+]

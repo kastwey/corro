@@ -1,0 +1,11 @@
+{
+  "tokens": { "circle": "Círculo", "diamond": "Rombo" },
+  "cards": {
+    "amberPiece": "Unidad ámbar",
+    "bluePiece": "Unidad azul",
+    "amberDamage": "Daño ámbar",
+    "blueDamage": "Daño azul",
+    "amberRepair": "Reparación ámbar",
+    "blueRepair": "Reparación azul"
+  }
+}

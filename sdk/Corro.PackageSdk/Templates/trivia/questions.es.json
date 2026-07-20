@@ -1,0 +1,8 @@
+[
+  { "id": "logic-1", "category": 0, "prompt": "¿Qué valor es par?", "answer": "2", "accept": ["dos"], "choices": ["2", "3", "5"], "difficulty": 1 },
+  { "id": "pattern-1", "category": 1, "prompt": "¿Qué viene después de A, B, C?", "answer": "D", "accept": ["d"], "choices": ["D", "A", "Z"], "difficulty": 1 },
+  { "id": "shape-1", "category": 2, "prompt": "¿Cuántos lados tiene un triángulo?", "answer": "3", "accept": ["tres"], "choices": ["3", "4", "5"], "difficulty": 1 },
+  { "id": "sequence-1", "category": 3, "prompt": "¿Qué sigue a 1, 2, 3?", "answer": "4", "accept": ["cuatro"], "choices": ["4", "2", "6"], "difficulty": 1 },
+  { "id": "symbol-1", "category": 4, "prompt": "¿Qué símbolo significa suma?", "answer": "+", "accept": ["más"], "choices": ["+", "-", "="], "difficulty": 1 },
+  { "id": "puzzle-1", "category": 5, "prompt": "¿Qué es mayor: uno o dos?", "answer": "dos", "accept": ["2"], "choices": ["dos", "uno", "iguales"], "difficulty": 1 }
+]

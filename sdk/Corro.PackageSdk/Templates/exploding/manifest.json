@@ -1,0 +1,22 @@
+{
+  "format": "corro/v1",
+  "gameType": "exploding",
+  "engineVersion": "^1.0",
+  "id": "starter-exploding",
+  "name": { "en": "Starter Chain Reaction", "es": "Reacción en cadena inicial" },
+  "author": "Your name",
+  "version": "0.1.0",
+  "locales": ["en", "es"],
+  "players": { "min": 2, "max": 2 },
+  "explodingRules": {
+    "handSize": 2,
+    "defusesPerPlayer": 1,
+    "seeFutureCount": 2,
+    "attackDraws": 2,
+    "nopeWindowMillis": 1500
+  },
+  "tokens": [
+    { "id": "circle", "nameKey": "tokens.circle" },
+    { "id": "diamond", "nameKey": "tokens.diamond" }
+  ]
+}

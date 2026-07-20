@@ -1,0 +1,10 @@
+{
+  "tokens": { "circle": "Círculo", "diamond": "Rombo" },
+  "cards": {
+    "pointOne": "Ficha de un punto",
+    "pointTwo": "Ficha de dos puntos",
+    "pair": "Ficha de pareja",
+    "signal": "Ficha de señal",
+    "memory": "Recuerdo de final de partida"
+  }
+}

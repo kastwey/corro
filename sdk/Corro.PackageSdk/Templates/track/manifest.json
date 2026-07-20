@@ -1,0 +1,16 @@
+{
+  "format": "corro/v1",
+  "gameType": "track",
+  "engineVersion": "^1.0",
+  "id": "starter-track",
+  "name": { "en": "Starter Track", "es": "Pista inicial" },
+  "author": "Your name",
+  "version": "0.1.0",
+  "locales": ["en", "es"],
+  "players": { "min": 2, "max": 2 },
+  "trackRules": { "exactFinish": "bounce", "rollAgainOnMax": true },
+  "tokens": [
+    { "id": "circle", "nameKey": "tokens.circle" },
+    { "id": "diamond", "nameKey": "tokens.diamond" }
+  ]
+}

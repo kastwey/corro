@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/kastwey/corro/main/sdk/Corro.PackageSdk/Schemas/questions.schema.json",
+  "title": "Corro trivia questions",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["id", "category", "prompt", "answer", "accept", "choices", "difficulty"],
+    "properties": {
+      "id": { "type": "string", "minLength": 1 },
+      "category": { "type": "integer", "minimum": 0, "maximum": 5 },
+      "prompt": { "type": "string", "minLength": 1 },
+      "answer": { "type": "string", "minLength": 1 },
+      "accept": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+      "choices": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+      "difficulty": { "type": "integer", "minimum": 1 }
+    },
+    "additionalProperties": false
+  }
+}
