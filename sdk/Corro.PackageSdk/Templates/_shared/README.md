@@ -16,6 +16,6 @@ corro-package inspect .
 corro-package pack . --output ../my-game.corro
 ```
 
-The `.vscode` folder associates the included schemas with the package files for completion and early editing feedback. Schemas are guidance; `corro-package validate` is authoritative because it executes the real engine validators.
+Open this generated folder as the VS Code workspace root. Its `.vscode` folder associates the included schemas with the package files for completion and early editing feedback. Schemas are guidance; `corro-package validate` is authoritative because it executes the real engine validators.
 
 See the Corro package format and family documentation for every supported field and mechanic. A package can configure known mechanics but cannot invent a new turn model; that belongs in a new engine family.
