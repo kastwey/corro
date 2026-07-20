@@ -65,6 +65,8 @@ The essentials are:
 ## Contributing a game package
 
 Every game is a `.corro` package (board or deck, pieces, translations and sounds).
+If you have not made one before, follow the [beginner guide](docs/package-authoring.md)
+([español](docs/package-authoring.es.md)) before using the format reference.
 We'd love more packages, but there's an important rule about
 which ones can be **bundled into this repository**:
 

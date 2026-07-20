@@ -6,6 +6,10 @@ here follows the same rules as an upload.
 
 Requires the [.NET 10 SDK](https://dot.net/download).
 
+If this is your first package, follow the [beginner guide](../../docs/package-authoring.md)
+([guía en español](../../docs/package-authoring.es.md)) rather than reading the command reference
+in isolation.
+
 ## Create a starter package
 
 ```powershell

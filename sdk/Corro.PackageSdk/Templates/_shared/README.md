@@ -2,6 +2,8 @@
 
 This folder is a complete, valid game created from a neutral family template. It is intentionally small: replace its names, rules, cards or board with your own design while preserving the family interaction model.
 
+First package? Follow the [English beginner guide](https://github.com/kastwey/corro/blob/main/docs/package-authoring.md) or the [Spanish guide](https://github.com/kastwey/corro/blob/main/docs/package-authoring.es.md).
+
 ## Authoring loop
 
 1. Edit `manifest.json` and the family content in `board.json`, `cards.json` or `questions.*.json`.

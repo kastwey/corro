@@ -4,6 +4,9 @@ A step-by-step, do-it-with-me guide to making a **complete 40-square property bo
 `.corro` package — themed around the streets of *your* city. No coding: a package is
 just data (a few text files). You'll end with a real board you can load and play.
 
+For a shorter introduction to tools, JSON and all nine families, read the
+[beginner package guide](package-authoring.md) ([español](package-authoring.es.md)) first.
+
 The quickest starting point is the neutral property template:
 
 ```bash

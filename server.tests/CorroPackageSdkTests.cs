@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using System.IO.Compression;
 using Corro.PackageCli;
 using Corro.PackageSdk;
@@ -198,6 +199,79 @@ public class CorroPackageSdkTests
 		Assert.Contains("Unknown command", unknown.Error);
 	}
 
+	[Fact]
+	public void The_SDK_README_uses_each_reference_packages_English_manifest_name()
+	{
+		var packagesRoot = CorroTestPaths.PackagesRoot();
+		var repositoryRoot = Directory.GetParent(Directory.GetParent(packagesRoot)!.FullName)!.FullName;
+		var readme = File.ReadAllText(Path.Combine(repositoryRoot, "sdk", "README.md"));
+		var references = new Dictionary<string, string>
+		{
+			["property"] = "imperio-galactico",
+			["race"] = "carrera-galactica",
+			["track"] = "escaleras-y-serpientes",
+			["journey"] = "la-gran-ruta",
+			["assembly"] = "taller-galactico",
+			["draft"] = "gran-tapeo",
+			["shedding"] = "cuatro-colores",
+			["exploding"] = "la-mina",
+			["trivia"] = "la-rueda-del-saber",
+		};
+
+		foreach (var (family, packageId) in references)
+		{
+			using var manifest = JsonDocument.Parse(File.ReadAllText(
+				Path.Combine(packagesRoot, packageId, "manifest.json")));
+			var englishName = manifest.RootElement.GetProperty("name").GetProperty("en").GetString();
+			Assert.Contains(
+				$"| `{family}` | [{englishName}](../server/Packages/{packageId}/) |",
+				readme);
+		}
+	}
+
+	[Fact]
+	public void The_bilingual_beginner_guides_cover_the_complete_workflow_and_have_no_broken_local_links()
+	{
+		var packagesRoot = CorroTestPaths.PackagesRoot();
+		var repositoryRoot = Directory.GetParent(Directory.GetParent(packagesRoot)!.FullName)!.FullName;
+		var englishPath = Path.Combine(repositoryRoot, "docs", "package-authoring.md");
+		var spanishPath = Path.Combine(repositoryRoot, "docs", "package-authoring.es.md");
+		var english = File.ReadAllText(englishPath);
+		var spanish = File.ReadAllText(spanishPath);
+
+		foreach (var family in PackageTemplateCatalog.SupportedFamilies)
+		{
+			Assert.Contains($"`{family}`", english);
+			Assert.Contains($"`{family}`", spanish);
+		}
+		foreach (var command in new[] { "-- new", "-- validate", "-- inspect", "-- pack" })
+		{
+			Assert.Contains(command, english);
+			Assert.Contains(command, spanish);
+		}
+
+		Assert.Contains("package-authoring.es.md", english);
+		Assert.Contains("package-authoring.md", spanish);
+		Assert.Contains("https://imperio.kastwey.org", english);
+		Assert.Contains("https://imperio.kastwey.org", spanish);
+		AssertRelativeMarkdownLinksExist(englishPath);
+		AssertRelativeMarkdownLinksExist(spanishPath);
+
+		foreach (var entryPoint in new[]
+		{
+			"README.md",
+			"CONTRIBUTING.md",
+			"CORRO_FORMAT.md",
+			Path.Combine("docs", "README.md"),
+			Path.Combine("docs", "tutorial-city-board.md"),
+			Path.Combine("sdk", "README.md"),
+			Path.Combine("tools", "Corro.PackageCli", "README.md"),
+		})
+		{
+			Assert.Contains("package-authoring", File.ReadAllText(Path.Combine(repositoryRoot, entryPoint)));
+		}
+	}
+
 	[Theory]
 	[MemberData(nameof(TemplateFamilies))]
 	public async Task Every_neutral_template_creates_validates_and_packs(string family)
@@ -372,6 +446,27 @@ public class CorroPackageSdkTests
 			var target = Path.Combine(destination, Path.GetRelativePath(source, file));
 			Directory.CreateDirectory(Path.GetDirectoryName(target)!);
 			File.Copy(file, target);
+		}
+	}
+
+	private static void AssertRelativeMarkdownLinksExist(string markdownPath)
+	{
+		var markdown = File.ReadAllText(markdownPath);
+		foreach (Match match in Regex.Matches(markdown, @"\[[^\]]+\]\(([^)]+)\)"))
+		{
+			var target = match.Groups[1].Value;
+			if (target.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+				|| target.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+				|| target.StartsWith('#'))
+			{
+				continue;
+			}
+
+			var relative = target.Split('#', 2)[0];
+			var resolved = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(markdownPath)!, relative));
+			Assert.True(
+				File.Exists(resolved) || Directory.Exists(resolved),
+				$"Broken link '{target}' in {markdownPath} (resolved to {resolved}).");
 		}
 	}
 

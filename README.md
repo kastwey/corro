@@ -8,9 +8,10 @@ view and provides parallel visual and screen-reader presentations.
 
 > **New here?** Read the architecture docs in **[`docs/`](docs/README.md)** — the big
 > picture, the client, the accessibility doctrine, the server, how game families work, and
-> end-to-end flows. To make a game as a *package* (no code), see
-> [`CORRO_FORMAT.md`](CORRO_FORMAT.md). Validate, inspect and build it with the
-> [Corro Package SDK](tools/Corro.PackageCli/README.md).
+> end-to-end flows. To make a game as a *package* without programming, start with the
+> [beginner guide](docs/package-authoring.md) ([español](docs/package-authoring.es.md)). Keep
+> [`CORRO_FORMAT.md`](CORRO_FORMAT.md) as the advanced reference and use the
+> [Corro Package SDK](tools/Corro.PackageCli/README.md) to create, validate and pack it.
 
 Create a valid starter for any supported family:
 

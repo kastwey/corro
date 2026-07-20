@@ -29,12 +29,13 @@ There are two very different kinds of contributor, and they need different docs:
    they explain the shapes and flows so you know *which* code.
 
 2. **Package / content creators** — people who make new games as **data** (a theme, a
-  deck, a board), without touching code. **These docs are NOT your entry point.** Start
-  with a neutral project from the [Corro Package SDK](../tools/Corro.PackageCli/README.md)
-  or the hands-on [tutorial-city-board.md](tutorial-city-board.md), then keep
-  [`../CORRO_FORMAT.md`](../CORRO_FORMAT.md)
-   — the `.corro` format spec — as your reference for every field. Neither mentions
-   SignalR or projection, because a package author never touches the wire.
+    deck, a board), without touching code. **Start with the
+    [beginner package guide](package-authoring.md) ([español](package-authoring.es.md)).** It
+    chooses a family, generates a neutral project and explains the complete edit/validate/pack
+    loop. The hands-on [property tutorial](tutorial-city-board.md) goes deeper, while
+    [`../CORRO_FORMAT.md`](../CORRO_FORMAT.md) remains the reference for every field. These
+    author guides do not mention SignalR or projection, because a package author never touches
+    the wire.
 
 Keeping the two sets separate is deliberate: the depth gap is huge. A package author
 would drown in the SignalR flow; an engine contributor needs exactly that. One document
