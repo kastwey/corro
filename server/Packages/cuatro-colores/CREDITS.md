@@ -10,3 +10,8 @@ Only CC0 and CC-BY.
 
 The generic earcons (`draw.ogg`, `turn-you.ogg`, `game-over.ogg`) come from
 [`sound-commons/`](../../../sound-commons/ATTRIBUTIONS.md).
+
+## Card illustrations
+
+- `cards/*.svg`: original Corro colour/number/action illustrations created for this
+  repository, distributed under AGPL-3.0-only.

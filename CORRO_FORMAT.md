@@ -13,6 +13,7 @@ myboard.corro (zip)
 ├── manifest.json     # identity, currency, terminology, groups, decks, rules, tokens
 ├── board.json        # the squares (array), referencing groups and decks by id
 ├── cards.json        # each deck's cards (generic effects + text keys)
+├── cards/            # optional card illustrations: <card-id>.svg (package overrides neutral fallback)
 ├── i18n/
 │   ├── es.json       # every translatable text, resolved by key
 │   └── en.json
@@ -21,7 +22,7 @@ myboard.corro (zip)
 ├── sounds/           # the package's game earcons (engine ships only platform cues)
 │   ├── pack.json
 │   └── *.ogg
-├── CREDITS.md        # sound attributions (CC0 / CC-BY)
+├── CREDITS.md        # art and sound attributions/licences
 └── help.<lang>.md    # optional: the board's own rules/how-to-play (F1 / Help button)
 ```
 
@@ -298,6 +299,39 @@ content, by key (`i18n/{lang}.json` under `cards.<id>`).
 ]
 ```
 
+### Optional card illustrations (`cards/<id>.svg`)
+
+Any card declared in `cards.json`, in any card-bearing family, may ship a visual
+illustration at `cards/<card-id>.svg`. Illustration files are **content**, so they live in
+the package — never in an engine renderer keyed by a shipped card/package/token id. When the
+file exists, its geometry replaces the engine's neutral drawing everywhere that card appears
+(hand, public discard/table/module or property-card reveal). When it is absent, the engine
+draws a neutral face from generic mechanics such as type/value; text and accessibility never
+depend on the picture.
+
+The art canvas is `viewBox="0 0 64 64"`. As with tokens, flatten the illustration to one or
+more `<path>` elements. The loader extracts and sanitizes **only path geometry**; fills,
+strokes, scripts, text, external resources, event handlers and all other SVG markup are
+discarded. The renderer colours that silhouette through the card type's accessible palette.
+An SVG with no usable path, a file whose basename does not match a card id, or art over the
+per-card/package limits makes the package invalid instead of silently falling back.
+
+```xml
+<!-- cards/my-card.svg -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <path d="M8 8h48v48H8z M20 20h24v24H20z"/>
+</svg>
+```
+
+Do not put `svg` or a file path in `cards.json`: the convention is automatic and keeps rules
+data separate from visual assets. Card names/rules remain localized text and the authoritative
+accessible channel; illustrations are always decorative (`aria-hidden`).
+
+A card may optionally declare `"artColor": "#2F7185"`. This package-owned `#RRGGBB` accent
+colours the card frame and SVG silhouette, allowing colour decks and themed systems without
+hardcoded engine palettes. It is visual reinforcement only: the localized card/colour name must
+still convey the same identity, and packages must not rely on colour alone.
+
 **Effect catalog** (engine-level; extensible):
 
 - `moveTo` `{ target, collectPass?, rentMultiplier?, utilityTimesDice? }` — go to a square.
@@ -416,15 +450,16 @@ simply silent** — declare only what you ship.
 | `shedding.skip` | shedding: a player loses their turn |
 | `shedding.penalty` | shedding: a penalty draw (2 or 4) |
 | `shedding.round` | shedding: a round is won and scored |
-| `exploding.played` | exploding: an action is played (opens the Nope window) |
+| `exploding.played` | exploding: rising warning when any action opens the Nope window |
+| `exploding.cat` | exploding: optional package-themed cat/pair cue, played alongside the rising warning |
 | `exploding.nope` | exploding: a Nope is played |
 | `exploding.fizzle` | exploding: a Noped action is cancelled |
 | `exploding.skip` | exploding: a turn ends without drawing |
-| `exploding.attack` | exploding: an attack piles draws on the next player |
 | `exploding.shuffle` | exploding: the draw pile is shuffled |
 | `exploding.future` | exploding: See the Future peeks the top cards |
 | `exploding.defuse` | exploding: a drawn bomb is defused |
 | `exploding.boom` | exploding: a player explodes and is knocked out |
+| `exploding.steal` | exploding: a cat-pair steal resolves successfully |
 | `trivia.move` | trivia: a piece lands on a square |
 | `trivia.roll_again` | trivia: landing on a Roll Again square |
 | `trivia.question` | trivia: a question is posed |
@@ -977,7 +1012,7 @@ are hidden; what a peek (See the Future) or a Defuse tuck reveals is a **one-sho
 announcement**, never stored — so a rival never learns the order.
 
 Playing an action does not resolve at once: it opens a real-time **Nope window**
-(`nopeWindowMillis`, default 2s; each Nope restarts it) during which anyone holding a **Nope** may
+(`nopeWindowMillis`, default 1s; each Nope restarts it) during which anyone holding a **Nope** may
 cancel it. An **even** number of Nopes (including zero) leaves the action standing, an **odd**
 number cancels it.
 
@@ -1009,7 +1044,8 @@ number cancels it.
 - `nope` — the only **out-of-turn** card: cancels a pending action; a Nope can itself be Noped.
 - `cat` — no power alone; two of the **same** cat card are a pair to steal a random card.
   *(Catalog type recognised; play not yet wired.)*
-- A card is `{ id, type, count, nameKey }` — no colour or value axis.
+- A card is `{ id, type, count, nameKey, artColor? }` — `artColor` is visual decoration,
+  not a rules colour/value axis.
 
 ### manifest explodingRules
 
@@ -1019,7 +1055,7 @@ number cancels it.
   "defusesPerPlayer": 1,   // guaranteed defuses in every opening hand
   "seeFutureCount": 3,     // cards See the Future reveals
   "attackDraws": 2,        // draws an Attack forces on its victim
-  "nopeWindowMillis": 2000 // the real-time suspense window before an action resolves
+  "nopeWindowMillis": 1000 // the real-time suspense window before an action resolves
 }
 ```
 
@@ -1030,7 +1066,7 @@ cards for the opening hands.
 
 ### Overridable voice (`game.exploding_*`)
 
-Plays and effects: `exploding_played`, `exploding_noped`, `exploding_action_cancelled`,
+Plays and effects: `exploding_played`, `exploding_played_cat_pair`, `exploding_noped`, `exploding_action_cancelled`,
 `exploding_skipped`, `exploding_attacked`, `exploding_shuffled`, `exploding_drew_bomb_defused`,
 `exploding_exploded`, `exploding_again` (each with `_self`). Private lines: `exploding_drew_self`,
 `exploding_tucked_self`, `exploding_future` (+`_2`, `_3`, `_empty`), `exploding_saw_future`,
@@ -1038,7 +1074,8 @@ Plays and effects: `exploding_played`, `exploding_noped`, `exploding_action_canc
 `exploding_resolve_bomb_first`, `exploding_not_seated`, `exploding_card_not_in_hand`,
 `exploding_unknown_card`, `exploding_not_playable`, `exploding_nothing_to_nope`,
 `exploding_not_a_nope`, `exploding_no_bomb_pending`. Surfaces/status: `exploding_status_*`,
-`exploding_table_row`, `exploding_pick_depth`, `exploding_depth_*`. Per-card help:
+`exploding_table_row`, `exploding_pick_target`, `exploding_pick_target_pair`,
+`exploding_pick_depth`, `exploding_depth_*`. Per-card help:
 `exploding_help_*` or `<nameKey>_help`.
 
 ---

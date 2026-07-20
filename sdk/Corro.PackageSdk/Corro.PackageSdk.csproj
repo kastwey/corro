@@ -22,6 +22,9 @@
     <EmbeddedResource Include="Templates\_shared\README.md"
               LogicalName="Corro.PackageSdk/Templates/_shared/README.md"
               WithCulture="false" />
+    <EmbeddedResource Include="Templates\_shared\CREDITS.md"
+          LogicalName="Corro.PackageSdk/Templates/_shared/CREDITS.md"
+          WithCulture="false" />
     <EmbeddedResource Include="Templates\**\help.*.md"
               LogicalName="Corro.PackageSdk/Templates/%(RecursiveDir)%(Filename)%(Extension)"
               WithCulture="false" />

@@ -8,9 +8,11 @@ First package? Follow the [English beginner guide](https://github.com/kastwey/co
 
 1. Edit `manifest.json` and the family content in `board.json`, `cards.json` or `questions.*.json`.
 2. Keep every player-facing string in both `i18n/en.json` and `i18n/es.json`.
-3. Rewrite both help files, including the screen-reader section.
-4. Validate after each meaningful change.
-5. Pack only when validation succeeds.
+3. Optional card art belongs in `cards/<card-id>.svg` (64×64, path geometry only). A card may add `artColor: "#RRGGBB"`; missing art uses Corro's neutral fallback. Never put package-specific drawings in engine code.
+4. Update `CREDITS.md` for every art or sound asset you add.
+5. Rewrite both help files, including the screen-reader section.
+6. Validate after each meaningful change.
+7. Pack only when validation succeeds.
 
 ```text
 corro-package validate .

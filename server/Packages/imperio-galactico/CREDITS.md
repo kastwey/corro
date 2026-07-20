@@ -36,3 +36,8 @@ The generic earcons (`dice.roll`, `turn.you`, `game.over`, `bankruptcy`) come fr
 | `auction.start` | auction-start.ogg | "buzzer_boardgame_three_times.wav" | [magedu](https://freesound.org/people/magedu/) | [s/395805](https://freesound.org/people/magedu/sounds/395805/) | CC BY 4.0 |
 | `auction.tick` | auction-tick.ogg | "timer with ding.wav" (looped while the auction runs) | [keweldog](https://freesound.org/people/keweldog/) | [s/181148](https://freesound.org/people/keweldog/sounds/181148/) | CC0 |
 | `auction.end` | auction-end.ogg | "timer with ding.wav" (final ding when the auction closes) | [keweldog](https://freesound.org/people/keweldog/) | [s/181148](https://freesound.org/people/keweldog/sounds/181148/) | CC0 |
+
+## Card illustrations
+
+- `cards/*.svg`: original Corro galactic-event illustrations created for this repository,
+  distributed under AGPL-3.0-only.

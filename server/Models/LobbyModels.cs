@@ -41,7 +41,7 @@ public record CreateGameRequest
 	/// trivia questions). Unsupported or missing values fall back to English.</summary>
 	public string Language { get; init; } = "en";
 	public int MaxPlayers { get; init; } = 8;
-	public string Board { get; init; } = "imperio-galactico";
+	public required string Board { get; init; }
 	public GameSettings? Settings { get; init; }
 	/// <summary>Token of an uploaded .corro package (from /api/packages); set for a package game.</summary>
 	public string? PackageToken { get; init; }

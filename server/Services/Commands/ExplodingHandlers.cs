@@ -14,8 +14,8 @@ namespace CorroServer.Services.Commands;
 ///
 /// The flow logic is timer-free: playing sets the pending action, and the window service (armed
 /// by the session registry when it sees a pending action) fires <see cref="ResolveWindowAsync"/>
-/// when the 2s elapse. Tests drive that resolution directly. Effects apply on RESOLUTION, so a
-/// Noped action never happened at all (only its spent card is on the discard).
+/// when the configured window elapses. Tests drive that resolution directly. Effects apply on
+/// RESOLUTION, so a Noped action never happened at all (only its spent card is on the discard).
 /// </summary>
 public static class ExplodingTurnFlow
 {
@@ -117,13 +117,25 @@ public static class ExplodingTurnFlow
 		ExplodingRulebook.SyncCounts(exploding);
 
 		// The actor is always named — the earcon-countdown carries the reaction clock, the voice
-		// carries the detail (both are fine to be cut short by a reflex Nope).
-		await context.Announce("game.exploding_played", new()
+		// carries the detail (both are fine to be cut short by a reflex Nope). A cat activation
+		// spends TWO matching cards automatically, so say that explicitly instead of making it
+		// sound as though the focused card was played alone.
+		var playVars = new Dictionary<string, object>
 		{
 			["player"] = player.Name,
 			["actorId"] = player.Id,
 			["card"] = card.NameKey,
-		});
+		};
+		if (card.Type == "cat")
+		{
+			playVars["target"] = context.GameState.Players
+				.FirstOrDefault(p => p.Id == targetId)?.Name ?? targetId!;
+			await context.Announce("game.exploding_played_cat_pair", playVars);
+		}
+		else
+		{
+			await context.Announce("game.exploding_played", playVars);
+		}
 		return new ExplodingActionResponse { Action = "play", WindowOpen = true };
 	}
 
@@ -359,13 +371,15 @@ public static class ExplodingTurnFlow
 			return new ExplodingActionResponse { Action = "draw", Exploded = true, TurnEnded = true };
 		}
 
-		// An ordinary card: into the hand. The identity is the drawer's alone.
+		// An ordinary card: into the hand. The identity is the drawer's alone. actorId does
+		// not reveal anything, but marks the private line as the drawer's OWN action so the
+		// client flushes it synchronously before repainting the hand with the new card.
 		seat.Hand.Add(card);
 		ExplodingRulebook.SyncCounts(exploding);
 		await context.Announcer.ToPlayer(player.Id, "game.exploding_drew_self",
-			new() { ["card"] = def?.NameKey ?? card.CardId });
+			new() { ["card"] = def?.NameKey ?? card.CardId, ["actorId"] = player.Id });
 		await context.Announcer.ToAllExcept(player.Id, "game.exploding_drew",
-			new() { ["player"] = player.Name });
+			new() { ["player"] = player.Name, ["actorId"] = player.Id });
 
 		var ended = await EndOneDrawAsync(context, exploding, player.Id);
 		return new ExplodingActionResponse { Action = "draw", TurnEnded = ended };

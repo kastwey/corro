@@ -35,10 +35,7 @@ export function soundEventForAnnouncement(
 	// Landing earcons depend on the square KIND, not the (generic) landing key: a player
 	// landing on a street, a station and a utility all announce "game.landed_on_property",
 	// so we pick the cue from the squareType the server includes in the vars.
-	let baseKey = key;
-	for (const suffix of ['_self', '_victim']) {
-		if (key.endsWith(suffix)) { baseKey = key.slice(0, -suffix.length); break; }
-	}
+	const baseKey = baseAnnouncementKey(key);
 	if (baseKey === 'game.landed_on_property' || baseKey === 'game.landed_on_property_colored') {
 		return LANDING_SOUND_BY_SQUARE_TYPE[String(vars?.squareType ?? '')] ?? null;
 	}
@@ -63,6 +60,35 @@ export function soundEventForAnnouncement(
 		?? ANNOUNCEMENT_SOUND_MAP[key]
 		?? ANNOUNCEMENT_SOUND_MAP[baseKey]
 		?? null;
+}
+
+/** Strip the audience suffixes that share one sound contract. */
+function baseAnnouncementKey(key: string): string {
+	for (const suffix of ['_self', '_victim']) {
+		if (key.endsWith(suffix)) return key.slice(0, -suffix.length);
+	}
+	return key;
+}
+
+/**
+ * All earcons triggered by one announcement. Most lines have exactly one. A cat-pair play
+ * adds its package-themed creature cue to the universal rising warning; a Nope adds its
+ * immediate response cue and a fresh warning because it restarts the reaction window.
+ */
+export function soundEventsForAnnouncement(
+	key: string,
+	vars?: Record<string, any>,
+	packAnnouncements?: Record<string, string>,
+): string[] {
+	const events = [soundEventForAnnouncement(key, vars, packAnnouncements)];
+	const baseKey = baseAnnouncementKey(key);
+	if (baseKey === 'game.exploding_played_cat_pair') {
+		events.push('exploding.cat');
+	}
+	if (baseKey === 'game.exploding_noped') {
+		events.push(soundEventForAnnouncement('game.exploding_played', undefined, packAnnouncements));
+	}
+	return [...new Set(events.filter((event): event is string => event !== null))];
 }
 
 /**
@@ -153,16 +179,15 @@ const ANNOUNCEMENT_SOUND_MAP: Readonly<Record<string, string>> = {
 	'game.shedding_drew_unplayable': 'card.draw',
 	'game.shedding_round_won': 'shedding.round',
 
-	// Exploding family: the play (and the rising suspense tone), the
-	// Nope reaction, whether it stands or fizzles, the forced draw, the boom, the defuse-tuck.
+	// Exploding family: EVERY playable action opens the same Nope window, so every public
+	// play line carries the rising warning immediately. Action-specific sounds belong to
+	// successful RESOLUTION (e.g. the cat-pair steal), never replace the reaction warning.
 	// Packs ship the files; an unmapped slot simply stays silent, like everywhere else.
-	// Playing a card = laying it on the discard pile, so it reuses the shared card-drop cue
-	// (card.discard) rather than a bespoke one — like reshuffle/draw already do.
-	'game.exploding_played': 'card.discard',
+	'game.exploding_played': 'exploding.played',
+	'game.exploding_played_cat_pair': 'exploding.played',
 	'game.exploding_noped': 'exploding.nope',
 	'game.exploding_action_cancelled': 'exploding.fizzle',
 	'game.exploding_skipped': 'exploding.skip',
-	'game.exploding_attacked': 'exploding.attack',
 	// Reshuffling the deck is a generic card action, so it reuses the shared cards.shuffle
 	// cue (the engine default pack) rather than a family-specific one — like drawing does.
 	'game.exploding_shuffled': 'cards.shuffle',
@@ -172,8 +197,6 @@ const ANNOUNCEMENT_SOUND_MAP: Readonly<Record<string, string>> = {
 	'game.exploding_drew_bomb_defused': 'exploding.defuse',
 	'game.exploding_exploded': 'exploding.boom',
 	'game.exploding_stole': 'exploding.steal',
-	'game.exploding_stole_self': 'exploding.steal',
-	'game.exploding_stole_victim': 'exploding.steal',
 
 	'game.property_purchased': 'property.buy',
 	'game.auction_won': 'property.buy',
@@ -469,8 +492,9 @@ export class SoundEventPlayer {
 
 	/** Plays the earcon mapped to an announcement key, if any. */
 	playForAnnouncement(key: string, vars?: Record<string, any>): void {
-		const eventKey = soundEventForAnnouncement(key, vars, this.packAnnouncements);
-		if (eventKey) this.playEvent(eventKey);
+		for (const eventKey of soundEventsForAnnouncement(key, vars, this.packAnnouncements)) {
+			this.playEvent(eventKey);
+		}
 	}
 
 	/** Plays a sound-pack event by name (random file when several), honouring mute/volume. */

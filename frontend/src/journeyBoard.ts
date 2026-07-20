@@ -17,10 +17,10 @@
 // more than one legal target.
 
 import { teamDisplayName } from './enginePalette.js';
-import { vehicleKeyFor, vehicleSvgFor } from './journeyVehicles.js';
+import { tokenIconHtml } from './tokenIcons.js';
 import { HandPanel, type HandCard } from './handPanel.js';
 import {
-	journeyCardArtHtml, journeyCardBackHtml, journeyKindIconSvg, journeyShieldIconSvg,
+	journeyCardArtHtml, journeyCardBackHtml, journeyHazardIconSvg, journeyShieldIconSvg,
 } from './journeyCardArt.js';
 import { popupMenu } from './popupMenu.js';
 import { dialogManager } from './dialogManager.js';
@@ -75,6 +75,13 @@ function hazardCardOf(kind: string, catalog: Map<string, JourneyCardDef>): Journ
 		if (def.type === 'attack' && def.kind === kind) return def;
 	}
 	return null;
+}
+
+/** Public hazard visuals use the package art of the attack that introduced the kind;
+ * unknown/missing art receives the neutral warning. No package-defined kind is hardcoded. */
+function hazardIconOf(kind: string, catalog: Map<string, JourneyCardDef>): string {
+	const card = hazardCardOf(kind, catalog);
+	return journeyHazardIconSvg(card?.svg, card?.artColor);
 }
 
 /** A SHARED seat's spoken identity («Equipo Rojo» — its palette colour word, the same
@@ -399,7 +406,7 @@ export class JourneyBoard {
 				playable: play.playable,
 				unplayableReason: this.deps.tSync(play.reasonKey ?? 'game.hand_not_playable'),
 				// The engine-rendered face (aria-hidden): the sighted player's card.
-				art: def ? journeyCardArtHtml(def, label, { limitCap: gs.journeyRules?.limitCap }) : undefined,
+				art: def ? journeyCardArtHtml(def, label) : undefined,
 				help: journeyCardHelp(gs, instance.cardId, this.deps.tSync) ?? undefined,
 			};
 		});
@@ -516,7 +523,6 @@ export class JourneyBoard {
 
 	private renderDashboards(gs: GameState): void {
 		const catalog = journeyCatalog(gs);
-		const cap = gs.journeyRules?.limitCap ?? 50;
 		const rows = (gs.journey?.seats ?? []).map(seat => {
 			const player = gs.players.find(p => p.id === seat.playerId);
 			const color = escapeHtml(player?.color ?? '#888');
@@ -529,11 +535,13 @@ export class JourneyBoard {
 			const digits = [...String(seat.km).padStart(4, '0')]
 				.map(d => `<span class="journey-dash__digit">${d}</span>`).join('');
 			const hazardIcons = seat.hazards
-				.map(kind => journeyKindIconSvg(kind, 'attack', cap))
-				.filter((s): s is string => !!s)
+				.map(kind => hazardIconOf(kind, catalog))
 				.map(s => `<span class="journey-dash__icon">${s}</span>`).join('');
 			const immunityIcons = seat.immunities
-				.map(() => `<span class="journey-dash__icon journey-dash__icon--shield">${journeyShieldIconSvg()}</span>`)
+				.map(id => {
+					const card = catalog.get(id);
+					return `<span class="journey-dash__icon journey-dash__icon--shield">${journeyShieldIconSvg(card?.svg, card?.artColor)}</span>`;
+				})
 				.join('');
 			const score = this.deps.tSync('game.journey_status_score', {
 				score: liveScore(gs, seat, catalog),
@@ -573,7 +581,7 @@ export class JourneyBoard {
 		const discard = `<span class="journey-centre__pile">`
 			+ `<span class="journey-centre__discard">`
 			+ (topDef
-				? journeyCardArtHtml(topDef, t(topDef.nameKey), { limitCap: gs.journeyRules?.limitCap })
+				? journeyCardArtHtml(topDef, t(topDef.nameKey))
 				: `<span class="jcard jcard--empty"></span>`)
 			+ `</span>`
 			+ `<span class="journey-centre__pile-label">${escapeHtml(t('game.journey_pile_discard'))}</span>`
@@ -623,22 +631,20 @@ export class JourneyBoard {
 				.find(el => el.dataset.playerId === seat.playerId) ?? null;
 			const player = gs.players.find(p => p.id === seat.playerId);
 			if (!car) {
-				// The marker is the VEHICLE this seat picked in the lobby (live-play bug: a
-				// player chose the motorbike and still saw a car). data-vehicle exposes what
-				// was actually drawn, for tests and debugging.
+				// The marker is the package token selected in the lobby. Its geometry already
+				// travelled through the shared safe token pipeline; no token id or drawing lives here.
 				car = document.createElement('span');
 				car.className = 'journey-car';
 				car.dataset.playerId = seat.playerId;
-				car.dataset.vehicle = vehicleKeyFor(player?.token);
-				car.innerHTML = `${vehicleSvgFor(player?.token)}<span class="journey-car__badges"></span>`;
+				car.dataset.token = player?.token ?? '';
+				car.innerHTML = `${tokenIconHtml(player?.token ?? '', 'journey-car__svg')}<span class="journey-car__badges"></span>`;
 				this.strip.appendChild(car);
 			}
 			if (player?.color) car.style.color = player.color;
 			car.style.setProperty('--lane', String(seats.indexOf(seat))); // its own lane on the road
 			// The car wears its troubles: one mini-sign per active hazard, at a glance.
 			const badges = seat.hazards
-				.map(kind => journeyKindIconSvg(kind, 'attack', gs.journeyRules?.limitCap ?? 50))
-				.filter((s): s is string => !!s)
+				.map(kind => hazardIconOf(kind, journeyCatalog(gs)))
 				.join('');
 			const badgeHost = car.querySelector<HTMLElement>('.journey-car__badges');
 			if (badgeHost && badgeHost.dataset.rendered !== badges) {
@@ -722,7 +728,7 @@ export class JourneyBoard {
 				flash.className = 'journey-dash__hitflash';
 				flash.setAttribute('aria-hidden', 'true');
 				flash.innerHTML =
-					(journeyKindIconSvg(added, 'attack', gs.journeyRules?.limitCap ?? 50) ?? '')
+					hazardIconOf(added, catalog)
 					+ `<span class="journey-dash__hitflash-name">${escapeHtml(def ? this.deps.tSync(def.nameKey) : added)}</span>`;
 				dash.appendChild(flash);
 				window.setTimeout(() => flash.remove(), 2600);

@@ -98,6 +98,9 @@ public static class CliApplication
 			command.Path,
 			command.TemplateOptions,
 			cancellationToken);
+		int? cardArtCount = result.Validation.Package?.Content.TryGetValue("cardIllustrations", out var illustrations) == true
+			? illustrations
+			: null;
 		if (command.Json)
 		{
 			await WriteJsonAsync(output, new
@@ -109,6 +112,11 @@ public static class CliApplication
 				id = result.Id,
 				names = result.Names,
 				valid = result.Validation.IsValid,
+				cardArt = cardArtCount is null ? null : new
+				{
+					convention = "cards/<card-id>.svg",
+					examples = cardArtCount.Value,
+				},
 			});
 		}
 		else
@@ -119,6 +127,11 @@ public static class CliApplication
 			await output.WriteLineAsync("Names: " + string.Join(
 				"; ", result.Names.Select(pair => $"{pair.Key}={pair.Value}")));
 			await output.WriteLineAsync("Validation: passed");
+			if (cardArtCount is not null)
+			{
+				await output.WriteLineAsync(
+					$"Card art: {cardArtCount} example at cards/<card-id>.svg; missing files use the neutral fallback.");
+			}
 			await output.WriteLineAsync($"Next: corro-package validate \"{result.Path}\"");
 		}
 		return Success;
@@ -415,5 +428,8 @@ Exit codes:
   1  Invalid package
   2  Invalid arguments
   3  File system error
+
+Card-bearing starters include one optional cards/<card-id>.svg example. The id matches
+cards.json; omit the file to use Corro's neutral fallback.
 """;
 }

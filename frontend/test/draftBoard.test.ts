@@ -14,8 +14,8 @@ import type { DraftSeatState, GameState } from '../src/models.js';
 before(() => setupDom());
 
 const DECK = [
-	{ id: 'bite3', type: 'points', value: 3, count: 6, nameKey: 'c.bite3' },
-	{ id: 'sauce', type: 'multiplier', factor: 3, count: 4, nameKey: 'c.sauce' },
+	{ id: 'bite3', type: 'points', value: 3, count: 6, nameKey: 'c.bite3', svg: 'M3 3h58v58z' },
+	{ id: 'sauce', type: 'multiplier', factor: 3, count: 4, nameKey: 'c.sauce', svg: 'M6 6h52v52z' },
 	{ id: 'pair', type: 'set', setSize: 2, setPoints: 5, count: 8, nameKey: 'c.pair' },
 	{ id: 'flan', type: 'dessert', count: 8, nameKey: 'c.flan' },
 	{ id: 'stick', type: 'extra', count: 4, nameKey: 'c.stick' },
@@ -102,9 +102,12 @@ test('the hand renders my seat with every card pickable and no draw/discard affo
 	assert.ok(rows()[0].getAttribute('aria-label')!.includes('c.bite3'));
 	assert.equal(document.querySelector('.hand-panel__draw'), null); // no draw in this family
 	assert.equal(document.querySelector('[data-focus-id="discard"]'), null); // nor discard
+	assert.ok(rows()[0].querySelector('[data-card-art="package"]'), 'package art wins on its card');
+	assert.ok(rows()[1].querySelector('[data-card-art="neutral"]'), 'missing art gets the neutral face');
 	// The deck rides the hand as a read-only row.
 	const info = document.querySelector('.hand-card--info')!;
 	assert.equal(info.getAttribute('aria-label'), 'game.draft_piles_row(85)');
+	assert.ok(info.querySelector('.gcard--back'));
 });
 
 test('Enter commits the pick, and Enter on another card re-commits', () => {
@@ -196,6 +199,7 @@ test('the tables are an aria-hidden echo: names, picked tick, score and desserts
 	assert.ok(tables[1].querySelector('.draft-table__picked')); // r1 already picked
 	assert.equal(tables[1].querySelector('.draft-table__score')!.textContent, '7');
 	assert.ok(tables[1].querySelector('.draft-card--stack')!.textContent!.includes('1')); // dessert stack tile
+	assert.ok(tables[1].querySelector('.draft-card--stack [data-card-art="neutral"]'));
 	assert.equal(tables[0].querySelector('.draft-table__picked'), null);
 });
 
@@ -205,6 +209,8 @@ test('a multiplier badge keeps its vivid type colour and receives contrasting in
 
 	const badge = boardEl.querySelector('.draft-card__badge') as HTMLElement;
 	assert.equal(badge.textContent, '×3');
+	assert.ok(boardEl.querySelector('.draft-card [data-card-art="package"]'));
+	assert.ok(boardEl.querySelector('.draft-card__multiplier-art[data-card-art="package"]'));
 	assert.equal((badge.parentElement as HTMLElement).style.getPropertyValue('--type-color'), '#2f9e5f');
 	assert.equal((badge.parentElement as HTMLElement).style.getPropertyValue('--type-ink'), '#000000');
 });

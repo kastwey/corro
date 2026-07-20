@@ -113,7 +113,7 @@
 	text-align: center;
 	background: linear-gradient(160deg, #ffffff 0%, var(--deck-accent-soft) 100%);
 	border: 6px solid var(--deck-accent);
-	color: var(--deck-ink);
+	color: var(--card-art-accent, var(--deck-ink));
 }
 
 .card-reveal__deck {
@@ -132,6 +132,23 @@
 
 .card-reveal__deck-icon {
 	font-size: 1rem;
+}
+
+.card-reveal__art {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 7rem;
+	height: 7rem;
+	color: var(--deck-ink);
+	background: rgba(255, 255, 255, 0.58);
+	border: 2px solid color-mix(in srgb, var(--deck-accent) 70%, #000);
+	border-radius: 50%;
+}
+
+.card-reveal__art-svg {
+	width: 5.2rem;
+	height: 5.2rem;
 }
 
 .card-reveal__icon {

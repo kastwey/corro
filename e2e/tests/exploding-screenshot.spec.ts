@@ -1,6 +1,6 @@
-// exploding-screenshot.spec.ts — capture the exploding-family board on the
-// shipped "La Mina" mining package. Doubles as a smoke test that the whole stack — server
-// rulebook + package + client family — loads and renders a two-player game.
+// exploding-screenshot.spec.ts — capture the exploding-family board on the shipped
+// "La Mina" mining package. Doubles as a smoke test that the whole stack — server rulebook,
+// package SVG overrides and client family — loads and renders.
 
 import { test, expect } from '../helpers/test';
 import { createGame, joinGame, newPlayerPage, resetDice, startGame } from '../helpers/game';
@@ -21,6 +21,8 @@ test('exploding: board and the defuse picker (screenshots)', async ({ browser })
 
 	// The table at start: 8-card hands (1 defuse + 7), the draw affordance (Space), no dice.
 	await expect(ana.locator('.hand-card:not(.hand-card--info)')).toHaveCount(8);
+	await expect(ana.locator('.exploding-hand [data-card-art="package"]')).toHaveCount(8);
+	await expect(ana.locator('.exploding-hand [data-card-art="neutral"]')).toHaveCount(0);
 	await expect(ana.locator('.hand-panel__draw')).toBeVisible();
 	await expect(ana.locator('.dice-control')).toBeHidden();
 	await ana.screenshot({ path: 'exploding-01-start.png', fullPage: true });
@@ -29,6 +31,7 @@ test('exploding: board and the defuse picker (screenshots)', async ({ browser })
 	await ana.locator('#board').focus();
 	await ana.keyboard.press(' ');
 	await expect(ana.locator('.popup-menu[role="menu"]')).toBeVisible();
+	await expect(ana.locator('.exploding-reveal .xcard--bomb [data-card-art="package"]')).toBeVisible();
 	await ana.screenshot({ path: 'exploding-02-defuse-picker.png', fullPage: true });
 
 	// Dark mode via the app's own toggle (it sets <html data-theme="dark">, not a media query).

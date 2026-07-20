@@ -188,6 +188,14 @@ export async function createGame(
 	page.on('pageerror', onPageError);
 	try {
 		await page.click('#create-button');
+		// Package-authored notices deliberately pause creation in a native confirmation
+		// dialog. The helper already knows the selected shipped package, so acknowledge its
+		// notice through the real UI before waiting for the lobby code.
+		if (packageManifest(boardId).warning) {
+			const notice = page.locator('.game-dialog.dialog-confirm');
+			await expect(notice).toBeVisible();
+			await notice.locator('.btn-primary').click();
+		}
 		const codeEl = page.locator('#lobby-code');
 		try {
 			await expect(codeEl).not.toBeEmpty();

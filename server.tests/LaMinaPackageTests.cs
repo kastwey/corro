@@ -101,13 +101,14 @@ public class LaMinaPackageTests
 		var soundsDir = System.IO.Path.Combine(CorroTestPaths.PackageDir("la-mina"), "sounds");
 		var events = new DefaultSoundPackProvider(soundsDir).ResolveEvents(null);
 
-		// The eight bomb-specific earcons — including the boom. Reshuffling and PLAYING a card
-		// are NOT among them: reshuffle reuses cards.shuffle, and a play lands on the discard
-		// pile so it reuses the shared card.discard cue.
+		// The eight family earcons — including the boom. Every action play gets the rising
+		// exploding.played warning while its Nope window is open. A successful cat-pair steal
+		// gets exploding.steal only after that window closes; a Noped pair never reaches it.
 		Assert.Equal("exploding-boom.ogg", events["exploding.boom"][0]);
 		Assert.Equal(8, events.Keys.Count(k => k.StartsWith("exploding.")));
+		Assert.Equal("exploding-attack.ogg", events["exploding.played"][0]);
+		Assert.False(events.ContainsKey("exploding.attack"), "Attack uses the universal window warning");
 		Assert.False(events.ContainsKey("exploding.shuffle"), "reshuffle uses the shared cue");
-		Assert.False(events.ContainsKey("exploding.played"), "a play reuses the shared card.discard cue");
 		Assert.Equal("shuffle.ogg", events["cards.shuffle"][0]);   // the shared generics
 		Assert.Equal("draw.ogg", events["card.draw"][0]);
 		Assert.Equal("discard.ogg", events["card.discard"][0]);

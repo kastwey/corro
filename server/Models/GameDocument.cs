@@ -25,7 +25,7 @@ public record GameDocument
 	public int MaxPlayers { get; init; } = 8;
 
 	[JsonPropertyName("board")]
-	public string Board { get; init; } = "imperio-galactico";
+	public string Board { get; init; } = string.Empty;
 
 	/// <summary>Host-selected language for package content resolved once at game start.</summary>
 	[JsonPropertyName("language")]

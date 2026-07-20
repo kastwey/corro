@@ -1,0 +1,143 @@
+/* card-art.css — shared neutral card faces for every card family.
+ * Package SVG geometry replaces only the picture; the localized name, focus model and
+ * accessible row label remain engine-owned and consistent in light and dark themes. */
+
+.gcard {
+  --gcard-accent: #546e7a;
+  --gcard-soft: #e8eef1;
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  width: 92px;
+  height: 128px;
+  padding: 7px 6px 5px;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 3px solid var(--gcard-accent);
+  border-radius: 10px;
+  background: #fffdf5;
+  color: #263238;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+}
+
+.gcard--attack,
+.gcard--bomb,
+.gcard--drawtwo,
+.gcard--wilddrawfour { --gcard-accent: #a52d32; --gcard-soft: #f9dfe0; }
+.gcard--remedy,
+.gcard--defuse { --gcard-accent: #147353; --gcard-soft: #ddf2e8; }
+.gcard--immunity { --gcard-accent: #9b7200; --gcard-soft: #fff0bd; }
+.gcard--skip { --gcard-accent: #17658f; --gcard-soft: #dcecf5; }
+.gcard--reverse,
+.gcard--shuffle { --gcard-accent: #61418f; --gcard-soft: #e8e0f5; }
+.gcard--favor { --gcard-accent: #923a5a; --gcard-soft: #f5e0e8; }
+.gcard--cat,
+.gcard--piece { --gcard-accent: #74502c; --gcard-soft: #f2e5d4; }
+.gcard--number,
+.gcard--distance,
+.gcard--points { --gcard-accent: #1768a8; --gcard-soft: #dceaf5; }
+.gcard--wild,
+.gcard--special,
+.gcard--multiplier,
+.gcard--set,
+.gcard--scale,
+.gcard--majority,
+.gcard--dessert,
+.gcard--extra { --gcard-accent: #6b438d; --gcard-soft: #e9e1f2; }
+
+.gcard__picture {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  border-radius: 6px 6px 3px 3px;
+  color: var(--gcard-accent);
+  background: var(--gcard-soft);
+}
+
+.gcard__svg {
+  display: block;
+  width: 64px;
+  height: 64px;
+  overflow: visible;
+}
+
+.gcard__name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 2.35em;
+  padding-top: 4px;
+  box-sizing: border-box;
+  color: #37474f;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: 0.015em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.gcard--back {
+  --gcard-accent: #263c58;
+  align-items: center;
+  justify-content: center;
+  background: #365c82;
+  border-color: #263c58;
+  color: #fff;
+}
+
+.gcard__back-pattern {
+  position: absolute;
+  inset: 5px;
+  border: 2px solid rgba(255, 255, 255, 0.42);
+  border-radius: 6px;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.13) 0 6px,
+    transparent 6px 12px
+  );
+}
+
+.gcard__back-label {
+  position: relative;
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+  font-variant-numeric: tabular-nums;
+}
+
+.gcard--empty {
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border-color: var(--border-strong);
+  border-style: dashed;
+  box-shadow: none;
+}
+
+.gcard__empty-label {
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+/* Unplayable remains readable: saturation + a dashed frame, never lowered text opacity. */
+.hand-card--visual.hand-card--unplayable .gcard {
+  border-style: dashed;
+  filter: saturate(0.55);
+  box-shadow: inset 0 0 0 1px #69747a, 0 2px 5px rgba(0, 0, 0, 0.22);
+}
+
+/* Public-table thumbnails reuse exactly the package/fallback geometry at a smaller size. */
+.card-art-thumb {
+  width: 1.8rem;
+  height: 1.8rem;
+  flex: 0 0 auto;
+}

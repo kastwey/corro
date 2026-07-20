@@ -166,6 +166,13 @@ this.
 **No dead code.** When a change orphans code (functions, handlers, keys, CSS),
 delete it in the same change. Grep for now-unused symbols before finishing.
 
+**Package boundary.** The engine owns generic mechanics and neutral fallbacks; packages own all
+themed identity and assets. Never branch shared client/server code on a shipped package, card or
+token id/title. Optional card art lives in `cards/<id>.svg` (64×64 path geometry), token art in
+`tokens/<id>.svg`; package art overrides the neutral fallback. For package-facing changes, inspect
+the loader/format first, update every relevant family/model/schema/SDK/doc surface, grep for leaked
+content ids, and add a boundary regression.
+
 **Style.** No inline styles in HTML. No `console.log` in production (use
 `console.debug`). Handlers emit events, not direct DOM manipulation.
 

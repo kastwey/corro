@@ -120,16 +120,18 @@ test('journey: the hand is home — private draw, playing an immunity, statuses 
 	// ── The hand renders my six known cards; the visual echoes stay aria-hidden. ──
 	const anaCards = ana.locator('.hand-card:not(.hand-card--info)');
 	await expect(anaCards).toHaveCount(6);
+	await expect(anaCards.locator('[data-card-art="package"]')).toHaveCount(6);
 	await expect(anaCards.first()).toHaveAttribute('aria-label', /As del volante/);
 	// The draw pile rides the hand as a read-only last row: 106 cards minus two hands.
 	await expect(ana.locator('.hand-card--info')).toHaveAttribute('aria-label', 'Cartas en el mazo: 94');
 	await expect(ana.locator('#board .journey-visual')).toHaveAttribute('aria-hidden', 'true');
-	// One car per seat sits on the strip — each drawn as ITS chosen vehicle (live-play
-	// bug: a motorbike player saw a car). Join order picks the first free tokens, so Ana
-	// drives the "coche" and Berto the "furgoneta": two different vehicles on screen.
+	// One marker per seat sits on the strip, using the actual SVG token supplied by the
+	// package. The engine neither knows token ids nor redraws their content.
 	await expect(ana.locator('#board .journey-car')).toHaveCount(2);
-	await expect(ana.locator('#board .journey-car[data-vehicle="coche"]')).toHaveCount(1);
-	await expect(ana.locator('#board .journey-car[data-vehicle="furgoneta"]')).toHaveCount(1);
+	await expect(ana.locator('#board .journey-car[data-token]')).toHaveCount(2);
+	const tokenPaths = await ana.locator('#board .journey-car .journey-car__svg path')
+		.evaluateAll(paths => paths.map(path => path.getAttribute('d')));
+	expect(new Set(tokenPaths).size).toBe(2);
 	// Each dashboard wears its battle-state chip (live-play request: the sighted player
 	// couldn't read his own state). At the start everyone waits for the green light: red
 	// "parado" chips, unnamed — nobody threw you anything yet.

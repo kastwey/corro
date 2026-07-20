@@ -13,6 +13,7 @@
 
 import { tSync } from './i18nBinder.js';
 import { escapeHtml } from './escapeHtml.js';
+import { cardArtStyle, cardArtSvg } from './cardArt.js';
 import type { CardDrawnNotification } from './models.js';
 
 const MIN_VISIBLE_MS = 3000;
@@ -63,6 +64,12 @@ class CardRevealClass {
 		const deckLabel = escapeHtml(isClassicDeck ? tSync(`game.card_deck_${card.deckType}`) : tSync('game.card_deck_generic'));
 		const title = card.titleKey ? escapeHtml(tSync(card.titleKey, card.descriptionVars)) : '';
 		const description = escapeHtml(tSync(card.descriptionKey, card.descriptionVars));
+		const illustration = cardArtSvg({
+			type: card.artType ?? 'card',
+			svg: card.svg,
+			artColor: card.artColor,
+		}, 'card-reveal__art-svg');
+		const illustrationStyle = cardArtStyle(card.artColor, '--card-art-accent');
 
 		const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -76,6 +83,7 @@ class CardRevealClass {
 						<div class="card-reveal__deck">
 							<span class="card-reveal__deck-label">${deckLabel}</span>
 						</div>
+						<div class="card-reveal__art"${illustrationStyle}>${illustration}</div>
 						${title ? `<h3 class="card-reveal__title">${title}</h3>` : ''}
 						<p class="card-reveal__desc">${description}</p>
 					</div>

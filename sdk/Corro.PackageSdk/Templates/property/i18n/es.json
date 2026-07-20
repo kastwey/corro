@@ -2,6 +2,8 @@
   "currency": { "name": "unidades" },
   "terminology": { "start": "Salida", "holding": "Pausa", "freeparking": "Descanso", "sendtoholding": "Ve a Pausa" },
   "groups": { "amber": "Grupo ámbar", "blue": "Grupo azul", "green": "Grupo verde", "violet": "Grupo violeta" },
+  "decks": { "event": "Suceso" },
+  "cards": { "eventBonus": "Un suceso favorable te concede 50 unidades." },
   "building": { "small": "marcador", "smallPlural": "marcadores", "big": "centro" },
   "tokens": { "circle": "Círculo", "diamond": "Rombo" },
   "squares": {

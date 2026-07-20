@@ -1,1 +1,3 @@
-[]
+[
+	{ "id": "event-bonus", "artColor": "#2F7185", "deck": "event", "textKey": "cards.eventBonus", "effect": { "type": "money", "amount": 50 } }
+]

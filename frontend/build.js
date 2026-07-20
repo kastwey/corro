@@ -5,7 +5,14 @@ const path = require('path');
 
 console.log('Starting build...');
 
-// 1. Compile TypeScript.
+// 1. Rebuild dist from a clean slate. TypeScript does not delete emitted JS when its source
+// disappears, so without this an orphaned module can keep shipping indefinitely.
+if (fs.existsSync('dist')) {
+	fs.rmSync('dist', { recursive: true, force: true });
+}
+fs.mkdirSync('dist', { recursive: true });
+
+// 2. Compile TypeScript.
 console.log('Compiling TypeScript...');
 try {
 	execSync('npx tsc', { stdio: 'inherit' });
@@ -15,7 +22,7 @@ try {
 	process.exit(1);
 }
 
-// 2. Copy files recursively.
+// 3. Copy files recursively.
 function copyRecursive(src, dest) {
 	const stats = fs.statSync(src);
 	
@@ -42,7 +49,7 @@ function copyRecursive(src, dest) {
 	}
 }
 
-// 3. Copy assets.
+// 4. Copy assets.
 console.log('Copying assets...');
 try {
 	const assetsDir = 'assets';
@@ -65,7 +72,7 @@ try {
 	process.exit(1);
 }
 
-// 4. Copy primary web files (HTML and CSS).
+// 5. Copy primary web files (HTML and CSS).
 console.log('Copying web files...');
 const webFiles = [
 	{ src: 'src/index.html', dest: 'dist/index.html' },
@@ -90,7 +97,7 @@ webFiles.forEach(({ src, dest }) => {
 	}
 });
 
-// 5. Copy JSON configuration files.
+// 6. Copy JSON configuration files.
 console.log('Copying configuration files...');
 // keymap.json now lives on the server (served at /api/config/keymap as the single source of truth).
 const configFiles = ['gameStatus.json'];
@@ -107,7 +114,7 @@ configFiles.forEach(file => {
 	}
 });
 
-// 6. Copy additional directories.
+// 7. Copy additional directories.
 const additionalDirs = ['i18n', 'css'];
 additionalDirs.forEach(dir => {
 	if (fs.existsSync(dir)) {
@@ -122,7 +129,7 @@ additionalDirs.forEach(dir => {
 	}
 });
 
-// 7. Copy browser dependencies from node_modules.
+// 8. Copy browser dependencies from node_modules.
 console.log('Copying browser dependencies...');
 const libsDir = path.join('dist', 'libs');
 if (!fs.existsSync(libsDir)) {

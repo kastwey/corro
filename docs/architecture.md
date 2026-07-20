@@ -37,6 +37,16 @@ server-authoritative core.
    package can never contain code or invent a rule. See
    [`../CORRO_FORMAT.md`](../CORRO_FORMAT.md).
 
+## Package asset boundary
+
+The package owns every themed asset; the engine owns only neutral mechanics and fallbacks.
+Player pieces live at `tokens/<id>.svg`, optional card illustrations at
+`cards/<card-id>.svg`, and earcons under `sounds/`. SVGs are not served as arbitrary markup:
+the loader extracts sanitized path geometry into the definition/state models. Card art uses
+a fixed 64×64 canvas and overrides the neutral type/value drawing when present. This keeps
+uploaded packages data-only, makes restore self-contained and prevents shared renderers from
+branching on a known package, token or card id.
+
 ## Why this shape
 
 - **Accessibility drives everything.** A blind player hears the game. If two clients

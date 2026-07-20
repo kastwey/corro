@@ -1,15 +1,15 @@
 [
-  { "id": "grisu",         "type": "bomb",      "count": 4, "nameKey": "cards.grisu" },
-  { "id": "cortar-mecha",  "type": "defuse",    "count": 6, "nameKey": "cards.cortar_mecha" },
-  { "id": "salir-pozo",    "type": "skip",      "count": 4, "nameKey": "cards.salir_pozo" },
-  { "id": "derrumbe",      "type": "attack",    "count": 4, "nameKey": "cards.derrumbe" },
-  { "id": "canario",       "type": "seeFuture", "count": 5, "nameKey": "cards.canario" },
-  { "id": "revuelto",      "type": "shuffle",   "count": 4, "nameKey": "cards.revuelto" },
-  { "id": "pico-prestado", "type": "favor",     "count": 4, "nameKey": "cards.pico_prestado" },
-  { "id": "ni-hablar",     "type": "nope",      "count": 5, "nameKey": "cards.ni_hablar" },
-  { "id": "rata",          "type": "cat",       "count": 4, "nameKey": "cards.rata" },
-  { "id": "murcielago",    "type": "cat",       "count": 4, "nameKey": "cards.murcielago" },
-  { "id": "topo",          "type": "cat",       "count": 4, "nameKey": "cards.topo" },
-  { "id": "lombriz",       "type": "cat",       "count": 4, "nameKey": "cards.lombriz" },
-  { "id": "escarabajo",    "type": "cat",       "count": 4, "nameKey": "cards.escarabajo" }
+  { "id": "grisu", "artColor": "#8B2D2D",         "type": "bomb",      "count": 4, "nameKey": "cards.grisu" },
+  { "id": "cortar-mecha", "artColor": "#147353",  "type": "defuse",    "count": 6, "nameKey": "cards.cortar_mecha" },
+  { "id": "salir-pozo", "artColor": "#276B83",    "type": "skip",      "count": 4, "nameKey": "cards.salir_pozo" },
+  { "id": "derrumbe", "artColor": "#9A4D22",      "type": "attack",    "count": 4, "nameKey": "cards.derrumbe" },
+  { "id": "canario", "artColor": "#8A6A00",       "type": "seeFuture", "count": 5, "nameKey": "cards.canario" },
+  { "id": "revuelto", "artColor": "#65508A",      "type": "shuffle",   "count": 4, "nameKey": "cards.revuelto" },
+  { "id": "pico-prestado", "artColor": "#7A4C2B", "type": "favor",     "count": 4, "nameKey": "cards.pico_prestado" },
+  { "id": "ni-hablar", "artColor": "#7A2F4F",     "type": "nope",      "count": 5, "nameKey": "cards.ni_hablar" },
+  { "id": "rata", "artColor": "#72523A",          "type": "cat",       "count": 4, "nameKey": "cards.rata" },
+  { "id": "murcielago", "artColor": "#4D4568",    "type": "cat",       "count": 4, "nameKey": "cards.murcielago" },
+  { "id": "topo", "artColor": "#785533",          "type": "cat",       "count": 4, "nameKey": "cards.topo" },
+  { "id": "lombriz", "artColor": "#8A4B55",       "type": "cat",       "count": 4, "nameKey": "cards.lombriz" },
+  { "id": "escarabajo", "artColor": "#355B4A",    "type": "cat",       "count": 4, "nameKey": "cards.escarabajo" }
 ]

@@ -2,7 +2,9 @@
 
 A multiplayer engine for **spatial games, card games and other turn-based interaction
 forms**, built accessibility-first so blind and sighted players can share the same game.
-Content — boards or decks, pieces, languages and sounds — lives in `.corro` packages.
+Content — boards or decks, pieces, optional card illustrations, languages and sounds — lives in
+`.corro` packages. Card-bearing packages may override neutral faces with `cards/<card-id>.svg` and
+may add a validated `artColor: "#RRGGBB"` accent; localized names remain the accessible truth.
 The authoritative server runs the rules; the browser renders each player's permitted
 view and provides parallel visual and screen-reader presentations.
 
@@ -325,7 +327,8 @@ breakpoints, no in-container debugger.
 ## Content: `.corro` packages
 
 The engine is content-agnostic. A game is a `.corro` package (a zip) carrying its
-board or deck, pieces, per-locale texts, terminology and optional sounds. Packages can be **bundled**
+board or deck, pieces, optional card illustrations, per-locale texts, terminology and sounds.
+Packages can be **bundled**
 with the server (`server/Packages/`) or **uploaded** at runtime from the lobby; the
 engine treats both identically.
 

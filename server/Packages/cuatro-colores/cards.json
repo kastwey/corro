@@ -1,6 +1,6 @@
 [
   {
-    "id": "rojo-0",
+    "id": "rojo-0", "artColor": "#C62828",
     "type": "number",
     "color": "rojo",
     "value": 0,
@@ -8,7 +8,7 @@
     "nameKey": "cards.rojo_0"
   },
   {
-    "id": "rojo-2",
+    "id": "rojo-2", "artColor": "#C62828",
     "type": "number",
     "color": "rojo",
     "value": 2,
@@ -16,7 +16,7 @@
     "nameKey": "cards.rojo_2"
   },
   {
-    "id": "rojo-3",
+    "id": "rojo-3", "artColor": "#C62828",
     "type": "number",
     "color": "rojo",
     "value": 3,
@@ -24,7 +24,7 @@
     "nameKey": "cards.rojo_3"
   },
   {
-    "id": "rojo-4",
+    "id": "rojo-4", "artColor": "#C62828",
     "type": "number",
     "color": "rojo",
     "value": 4,
@@ -32,7 +32,7 @@
     "nameKey": "cards.rojo_4"
   },
   {
-    "id": "rojo-6",
+    "id": "rojo-6", "artColor": "#C62828",
     "type": "number",
     "color": "rojo",
     "value": 6,
@@ -40,7 +40,7 @@
     "nameKey": "cards.rojo_6"
   },
   {
-    "id": "rojo-7",
+    "id": "rojo-7", "artColor": "#C62828",
     "type": "number",
     "color": "rojo",
     "value": 7,
@@ -48,7 +48,7 @@
     "nameKey": "cards.rojo_7"
   },
   {
-    "id": "rojo-8",
+    "id": "rojo-8", "artColor": "#C62828",
     "type": "number",
     "color": "rojo",
     "value": 8,
@@ -56,7 +56,7 @@
     "nameKey": "cards.rojo_8"
   },
   {
-    "id": "rojo-9",
+    "id": "rojo-9", "artColor": "#C62828",
     "type": "number",
     "color": "rojo",
     "value": 9,
@@ -64,21 +64,21 @@
     "nameKey": "cards.rojo_9"
   },
   {
-    "id": "rojo-reversa",
+    "id": "rojo-reversa", "artColor": "#C62828",
     "type": "reverse",
     "color": "rojo",
     "count": 2,
     "nameKey": "cards.rojo_reversa"
   },
   {
-    "id": "rojo-roba2",
+    "id": "rojo-roba2", "artColor": "#C62828",
     "type": "drawTwo",
     "color": "rojo",
     "count": 2,
     "nameKey": "cards.rojo_roba2"
   },
   {
-    "id": "amarillo-1",
+    "id": "amarillo-1", "artColor": "#A66F00",
     "type": "number",
     "color": "amarillo",
     "value": 1,
@@ -86,7 +86,7 @@
     "nameKey": "cards.amarillo_1"
   },
   {
-    "id": "amarillo-2",
+    "id": "amarillo-2", "artColor": "#A66F00",
     "type": "number",
     "color": "amarillo",
     "value": 2,
@@ -94,7 +94,7 @@
     "nameKey": "cards.amarillo_2"
   },
   {
-    "id": "amarillo-3",
+    "id": "amarillo-3", "artColor": "#A66F00",
     "type": "number",
     "color": "amarillo",
     "value": 3,
@@ -102,7 +102,7 @@
     "nameKey": "cards.amarillo_3"
   },
   {
-    "id": "amarillo-4",
+    "id": "amarillo-4", "artColor": "#A66F00",
     "type": "number",
     "color": "amarillo",
     "value": 4,
@@ -110,7 +110,7 @@
     "nameKey": "cards.amarillo_4"
   },
   {
-    "id": "amarillo-5",
+    "id": "amarillo-5", "artColor": "#A66F00",
     "type": "number",
     "color": "amarillo",
     "value": 5,
@@ -118,7 +118,7 @@
     "nameKey": "cards.amarillo_5"
   },
   {
-    "id": "amarillo-6",
+    "id": "amarillo-6", "artColor": "#A66F00",
     "type": "number",
     "color": "amarillo",
     "value": 6,
@@ -126,7 +126,7 @@
     "nameKey": "cards.amarillo_6"
   },
   {
-    "id": "amarillo-8",
+    "id": "amarillo-8", "artColor": "#A66F00",
     "type": "number",
     "color": "amarillo",
     "value": 8,
@@ -134,7 +134,7 @@
     "nameKey": "cards.amarillo_8"
   },
   {
-    "id": "amarillo-9",
+    "id": "amarillo-9", "artColor": "#A66F00",
     "type": "number",
     "color": "amarillo",
     "value": 9,
@@ -142,28 +142,28 @@
     "nameKey": "cards.amarillo_9"
   },
   {
-    "id": "amarillo-salta",
+    "id": "amarillo-salta", "artColor": "#A66F00",
     "type": "skip",
     "color": "amarillo",
     "count": 2,
     "nameKey": "cards.amarillo_salta"
   },
   {
-    "id": "amarillo-reversa",
+    "id": "amarillo-reversa", "artColor": "#A66F00",
     "type": "reverse",
     "color": "amarillo",
     "count": 2,
     "nameKey": "cards.amarillo_reversa"
   },
   {
-    "id": "amarillo-roba2",
+    "id": "amarillo-roba2", "artColor": "#A66F00",
     "type": "drawTwo",
     "color": "amarillo",
     "count": 2,
     "nameKey": "cards.amarillo_roba2"
   },
   {
-    "id": "verde-0",
+    "id": "verde-0", "artColor": "#137A43",
     "type": "number",
     "color": "verde",
     "value": 0,
@@ -171,7 +171,7 @@
     "nameKey": "cards.verde_0"
   },
   {
-    "id": "verde-1",
+    "id": "verde-1", "artColor": "#137A43",
     "type": "number",
     "color": "verde",
     "value": 1,
@@ -179,7 +179,7 @@
     "nameKey": "cards.verde_1"
   },
   {
-    "id": "verde-3",
+    "id": "verde-3", "artColor": "#137A43",
     "type": "number",
     "color": "verde",
     "value": 3,
@@ -187,7 +187,7 @@
     "nameKey": "cards.verde_3"
   },
   {
-    "id": "verde-4",
+    "id": "verde-4", "artColor": "#137A43",
     "type": "number",
     "color": "verde",
     "value": 4,
@@ -195,7 +195,7 @@
     "nameKey": "cards.verde_4"
   },
   {
-    "id": "verde-5",
+    "id": "verde-5", "artColor": "#137A43",
     "type": "number",
     "color": "verde",
     "value": 5,
@@ -203,7 +203,7 @@
     "nameKey": "cards.verde_5"
   },
   {
-    "id": "verde-6",
+    "id": "verde-6", "artColor": "#137A43",
     "type": "number",
     "color": "verde",
     "value": 6,
@@ -211,7 +211,7 @@
     "nameKey": "cards.verde_6"
   },
   {
-    "id": "verde-8",
+    "id": "verde-8", "artColor": "#137A43",
     "type": "number",
     "color": "verde",
     "value": 8,
@@ -219,7 +219,7 @@
     "nameKey": "cards.verde_8"
   },
   {
-    "id": "verde-9",
+    "id": "verde-9", "artColor": "#137A43",
     "type": "number",
     "color": "verde",
     "value": 9,
@@ -227,28 +227,28 @@
     "nameKey": "cards.verde_9"
   },
   {
-    "id": "verde-salta",
+    "id": "verde-salta", "artColor": "#137A43",
     "type": "skip",
     "color": "verde",
     "count": 2,
     "nameKey": "cards.verde_salta"
   },
   {
-    "id": "verde-reversa",
+    "id": "verde-reversa", "artColor": "#137A43",
     "type": "reverse",
     "color": "verde",
     "count": 2,
     "nameKey": "cards.verde_reversa"
   },
   {
-    "id": "verde-roba2",
+    "id": "verde-roba2", "artColor": "#137A43",
     "type": "drawTwo",
     "color": "verde",
     "count": 2,
     "nameKey": "cards.verde_roba2"
   },
   {
-    "id": "azul-0",
+    "id": "azul-0", "artColor": "#1769AA",
     "type": "number",
     "color": "azul",
     "value": 0,
@@ -256,7 +256,7 @@
     "nameKey": "cards.azul_0"
   },
   {
-    "id": "azul-1",
+    "id": "azul-1", "artColor": "#1769AA",
     "type": "number",
     "color": "azul",
     "value": 1,
@@ -264,7 +264,7 @@
     "nameKey": "cards.azul_1"
   },
   {
-    "id": "azul-3",
+    "id": "azul-3", "artColor": "#1769AA",
     "type": "number",
     "color": "azul",
     "value": 3,
@@ -272,7 +272,7 @@
     "nameKey": "cards.azul_3"
   },
   {
-    "id": "azul-4",
+    "id": "azul-4", "artColor": "#1769AA",
     "type": "number",
     "color": "azul",
     "value": 4,
@@ -280,7 +280,7 @@
     "nameKey": "cards.azul_4"
   },
   {
-    "id": "azul-6",
+    "id": "azul-6", "artColor": "#1769AA",
     "type": "number",
     "color": "azul",
     "value": 6,
@@ -288,7 +288,7 @@
     "nameKey": "cards.azul_6"
   },
   {
-    "id": "azul-7",
+    "id": "azul-7", "artColor": "#1769AA",
     "type": "number",
     "color": "azul",
     "value": 7,
@@ -296,7 +296,7 @@
     "nameKey": "cards.azul_7"
   },
   {
-    "id": "azul-8",
+    "id": "azul-8", "artColor": "#1769AA",
     "type": "number",
     "color": "azul",
     "value": 8,
@@ -304,7 +304,7 @@
     "nameKey": "cards.azul_8"
   },
   {
-    "id": "azul-9",
+    "id": "azul-9", "artColor": "#1769AA",
     "type": "number",
     "color": "azul",
     "value": 9,
@@ -312,33 +312,33 @@
     "nameKey": "cards.azul_9"
   },
   {
-    "id": "azul-salta",
+    "id": "azul-salta", "artColor": "#1769AA",
     "type": "skip",
     "color": "azul",
     "count": 2,
     "nameKey": "cards.azul_salta"
   },
   {
-    "id": "azul-reversa",
+    "id": "azul-reversa", "artColor": "#1769AA",
     "type": "reverse",
     "color": "azul",
     "count": 2,
     "nameKey": "cards.azul_reversa"
   },
   {
-    "id": "comodin",
+    "id": "comodin", "artColor": "#6A3FA0",
     "type": "wild",
     "count": 4,
     "nameKey": "cards.comodin"
   },
   {
-    "id": "comodin-roba4",
+    "id": "comodin-roba4", "artColor": "#6A3FA0",
     "type": "wildDrawFour",
     "count": 4,
     "nameKey": "cards.comodin_roba4"
   },
   {
-    "id": "rojo-1",
+    "id": "rojo-1", "artColor": "#C62828",
     "type": "number",
     "color": "rojo",
     "value": 1,
@@ -346,7 +346,7 @@
     "nameKey": "cards.rojo_1"
   },
   {
-    "id": "azul-2",
+    "id": "azul-2", "artColor": "#1769AA",
     "type": "number",
     "color": "azul",
     "value": 2,
@@ -354,7 +354,7 @@
     "nameKey": "cards.azul_2"
   },
   {
-    "id": "amarillo-0",
+    "id": "amarillo-0", "artColor": "#A66F00",
     "type": "number",
     "color": "amarillo",
     "value": 0,
@@ -362,7 +362,7 @@
     "nameKey": "cards.amarillo_0"
   },
   {
-    "id": "amarillo-7",
+    "id": "amarillo-7", "artColor": "#A66F00",
     "type": "number",
     "color": "amarillo",
     "value": 7,
@@ -370,7 +370,7 @@
     "nameKey": "cards.amarillo_7"
   },
   {
-    "id": "verde-2",
+    "id": "verde-2", "artColor": "#137A43",
     "type": "number",
     "color": "verde",
     "value": 2,
@@ -378,14 +378,14 @@
     "nameKey": "cards.verde_2"
   },
   {
-    "id": "azul-roba2",
+    "id": "azul-roba2", "artColor": "#1769AA",
     "type": "drawTwo",
     "color": "azul",
     "count": 2,
     "nameKey": "cards.azul_roba2"
   },
   {
-    "id": "verde-7",
+    "id": "verde-7", "artColor": "#137A43",
     "type": "number",
     "color": "verde",
     "value": 7,
@@ -393,7 +393,7 @@
     "nameKey": "cards.verde_7"
   },
   {
-    "id": "azul-5",
+    "id": "azul-5", "artColor": "#1769AA",
     "type": "number",
     "color": "azul",
     "value": 5,
@@ -401,14 +401,14 @@
     "nameKey": "cards.azul_5"
   },
   {
-    "id": "rojo-salta",
+    "id": "rojo-salta", "artColor": "#C62828",
     "type": "skip",
     "color": "rojo",
     "count": 2,
     "nameKey": "cards.rojo_salta"
   },
   {
-    "id": "rojo-5",
+    "id": "rojo-5", "artColor": "#C62828",
     "type": "number",
     "color": "rojo",
     "value": 5,

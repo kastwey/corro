@@ -74,6 +74,9 @@
 }
 /* Text sits above the affliction overlay. */
 .assembly-module__name { position: relative; z-index: 1; font-weight: 700; font-size: 0.85rem; line-height: 1.05; color: var(--text); }
+.assembly-module__art { position: relative; z-index: 1; color: var(--text); }
+.assembly-module__attachments { position: relative; z-index: 1; display: flex; gap: 0.1rem; color: var(--danger); }
+.assembly-module__attachment-art { width: 1.25rem; height: 1.25rem; }
 .assembly-module__tag { position: relative; z-index: 1; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
 
 /* States are layered ON TOP of the system colour (hue-independent, so a red-system module never

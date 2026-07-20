@@ -573,6 +573,12 @@ public record CardDrawnNotification
 	public required string PlayerName { get; init; }
 	public required string CardId { get; init; }
 	public required string DeckType { get; init; } // "chance" | "community" | a package deck id
+	/// <summary>Sanitized path-data from cards/&lt;id&gt;.svg; null uses the neutral client drawing.</summary>
+	public string? Svg { get; init; }
+	/// <summary>Optional package-owned #RRGGBB accent for the revealed face.</summary>
+	public string? ArtColor { get; init; }
+	/// <summary>The generic effect id, used only to choose a neutral fallback drawing.</summary>
+	public string? ArtType { get; init; }
 												   // Both classic and package cards reveal via translation keys (a package card's key resolves
 												   // against the merged package i18n). Package cards have no title key.
 	public string TitleKey { get; init; } = "";

@@ -89,6 +89,10 @@ implements the rules. Visual-only effects must not interfere with assistive tech
   gate the turn.
 - The accessible identity of a thing is its **name + keyboard affordance**, not its
   colour. Colour is decoration; the spoken name and the shortcut carry the meaning.
+- Optional package card illustrations (`cards/<id>.svg`) and neutral fallback drawings are
+  **always decorative**. They may help a sighted player recognize a card, but never replace its
+  localized row label, rules/help text or server announcement. A missing picture therefore loses
+  no semantic information.
 
 ## Sound (earcons)
 

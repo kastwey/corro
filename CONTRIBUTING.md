@@ -76,6 +76,12 @@ which ones can be **bundled into this repository**:
 - **No reproductions of existing games.** Please don't submit packages that recreate a
   copyrighted or trademarked game — its layout, names, card texts,
   artwork, or overall look — even as a "clone" or "tribute." Those cannot be accepted.
+- **Keep themed assets in the package.** Player pieces belong in `tokens/<id>.svg`, optional
+  card illustrations in `cards/<card-id>.svg`, optional `artColor: "#RRGGBB"` accents in card
+  definitions, and game earcons in `sounds/`. Shared engine
+  code may provide neutral fallbacks but must never branch on one package/card/token id.
+- **Credit package assets.** Record the source and redistribution licence for art and sounds
+  in the package's `CREDITS.md`; original work may state that explicitly.
 - **Every bundled board is reviewed and approved individually**, at the maintainer's
   discretion, before it's added to the repository. Inclusion is not automatic and may be
   declined; the goal is to keep the public project unambiguously clean.

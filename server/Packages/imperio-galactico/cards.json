@@ -1,6 +1,6 @@
 [
   {
-    "id": "f1",
+    "id": "f1", "artColor": "#2477A8",
     "deck": "fortune",
     "textKey": "cards.f1",
     "effect": {
@@ -10,7 +10,7 @@
     }
   },
   {
-    "id": "f2",
+    "id": "f2", "artColor": "#2477A8",
     "deck": "fortune",
     "textKey": "cards.f2",
     "effect": {
@@ -20,7 +20,7 @@
     }
   },
   {
-    "id": "f3",
+    "id": "f3", "artColor": "#2477A8",
     "deck": "fortune",
     "textKey": "cards.f3",
     "effect": {
@@ -31,7 +31,7 @@
     }
   },
   {
-    "id": "f4",
+    "id": "f4", "artColor": "#2477A8",
     "deck": "fortune",
     "textKey": "cards.f4",
     "effect": {
@@ -41,7 +41,7 @@
     }
   },
   {
-    "id": "f5",
+    "id": "f5", "artColor": "#2477A8",
     "deck": "fortune",
     "textKey": "cards.f5",
     "effect": {
@@ -51,7 +51,7 @@
     }
   },
   {
-    "id": "f6",
+    "id": "f6", "artColor": "#2477A8",
     "deck": "fortune",
     "textKey": "cards.f6",
     "effect": {
@@ -61,7 +61,7 @@
     }
   },
   {
-    "id": "f7",
+    "id": "f7", "artColor": "#2477A8",
     "deck": "fortune",
     "textKey": "cards.f7",
     "effect": {
@@ -70,7 +70,7 @@
     }
   },
   {
-    "id": "f8",
+    "id": "f8", "artColor": "#2477A8",
     "deck": "fortune",
     "textKey": "cards.f8",
     "effect": {
@@ -78,7 +78,7 @@
     }
   },
   {
-    "id": "f9",
+    "id": "f9", "artColor": "#2477A8",
     "deck": "fortune",
     "textKey": "cards.f9",
     "effect": {
@@ -86,7 +86,7 @@
     }
   },
   {
-    "id": "f10",
+    "id": "f10", "artColor": "#2477A8",
     "deck": "fortune",
     "textKey": "cards.f10",
     "effect": {
@@ -95,7 +95,7 @@
     }
   },
   {
-    "id": "f11",
+    "id": "f11", "artColor": "#2477A8",
     "deck": "fortune",
     "textKey": "cards.f11",
     "effect": {
@@ -104,7 +104,7 @@
     }
   },
   {
-    "id": "f12",
+    "id": "f12", "artColor": "#2477A8",
     "deck": "fortune",
     "textKey": "cards.f12",
     "effect": {
@@ -114,7 +114,7 @@
     }
   },
   {
-    "id": "f13",
+    "id": "f13", "artColor": "#2477A8",
     "deck": "fortune",
     "textKey": "cards.f13",
     "effect": {
@@ -123,7 +123,7 @@
     }
   },
   {
-    "id": "f14",
+    "id": "f14", "artColor": "#2477A8",
     "deck": "fortune",
     "textKey": "cards.f14",
     "effect": {
@@ -132,7 +132,7 @@
     }
   },
   {
-    "id": "f15",
+    "id": "f15", "artColor": "#2477A8",
     "deck": "fortune",
     "textKey": "cards.f15",
     "effect": {
@@ -142,7 +142,7 @@
     }
   },
   {
-    "id": "f16",
+    "id": "f16", "artColor": "#2477A8",
     "deck": "fortune",
     "textKey": "cards.f16",
     "effect": {
@@ -151,7 +151,7 @@
     }
   },
   {
-    "id": "b1",
+    "id": "b1", "artColor": "#6B3F78",
     "deck": "blackmarket",
     "textKey": "cards.b1",
     "effect": {
@@ -161,7 +161,7 @@
     }
   },
   {
-    "id": "b2",
+    "id": "b2", "artColor": "#6B3F78",
     "deck": "blackmarket",
     "textKey": "cards.b2",
     "effect": {
@@ -170,7 +170,7 @@
     }
   },
   {
-    "id": "b3",
+    "id": "b3", "artColor": "#6B3F78",
     "deck": "blackmarket",
     "textKey": "cards.b3",
     "effect": {
@@ -179,7 +179,7 @@
     }
   },
   {
-    "id": "b4",
+    "id": "b4", "artColor": "#6B3F78",
     "deck": "blackmarket",
     "textKey": "cards.b4",
     "effect": {
@@ -188,7 +188,7 @@
     }
   },
   {
-    "id": "b5",
+    "id": "b5", "artColor": "#6B3F78",
     "deck": "blackmarket",
     "textKey": "cards.b5",
     "effect": {
@@ -197,7 +197,7 @@
     }
   },
   {
-    "id": "b6",
+    "id": "b6", "artColor": "#6B3F78",
     "deck": "blackmarket",
     "textKey": "cards.b6",
     "effect": {
@@ -206,7 +206,7 @@
     }
   },
   {
-    "id": "b7",
+    "id": "b7", "artColor": "#6B3F78",
     "deck": "blackmarket",
     "textKey": "cards.b7",
     "effect": {
@@ -215,7 +215,7 @@
     }
   },
   {
-    "id": "b8",
+    "id": "b8", "artColor": "#6B3F78",
     "deck": "blackmarket",
     "textKey": "cards.b8",
     "effect": {
@@ -224,7 +224,7 @@
     }
   },
   {
-    "id": "b9",
+    "id": "b9", "artColor": "#6B3F78",
     "deck": "blackmarket",
     "textKey": "cards.b9",
     "effect": {
@@ -233,7 +233,7 @@
     }
   },
   {
-    "id": "b10",
+    "id": "b10", "artColor": "#6B3F78",
     "deck": "blackmarket",
     "textKey": "cards.b10",
     "effect": {
@@ -242,7 +242,7 @@
     }
   },
   {
-    "id": "b11",
+    "id": "b11", "artColor": "#6B3F78",
     "deck": "blackmarket",
     "textKey": "cards.b11",
     "effect": {
@@ -250,7 +250,7 @@
     }
   },
   {
-    "id": "b12",
+    "id": "b12", "artColor": "#6B3F78",
     "deck": "blackmarket",
     "textKey": "cards.b12",
     "effect": {
@@ -258,7 +258,7 @@
     }
   },
   {
-    "id": "b13",
+    "id": "b13", "artColor": "#6B3F78",
     "deck": "blackmarket",
     "textKey": "cards.b13",
     "effect": {
@@ -267,7 +267,7 @@
     }
   },
   {
-    "id": "b14",
+    "id": "b14", "artColor": "#6B3F78",
     "deck": "blackmarket",
     "textKey": "cards.b14",
     "effect": {
@@ -276,7 +276,7 @@
     }
   },
   {
-    "id": "b15",
+    "id": "b15", "artColor": "#6B3F78",
     "deck": "blackmarket",
     "textKey": "cards.b15",
     "effect": {
@@ -286,7 +286,7 @@
     }
   },
   {
-    "id": "b16",
+    "id": "b16", "artColor": "#6B3F78",
     "deck": "blackmarket",
     "textKey": "cards.b16",
     "effect": {

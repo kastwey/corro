@@ -1,5 +1,5 @@
 [
-  { "id": "amber-zero", "type": "number", "color": "amber", "value": 0, "count": 2, "nameKey": "cards.amberZero" },
+  { "id": "amber-zero", "artColor": "#9A6B00", "type": "number", "color": "amber", "value": 0, "count": 2, "nameKey": "cards.amberZero" },
   { "id": "amber-one", "type": "number", "color": "amber", "value": 1, "count": 3, "nameKey": "cards.amberOne" },
   { "id": "amber-skip", "type": "skip", "color": "amber", "count": 2, "nameKey": "cards.amberSkip" },
   { "id": "blue-zero", "type": "number", "color": "blue", "value": 0, "count": 2, "nameKey": "cards.blueZero" },

@@ -6,6 +6,7 @@
 // my own. Targeted cards walk short picker chains (victim → slot) through popupMenu.
 
 import { HandPanel, type HandCard } from './handPanel.js';
+import { cardArtSvg, genericCardArtHtml, genericCardBackHtml } from './cardArt.js';
 import { popupMenu } from './popupMenu.js';
 import { escapeHtml } from './escapeHtml.js';
 import {
@@ -121,6 +122,7 @@ export class AssemblyBoard {
 						draw: gs.assembly.drawCount ?? 0,
 						discard: gs.assembly.discardCount ?? 0,
 					}),
+					art: genericCardBackHtml(`${gs.assembly.drawCount ?? 0}/${gs.assembly.discardCount ?? 0}`),
 				}];
 			},
 			onPlay: card => this.playCard(card),
@@ -187,6 +189,7 @@ export class AssemblyBoard {
 				colourOrder: ci >= 0 ? ci : undefined,
 				playable: play.playable,
 				unplayableReason: this.deps.tSync(play.reasonKey ?? 'game.hand_not_playable'),
+				art: def ? genericCardArtHtml(def, label) : undefined,
 				help: assemblyCardHelp(gs, instance.cardId, this.deps.tSync) ?? undefined,
 			};
 		});
@@ -351,7 +354,14 @@ export class AssemblyBoard {
 				const band = SLOT_COLORS[slot.color] ?? '#9e9e9e';
 				const tag = state === 'ok' ? ''
 					: `<span class="assembly-module__tag">${badgeOf[state]} ${word}</span>`;
+				const attachments = [...slot.afflictions, ...slot.shields]
+					.map(instance => catalog.get(instance.cardId))
+					.filter((card): card is AssemblyCardDef => !!card)
+					.map(card => cardArtSvg(card, 'assembly-module__attachment-art'))
+					.join('');
 				return `<span class="assembly-module assembly-module--${state}" style="--slot-color:${band}" title="${label} (${word})">`
+					+ (def ? cardArtSvg(def, 'assembly-module__art card-art-thumb') : '')
+					+ (attachments ? `<span class="assembly-module__attachments">${attachments}</span>` : '')
 					+ `<span class="assembly-module__name">${label}</span>`
 					+ tag
 					+ `</span>`;

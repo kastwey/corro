@@ -45,6 +45,7 @@ test('draft: secret pick, re-pick, reveal, tray rotation, boosted serve, status 
 	// assertable here; round TWO's is, below.) ──
 	const anaCards = ana.locator('.hand-card:not(.hand-card--info)');
 	await expect(anaCards).toHaveCount(10);
+	await expect(anaCards.locator('[data-card-art="package"]')).toHaveCount(10);
 	await expect(ana.locator('.hand-card--info')).toHaveAttribute('aria-label', /Mazo: 89/);
 	await expect(ana.locator('#board .draft-table')).toHaveCount(2);
 	await expect(ana.locator('.hand-panel__draw')).toHaveCount(0);

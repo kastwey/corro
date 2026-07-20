@@ -1,5 +1,5 @@
 [
-  { "id": "spark", "type": "bomb", "count": 1, "nameKey": "cards.spark" },
+  { "id": "spark", "artColor": "#A52D32", "type": "bomb", "count": 1, "nameKey": "cards.spark" },
   { "id": "extinguish", "type": "defuse", "count": 2, "nameKey": "cards.extinguish" },
   { "id": "skip", "type": "skip", "count": 4, "nameKey": "cards.skip" },
   { "id": "attack", "type": "attack", "count": 2, "nameKey": "cards.attack" },

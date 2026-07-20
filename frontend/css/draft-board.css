@@ -73,6 +73,18 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 .draft-card__name { font-weight: 700; font-size: 0.8rem; line-height: 1.05; color: var(--text); }
+.draft-card__art { color: var(--text); }
+.draft-card__multiplier-art {
+  position: absolute;
+  left: -0.45rem;
+  bottom: -0.45rem;
+  width: 1.4rem;
+  height: 1.4rem;
+  padding: 0.12rem;
+  border-radius: 50%;
+  color: var(--type-ink);
+  background: var(--type-color);
+}
 .draft-card__count {
   font-size: 0.72rem;
   font-weight: 800;

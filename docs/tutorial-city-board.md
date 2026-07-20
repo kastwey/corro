@@ -267,6 +267,19 @@ Start with these and add more later.
 ]
 ```
 
+Optional visual art belongs beside that JSON, not inside it. For example, make a
+`cards/c1.svg` file for card id `c1`:
+
+```xml
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <path d="M32 4l7 19 20 1-15 13 5 20-17-11-17 11 5-20L5 24l20-1z"/>
+</svg>
+```
+
+Use the exact card id as the filename, a 64×64 viewBox and flattened `<path>` geometry.
+When the file is absent Corro shows a neutral effect drawing. `inspect` reports
+`cardIllustrations`; `validate` rejects a misspelled/orphaned filename or malformed SVG.
+
 ---
 
 ## Step 5 — `i18n/en.json` and `i18n/es.json` (the names — including your streets!)
@@ -424,6 +437,8 @@ The common ones:
 - **"key 'squares.N' resolves in no locale"** — you referenced a name that isn't defined in
   *any* `i18n/*.json`. Add it (a placeholder counts).
 - **"token 'x' has no icon"** — a manifest token is missing its `tokens/x.svg`.
+- **"card illustration …"** — check that `cards/<id>.svg` matches a `cards.json` id,
+  uses viewBox 0 0 64 64 and contains flattened path geometry.
 - **"gameType '…' is not supported"** — check `"gameType": "property"` is spelled exactly.
 - **The board isn't in the lobby list** — the folder isn't under `server/Packages/`, or the
   `manifest.json` failed to parse (a stray comma? a missing quote?). Validate your JSON.

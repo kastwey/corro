@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/kastwey/corro/main/sdk/Corro.PackageSdk/Schemas/cards.schema.json",
   "title": "Corro card catalog",
+  "$comment": "Optional visual art is a sibling file at cards/<card-id>.svg (64x64 path geometry), not a JSON property.",
   "oneOf": [
     { "$ref": "#/$defs/propertyDeck" },
     { "$ref": "#/$defs/journeyDeck" },
@@ -11,6 +12,16 @@
     { "$ref": "#/$defs/explodingDeck" }
   ],
   "$defs": {
+    "cardId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "description": "Stable card id. To override Corro's neutral drawing, add a sibling file at cards/<this-id>.svg using viewBox='0 0 64 64' and path geometry only. Do not add an svg property to cards.json."
+    },
+    "artColor": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$",
+      "description": "Optional package-owned #RRGGBB accent used for this card's frame and SVG silhouette. Keep semantic names/help authoritative; never rely on colour alone."
+    },
     "propertyDeck": { "type": "array", "items": { "$ref": "#/$defs/propertyCard" } },
     "journeyDeck": { "type": "array", "items": { "$ref": "#/$defs/journeyCard" } },
     "assemblyDeck": { "type": "array", "items": { "$ref": "#/$defs/assemblyCard" } },
@@ -18,11 +29,12 @@
     "sheddingDeck": { "type": "array", "items": { "$ref": "#/$defs/sheddingCard" } },
     "explodingDeck": { "type": "array", "items": { "$ref": "#/$defs/explodingCard" } },
     "propertyCard": {
-      "title": "Property card",
+      "title": "Property card (optional art: cards/<id>.svg)",
       "type": "object",
       "required": ["id", "deck", "textKey", "effect"],
       "properties": {
-        "id": { "type": "string" },
+        "id": { "$ref": "#/$defs/cardId" },
+        "artColor": { "$ref": "#/$defs/artColor" },
         "deck": { "type": "string" },
         "textKey": { "type": "string" },
         "effect": {
@@ -45,11 +57,12 @@
       "additionalProperties": false
     },
     "journeyCard": {
-      "title": "Journey card",
+      "title": "Journey card (optional art: cards/<id>.svg)",
       "type": "object",
       "required": ["id", "type", "count", "nameKey"],
       "properties": {
-        "id": { "type": "string" },
+        "id": { "$ref": "#/$defs/cardId" },
+        "artColor": { "$ref": "#/$defs/artColor" },
         "type": { "enum": ["distance", "attack", "remedy", "immunity"] },
         "value": { "type": "integer", "minimum": 0 },
         "kind": { "type": "string" },
@@ -64,11 +77,12 @@
       "additionalProperties": false
     },
     "assemblyCard": {
-      "title": "Assembly card",
+      "title": "Assembly card (optional art: cards/<id>.svg)",
       "type": "object",
       "required": ["id", "type", "count", "nameKey"],
       "properties": {
-        "id": { "type": "string" },
+        "id": { "$ref": "#/$defs/cardId" },
+        "artColor": { "$ref": "#/$defs/artColor" },
         "type": { "enum": ["piece", "attack", "remedy", "special"] },
         "color": { "type": "string" },
         "specialKind": { "enum": ["swapPiece", "stealPiece", "plague", "scrapHands", "fullSwap"] },
@@ -79,11 +93,12 @@
       "additionalProperties": false
     },
     "draftCard": {
-      "title": "Draft card",
+      "title": "Draft card (optional art: cards/<id>.svg)",
       "type": "object",
       "required": ["id", "type", "count", "nameKey"],
       "properties": {
-        "id": { "type": "string" },
+        "id": { "$ref": "#/$defs/cardId" },
+        "artColor": { "$ref": "#/$defs/artColor" },
         "type": { "enum": ["points", "multiplier", "set", "scale", "majority", "dessert", "extra"] },
         "count": { "type": "integer", "minimum": 1 },
         "nameKey": { "type": "string" },
@@ -97,11 +112,12 @@
       "additionalProperties": false
     },
     "sheddingCard": {
-      "title": "Shedding card",
+      "title": "Shedding card (optional art: cards/<id>.svg)",
       "type": "object",
       "required": ["id", "type", "count", "nameKey"],
       "properties": {
-        "id": { "type": "string" },
+        "id": { "$ref": "#/$defs/cardId" },
+        "artColor": { "$ref": "#/$defs/artColor" },
         "type": { "enum": ["number", "skip", "reverse", "drawTwo", "wild", "wildDrawFour"] },
         "color": { "type": ["string", "null"] },
         "value": { "type": "integer", "minimum": 0 },
@@ -112,11 +128,12 @@
       "additionalProperties": false
     },
     "explodingCard": {
-      "title": "Exploding card",
+      "title": "Exploding card (optional art: cards/<id>.svg)",
       "type": "object",
       "required": ["id", "type", "count", "nameKey"],
       "properties": {
-        "id": { "type": "string" },
+        "id": { "$ref": "#/$defs/cardId" },
+        "artColor": { "$ref": "#/$defs/artColor" },
         "type": { "enum": ["bomb", "defuse", "skip", "attack", "seeFuture", "shuffle", "favor", "nope", "cat"] },
         "count": { "type": "integer", "minimum": 1 },
         "nameKey": { "type": "string" }

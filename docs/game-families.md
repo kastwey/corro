@@ -6,20 +6,26 @@ and sounds. Different packages can therefore share mechanics without sharing nam
 
 ## Supported families
 
-| Family | Interaction model | Hidden information | Primary surface |
-| --- | --- | --- | --- |
-| `property` | Roll, move, trade and manage an economy | no | perimeter board |
-| `race` | Roll and choose one of several pieces | no | shared circuit and final lanes |
-| `track` | Roll and advance along a path with square effects | no | linear track |
-| `trivia` | Roll, choose a destination and answer by category | question-dependent | hub-and-spoke wheel |
-| `journey` | Draw and play distance, hazard and remedy cards | yes | hand and shared journey state |
-| `assembly` | Build a rack while repairing or disrupting rivals | yes | hand and racks |
-| `draft` | Everyone picks secretly, then hands rotate | yes | hand and public table |
-| `shedding` | Match the discard or draw | yes | hand and discard pile |
-| `exploding` | Play actions, then draw against elimination risk | yes | hand and draw pile |
+| Family | Interaction model | Hidden information | Primary surface | Package card art |
+| --- | --- | --- | --- | --- |
+| `property` | Roll, move, trade and manage an economy | no | perimeter board | yes, deck-card reveals |
+| `race` | Roll and choose one of several pieces | no | shared circuit and final lanes | — |
+| `track` | Roll and advance along a path with square effects | no | linear track | — |
+| `trivia` | Roll, choose a destination and answer by category | question-dependent | hub-and-spoke wheel | — |
+| `journey` | Draw and play distance, hazard and remedy cards | yes | hand and shared journey state | yes |
+| `assembly` | Build a rack while repairing or disrupting rivals | yes | hand and racks | yes |
+| `draft` | Everyone picks secretly, then hands rotate | yes | hand and public table | yes |
+| `shedding` | Match the discard or draw | yes | hand and discard pile | yes |
+| `exploding` | Play actions, then draw against elimination risk | yes | hand and draw pile | yes |
 
 The server registry in `server/Services/Corro/Families/GameFamilies.cs` is authoritative.
 The format details for each family live in [`../CORRO_FORMAT.md`](../CORRO_FORMAT.md).
+
+For every “yes” row, `cards/<card-id>.svg` is optional package content. Its sanitized
+64×64 path geometry overrides the neutral type/value drawing; absence is valid and selects
+the fallback. The same card art follows the card across hand, discard and public-table views.
+An optional `artColor: "#RRGGBB"` travels with that geometry to preserve package identity in
+those views; text still names every colour/type so the accent never carries meaning alone.
 
 ## Package or new family?
 

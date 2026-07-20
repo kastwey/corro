@@ -201,6 +201,10 @@ export interface TriviaRulesConfig {
 /** One card DEFINITION of the deck catalog (public wire data — only hand/pile CONTENTS are secret). */
 export interface JourneyCardDef {
   id: string;
+  /** Sanitized path-data from optional package file cards/<id>.svg. */
+  svg?: string | null;
+  /** Optional package-owned #RRGGBB accent. */
+  artColor?: string | null;
   /** "distance" | "attack" | "remedy" | "immunity". */
   type: string;
   value: number;
@@ -307,6 +311,10 @@ export interface JourneyState {
 /** One card DEFINITION of the assembly deck catalog (public wire data). */
 export interface AssemblyCardDef {
   id: string;
+  /** Sanitized path-data from optional package file cards/<id>.svg. */
+  svg?: string | null;
+  /** Optional package-owned #RRGGBB accent. */
+  artColor?: string | null;
   /** "piece" | "attack" | "remedy" | "special". */
   type: string;
   /** Colour id; "wild" matches any. Null for specials. */
@@ -365,6 +373,10 @@ export interface AssemblyState {
 /** One card DEFINITION of the draft deck catalog (public wire data). */
 export interface DraftCardDef {
   id: string;
+  /** Sanitized path-data from optional package file cards/<id>.svg. */
+  svg?: string | null;
+  /** Optional package-owned #RRGGBB accent. */
+  artColor?: string | null;
   /** "points" | "multiplier" | "set" | "scale" | "majority" | "dessert". */
   type: string;
   count: number;
@@ -435,6 +447,10 @@ export interface DraftState {
 /** One card DEFINITION of the shedding deck catalog (public wire data). */
 export interface SheddingCardDef {
   id: string;
+  /** Sanitized path-data from optional package file cards/<id>.svg. */
+  svg?: string | null;
+  /** Optional package-owned #RRGGBB accent. */
+  artColor?: string | null;
   /** "number" | "skip" | "reverse" | "drawTwo" | "wild" | "wildDrawFour". */
   type: string;
   /** Colour id ("red", "azul"…), spoken via the package's colors.<id> key. Null for wilds. */
@@ -516,6 +532,10 @@ export interface SheddingState {
 /** One card DEFINITION of the exploding deck catalog (public wire data). */
 export interface ExplodingCardDef {
   id: string;
+  /** Sanitized path-data from optional package file cards/<id>.svg. */
+  svg?: string | null;
+  /** Optional package-owned #RRGGBB accent. */
+  artColor?: string | null;
   /** "bomb" | "defuse" | "skip" | "attack" | "seeFuture" | "shuffle" | "favor" | "nope" | "cat". */
   type: string;
   count: number;
@@ -1092,6 +1112,12 @@ export interface CardDrawnNotification {
   playerName: string;
   cardId: string;
   deckType: string; // 'chance' | 'community' | a package deck id
+  /** Sanitized path-data from cards/<id>.svg; absent uses a neutral illustration. */
+  svg?: string | null;
+  /** Optional package-owned #RRGGBB accent. */
+  artColor?: string | null;
+  /** Generic effect id used to choose the neutral illustration. */
+  artType?: string | null;
   titleKey: string;
   /** i18n key for the card's text (classic app key or a package "cards.*" key); resolved client-side. */
   descriptionKey: string;

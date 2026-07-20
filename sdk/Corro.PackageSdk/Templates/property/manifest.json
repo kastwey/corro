@@ -28,7 +28,9 @@
     { "id": "green", "color": "#388a58", "colorName": "groups.green" },
     { "id": "violet", "color": "#7b55b5", "colorName": "groups.violet" }
   ],
-  "decks": [],
+  "decks": [
+    { "id": "event", "nameKey": "decks.event" }
+  ],
   "rules": {
     "startingMoney": 500,
     "passStartBonus": 100,

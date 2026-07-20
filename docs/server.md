@@ -53,6 +53,19 @@ registry is the one place they're enumerated:
   start/restore and the dice dispatch all ask the registry, so **adding a family is
   writing one class and registering it**, not editing those call sites.
 
+  ## Package assets
+
+  `CorroPackageLoader` resolves asset conventions before family validation. Required
+  `tokens/<id>.svg` and optional `cards/<card-id>.svg` are parsed as XML with external entities
+  and DTDs disabled; only `<path d>` geometry survives. Card art additionally requires a 64×64
+  viewBox, a matching card id and per-file/package size limits. Invalid or orphaned files reject
+  the package; a genuinely absent card file remains `Svg = null` and selects the client fallback.
+
+  The resolved geometry rides in the relevant token/card definition, so folder packages,
+  uploaded archives, persisted games and restored games follow one path. `PackageSummary` exposes
+  `cardIllustrations` through `corro-package inspect`. Sounds differ because binary audio is served
+  through the sound-pack provider instead of being embedded in game state.
+
 ## Hidden information
 
 The single most important server responsibility for a card game. The full `GameState` is

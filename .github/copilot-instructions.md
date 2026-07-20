@@ -354,6 +354,26 @@ NEVER replaces the spoken voice or earcons and NEVER touches the live region —
 is `aria-hidden`. Add a toast for salient, glanceable events; never rely on it for the
 actual accessible information.
 
+### Package content boundary (NON-NEGOTIABLE)
+The engine implements generic mechanics and neutral fallbacks; **all game identity/content belongs
+to the `.corro` package**. Before adding any themed name, drawing, sound, colour, token/card id or
+package-specific branch to `frontend/src/`, `server/` (outside `server/Packages/`) or shared CSS:
+- inspect the package format, loader and existing asset channels first;
+- put card illustrations in optional `cards/<card-id>.svg` and player-piece drawings in
+  `tokens/<token-id>.svg`; package geometry overrides the engine's neutral fallback;
+- never branch engine rendering on a shipped package id, card id, token id, localized title or
+  known content key — not even as a convenient fallback or for one private package;
+- load and sanitize package assets at the package boundary, keep renderers data-driven by generic
+  family fields, and preserve neutral behaviour when an optional asset is absent;
+- apply a package feature across every relevant family/model/schema/SDK/documentation surface,
+  not only the package that exposed the gap;
+- grep engine sources for the package/card/token ids touched by the change before finishing and
+  add a boundary regression when a leak could recur.
+
+Card SVGs use a fixed 64×64 canvas and path geometry only. They are decorative (`aria-hidden`):
+localized names/help remain the accessible truth. Invalid, orphaned or oversized card SVG files are
+package errors; a genuinely absent file is the only case that selects the neutral fallback.
+
 ### Keyboard Shortcuts (keymap.json)
 - Arrow keys: Board navigation
 - `Enter`: Roll dice
@@ -443,6 +463,7 @@ bug fix gets a regression test; every new behaviour gets unit tests. This is not
 - No `console.log` in production (use `console.debug`)
 - No direct DOM manipulation in handlers (use events)
 - No blocking operations in SignalR handlers
+- No package-specific content or identifiers in engine/client code; packages own themed assets and identity
 - No dead code. When a change makes code unreachable (unused functions, events,
   handlers, fields, interfaces, translation keys, CSS, etc.), DELETE it in the same
   change instead of leaving it "just in case". Dead code is technical debt: it rots,

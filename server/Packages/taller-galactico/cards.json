@@ -1,26 +1,26 @@
 [
-  { "id": "soporte", "type": "piece", "color": "green", "count": 5, "nameKey": "cards.soporte" },
-  { "id": "nucleo", "type": "piece", "color": "blue", "count": 5, "nameKey": "cards.nucleo" },
-  { "id": "chasis", "type": "piece", "color": "yellow", "count": 5, "nameKey": "cards.chasis" },
-  { "id": "modulo-omni", "type": "piece", "color": "wild", "count": 1, "nameKey": "cards.modulo_omni" },
+  { "id": "soporte", "artColor": "#147A4A", "type": "piece", "color": "green", "count": 5, "nameKey": "cards.soporte" },
+  { "id": "nucleo", "artColor": "#1769AA", "type": "piece", "color": "blue", "count": 5, "nameKey": "cards.nucleo" },
+  { "id": "chasis", "artColor": "#9A6B00", "type": "piece", "color": "yellow", "count": 5, "nameKey": "cards.chasis" },
+  { "id": "modulo-omni", "artColor": "#6A3FA0", "type": "piece", "color": "wild", "count": 1, "nameKey": "cards.modulo_omni" },
 
-  { "id": "fuga", "type": "attack", "color": "green", "count": 4, "nameKey": "cards.fuga", "playedKey": "cards.fuga_played" },
-  { "id": "corrupcion", "type": "attack", "color": "blue", "count": 4, "nameKey": "cards.corrupcion", "playedKey": "cards.corrupcion_played" },
-  { "id": "grieta", "type": "attack", "color": "yellow", "count": 4, "nameKey": "cards.grieta", "playedKey": "cards.grieta_played" },
-  { "id": "averia-omni", "type": "attack", "color": "wild", "count": 1, "nameKey": "cards.averia_omni", "playedKey": "cards.averia_omni_played" },
+  { "id": "fuga", "artColor": "#147A4A", "type": "attack", "color": "green", "count": 4, "nameKey": "cards.fuga", "playedKey": "cards.fuga_played" },
+  { "id": "corrupcion", "artColor": "#1769AA", "type": "attack", "color": "blue", "count": 4, "nameKey": "cards.corrupcion", "playedKey": "cards.corrupcion_played" },
+  { "id": "grieta", "artColor": "#9A6B00", "type": "attack", "color": "yellow", "count": 4, "nameKey": "cards.grieta", "playedKey": "cards.grieta_played" },
+  { "id": "averia-omni", "artColor": "#6A3FA0", "type": "attack", "color": "wild", "count": 1, "nameKey": "cards.averia_omni", "playedKey": "cards.averia_omni_played" },
 
-  { "id": "sellador", "type": "remedy", "color": "green", "count": 4, "nameKey": "cards.sellador" },
-  { "id": "antivirus", "type": "remedy", "color": "blue", "count": 4, "nameKey": "cards.antivirus" },
-  { "id": "refuerzo", "type": "remedy", "color": "yellow", "count": 4, "nameKey": "cards.refuerzo" },
-  { "id": "nanobots", "type": "remedy", "color": "wild", "count": 4, "nameKey": "cards.nanobots" },
+  { "id": "sellador", "artColor": "#147A4A", "type": "remedy", "color": "green", "count": 4, "nameKey": "cards.sellador" },
+  { "id": "antivirus", "artColor": "#1769AA", "type": "remedy", "color": "blue", "count": 4, "nameKey": "cards.antivirus" },
+  { "id": "refuerzo", "artColor": "#9A6B00", "type": "remedy", "color": "yellow", "count": 4, "nameKey": "cards.refuerzo" },
+  { "id": "nanobots", "artColor": "#6A3FA0", "type": "remedy", "color": "wild", "count": 4, "nameKey": "cards.nanobots" },
 
-  { "id": "grua", "type": "special", "specialKind": "swapPiece", "count": 3, "nameKey": "cards.grua", "playedKey": "cards.grua_played" },
-  { "id": "requisa", "type": "special", "specialKind": "stealPiece", "count": 3, "nameKey": "cards.requisa", "playedKey": "cards.requisa_played" },
-  { "id": "fuga-en-cadena", "type": "special", "specialKind": "plague", "count": 2, "nameKey": "cards.fuga_en_cadena", "playedKey": "cards.fuga_en_cadena_played" },
-  { "id": "inspeccion", "type": "special", "specialKind": "scrapHands", "count": 1, "nameKey": "cards.inspeccion", "playedKey": "cards.inspeccion_played" },
-  { "id": "permuta", "type": "special", "specialKind": "fullSwap", "count": 1, "nameKey": "cards.permuta", "playedKey": "cards.permuta_played" },
+  { "id": "grua", "artColor": "#397487", "type": "special", "specialKind": "swapPiece", "count": 3, "nameKey": "cards.grua", "playedKey": "cards.grua_played" },
+  { "id": "requisa", "artColor": "#8B4C34", "type": "special", "specialKind": "stealPiece", "count": 3, "nameKey": "cards.requisa", "playedKey": "cards.requisa_played" },
+  { "id": "fuga-en-cadena", "artColor": "#A04444", "type": "special", "specialKind": "plague", "count": 2, "nameKey": "cards.fuga_en_cadena", "playedKey": "cards.fuga_en_cadena_played" },
+  { "id": "inspeccion", "artColor": "#596373", "type": "special", "specialKind": "scrapHands", "count": 1, "nameKey": "cards.inspeccion", "playedKey": "cards.inspeccion_played" },
+  { "id": "permuta", "artColor": "#6A3FA0", "type": "special", "specialKind": "fullSwap", "count": 1, "nameKey": "cards.permuta", "playedKey": "cards.permuta_played" },
 
-  { "id": "refrigerante", "type": "remedy", "color": "red", "count": 4, "nameKey": "cards.refrigerante" },
-  { "id": "sobrecarga", "type": "attack", "color": "red", "count": 4, "nameKey": "cards.sobrecarga", "playedKey": "cards.sobrecarga_played" },
-  { "id": "reactor", "type": "piece", "color": "red", "count": 5, "nameKey": "cards.reactor" }
+  { "id": "refrigerante", "artColor": "#B33434", "type": "remedy", "color": "red", "count": 4, "nameKey": "cards.refrigerante" },
+  { "id": "sobrecarga", "artColor": "#B33434", "type": "attack", "color": "red", "count": 4, "nameKey": "cards.sobrecarga", "playedKey": "cards.sobrecarga_played" },
+  { "id": "reactor", "artColor": "#B33434", "type": "piece", "color": "red", "count": 5, "nameKey": "cards.reactor" }
 ]

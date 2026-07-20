@@ -64,7 +64,7 @@ public class PackageCardDrawTests
 		var harness = new GameHarness(new[] { a }, board);
 		harness.State.PackageCards = new List<CardDef>
 		{
-			new() { Id = "c1", Deck = "d", TextKey = "cards.c1",
+			new() { Id = "c1", Deck = "d", TextKey = "cards.c1", Svg = "M1 1h62v62z", ArtColor = "#2F7185",
 					Effect = new CardEffect { Type = "money", Amount = 50 } },
 		};
 		harness.State.PackageDecks["d"] = new CardDeck { Cards = new List<string> { "c1" }, HeldCards = new List<string>(), IsInitialized = true };
@@ -75,6 +75,9 @@ public class PackageCardDrawTests
 		Assert.Equal("c1", reveal.CardId);
 		Assert.Equal("d", reveal.DeckType);
 		Assert.Equal("cards.c1", reveal.DescriptionKey); // the i18n key travels; the client resolves it
+		Assert.Equal("M1 1h62v62z", reveal.Svg);
+		Assert.Equal("#2F7185", reveal.ArtColor);
+		Assert.Equal("money", reveal.ArtType);
 	}
 
 	[Fact]

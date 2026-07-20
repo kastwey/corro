@@ -58,7 +58,7 @@
 
 .end-screen__you {
   font-style: italic;
-  opacity: 0.8;
+  color: var(--text-muted);
 }
 
 .end-screen__bankrupt {

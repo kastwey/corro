@@ -7,6 +7,7 @@
 // panel). There is deliberately NO one-card-left shout: counts are on-demand.
 
 import { HandPanel, type HandCard } from './handPanel.js';
+import { genericCardArtHtml, genericCardBackHtml, genericEmptyCardHtml } from './cardArt.js';
 import { popupMenu } from './popupMenu.js';
 import { escapeHtml } from './escapeHtml.js';
 import { contrastingTextColor } from './colorContrast.js';
@@ -392,6 +393,7 @@ export class SheddingBoard {
 				colourOrder: ci >= 0 ? ci : undefined,
 				playable: play.playable,
 				unplayableReason: this.deps.tSync(play.reasonKey ?? 'game.hand_not_playable'),
+				art: def ? genericCardArtHtml(def, label) : undefined,
 				help: sheddingCardHelp(gs, instance.cardId, this.deps.tSync) ?? undefined,
 			};
 		});
@@ -408,6 +410,7 @@ export class SheddingBoard {
 				card: top?.nameKey ?? 'game.shedding_no_top',
 				color: `colors.${gs.shedding.currentColor}`,
 			}),
+			art: genericCardBackHtml(String(gs.shedding.drawCount ?? 0)),
 		}];
 	}
 
@@ -483,7 +486,9 @@ export class SheddingBoard {
 		if (!shedding) return;
 		const top = topDef(gs);
 		const band = COLOR_BANDS[shedding.currentColor] ?? '#9e9e9e';
-		const topLabel = top ? escapeHtml(this.deps.tSync(top.nameKey)) : '—';
+		const topFace = top
+			? genericCardArtHtml(top, this.deps.tSync(top.nameKey))
+			: genericEmptyCardHtml();
 		const colorWord = escapeHtml(this.deps.tSync(`colors.${shedding.currentColor}`));
 		const arrow = shedding.direction === 1 ? '↻' : '↺';
 
@@ -508,11 +513,11 @@ export class SheddingBoard {
 		this.table.innerHTML =
 			`<div class="shedding-piles">`
 			+ `<div class="shedding-discard" style="--in-force:${band};--in-force-ink:${contrastingTextColor(band)}">`
-			+   `<span class="shedding-discard__name">${topLabel}</span>`
+			+   topFace
 			+   `<span class="shedding-discard__color">${colorWord}</span>`
 			+ `</div>`
 			+ `<div class="shedding-direction">${arrow}</div>`
-			+ `<div class="shedding-draw"><span class="shedding-draw__count">🂠 ${shedding.drawCount}</span></div>`
+			+ `<div class="shedding-draw">${genericCardBackHtml(String(shedding.drawCount))}</div>`
 			+ `</div>`
 			+ `<div class="shedding-seats">${rivals}</div>`;
 	}

@@ -2,6 +2,8 @@
   "currency": { "name": "units" },
   "terminology": { "start": "Start", "holding": "Pause", "freeparking": "Rest", "sendtoholding": "Go to Pause" },
   "groups": { "amber": "Amber set", "blue": "Blue set", "green": "Green set", "violet": "Violet set" },
+  "decks": { "event": "Event" },
+  "cards": { "eventBonus": "A helpful event grants you 50 units." },
   "building": { "small": "marker", "smallPlural": "markers", "big": "hub" },
   "tokens": { "circle": "Circle", "diamond": "Diamond" },
   "squares": {

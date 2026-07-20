@@ -50,7 +50,10 @@
   align-items: center;
   justify-content: center;
   width: 100%;
+  color: var(--jcard-accent);
 }
+
+.journey-package-icon { display: inline-flex; color: var(--journey-art-accent, currentColor); }
 
 .jcard__face svg {
   width: 52px;
@@ -158,7 +161,9 @@
 
 .hand-card--visual:hover { transform: translateY(-4px); }
 
-.hand-card--visual .hand-card__name { display: none; }
+.hand-card--visual:has(.jcard) .hand-card__name,
+.hand-card--visual:has(.xcard) .hand-card__name,
+.hand-card--visual:has(.gcard) .hand-card__name { display: none; }
 
 .hand-card--visual .hand-card__actions {
   position: absolute;
@@ -173,6 +178,15 @@
 .hand-card--visual:hover .hand-card__actions,
 .hand-card--visual:focus-within .hand-card__actions {
   display: flex;
+}
+
+/* Generic faces were added to families whose Play/Help controls were always visible.
+ * Keep that interaction: only specialised jcard/xcard frames use the hover overlay. */
+.hand-card--visual:has(.gcard) .hand-card__actions {
+  position: static;
+  transform: none;
+  display: flex;
+  margin-top: 0.25rem;
 }
 
 .hand-card--visual .hand-card__btn {

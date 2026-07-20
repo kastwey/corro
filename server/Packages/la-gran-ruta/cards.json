@@ -1,24 +1,24 @@
 [
-  { "id": "d25", "type": "distance", "value": 25, "count": 10, "nameKey": "cards.d25" },
-  { "id": "d50", "type": "distance", "value": 50, "count": 10, "nameKey": "cards.d50" },
-  { "id": "d75", "type": "distance", "value": 75, "count": 10, "nameKey": "cards.d75" },
-  { "id": "d100", "type": "distance", "value": 100, "count": 12, "nameKey": "cards.d100" },
-  { "id": "d200", "type": "distance", "value": 200, "count": 4, "premium": true, "maxPlaysPerHand": 2, "nameKey": "cards.d200" },
+  { "id": "d25", "artColor": "#1769AA", "type": "distance", "value": 25, "count": 10, "nameKey": "cards.d25" },
+  { "id": "d50", "artColor": "#1769AA", "type": "distance", "value": 50, "count": 10, "nameKey": "cards.d50" },
+  { "id": "d75", "artColor": "#1769AA", "type": "distance", "value": 75, "count": 10, "nameKey": "cards.d75" },
+  { "id": "d100", "artColor": "#1769AA", "type": "distance", "value": 100, "count": 12, "nameKey": "cards.d100" },
+  { "id": "d200", "artColor": "#1769AA", "type": "distance", "value": 200, "count": 4, "premium": true, "maxPlaysPerHand": 2, "nameKey": "cards.d200" },
 
-  { "id": "semaforo", "type": "attack", "kind": "stop", "hazardClass": "stopper", "count": 5, "nameKey": "cards.semaforo", "playedKey": "cards.semaforo_played" },
-  { "id": "limite", "type": "attack", "kind": "speedLimit", "hazardClass": "limiter", "count": 4, "nameKey": "cards.limite", "playedKey": "cards.limite_played" },
-  { "id": "sin-gasolina", "type": "attack", "kind": "outOfGas", "hazardClass": "stopper", "count": 3, "nameKey": "cards.sin_gasolina", "playedKey": "cards.sin_gasolina_played" },
-  { "id": "pinchazo", "type": "attack", "kind": "flat", "hazardClass": "stopper", "count": 3, "nameKey": "cards.pinchazo", "playedKey": "cards.pinchazo_played" },
-  { "id": "accidente", "type": "attack", "kind": "accident", "hazardClass": "stopper", "count": 3, "nameKey": "cards.accidente", "playedKey": "cards.accidente_played" },
+  { "id": "semaforo", "artColor": "#A52D32", "type": "attack", "kind": "stop", "hazardClass": "stopper", "count": 5, "nameKey": "cards.semaforo", "playedKey": "cards.semaforo_played" },
+  { "id": "limite", "artColor": "#A52D32", "type": "attack", "kind": "speedLimit", "hazardClass": "limiter", "count": 4, "nameKey": "cards.limite", "playedKey": "cards.limite_played" },
+  { "id": "sin-gasolina", "artColor": "#A52D32", "type": "attack", "kind": "outOfGas", "hazardClass": "stopper", "count": 3, "nameKey": "cards.sin_gasolina", "playedKey": "cards.sin_gasolina_played" },
+  { "id": "pinchazo", "artColor": "#A52D32", "type": "attack", "kind": "flat", "hazardClass": "stopper", "count": 3, "nameKey": "cards.pinchazo", "playedKey": "cards.pinchazo_played" },
+  { "id": "accidente", "artColor": "#A52D32", "type": "attack", "kind": "accident", "hazardClass": "stopper", "count": 3, "nameKey": "cards.accidente", "playedKey": "cards.accidente_played" },
 
-  { "id": "circule", "type": "remedy", "kind": "stop", "count": 14, "nameKey": "cards.circule", "playedKey": "cards.circule_played" },
-  { "id": "fin-limite", "type": "remedy", "kind": "speedLimit", "count": 6, "nameKey": "cards.fin_limite", "playedKey": "cards.fin_limite_played" },
-  { "id": "gasolina", "type": "remedy", "kind": "outOfGas", "count": 6, "nameKey": "cards.gasolina", "playedKey": "cards.gasolina_played" },
-  { "id": "rueda-recambio", "type": "remedy", "kind": "flat", "count": 6, "nameKey": "cards.rueda_recambio", "playedKey": "cards.rueda_recambio_played" },
-  { "id": "reparacion", "type": "remedy", "kind": "accident", "count": 6, "nameKey": "cards.reparacion", "playedKey": "cards.reparacion_played" },
+  { "id": "circule", "artColor": "#147353", "type": "remedy", "kind": "stop", "count": 14, "nameKey": "cards.circule", "playedKey": "cards.circule_played" },
+  { "id": "fin-limite", "artColor": "#147353", "type": "remedy", "kind": "speedLimit", "count": 6, "nameKey": "cards.fin_limite", "playedKey": "cards.fin_limite_played" },
+  { "id": "gasolina", "artColor": "#147353", "type": "remedy", "kind": "outOfGas", "count": 6, "nameKey": "cards.gasolina", "playedKey": "cards.gasolina_played" },
+  { "id": "rueda-recambio", "artColor": "#147353", "type": "remedy", "kind": "flat", "count": 6, "nameKey": "cards.rueda_recambio", "playedKey": "cards.rueda_recambio_played" },
+  { "id": "reparacion", "artColor": "#147353", "type": "remedy", "kind": "accident", "count": 6, "nameKey": "cards.reparacion", "playedKey": "cards.reparacion_played" },
 
-  { "id": "prioridad", "type": "immunity", "shieldsKinds": ["stop", "speedLimit"], "count": 1, "nameKey": "cards.prioridad", "playedKey": "cards.prioridad_played" },
-  { "id": "cisterna", "type": "immunity", "kind": "outOfGas", "count": 1, "nameKey": "cards.cisterna", "playedKey": "cards.cisterna_played" },
-  { "id": "rueda-maciza", "type": "immunity", "kind": "flat", "count": 1, "nameKey": "cards.rueda_maciza", "playedKey": "cards.rueda_maciza_played" },
-  { "id": "as-del-volante", "type": "immunity", "kind": "accident", "count": 1, "nameKey": "cards.as_del_volante", "playedKey": "cards.as_del_volante_played" }
+  { "id": "prioridad", "artColor": "#9A6B00", "type": "immunity", "shieldsKinds": ["stop", "speedLimit"], "count": 1, "nameKey": "cards.prioridad", "playedKey": "cards.prioridad_played" },
+  { "id": "cisterna", "artColor": "#9A6B00", "type": "immunity", "kind": "outOfGas", "count": 1, "nameKey": "cards.cisterna", "playedKey": "cards.cisterna_played" },
+  { "id": "rueda-maciza", "artColor": "#9A6B00", "type": "immunity", "kind": "flat", "count": 1, "nameKey": "cards.rueda_maciza", "playedKey": "cards.rueda_maciza_played" },
+  { "id": "as-del-volante", "artColor": "#9A6B00", "type": "immunity", "kind": "accident", "count": 1, "nameKey": "cards.as_del_volante", "playedKey": "cards.as_del_volante_played" }
 ]

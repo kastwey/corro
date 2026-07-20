@@ -265,6 +265,7 @@ public class GameHubRoutingTests
 		{
 			HostName = "Host",
 			HostToken = "disc",
+			Board = "Test board",
 			Settings = settings
 		});
 
@@ -294,6 +295,7 @@ public class GameHubRoutingTests
 		{
 			HostName = "Host",
 			HostToken = "disc",
+			Board = "Test board",
 			Settings = null
 		});
 
@@ -309,7 +311,10 @@ public class GameHubRoutingTests
 		var registry = new GameSessionRegistry(new FakeHubContext(), repository, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
 		var hub = CreateLobbyHub(repository, registry, out _);
 
-		await hub.CreateGameLobby(new CreateGameRequest { HostName = "  Host  ", HostToken = "disc" });
+		await hub.CreateGameLobby(new CreateGameRequest
+		{
+			HostName = "  Host  ", HostToken = "disc", Board = "Test board",
+		});
 
 		Assert.Equal("Host", Assert.Single(repository.Created!.Players).Name);
 	}
@@ -340,7 +345,10 @@ public class GameHubRoutingTests
 		var registry = new GameSessionRegistry(new FakeHubContext(), repository, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
 		var hub = CreateLobbyHub(repository, registry, out var clients);
 
-		await hub.CreateGameLobby(new CreateGameRequest { HostName = "bad\nname", HostToken = "disc" });
+		await hub.CreateGameLobby(new CreateGameRequest
+		{
+			HostName = "bad\nname", HostToken = "disc", Board = "Test board",
+		});
 
 		Assert.Null(repository.Created);
 		Assert.True(clients.Caller.Received("Error"));

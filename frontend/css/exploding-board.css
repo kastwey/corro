@@ -21,8 +21,127 @@
   gap: 0.6rem;
 }
 
-/* The table centre: the discard's top card as a card tile, beside the draw pile as a card-back
- * stack — the tense heart of the game (a bomb lurks in it), so it is tinged danger-red. */
+/* ── Original engine-rendered faces (see explodingCardArt.ts) ─────────────── */
+.xcard {
+  --xcard-accent: #4d5c64;
+  --xcard-soft: #e7edf0;
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  width: 112px;
+  height: 156px;
+  padding: 7px;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 3px solid var(--xcard-accent);
+  border-radius: 14px;
+  background: #fffaf0;
+  color: #202a30;
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.26);
+}
+
+.xcard--bomb    { --xcard-accent: #a42d20; --xcard-soft: #ffe0d2; }
+.xcard--defuse  { --xcard-accent: #137356; --xcard-soft: #dcf4e7; }
+.xcard--nope    { --xcard-accent: #75305a; --xcard-soft: #f4deec; }
+.xcard--attack  { --xcard-accent: #a94618; --xcard-soft: #ffe7cc; }
+.xcard--skip    { --xcard-accent: #176592; --xcard-soft: #dceefa; }
+.xcard--favor   { --xcard-accent: #963457; --xcard-soft: #f8e0e9; }
+.xcard--shuffle { --xcard-accent: #624298; --xcard-soft: #e9e1fa; }
+.xcard--future  { --xcard-accent: #403582; --xcard-soft: #e4e1fa; }
+.xcard--cat     { --xcard-accent: #754820; --xcard-soft: #f8e6c7; }
+
+.xcard__picture {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  border-radius: 9px 9px 5px 5px;
+  color: var(--xcard-accent);
+  background: var(--xcard-soft);
+}
+
+.xcard__svg {
+  display: block;
+  width: 82px;
+  height: 82px;
+  overflow: visible;
+}
+
+.xcard__name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 2.8em;
+  padding: 5px 2px 1px;
+  box-sizing: border-box;
+  color: #29343a;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: 0.015em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* A deliberately non-branded back: midnight fuse-red, geometric burst and a clear count. */
+.xcard--back {
+  --xcard-accent: #481523;
+  align-items: center;
+  justify-content: center;
+  background: #711f32;
+  border-color: #481523;
+  color: #fff9e8;
+}
+
+.xcard__back-burst {
+  position: absolute;
+  inset: 7px;
+  border: 2px solid rgba(255, 249, 232, 0.72);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at center, transparent 0 24%, rgba(255, 206, 76, 0.24) 25% 28%, transparent 29%),
+    repeating-conic-gradient(from 8deg, rgba(255, 249, 232, 0.16) 0 8deg, transparent 8deg 18deg);
+}
+
+.xcard__back-cat {
+  position: relative;
+  color: #ffd35c;
+  font-size: 2.4rem;
+  line-height: 1;
+  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.4);
+}
+
+.xcard__back-label {
+  position: relative;
+  margin-top: 0.2rem;
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+  font-variant-numeric: tabular-nums;
+}
+
+.xcard--empty {
+  align-items: center;
+  justify-content: center;
+  background: #fffaf0;
+  border-color: #b9a778;
+  border-style: dashed;
+  box-shadow: none;
+}
+
+.xcard__empty-label {
+  color: #554b39;
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+/* The table centre: a compact illustrated discard beside the danger-tinged back. */
 .exploding-piles {
   display: flex;
   align-items: center;
@@ -30,45 +149,38 @@
   padding: 0.4rem 0.2rem 0.2rem;
 }
 .exploding-discard,
-.exploding-draw {
+.exploding-draw,
+.exploding-reveal {
   position: relative;
-  width: 4.6rem;
-  height: 6.6rem;
-  border-radius: 0.6rem;
-  box-sizing: border-box;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.35rem;
-  text-align: center;
 }
-/* The discard: a played card face, name centred; pulses while an action awaits a Nope. */
-.exploding-discard {
-  background: #fbf6ea;
-  color: #3a2f22;
-  border: 3px solid #cbb98f;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), 5px 5px 0 -2px #e7dcc2, 9px 9px 0 -4px #d8cbaa;
+.exploding-piles .xcard {
+  width: 92px;
+  height: 128px;
+  border-radius: 11px;
 }
-.exploding-discard__name { font-weight: 800; font-size: 0.9rem; line-height: 1.08; }
-.exploding-discard--pending {
-  border-color: #1e88e5;
+.exploding-piles .xcard__svg { width: 64px; height: 64px; }
+.exploding-piles .xcard__name { font-size: 0.6rem; min-height: 2.5em; }
+
+.exploding-reveal .xcard {
+  transform: rotate(2deg) scale(1.08);
+  box-shadow: 0 5px 16px rgba(164, 45, 32, 0.44);
+}
+
+.exploding-discard--pending .xcard {
+  outline: 3px solid #1e88e5;
+  outline-offset: 2px;
   animation: exploding-pulse 0.6s ease-in-out infinite alternate;
 }
-/* The draw pile: a dark card-back stack tinged danger-red — this is where the bomb waits. */
-.exploding-draw {
-  color: #fff;
-  background: repeating-linear-gradient(45deg, #5d1e12 0 7px, #7a2a1a 7px 14px);
-  border: 3px solid rgba(255, 255, 255, 0.65);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 5px 5px 0 -2px #3d130b, 9px 9px 0 -4px #2a0d07;
-}
-.exploding-draw__count { font-weight: 800; font-size: 0.9rem; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
 
 @keyframes exploding-pulse {
-  from { box-shadow: 0 0 0 0 rgba(30, 136, 229, 0.0); }
-  to   { box-shadow: 0 0 0 4px rgba(30, 136, 229, 0.35); }
+  from { box-shadow: 0 3px 7px rgba(0, 0, 0, 0.26), 0 0 0 0 rgba(30, 136, 229, 0); }
+  to   { box-shadow: 0 3px 7px rgba(0, 0, 0, 0.26), 0 0 0 5px rgba(30, 136, 229, 0.38); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .exploding-discard--pending { animation: none; }
+  .exploding-discard--pending .xcard { animation: none; }
 }
 
 .exploding-seats {
@@ -101,3 +213,27 @@
 .exploding-seat__cards { color: var(--text-muted); white-space: nowrap; }
 
 .exploding-hand { margin-top: 0.5rem; }
+
+.exploding-hand .hand-panel__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0.25rem 0;
+  list-style: none;
+}
+
+/* Unavailable cards stay fully readable; shape and colour, not opacity, carry the state. */
+.exploding-hand .hand-card--visual.hand-card--unplayable .xcard {
+  border-style: dashed;
+  filter: saturate(0.58);
+  box-shadow: inset 0 0 0 2px #6b7378, 0 2px 5px rgba(0, 0, 0, 0.22);
+}
+
+@media (max-width: 620px) {
+  .xcard { width: 100px; height: 140px; }
+  .xcard__svg { width: 72px; height: 72px; }
+  .exploding-piles .xcard { width: 82px; height: 114px; }
+  .exploding-piles .xcard__svg { width: 56px; height: 56px; }
+}

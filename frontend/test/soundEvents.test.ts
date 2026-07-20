@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
 	soundEventForAnnouncement,
+	soundEventsForAnnouncement,
 	clampVolume,
 	soundManifestUrl,
 	pickOne,
@@ -73,16 +74,45 @@ test('assembly engine lines carry their earcons (attacks/specials go through pac
 	assert.equal(soundEventForAnnouncement('game.assembly_refilled_self_many'), 'card.draw');
 });
 
-test('exploding reshuffle and draw reuse the shared generic card cues (not family slots)', () => {
+test('every exploding action warns while its Nope window is open', () => {
 	assert.equal(soundEventForAnnouncement('game.exploding_shuffled'), 'cards.shuffle');
 	assert.equal(soundEventForAnnouncement('game.exploding_shuffled_self'), 'cards.shuffle');
 	assert.equal(soundEventForAnnouncement('game.exploding_drew'), 'card.draw');
 	assert.equal(soundEventForAnnouncement('game.exploding_drew_self'), 'card.draw');
-	// Playing a card reuses the shared card-drop cue (it lands on the discard pile).
-	assert.equal(soundEventForAnnouncement('game.exploding_played'), 'card.discard');
+	// Skip, Attack, Shuffle, See the Future and Favor all use this same play line.
+	assert.equal(soundEventForAnnouncement('game.exploding_played'), 'exploding.played');
+	assert.equal(soundEventForAnnouncement('game.exploding_played_self'), 'exploding.played');
+	// A cat pair has clearer wording but opens exactly the same Nope window.
+	assert.equal(soundEventForAnnouncement('game.exploding_played_cat_pair'), 'exploding.played');
+	assert.equal(soundEventForAnnouncement('game.exploding_played_cat_pair_self'), 'exploding.played');
+	assert.deepEqual(soundEventsForAnnouncement('game.exploding_played_cat_pair'),
+		['exploding.played', 'exploding.cat']);
+	assert.deepEqual(soundEventsForAnnouncement('game.exploding_played_cat_pair_self'),
+		['exploding.played', 'exploding.cat']);
+	// Once the window closes, the effect gets its own cue. Attack has no second rising tone;
+	// a successful cat pair now sounds the actual steal (a Noped pair never reaches this line).
+	assert.equal(soundEventForAnnouncement('game.exploding_attacked'), null);
+	assert.equal(soundEventForAnnouncement('game.exploding_stole'), 'exploding.steal');
+	assert.equal(soundEventForAnnouncement('game.exploding_stole_self'), 'exploding.steal');
+	assert.equal(soundEventForAnnouncement('game.exploding_stole_victim'), 'exploding.steal');
+	// Packages may still replace the complete play cue.
+	assert.equal(soundEventForAnnouncement(
+		'game.exploding_played', undefined, { 'game.exploding_played': 'custom.warning' }),
+	'custom.warning');
 	// The bomb-specific cues stay family-specific.
 	assert.equal(soundEventForAnnouncement('game.exploding_exploded'), 'exploding.boom');
 	assert.equal(soundEventForAnnouncement('game.exploding_drew_bomb_defused'), 'exploding.defuse');
+});
+
+test('a Nope plays its response cue and restarts the rising reaction warning', () => {
+	assert.deepEqual(soundEventsForAnnouncement('game.exploding_noped'),
+		['exploding.nope', 'exploding.played']);
+	assert.deepEqual(soundEventsForAnnouncement('game.exploding_noped_self'),
+		['exploding.nope', 'exploding.played']);
+	assert.deepEqual(soundEventsForAnnouncement('game.exploding_noped', undefined, {
+		'game.exploding_noped': 'custom.nope',
+		'game.exploding_played': 'custom.warning',
+	}), ['custom.nope', 'custom.warning']);
 });
 
 test('a pack announcement map wins, and _self/_victim variants inherit its base entry', () => {
@@ -260,6 +290,43 @@ function stubAudio(manifest: { ok: boolean; events?: Record<string, string[]> })
 	};
 	return { played, restore };
 }
+
+test('the event player sounds a Nope and its restarted reaction window together', async () => {
+	const { played, restore } = stubAudio({
+		ok: true,
+		events: {
+			'exploding.nope': ['/nope.ogg'],
+			'exploding.played': ['/warning.ogg'],
+		},
+	});
+	try {
+		const player = new SoundEventPlayer();
+		await player.preload();
+		player.playForAnnouncement('game.exploding_noped_self');
+		assert.deepEqual(played, ['exploding.nope#0', 'exploding.played#0']);
+	} finally { restore(); }
+});
+
+test('the event player sounds the cat together with the rising warning, then the steal on resolution', async () => {
+	const { played, restore } = stubAudio({
+		ok: true,
+		events: {
+			'exploding.played': ['/warning.ogg'],
+			'exploding.cat': ['/cat.ogg'],
+			'exploding.steal': ['/steal.ogg'],
+		},
+	});
+	try {
+		const player = new SoundEventPlayer();
+		await player.preload();
+
+		player.playForAnnouncement('game.exploding_played_cat_pair_self');
+		assert.deepEqual(played, ['exploding.played#0', 'exploding.cat#0']);
+
+		player.playForAnnouncement('game.exploding_stole_self');
+		assert.deepEqual(played, ['exploding.played#0', 'exploding.cat#0', 'exploding.steal#0']);
+	} finally { restore(); }
+});
 
 test('an earcon that races the preload is queued and replayed once buffers load', async () => {
 	const { played, restore } = stubAudio({ ok: true, events: { 'dice.roll': ['/a.ogg'] } });

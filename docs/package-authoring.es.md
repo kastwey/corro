@@ -4,7 +4,7 @@
 
 Esta guía te lleva desde una idea hasta un juego `.corro` listo para subir. Da por hecho que puedes
 abrir una terminal y editar archivos de texto, pero **no presupone conocimientos de C#, TypeScript
-ni programación web**. Un paquete son datos: JSON, traducciones, ayuda Markdown y fichas SVG.
+ni programación web**. Un paquete son datos: JSON, traducciones, ayuda Markdown y recursos SVG.
 
 Si ya conoces el formato, usa directamente la [referencia completa](../CORRO_FORMAT.md).
 
@@ -105,9 +105,11 @@ ayudas de autoría y se excluyen automáticamente del `.corro` final.
 | `manifest.json` | Identidad, familia, jugadores, reglas y lista de fichas | Sí |
 | `board.json` | Disposición espacial de `property`, `race`, `track` y `trivia` | Depende de la familia |
 | `cards.json` | Cartas de `property` y las cinco familias de cartas | Depende de la familia |
+| `cards/*.svg` | Ilustración opcional de la carta cuyo id coincida | Más adelante |
 | `questions.en.json`, `questions.es.json` | Bancos reales de preguntas para `trivia` | Solo trivia |
 | `i18n/en.json`, `i18n/es.json` | Nombres y textos referenciados mediante claves | Sí |
 | `tokens/*.svg` | Geometría de las fichas de jugador | Más adelante |
+| `CREDITS.md` | Fuentes y licencias de redistribución de arte y sonidos | Antes de compartir |
 | `help.en.md`, `help.es.md` | Reglas F1 e instrucciones para lector de pantalla | Antes de compartir |
 | `README.md` | Lista breve de pasos para el proyecto generado | Léelo |
 | `.vscode/` | Esquemas locales y configuración del editor | No lo toques |
@@ -164,6 +166,22 @@ neutrales existentes. Después cambia valores o cantidades. Solo entonces añade
 
 La plantilla muestra las mecánicas esenciales de su familia. Cuando necesites un ejemplo realista,
 compárala con el paquete más completo de la [tabla de referencias del SDK](../sdk/README.md#starter-templates-and-reference-packages).
+
+### Dibujos opcionales para las cartas
+
+Todas las cartas funcionan sin imagen: Corro muestra un dibujo neutro según su mecánica genérica.
+Para sustituirlo, añade `cards/<id-de-carta>.svg`; por ejemplo, la carta `step25` usa
+`cards/step25.svg`. No añadas un campo `svg` a `cards.json`.
+
+Usa `viewBox="0 0 64 64"` y aplana el dibujo a geometría `<path>`. Por seguridad, el cargador
+descarta colores y cualquier otro marcado SVG; el marco de la carta aporta un color legible. El
+dibujo es decorativo: el nombre localizado y la ayuda de la carta siguen siendo la información
+accesible. Ejecuta `validate`: un nombre de archivo mal escrito, un SVG sin trazado utilizable o un
+dibujo demasiado grande se rechazan en vez de ignorarse silenciosamente.
+
+También puedes añadir `"artColor": "#2F7185"` a esa carta en `cards.json` para colorear su marco
+y silueta. Debe ser un valor `#RRGGBB` completo. Es solo una ayuda visual: el nombre y la ayuda
+deben seguir expresando el color o la identidad de la carta.
 
 ## Supervivencia básica con JSON
 
@@ -228,6 +246,7 @@ paquete oculto muestra `Hidden: yes`, pero nunca imprime el código de desbloque
 | `Invalid JSON (line …)` | El JSON está mal formado | Comillas, comas y cierres cerca de esa línea |
 | `resolves in no locale` | Una clave `nameKey`/`textKey` no tiene texto | Añade la misma clave en `i18n/en.json` e `i18n/es.json` |
 | `token … has no icon` | Una ficha declarada no tiene un SVG utilizable | Revisa el id y `tokens/<id>.svg` |
+| `card illustration …` | Un SVG opcional de carta está mal formado, es demasiado grande o no corresponde a ninguna carta | Haz coincidir `cards/<id>.svg` con un id de `cards.json` y aplánalo a trazados |
 | `unknown type` o `unknown effect` | Has nombrado una mecánica no implementada por la familia | Usa una opción sugerida por el esquema o la referencia |
 | `deck … is too small` | No se puede repartir a la mesa máxima | Añade copias, reduce la mano o baja `players.max` |
 | `players.max … tokens/seats` | Hay más jugadores permitidos que fichas/asientos | Añade fichas/asientos o reduce `players.max` |

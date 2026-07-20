@@ -13,6 +13,10 @@ namespace CorroServer.Models.Corro;
 public sealed record DraftCardDef
 {
 	public string Id { get; init; } = string.Empty;
+	/// <summary>Sanitized path-data loaded from optional cards/&lt;id&gt;.svg.</summary>
+	public string? Svg { get; init; }
+	/// <summary>Optional package-owned #RRGGBB accent for the card face.</summary>
+	public string? ArtColor { get; init; }
 
 	/// <summary>
 	/// The engine effect this card scores with:

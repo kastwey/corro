@@ -34,6 +34,7 @@ public sealed record PackageSummary
 			case "property":
 				content["squares"] = definition.Board.Count;
 				content["cardDefinitions"] = definition.Cards.Count;
+				content["cardIllustrations"] = definition.Cards.Count(card => !string.IsNullOrWhiteSpace(card.Svg));
 				content["groups"] = manifest.Groups.Count;
 				content["decks"] = manifest.Decks.Count;
 				break;
@@ -56,19 +57,19 @@ public sealed record PackageSummary
 				}
 				break;
 			case "journey":
-				AddDeck(content, definition.JourneyDeck, card => card.Count);
+				AddDeck(content, definition.JourneyDeck, card => card.Count, card => card.Svg);
 				break;
 			case "assembly":
-				AddDeck(content, definition.AssemblyDeck, card => card.Count);
+				AddDeck(content, definition.AssemblyDeck, card => card.Count, card => card.Svg);
 				break;
 			case "draft":
-				AddDeck(content, definition.DraftDeck, card => card.Count);
+				AddDeck(content, definition.DraftDeck, card => card.Count, card => card.Svg);
 				break;
 			case "shedding":
-				AddDeck(content, definition.SheddingDeck, card => card.Count);
+				AddDeck(content, definition.SheddingDeck, card => card.Count, card => card.Svg);
 				break;
 			case "exploding":
-				AddDeck(content, definition.ExplodingDeck, card => card.Count);
+				AddDeck(content, definition.ExplodingDeck, card => card.Count, card => card.Svg);
 				break;
 		}
 
@@ -95,9 +96,11 @@ public sealed record PackageSummary
 	private static void AddDeck<T>(
 		IDictionary<string, int> content,
 		IReadOnlyCollection<T>? deck,
-		Func<T, int> copies)
+		Func<T, int> copies,
+		Func<T, string?> art)
 	{
 		content["cardDefinitions"] = deck?.Count ?? 0;
 		content["cardCopies"] = deck?.Sum(card => Math.Max(0, copies(card))) ?? 0;
+		content["cardIllustrations"] = deck?.Count(card => !string.IsNullOrWhiteSpace(art(card))) ?? 0;
 	}
 }

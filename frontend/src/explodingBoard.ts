@@ -7,6 +7,9 @@
 // same story speaks through explodingStatusText (S / Shift+S / the players panel).
 
 import { HandPanel, type HandCard } from './handPanel.js';
+import {
+	explodingCardArtHtml, explodingCardBackHtml, explodingEmptyCardHtml,
+} from './explodingCardArt.js';
 import { popupMenu } from './popupMenu.js';
 import { escapeHtml } from './escapeHtml.js';
 import { contrastingTextColor } from './colorContrast.js';
@@ -212,6 +215,7 @@ export class ExplodingBoard {
 				value: 0,
 				playable: play.playable,
 				unplayableReason: this.deps.tSync(play.reasonKey ?? 'game.hand_not_playable'),
+				art: def ? explodingCardArtHtml(def, label) : undefined,
 				help: explodingCardHelp(gs, instance.cardId, this.deps.tSync) ?? undefined,
 			};
 		});
@@ -227,6 +231,7 @@ export class ExplodingBoard {
 				draw: gs.exploding.drawCount ?? 0,
 				card: top?.nameKey ?? 'game.exploding_no_top',
 			}),
+			art: explodingCardBackHtml(String(gs.exploding.drawCount ?? 0)),
 		}];
 	}
 
@@ -278,9 +283,13 @@ export class ExplodingBoard {
 		if (!gs || !myId) return;
 		const rivals = (gs.exploding?.seats ?? []).filter(s => s.playerId !== myId && !s.retired);
 		if (rivals.length === 0) return;
+		const prompt = this.deps.tSync(
+			second ? 'game.exploding_pick_target_pair' : 'game.exploding_pick_target',
+			{ card: card.label },
+		);
 		popupMenu.open({
-			ariaLabel: this.deps.tSync('game.exploding_pick_target', { card: card.label }),
-			openAnnouncement: this.deps.tSync('game.exploding_pick_target', { card: card.label }),
+			ariaLabel: prompt,
+			openAnnouncement: prompt,
 			anchor: document.activeElement instanceof HTMLElement ? document.activeElement : null,
 			items: rivals.map(seat => ({
 				label: playerName(gs, seat.playerId),
@@ -328,7 +337,18 @@ export class ExplodingBoard {
 		const exploding = gs.exploding;
 		if (!exploding) return;
 		const top = topDef(gs);
-		const topLabel = top ? escapeHtml(this.deps.tSync(top.nameKey)) : '—';
+		const topFace = top
+			? explodingCardArtHtml(top, this.deps.tSync(top.nameKey))
+			: explodingEmptyCardHtml();
+		const catalog = explodingCatalog(gs);
+		const revealedBomb = exploding.pendingBomb
+			? catalog.get(exploding.pendingBomb.cardId) ?? null
+			: null;
+		const bombFace = revealedBomb
+			? `<div class="exploding-reveal">${explodingCardArtHtml(
+				revealedBomb, this.deps.tSync(revealedBomb.nameKey),
+			)}</div>`
+			: '';
 		const pending = exploding.pendingAction ? ' exploding-discard--pending' : '';
 
 		const rivals = exploding.seats.map(seat => {
@@ -351,8 +371,9 @@ export class ExplodingBoard {
 		// aria-hidden; the C key, the panel and the announcer speak the same.
 		this.table.innerHTML =
 			`<div class="exploding-piles">`
-			+ `<div class="exploding-discard${pending}"><span class="exploding-discard__name">${topLabel}</span></div>`
-			+ `<div class="exploding-draw"><span class="exploding-draw__count">🂠 ${exploding.drawCount}</span></div>`
+			+ `<div class="exploding-discard${pending}">${topFace}</div>`
+			+ `<div class="exploding-draw">${explodingCardBackHtml(String(exploding.drawCount))}</div>`
+			+ bombFace
 			+ `</div>`
 			+ `<div class="exploding-seats">${rivals}</div>`;
 	}

@@ -34,9 +34,12 @@ public static class JourneyTurnFlow
 		}
 
 		// Everyone hears THAT you drew; only you hear WHAT (two dispatches, never shared vars).
+		// actorId makes the drawer's private batch flush before the hand repaint, rather than
+		// letting the newly-added list row reach the screen reader before the draw announcement.
 		await context.Announcer.ToAllExcept(player.Id, "game.journey_drew",
-			new() { ["player"] = player.Name });
-		await context.Announcer.ToPlayer(player.Id, "game.journey_drew_self");
+			new() { ["player"] = player.Name, ["actorId"] = player.Id });
+		await context.Announcer.ToPlayer(player.Id, "game.journey_drew_self",
+			new() { ["actorId"] = player.Id });
 		var runtime = context.Family<JourneyRuntime>();
 		if (runtime.Catalog.GetValueOrDefault(result.Card!.CardId) is { } drawn)
 		{

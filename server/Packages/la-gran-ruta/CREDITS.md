@@ -76,3 +76,8 @@ unmodified (except the noted mixes). Only CC0 and CC-BY licences are used.
 
 The generic earcons (`draw.ogg`, `discard.ogg`, `shuffle.ogg`, `turn-you.ogg`, `game-over.ogg`)
 come from [`sound-commons/`](../../../sound-commons/ATTRIBUTIONS.md).
+
+## Card illustrations
+
+- `cards/*.svg`: original Corro road-sign and journey illustrations created for this
+  repository, distributed under AGPL-3.0-only.

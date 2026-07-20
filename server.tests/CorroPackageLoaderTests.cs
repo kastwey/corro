@@ -55,6 +55,164 @@ public class CorroPackageLoaderTests
 	}
 
 	[Fact]
+	public async Task LoadAsync_resolves_optional_card_art_and_leaves_missing_art_for_the_neutral_fallback()
+	{
+		var dir = CopyPackage("la-mina");
+		try
+		{
+			Directory.CreateDirectory(Path.Combine(dir, "cards"));
+			File.Delete(Path.Combine(dir, "cards", "salir-pozo.svg"));
+			File.WriteAllText(Path.Combine(dir, "cards", "grisu.svg"),
+				"<svg viewBox=\"0 0 64 64\"><path d=\"M1 1h62v62z\"/><script>alert(1)</script></svg>");
+			var definition = await new CorroPackageLoader().LoadAsync(dir);
+			var illustrated = definition.ExplodingDeck!.Single(card => card.Id == "grisu");
+			Assert.Equal("M1 1h62v62z", illustrated.Svg);
+			Assert.DoesNotContain('<', illustrated.Svg!);
+			Assert.Null(definition.ExplodingDeck!.Single(card => card.Id == "salir-pozo").Svg);
+		}
+		finally
+		{
+			CorroPackageLoader.DeleteExtracted(dir);
+		}
+	}
+
+	[Fact]
+	public async Task LoadAsync_rejects_orphaned_or_markup_only_card_art_instead_of_silent_fallback()
+	{
+		var orphaned = CopyPackage("la-mina");
+		var malformed = CopyPackage("la-mina");
+		try
+		{
+			Directory.CreateDirectory(Path.Combine(orphaned, "cards"));
+			File.WriteAllText(Path.Combine(orphaned, "cards", "typo.svg"),
+				"<svg viewBox=\"0 0 64 64\"><path d=\"M0 0h10v10z\"/></svg>");
+			var orphan = await Assert.ThrowsAsync<InvalidOperationException>(
+				() => new CorroPackageLoader().LoadAsync(orphaned));
+			Assert.Contains("no matching card id", orphan.Message);
+
+			Directory.CreateDirectory(Path.Combine(malformed, "cards"));
+			File.WriteAllText(Path.Combine(malformed, "cards", "grisu.svg"),
+				"<svg viewBox=\"0 0 64 64\"><script d=\"M0 0h64v64z\">alert(1)</script></svg>");
+			var noPath = await Assert.ThrowsAsync<InvalidOperationException>(
+				() => new CorroPackageLoader().LoadAsync(malformed));
+			Assert.Contains("no usable <path>", noPath.Message);
+		}
+		finally
+		{
+			CorroPackageLoader.DeleteExtracted(orphaned);
+			CorroPackageLoader.DeleteExtracted(malformed);
+		}
+	}
+
+	[Fact]
+	public async Task LoadAsync_requires_the_fixed_64_by_64_card_art_canvas()
+	{
+		var dir = CopyPackage("la-mina");
+		try
+		{
+			Directory.CreateDirectory(Path.Combine(dir, "cards"));
+			File.WriteAllText(Path.Combine(dir, "cards", "grisu.svg"),
+				"<svg viewBox=\"0 0 24 24\"><path d=\"M1 1h22v22z\"/></svg>");
+			var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+				() => new CorroPackageLoader().LoadAsync(dir));
+			Assert.Contains("viewBox=\"0 0 64 64\"", ex.Message);
+		}
+		finally
+		{
+			CorroPackageLoader.DeleteExtracted(dir);
+		}
+	}
+
+	[Fact]
+	public async Task LoadAsync_rejects_inline_svg_and_points_to_the_file_convention()
+	{
+		var dir = CopyPackage("la-mina");
+		try
+		{
+			var cardsPath = Path.Combine(dir, "cards.json");
+			var cards = File.ReadAllText(cardsPath).Replace(
+				"\"nameKey\": \"cards.grisu\"",
+				"\"svg\": \"M1 1h62v62z\", \"nameKey\": \"cards.grisu\"",
+				StringComparison.Ordinal);
+			File.WriteAllText(cardsPath, cards);
+
+			var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+				() => new CorroPackageLoader().LoadAsync(dir));
+			Assert.Contains("remove the svg field", ex.Message);
+			Assert.Contains("cards/grisu.svg", ex.Message);
+		}
+		finally
+		{
+			CorroPackageLoader.DeleteExtracted(dir);
+		}
+	}
+
+	[Fact]
+	public async Task LoadAsync_rejects_an_unsafe_card_art_color()
+	{
+		var dir = CopyPackage("la-mina");
+		try
+		{
+			var cardsPath = Path.Combine(dir, "cards.json");
+			var cards = File.ReadAllText(cardsPath).Replace(
+				"\"artColor\": \"#8B2D2D\"",
+				"\"artColor\": \"red; background:url(evil)\"",
+				StringComparison.OrdinalIgnoreCase);
+			File.WriteAllText(cardsPath, cards);
+
+			var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+				() => new CorroPackageLoader().LoadAsync(dir));
+			Assert.Contains("artColor must be a #RRGGBB", ex.Message);
+		}
+		finally
+		{
+			CorroPackageLoader.DeleteExtracted(dir);
+		}
+	}
+
+	[Theory]
+	[InlineData("cuatro-colores", 54)]
+	[InlineData("gran-tapeo", 12)]
+	[InlineData("imperio-galactico", 32)]
+	[InlineData("la-gran-ruta", 19)]
+	[InlineData("la-mina", 13)]
+	[InlineData("taller-galactico", 20)]
+	public async Task Shipped_card_packages_have_complete_credited_art(string packageId, int expectedCards)
+	{
+		var packagePath = CorroTestPaths.PackageDir(packageId);
+		var definition = await new CorroPackageLoader().LoadAsync(packagePath);
+		var cards = EnumerateCards(definition).ToList();
+
+		Assert.Equal(expectedCards, cards.Count);
+		Assert.All(cards, card =>
+		{
+			Assert.False(string.IsNullOrWhiteSpace(card.Svg));
+			Assert.Matches("^#[0-9A-Fa-f]{6}$", card.ArtColor);
+		});
+		Assert.Contains("cards/*.svg", await File.ReadAllTextAsync(Path.Combine(packagePath, "CREDITS.md")));
+	}
+
+	[Fact]
+	public async Task LoadAsync_bounds_card_art_that_will_ride_in_game_documents()
+	{
+		var dir = CopyPackage("la-mina");
+		try
+		{
+			Directory.CreateDirectory(Path.Combine(dir, "cards"));
+			var oversized = "M0 0 " + new string('L', CorroPackageLoader.MaxCardSvgPathChars);
+			File.WriteAllText(Path.Combine(dir, "cards", "grisu.svg"),
+				$"<svg viewBox=\"0 0 64 64\"><path d=\"{oversized}\"/></svg>");
+			var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+				() => new CorroPackageLoader().LoadAsync(dir));
+			Assert.Contains("path limit", ex.Message);
+		}
+		finally
+		{
+			CorroPackageLoader.DeleteExtracted(dir);
+		}
+	}
+
+	[Fact]
 	public async Task LoadAsync_rejects_a_square_referencing_an_undefined_group()
 	{
 		var dir = WriteTempPackage(
@@ -257,5 +415,35 @@ public class CorroPackageLoaderTests
 		File.WriteAllText(Path.Combine(dir, "board.json"), board);
 		File.WriteAllText(Path.Combine(dir, "cards.json"), cards);
 		return dir;
+	}
+
+	private static IEnumerable<(string? Svg, string? ArtColor)> EnumerateCards(GameDefinition definition)
+	{
+		var cards = new List<(string? Svg, string? ArtColor)>();
+		cards.AddRange(definition.Cards.Select(card => (card.Svg, card.ArtColor)));
+		cards.AddRange((definition.JourneyDeck ?? []).Select(card => (card.Svg, card.ArtColor)));
+		cards.AddRange((definition.AssemblyDeck ?? []).Select(card => (card.Svg, card.ArtColor)));
+		cards.AddRange((definition.DraftDeck ?? []).Select(card => (card.Svg, card.ArtColor)));
+		cards.AddRange((definition.SheddingDeck ?? []).Select(card => (card.Svg, card.ArtColor)));
+		cards.AddRange((definition.ExplodingDeck ?? []).Select(card => (card.Svg, card.ArtColor)));
+		return cards;
+	}
+
+	private static string CopyPackage(string id)
+	{
+		var source = CorroTestPaths.PackageDir(id);
+		var target = Path.Combine(Path.GetTempPath(), "corro_test_" + Guid.NewGuid().ToString("N"));
+		foreach (var directory in Directory.GetDirectories(source, "*", SearchOption.AllDirectories))
+		{
+			Directory.CreateDirectory(Path.Combine(target, Path.GetRelativePath(source, directory)));
+		}
+		Directory.CreateDirectory(target);
+		foreach (var file in Directory.GetFiles(source, "*", SearchOption.AllDirectories))
+		{
+			var destination = Path.Combine(target, Path.GetRelativePath(source, file));
+			Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+			File.Copy(file, destination);
+		}
+		return target;
 	}
 }

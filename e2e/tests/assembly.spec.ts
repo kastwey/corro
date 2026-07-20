@@ -38,6 +38,7 @@ test('assembly: install, auto-targeted breakdown, refusal, face-down discard, re
 	// ── The table at start: 3-card hands, both piles counted, one rack per player. ──
 	const anaCards = ana.locator('.hand-card:not(.hand-card--info)');
 	await expect(anaCards).toHaveCount(3);
+	await expect(anaCards.locator('[data-card-art="package"]')).toHaveCount(3);
 	await expect(anaCards.first()).toHaveAttribute('aria-label', /Reactor/);
 	await expect(ana.locator('.hand-card--info')).toHaveAttribute('aria-label', /Mazo: 62/);
 	await expect(ana.locator('#board .assembly-rack')).toHaveCount(2);
@@ -63,6 +64,7 @@ test('assembly: install, auto-targeted breakdown, refusal, face-down discard, re
 	await expectAnnouncement(ana, /Robas 1/);
 	await expectAnnouncement(ana, /Sobrecarga/); // the drawn identity: hers alone
 	await expect(ana.locator('#board .assembly-rack').first().locator('.assembly-module')).toHaveCount(1);
+	await expect(ana.locator('#board .assembly-rack').first().locator('[data-card-art="package"]')).toHaveCount(1);
 	await expect(ana.locator('#board .assembly-rack').first()).toContainText('1/4');
 
 	// ── Berto throws his Sobrecarga: ONE victim with ONE slot → no picker, straight hit. ──

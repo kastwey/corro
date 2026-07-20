@@ -33,6 +33,9 @@ test('a card that moves you after landing resolves cleanly and the turn complete
 
 	// 0 → 7 (fortune deck); its top card advances her to start, so she ends the turn back on 0.
 	await roll(ana, 3, 4);
+	const reveal = ana.locator('.card-reveal-overlay');
+	await expect(reveal).toBeVisible();
+	await expect(reveal.locator('svg[data-card-art="package"]')).toBeVisible();
 
 	// End turn is available (the turn resolved), and the card really moved her: she left the deck
 	// square (7) and is back on start (0) alongside Berto, who never left it — so this exercises

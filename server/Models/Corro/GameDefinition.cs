@@ -278,6 +278,11 @@ public sealed record CardDef
 {
 	public string Id { get; init; } = string.Empty;
 	public string Deck { get; init; } = string.Empty;
+	/// <summary>Sanitized path-data loaded from optional cards/&lt;id&gt;.svg. Package content
+	/// overrides the client's neutral face; null lets the engine render its fallback.</summary>
+	public string? Svg { get; init; }
+	/// <summary>Optional package-owned #RRGGBB accent for this card's frame and silhouette.</summary>
+	public string? ArtColor { get; init; }
 	/// <summary>i18n key for the card's text (e.g. "cards.f1"), resolved client-side against the
 	/// merged app + package translations.</summary>
 	public string? TextKey { get; init; }

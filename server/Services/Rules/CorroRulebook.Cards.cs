@@ -99,6 +99,9 @@ public partial class CorroRulebook
 			PlayerName = player.Name,
 			CardId = cardId,
 			DeckType = deckId,
+			Svg = card.Svg,
+			ArtColor = card.ArtColor,
+			ArtType = card.Effect.Type,
 			DescriptionKey = card.TextKey ?? string.Empty
 		});
 

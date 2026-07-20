@@ -212,7 +212,11 @@ public class ExplodingTurnFlowTests
 		Assert.Contains("taco#5", state.Exploding!.Seats[0].Hand.Select(c => c.InstanceId));
 		Assert.Equal("b", state.CurrentTurn);
 		var announcer = TestFixtures.Announcer(context);
-		Assert.True(announcer.Has(AnnouncementAudience.Player, "a", "game.exploding_drew_self")); // identity private
+		var mine = announcer.Sent.Single(d => d.Key == "game.exploding_drew_self");
+		Assert.Equal(AnnouncementAudience.Player, mine.Audience); // identity private
+		// Marks this as the drawer's own batch: the client writes the announcement before
+		// applying the state that adds the new row to the hand.
+		Assert.Equal("a", mine.Vars["actorId"]);
 	}
 
 	[Fact]
@@ -295,6 +299,16 @@ public class ExplodingTurnFlowTests
 
 		await PlayTargeted(context, state, "a", "taco#0", "b", "taco#1");
 		Assert.Equal("b", state.Exploding!.PendingAction!.TargetId);
+		// The distinct play key still maps to the universal rising Nope-window warning. The
+		// steal cue belongs to the successful result after that window closes.
+		var played = TestFixtures.Announcer(context).Sent
+			.Single(d => d.Key == "game.exploding_played_cat_pair");
+		Assert.Equal("c.taco", played.Vars["card"]);
+		Assert.Equal("b", played.Vars["target"]);
+		Assert.DoesNotContain("game.exploding_played", Keys(context));
+		Assert.DoesNotContain(state.Exploding.Seats.First(s => s.PlayerId == "a").Hand,
+			c => c.CardId == "taco");
+		Assert.Equal(2, state.Exploding.DiscardPile.Count(c => c.CardId == "taco"));
 		// Steal index 0 of b's one-card hand.
 		await ResolveWith(context, new ScriptedRandomSource().Enqueue(0));
 
@@ -304,6 +318,25 @@ public class ExplodingTurnFlowTests
 		var announcer = TestFixtures.Announcer(context);
 		Assert.True(announcer.Has(AnnouncementAudience.Player, "a", "game.exploding_stole_self"));
 		Assert.True(announcer.Has(AnnouncementAudience.Player, "b", "game.exploding_stole_victim"));
+	}
+
+	[Fact]
+	public async Task A_nope_cancels_a_cat_pair_before_it_can_steal()
+	{
+		var (state, context) = Game(
+			("a", new[] { "taco", "taco" }),
+			("b", new[] { "nope", "skip" }));
+
+		await PlayTargeted(context, state, "a", "taco#0", "b", "taco#1");
+		await Nope(context, state, "b", "nope#0");
+		await Resolve(context); // no scripted random value: a cancelled pair must never steal
+
+		Assert.Null(state.Exploding!.PendingAction);
+		Assert.Empty(state.Exploding.Seats.First(s => s.PlayerId == "a").Hand);
+		Assert.Contains("skip#1",
+			state.Exploding.Seats.First(s => s.PlayerId == "b").Hand.Select(c => c.InstanceId));
+		Assert.Contains("game.exploding_action_cancelled", Keys(context));
+		Assert.DoesNotContain(Keys(context), key => key.StartsWith("game.exploding_stole"));
 	}
 
 	[Fact]

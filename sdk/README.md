@@ -8,6 +8,11 @@ the operations that must never drift from the engine:
 - create deterministic, upload-compatible archives and round-trip them through secure extraction;
 - generate a neutral, bilingual and valid starter project for every supported family;
 - provide local JSON schemas and VS Code associations for early authoring feedback.
+- provide one valid `cards/<card-id>.svg` example in every card-bearing starter; deleting it
+  deliberately exercises the neutral engine fallback.
+- demonstrate the optional validated `artColor: "#RRGGBB"` accent without making colour the only
+  way to identify a card.
+- seed `CREDITS.md` so authors have an explicit place to record every replacement art/sound licence.
 
 The .NET API lives in [Corro.PackageSdk](Corro.PackageSdk/) and the command-line interface in
 [tools/Corro.PackageCli](../tools/Corro.PackageCli/README.md).
@@ -25,17 +30,17 @@ and covers family choice, JSON editing, translations, accessibility, validation 
 Run `corro-package new <family> <folder>` to create the neutral starter. These distributable packages
 remain richer executable examples of each supported interaction model:
 
-| Family | Reference package |
-| --- | --- |
-| `property` | [Galactic Empire](../server/Packages/imperio-galactico/) |
-| `race` | [Galactic Race](../server/Packages/carrera-galactica/) |
-| `track` | [Snakes and Ladders](../server/Packages/escaleras-y-serpientes/) |
-| `journey` | [The Great Route](../server/Packages/la-gran-ruta/) |
-| `assembly` | [Galactic Workshop](../server/Packages/taller-galactico/) |
-| `draft` | [The Grand Tapeo](../server/Packages/gran-tapeo/) |
-| `shedding` | [Four Colours](../server/Packages/cuatro-colores/) |
-| `exploding` | [The Mine](../server/Packages/la-mina/) |
-| `trivia` | [The Wheel of Wits](../server/Packages/la-rueda-del-saber/) |
+| Family | Reference package | Generated card-art example |
+| --- | --- | --- |
+| `property` | [Galactic Empire](../server/Packages/imperio-galactico/) | yes |
+| `race` | [Galactic Race](../server/Packages/carrera-galactica/) | — (no deck) |
+| `track` | [Snakes and Ladders](../server/Packages/escaleras-y-serpientes/) | — (no deck) |
+| `journey` | [The Great Route](../server/Packages/la-gran-ruta/) | yes |
+| `assembly` | [Galactic Workshop](../server/Packages/taller-galactico/) | yes |
+| `draft` | [The Grand Tapeo](../server/Packages/gran-tapeo/) | yes |
+| `shedding` | [Four Colours](../server/Packages/cuatro-colores/) | yes |
+| `exploding` | [The Mine](../server/Packages/la-mina/) | yes; La Mina also ships real examples |
+| `trivia` | [The Wheel of Wits](../server/Packages/la-rueda-del-saber/) | — (questions, no deck) |
 
 This English document uses each manifest's `name.en`. Package ids and directory names are stable,
 language-neutral identifiers even when they originated in Spanish; the lobby and game UI select

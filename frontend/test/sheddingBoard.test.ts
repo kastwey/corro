@@ -16,7 +16,7 @@ import type { GameState, SheddingSeatState } from '../src/models.js';
 before(() => setupDom());
 
 const DECK = [
-	{ id: 'red-5', type: 'number', color: 'red', value: 5, count: 2, nameKey: 'c.red5' },
+	{ id: 'red-5', type: 'number', color: 'red', value: 5, count: 2, nameKey: 'c.red5', svg: 'M5 5h54v54z' },
 	{ id: 'red-7', type: 'number', color: 'red', value: 7, count: 2, nameKey: 'c.red7' },
 	{ id: 'blue-7', type: 'number', color: 'blue', value: 7, count: 2, nameKey: 'c.blue7' },
 	{ id: 'wild', type: 'wild', count: 2, nameKey: 'c.wild' },
@@ -106,6 +106,7 @@ test('the hand mirrors the server: colour match plays, a mismatch refuses ALOUD'
 
 	const blue7 = rows().find(r => r.getAttribute('aria-label')!.includes('c.blue7'))!;
 	assert.ok(blue7.getAttribute('aria-label')!.includes('game.hand_unplayable_tag'));
+	assert.ok(red7.querySelector('[data-card-art="neutral"]'));
 });
 
 test('a wild walks the colour picker and the pick carries the colour', () => {
@@ -133,6 +134,7 @@ test('Space draws on my turn — and KEEPS mid drawn-card pause; the drawn card 
 	view.update(gs);
 	const drawnRow = rows().find(r => r.getAttribute('aria-label')!.startsWith('game.shedding_card_drawn'))!;
 	assert.ok(drawnRow);
+	assert.ok(drawnRow.querySelector('[data-card-art="package"]'));
 	// …the REST of the hand refuses with the pause's reason…
 	const red7 = rows().find(r => r.getAttribute('aria-label')!.startsWith('c.red7'))!;
 	assert.ok(red7.getAttribute('aria-label')!.includes('game.hand_unplayable_tag'));
@@ -277,7 +279,10 @@ test('a deck colour with no card in your hand is announced by name, focus unmove
 test('the table is an aria-hidden echo: top card, colour, direction and counters', () => {
 	const visual = boardEl.querySelector('.shedding-visual')!;
 	assert.equal(visual.getAttribute('aria-hidden'), 'true');
-	assert.ok(boardEl.querySelector('.shedding-discard__name')!.textContent!.includes('c.red5'));
+	assert.ok(boardEl.querySelector('.shedding-discard .gcard__name')!.textContent!.includes('c.red5'));
+	assert.ok(boardEl.querySelector('.shedding-discard [data-card-art="package"]'));
+	assert.ok(boardEl.querySelector('.shedding-draw .gcard--back'));
+	assert.ok(boardEl.querySelector('.hand-card--info .gcard--back'));
 	assert.equal(boardEl.querySelector('.shedding-direction')!.textContent, '↻');
 	const seats = boardEl.querySelectorAll('.shedding-seat');
 	assert.equal(seats.length, 2);

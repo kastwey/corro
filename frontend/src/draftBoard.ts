@@ -7,6 +7,7 @@
 // line per player, the S key for my own, Shift+S for the rivals.
 
 import { HandPanel, type HandCard } from './handPanel.js';
+import { cardArtSvg, genericCardArtHtml, genericCardBackHtml } from './cardArt.js';
 import { escapeHtml } from './escapeHtml.js';
 import { contrastingTextColor } from './colorContrast.js';
 import {
@@ -119,6 +120,7 @@ export class DraftBoard {
 				return [{
 					id: '__piles',
 					label: this.deps.tSync('game.draft_piles_row', { draw: gs.draft.drawCount ?? 0 }),
+					art: genericCardBackHtml(String(gs.draft.drawCount ?? 0)),
 				}];
 			},
 			// No onDiscard either: the pick IS the whole turn, so the discard
@@ -173,6 +175,7 @@ export class DraftBoard {
 				typeKey: def?.type ?? 'unknown',
 				value: def?.value ?? 0,
 				playable: true, // a pick is always legal in this genre
+				art: def ? genericCardArtHtml(def, label) : undefined,
 				help: draftCardHelp(gs, instance.cardId, this.deps.tSync) ?? undefined,
 			};
 		});
@@ -226,8 +229,9 @@ export class DraftBoard {
 			const player = gs.players.find(p => p.id === seat.playerId);
 			const color = escapeHtml(player?.color ?? '#888');
 			const name = escapeHtml(player?.name ?? seat.playerId);
+			const dessert = seat.desserts[0] ? catalog.get(seat.desserts[0].cardId) : undefined;
 			const tiles = this.tableTiles(seat, catalog)
-				+ (seat.desserts.length > 0 ? this.dessertTile(seat.desserts.length) : '');
+				+ (seat.desserts.length > 0 ? this.dessertTile(seat.desserts.length, dessert) : '');
 			const picked = seat.hasPicked && seat.handCount > 0
 				? `<span class="draft-table__picked">✓</span>` : '';
 			const short = seat.handCount !== handSize && seat.handCount > 0
@@ -248,35 +252,39 @@ export class DraftBoard {
 	 *  boosted card (multiplier caught its points card) kept apart with its ×factor badge. */
 	private tableTiles(seat: DraftSeatState, catalog: Map<string, DraftCardDef>): string {
 		const plain = new Map<string, { def?: DraftCardDef; count: number }>();
-		const boosted: Array<{ def?: DraftCardDef; factor: number }> = [];
+		const boosted: Array<{ def?: DraftCardDef; multiplier?: DraftCardDef; factor: number }> = [];
 		for (const slot of seat.table) {
 			const def = catalog.get(slot.card.cardId);
 			if (slot.onMultiplier) {
-				boosted.push({ def, factor: catalog.get(slot.onMultiplier.cardId)?.factor ?? 1 });
+				const multiplier = catalog.get(slot.onMultiplier.cardId);
+				boosted.push({ def, multiplier, factor: multiplier?.factor ?? 1 });
 				continue;
 			}
 			const entry = plain.get(slot.card.cardId) ?? { def, count: 0 };
 			entry.count++;
 			plain.set(slot.card.cardId, entry);
 		}
-		const tile = (def: DraftCardDef | undefined, count: number, badge: string): string => {
+		const tile = (def: DraftCardDef | undefined, count: number, badge: string, multiplier?: DraftCardDef): string => {
 			const type = (def?.type ?? 'unknown').replace(/[^a-z]/gi, '');
 			const colour = DRAFT_TYPE_COLOR[type] ?? '#9e9e9e';
 			const nm = escapeHtml(def ? this.deps.tSync(def.nameKey) : '?');
 			return `<span class="draft-card draft-card--${type}" style="--type-color:${colour};--type-ink:${contrastingTextColor(colour)}">`
+				+ (def ? cardArtSvg(def, 'draft-card__art card-art-thumb') : '')
+				+ (multiplier ? cardArtSvg(multiplier, 'draft-card__multiplier-art') : '')
 				+ `<span class="draft-card__name">${nm}</span>`
 				+ (count > 1 ? `<span class="draft-card__count">×${count}</span>` : '')
 				+ (badge ? `<span class="draft-card__badge">${badge}</span>` : '')
 				+ `</span>`;
 		};
 		return [...plain.values()].map(e => tile(e.def, e.count, '')).join('')
-			+ boosted.map(b => tile(b.def, 1, `×${b.factor}`)).join('');
+			+ boosted.map(b => tile(b.def, 1, `×${b.factor}`, b.multiplier)).join('');
 	}
 
 	/** The dessert stash: one pudding tile wearing the count, drawn as a little stack. */
-	private dessertTile(n: number): string {
+	private dessertTile(n: number, def?: DraftCardDef): string {
 		return `<span class="draft-card draft-card--stack" style="--type-color:${DRAFT_TYPE_COLOR.dessert}">`
-			+ `<span class="draft-card__name">🍮</span><span class="draft-card__count">×${n}</span></span>`;
+			+ (def ? cardArtSvg(def, 'draft-card__art card-art-thumb') : '')
+			+ `<span class="draft-card__count">×${n}</span></span>`;
 	}
 
 	/** A table that just GREW flashes (the reveal landed — same language as the other
