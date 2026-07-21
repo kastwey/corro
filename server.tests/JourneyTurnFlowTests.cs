@@ -123,7 +123,7 @@ public class JourneyTurnFlowTests
 
 		var announcer = TestFixtures.Announcer(context);
 		// The themed victim line reaches BOTH members of the attacked seat, in the PLURAL
-		// variant («¡Pepe os lanza…!» — the client falls back _victim_team → _victim → base)…
+		// variant ("Pepe attacks both of you"; the client falls back _victim_team → _victim → base)…
 		Assert.True(announcer.Has(AnnouncementAudience.Player, "A", "cards.limit_played_victim_team"));
 		Assert.True(announcer.Has(AnnouncementAudience.Player, "C", "cards.limit_played_victim_team"));
 		// …the attacker's partner hears the table line…
@@ -205,7 +205,7 @@ public class JourneyTurnFlowTests
 
 		var action = Assert.IsType<JourneyActionResponse>(response);
 		Assert.True(action.TurnEnded);
-		// Curing your LAST stopper is the moment that matters: "¡En marcha!" follows the card.
+		// Curing your LAST stopper is the moment that matters: "You are moving!" follows the card.
 		Assert.Equal(new[] { "game.journey_played_remedy", "cards.go", "game.journey_now_rolling", "game.turn_of" }, Keys(ctx));
 		Assert.Equal("B", state.CurrentTurn);
 		Assert.False(state.Journey.HasDrawn); // reset for the next player's turn

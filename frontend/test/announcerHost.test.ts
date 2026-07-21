@@ -77,7 +77,7 @@ test('repeating the same instant message re-announces it (clears then re-writes)
 	assert.equal(assertive().textContent, 'Money 1500.');
 });
 
-// Bug ("abajo del todo leo el último mensaje con el cursor virtual"): the assertive region
+// Bug report: the virtual cursor could re-read the last message at the bottom of the page. The assertive region
 // was written but never wiped, so the last instant line (board navigation, an on-demand
 // query, history playback) stayed at the bottom of the page and could be re-read in browse
 // mode. It must be cleared a short while after being spoken, like the polite region.
@@ -119,7 +119,7 @@ test('two instant messages in the same frame are both spoken (coalesced, no clob
 	assert.equal(assertive().textContent, 'Alice, Bob. on Old Kent Road.');
 });
 
-// Bug ("pulso C y oigo el dinero y, rezagado, 'no hay subasta activa'"): instant
+// Bug report: pressing C spoke the money and then a stale "no active auction" line. Instant
 // announcements used to flush via requestAnimationFrame, which the browser PAUSES while a
 // tab is in the background. When testing multiplayer with two windows, an instant line
 // spoken in the backgrounded window never flushed and piled up, then spilled out as a
@@ -140,7 +140,7 @@ test('an instant announcement is spoken even when requestAnimationFrame never fi
 });
 
 
-// Bug ("pulso la c y pasa de mí"): the manage-properties modal silenced read-only
+// Bug report: pressing C inside the manage-properties modal produced no response. The modal silenced read-only
 // announcements because it never hosted the live region. It must host it while open
 // and restore it to <body> on close.
 test('the manage-properties modal hosts the live region while open and restores it on close', () => {
@@ -221,11 +221,11 @@ test('historyNext at the newest boundary repeats the latest entry', async () => 
 	assert.ok(!(assertive().textContent ?? '').includes('history_at_latest'));
 });
 
-// Bug ("Eric tiró mientras estaba retenido, sin dobles"): a "move" line (the dice roll) is spoken
+// Bug report: Eric rolled while held without doubles, but the roll was lost. A "move" line is spoken
 // immediately, then a "resolve" line that involves NO token movement (staying in holding) is
 // released right behind it. Both polite flushes landed inside the clearGapMs window, and
 // the second flush cancelled the first's pending write — so JAWS only ever read the second
-// line ("Sigues retenido"), silently dropping the dice roll. The two must now MERGE
+// holding-status line, silently dropping the dice roll. The two must now MERGE
 // into one utterance so both lines are spoken.
 test('a second polite flush within the clear gap merges with the first instead of dropping it', async () => {
 	const announce = createAnnouncer();

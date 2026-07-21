@@ -154,7 +154,7 @@
 	transform: translateY(-1px);
 }
 
-/* Estados de focus para accesibilidad */
+/* Accessible focus states */
 .modal-content:focus {
 	outline: none;
 }
@@ -662,8 +662,8 @@
 }
 
 /* ==========================================
-   FIN DEL ARCHIVO
-   ========================================== */
+	END OF FILE
+	========================================== */
 
 /* Draggable floating dialogs: the title bar is the handle. touch-action:none lets touch
    drags produce pointermove events instead of scrolling the page. */

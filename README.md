@@ -11,7 +11,7 @@ view and provides parallel visual and screen-reader presentations.
 > **New here?** Read the architecture docs in **[`docs/`](docs/README.md)** — the big
 > picture, the client, the accessibility doctrine, the server, how game families work, and
 > end-to-end flows. To make a game as a *package* without programming, start with the
-> [beginner guide](docs/package-authoring.md) ([español](docs/package-authoring.es.md)). Keep
+> [beginner guide](docs/package-authoring.md) ([Spanish](docs/package-authoring.es.md)). Keep
 > [`CORRO_FORMAT.md`](CORRO_FORMAT.md) as the advanced reference and use the
 > [Corro Package SDK](tools/Corro.PackageCli/README.md) to create, validate and pack it.
 
@@ -211,9 +211,9 @@ once after cloning:
 pwsh -File ./tools/install-hooks.ps1
 ```
 
-The hook runs before **every push to any branch**. It builds and tests the frontend, then builds and
-tests the backend; a failure aborts the push. Playwright remains opt-in because it needs installed
-browsers and takes several minutes:
+The hook runs before **every push to any branch**. It checks repository conventions, builds and
+tests the frontend, then builds and tests the backend; a failure aborts the push. Playwright remains
+opt-in because it needs installed browsers and takes several minutes:
 
 ```powershell
 $env:RUN_E2E = '1'; git push       # PowerShell

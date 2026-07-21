@@ -158,7 +158,7 @@ test('Escape closes the menu and restores focus via onClose', () => {
 	assert.equal(document.activeElement, anchor);
 });
 
-// Live-play ("pulsé Tab y desapareció"): closing the menu without choosing silently
+// Live-play report: pressing Tab made the menu disappear. Closing without choosing silently
 // ABORTS a pending multi-step play — onCancel lets the opener say so. A real selection
 // must never fire it.
 test('closing without a selection fires onCancel; selecting does not', () => {

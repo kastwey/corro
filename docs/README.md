@@ -30,7 +30,7 @@ There are two very different kinds of contributor, and they need different docs:
 
 2. **Package / content creators** — people who make new games as **data** (a theme, a
     deck, a board), without touching code. **Start with the
-    [beginner package guide](package-authoring.md) ([español](package-authoring.es.md)).** It
+    [beginner package guide](package-authoring.md) ([Spanish](package-authoring.es.md)).** It
     chooses a family, generates a neutral project and explains the complete edit/validate/pack
     loop. The hands-on [property tutorial](tutorial-city-board.md) goes deeper, while
     [`../CORRO_FORMAT.md`](../CORRO_FORMAT.md) remains the reference for every field. These

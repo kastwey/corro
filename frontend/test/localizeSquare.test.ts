@@ -101,7 +101,7 @@ test('groupDisplayName: a classic colour word with no group key is localized', (
 
 test('groupDisplayName: a type-named group (transit/utility) resolves the board TERM, not the raw word', () => {
 	// A station carries color:"transit" and no group key; the trade list must read "Station",
-	// not the raw "transit" (bug: "Estación de las Delicias, transit").
+	// not append the raw "transit" value to the localized station name.
 	assert.equal(groupDisplayName({ color: 'transit' }, tg, colorWord), 'Station');
 	assert.equal(groupDisplayName({ color: 'utility' }, tg, colorWord), 'Utility');
 	// A non-type, unknown colour word still falls back to the localized colour, not a term.

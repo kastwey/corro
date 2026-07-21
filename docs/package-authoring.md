@@ -1,6 +1,6 @@
 # Create your first Corro package
 
-[Leer en español](package-authoring.es.md)
+[Read in Spanish](package-authoring.es.md)
 
 This guide takes you from an idea to an uploadable `.corro` game. It assumes that you can open a
 terminal and edit text files, but **it does not assume that you know C#, TypeScript or web

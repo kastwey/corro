@@ -173,8 +173,8 @@ export function describeCursor(cursor: RaceCursor, ctx: RaceDescribeContext): st
 
 // ── choice labels (the "which piece moves?" dialog) ─────────────────────────
 
-/** Where a piece currently stands, for the choice dialog ("desde tu salida / la casilla 12 /
- *  tu pasillo 3"). Null for a piece at home (its only move is the exit, already explicit). */
+/** Where a piece currently stands, for the choice dialog ("from your start / square 12 /
+ *  your corridor 3"). Null for a piece at home (its only move is the exit, already explicit). */
 export function describePieceOrigin(
 	board: RaceBoardDef, race: RaceState, playerId: string, pieceIndex: number,
 	t: (key: string, vars?: Record<string, unknown>) => string
@@ -201,9 +201,9 @@ export function describeMoveOption(
 	ctx: {
 		t: (key: string, vars?: Record<string, unknown>) => string;
 		playerName: (id: string) => string;
-		/** Optional richer piece label (e.g. "Nave estelar 2" from the player's token). */
+		/** Optional richer piece label (e.g. "Starship 2" from the player's token). */
 		pieceLabel?: (pieceIndex: number) => string;
-		/** Optional origin line ("desde tu salida") appended after the piece label. */
+		/** Optional origin line ("from your start") appended after the piece label. */
 		origin?: (pieceIndex: number) => string | null;
 		/** Optional current location of the piece to distinguish "enters" vs "advances". */
 		pieceLocation?: (pieceIndex: number) => 'home' | 'circuit' | 'corridor' | 'goal' | null;

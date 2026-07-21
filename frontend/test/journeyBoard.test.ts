@@ -196,7 +196,7 @@ test('an attack with several attackable rivals opens the victim picker', () => {
 	assert.deepEqual(played, [['stop#0', 'r2']]);
 });
 
-// Live-play ("pulsé Tab y desapareció"): Escape/Tab on the picker aborts the attack in
+// Live-play report: pressing Tab made the picker disappear. Escape/Tab aborts the attack in
 // silence — the player is left wondering whether the card was played. Cancelling must SAY so.
 test('cancelling the victim picker announces it and plays nothing', () => {
 	const attack = rows()[1];
@@ -286,8 +286,8 @@ test('a retired seat tells its exit and banked score, and takes no more attacks'
 	assert.equal(play.reasonKey, 'game.journey_no_attackable');
 });
 
-// Live-play request: "cuando pulso shift+s quiero que solo me lea los otros, no mi info,
-// esa ya me la sé con la s" — Shift+S surveys the RIVAL seats only.
+// Live-play request: Shift+S should read only the other players because S already reads
+// the local player's information. Shift+S therefore surveys the RIVAL seats only.
 test('Shift+S reads the other seats only — mine is left out (S already covers it)', () => {
 	const row = rows()[0];
 	row.focus();

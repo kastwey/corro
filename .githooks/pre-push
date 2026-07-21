@@ -1,7 +1,8 @@
 #!/bin/sh
 # pre-push — refuse to push (to ANY branch) when the test suites are red.
 #
-# Runs ALWAYS: the frontend (build + node:test) and backend (build + dotnet test) suites.
+# Runs ALWAYS: repository convention checks, frontend (build + node:test), and backend
+# (build + dotnet test) suites.
 # Runs ONLY when RUN_E2E is set to 1/true/yes: the Playwright E2E suite — it needs a built
 # server and installed browsers and takes minutes, so it is opt-in per the project convention
 # (AGENTS.md: unit/integration every change, E2E when the change touches a flow it covers).
@@ -38,6 +39,7 @@ step() {
 	fi
 }
 
+step "repository conventions" "pwsh -NoProfile -File '$ROOT/tools/tests/repository-language.tests.ps1'"
 step "frontend build + tests" "cd '$ROOT/frontend' && npm run build && npm test"
 
 # Release the .NET build lock: a running dev server holds CorroServer.dll (best-effort).

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { resolveTokenVar } from '../src/announcer.js';
 
 // The token-var convention: a server announcement carrying `tokenId` gets `{{token}}`
-// resolved client-side to the piece's localized name ("Llenas el tanque de tu camión"),
+// resolved client-side to the piece's localized name (for example, "you fill your lorry's tank"),
 // per listener language. Everything else passes through untouched.
 
 const t = (key: string) => key === 'tokens.lorry' ? 'camión' : key;

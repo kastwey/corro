@@ -6,7 +6,7 @@
 // jump to a headquarters, arrows follow up=centre / down=ring). This family has NO bots.
 //
 // The deal is the question queue: the identity shuffle keeps questions.es.json order, so the
-// first Geografía question is "the capital of Australia" (reordering that file breaks this spec).
+// first Geography question is "the capital of Australia" (reordering that file breaks this spec).
 
 import { test, expect } from '../helpers/test';
 import {
@@ -54,7 +54,7 @@ test('trivia: roll, pick a headquarters, answer, the judge rules, a wedge is ear
 	await expect(destDialog).toHaveAttribute('data-modal', 'false');
 	await expect(destDialog.locator('.dialog-buttons')).not.toHaveAttribute('role', 'application');
 	// Each landing button names its spot in the wheel, so you can anticipate where you'll go —
-	// a headquarters carries its clock hour (Geografía sits at 12 o'clock).
+	// a headquarters carries its clock hour (Geography sits at 12 o'clock).
 	await expect(destDialog.locator('.dialog-buttons button', { hasText: 'Geografía' })).toContainText('a las 12');
 	await expect(ana.locator('#board .trivia-cell--option')).toHaveCount(6); // the six headquarters
 
@@ -88,7 +88,7 @@ test('trivia: roll, pick a headquarters, answer, the judge rules, a wedge is ear
 	await geoCell.click(); // clicking the board square executes the move
 	await expectAnnouncement(berto, /Ana cae en la casa de Geografía/);
 
-	// ── Ana's Geografía question (deck order → the capital of Australia); she writes "Canberra". ──
+	// ── Ana's Geography question (deck order → the capital of Australia); she writes "Canberra". ──
 	// Accessibility: the QUESTION is the dialog title (so it is announced on open), and focus
 	// lands straight on the input (not a button), so NVDA reads it and never gets stuck.
 	const anaDialog = ana.locator('#game-dialog');
@@ -129,11 +129,11 @@ test('trivia: roll, pick a headquarters, answer, the judge rules, a wedge is ear
 	await expectAnnouncement(ana, /del centro/);
 	await ana.keyboard.press('b'); // B (blue) → the Geografía headquarters
 	await expectAnnouncement(ana, /Casa de Geografía/);
-	// Spatial cues: the junction gives its exact clock hour (Geografía HQ sits at 12 o'clock)…
+	// Spatial cues: the junction gives its exact clock hour (Geography HQ sits at 12 o'clock)…
 	await expectAnnouncement(ana, /a las 12/);
 
 	// The colour key is a ROTOR: press it again to advance to the next square of that category,
-	// Shift+colour to step back — so you can survey every Geografía square, not only its house.
+	// Shift+colour to step back — so you can survey every Geography square, not only its house.
 	const focusedNode = () => ana.locator('#board .trivia-cell.focused').getAttribute('data-node');
 	expect(await focusedNode()).toBe('R0');
 	await ana.keyboard.press('b');

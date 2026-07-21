@@ -2,12 +2,12 @@
 //
 // Two real browsers, Spanish locale. In the E2E environment the deck keeps its cards.json
 // order (identity shuffle) and deals from the END, so the opening hands are known:
-//   Ana:   As del volante, Camión cisterna, Reparación ×3, Rueda de recambio
-//   Berto: Rueda maciza, Prioridad de paso, Reparación ×3, Rueda de recambio
+//   Ana:   driving ace, tanker truck, repairs ×3, spare wheel
+//   Berto: puncture-proof wheel, right of way, repairs ×3, spare wheel
 // Covers: the lobby offering the deck tokens-only, the HAND as the family's home surface
 // (board focus dives into it), Space drawing with the identity spoken ONLY to the drawer,
 // Enter playing an immunity (announced to all with the card's own line), the turn handover,
-// the players-panel status line (kilómetros + state), and S speaking my own status.
+// the players-panel status line (kilometres + state), and S speaking my own status.
 
 import { test, expect } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
@@ -173,7 +173,7 @@ test('journey: the hand is home — private draw, playing an immunity, statuses 
 	await expect(anaCards).toHaveCount(6);
 
 	// Regression: Space in the hand must DRAW only. It is also the global "roll dice" key,
-	// and both layers once fired together ("robas una carta… ¡y suena el dado!").
+	// and both layers once fired together ("you draw a card… and the die sounds!").
 	for (const page of [ana, berto]) {
 		const heard: string[] = await page.evaluate(() => (window as any).__announcements ?? []);
 		expect(heard.filter(line => /saca un|dado/i.test(line))).toEqual([]);

@@ -52,7 +52,7 @@ test('a bot pays a Favor directed at it without wedging the game', async ({ brow
 	const ana = await startHumanVsBot(browser);
 
 	// The identity deal reaches Ana's Favor after the known opening and ordinary draws.
-	// First move the planted Grisú to the bottom so the deterministic sequence can continue.
+	// First move the planted bomb to the bottom so the deterministic sequence can continue.
 	await ana.locator('#board').focus();
 	await ana.keyboard.press(' ');
 	await expectAnnouncement(ana, /Destapas gris.*cortas la mecha/i);

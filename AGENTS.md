@@ -1,9 +1,8 @@
 # AGENTS.md — Corro Online
 
-Cross-tool guide for AI coding agents (Claude Code, Copilot, etc.). The full,
-authoritative reference lives in [.github/copilot-instructions.md](.github/copilot-instructions.md);
-read it before doing non-trivial work. This file is the short version with the
-rules you must never break.
+This is the single authoritative instruction file for every coding agent working in this
+repository. GitHub Copilot reads it directly; Claude Code imports it through `CLAUDE.md`.
+Do not duplicate these rules in tool-specific instruction files. Update this file instead.
 
 For **how the system is built** (architecture, client, accessibility, server, game
 families, end-to-end flows), see the prose docs in [docs/](docs/README.md). This file is
@@ -19,6 +18,7 @@ displays state and drives visuals.
 ## Build, run & test
 
 Frontend (from `frontend/`):
+
 ```bash
 npm install
 npm run build        # compile TS + copy assets to dist/ ("Build completed successfully!")
@@ -27,6 +27,7 @@ node --import tsx --test test/<file>.test.ts   # a single suite
 ```
 
 Backend (stop any running CorroServer first to release the build lock):
+
 ```bash
 # PowerShell: Get-Process -Name CorroServer -ErrorAction SilentlyContinue | Stop-Process -Force
 dotnet build server/CorroServer.csproj -p:SkipFrontendBuild=true --nologo
@@ -34,6 +35,7 @@ dotnet test server.tests/CorroServer.Tests.csproj --nologo
 ```
 
 E2E (Playwright, real browsers + real server with scripted dice — see `e2e/README.md`):
+
 ```bash
 cd e2e && npm test   # run from e2e/, NEVER from the repo root
 ```
@@ -45,60 +47,37 @@ Always finish a change by running the frontend tests (incl. translation parity)
 ### Pre-push hook (blocks a red push)
 
 A shared `pre-push` hook (`.githooks/pre-push`) refuses to push to ANY branch when the suites
-are red: it always runs the frontend (build + `npm test`) and backend (build + `dotnet test`)
-suites, and runs the E2E suite only when `RUN_E2E=1` (it needs a built server + installed
-Playwright browsers, so it stays opt-in). `tools/dev.ps1` installs it idempotently on startup;
-when using another development path, enable it once per clone:
+are red: it always checks repository conventions, runs the frontend (build + `npm test`) and
+backend (build + `dotnet test`) suites, and runs E2E only when `RUN_E2E=1` (it needs a built
+server + installed Playwright browsers, so it stays opt-in). `tools/dev.ps1` installs it
+idempotently on startup; when using another development path, enable it once per clone:
+
 ```bash
 pwsh -File tools/install-hooks.ps1        # sets core.hooksPath=.githooks
 RUN_E2E=1 git push                         # include E2E in this push
 ```
+
 It's a local safety net, not the real gate — CI / branch protection is. Genuine emergency
 bypass: `git push --no-verify`.
 
-### Local Azure Blob (Azurite) — uploaded-package persistence
+### Local persistent development
 
-Uploaded `.corro` packages are persisted as a single zip blob so a game can be restored after a
-restart. With no `ConnectionStrings:PackageBlobs` configured the server uses a filesystem store
-(`%TEMP%/corro-blobs/`); set that connection string to use Azure Blob (prod) or the local Azurite
-emulator (dev). Shipped boards in `server/Packages/` never go to blob — they re-stage from disk by id.
-
-To exercise the real Azure client locally (Azurite runs in Docker via compose):
-```bash
-docker compose up -d azurite     # Azurite (blob) on :10000; data in a named volume
-dotnet user-secrets --project server set "ConnectionStrings:PackageBlobs" "UseDevelopmentStorage=true"
-```
-The `AzureBlobPackageStore` integration tests (`[AzuriteFact]`) then run against it; they SKIP (never
-fail) when Azurite isn't up, so CI stays green.
-
-### Local Cosmos DB (emulator) — game persistence
-
-Games (lobbies + in-progress) are stored in Cosmos. For full create→save→restore e2e locally, run the
-Cosmos emulator in Docker (via compose):
-```bash
-docker compose up -d cosmos     # vnext-preview emulator; NoSQL over HTTP on :8081, data explorer :1234
-dotnet user-secrets --project server set "ConnectionStrings:CosmosDB" \
-  "AccountEndpoint=http://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
-```
-The server detects the emulator — a `localhost`/`127.0.0.1` endpoint **or** the emulator's well-known
-key (so the containerised app whose endpoint is the `cosmos` compose service is recognised too) — and
-switches the `CosmosClient` to Gateway mode, gated so it never relaxes TLS against a real account (see
-`ServiceCollectionExtensions.IsCosmosEmulator`). It bootstraps the `CorroGame`/`Games` schema on
-startup. The `CosmosGameRepository` integration tests (`[CosmosFact]`) round-trip a game against it and
-SKIP when it's down. With **both** emulators up you can play a package game and exercise restore e2e.
-
-`tools/dev.ps1` brings the whole stack up at once (`docker compose up` for the emulators + secrets +
-an initial frontend build + complete frontend watch + the server on the host). Development serves
-`frontend/dist` directly; TS, HTML, CSS, i18n, config and assets update there and appear on browser
-refresh. Ctrl+C stops both app processes; the emulators outlive them. Use `-NoWatch` to opt out or
-`-Build` to additionally mirror the initial build into `server/wwwroot`. Stop Corro-owned emulators
-with `tools/stop.ps1`. To run **everything** in Docker, including the app, use
-`docker compose --profile full up` (built from `server/Dockerfile`).
-The script probes `localhost:8081`/`:10000` first and reuses healthy emulators even when another
-Compose project owns them; do not replace that with an unconditional `docker compose up`, which
-reintroduces host-port collisions.
+Use `tools/dev.ps1` for the complete host development stack: hook setup, healthy Cosmos/Azurite
+reuse, secrets, frontend build/watch and the server. See the README's quick start and local setup
+sections for commands and connection details. The startup helper deliberately probes the host
+endpoints and reuses healthy emulators owned by other Compose projects; never replace that with an
+unconditional `docker compose up`, which reintroduces port collisions. Emulator-backed integration
+tests skip rather than fail when their emulator is unavailable.
 
 ## Non-negotiable rules
+
+**English-only repository (mandatory).** English is the sole working language for every
+canonical repository artifact: paths and filenames, identifiers, source code, comments,
+documentation, test names, scripts, console/log/error messages, configuration and schema text,
+agent instructions, and commit/PR text. Non-English text is allowed only when it is localized
+content: locale resources, translated documentation/help, localized package fields, or fixtures
+and assertions that explicitly test localization. Keep the surrounding test descriptions and
+comments in English. Never add non-English fallback or source text outside those boundaries.
 
 **Testing discipline (mandatory).** Every change ships with the highest possible
 test coverage; every bug fix gets a regression test. Prefer extracting pure,
@@ -106,6 +85,7 @@ unit-testable functions over leaving logic in timers/DOM/Hub methods. If
 something genuinely can't be covered, say so explicitly.
 
 **Accessibility.**
+
 - Dialogs are ALWAYS native `<dialog>` (never `<div role="dialog">`). Keep the native
   root's implicit role — `role="application"` is invalid there. A keyboard-intensive
   dialog may put it on a named INNER surface; reading dialogs contain none. Restore focus
@@ -138,12 +118,13 @@ something genuinely can't be covered, say so explicitly.
   focus, never gate the turn.
 - **Every composed line must read as ONE flowing sentence.** A screen reader
   hears a label/row/announcement as a single line: connect its facts with words
-  and punctuation ("120₡, de Berto", "Mazo: 58. Descartes: 1."), never with
+  and punctuation ("Current bid: 120 credits, by Berto.", "Deck: 58. Discards: 1."), never with
   visual separators (`·`, `|`, bare juxtaposition) — those don't speak. Join
   lists with a spoken connector (`joinList` in `tradeDialog.ts` wraps
   `Intl.ListFormat`); word money as cash where it could be misheard as a price.
 
 **Automatic Axe gate (mandatory for every browser UI state).**
+
 - Every E2E spec imports `test`/`expect` from `e2e/helpers/test.ts`, never directly from
   `@playwright/test`; create contexts through `newPlayerPage()` so Axe loads before the app.
 - The mutation monitor retains violations from settled transient states, but it can inspect

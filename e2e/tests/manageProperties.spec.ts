@@ -47,7 +47,7 @@ test('manage: rows read group names (not hex), Shift+F10 menu opens inside the d
 	await expect(dialog).toBeVisible();
 
 	// Bug #10: the row voices name + GROUP NAME + price in the board's currency
-	// WORD ("60 créditos") — no raw hex anywhere.
+	// localized currency WORD — no raw hex anywhere.
 	const row = dialog.locator('.manage-item').first();
 	await expect(row).toHaveAttribute('aria-label', new RegExp(`${sq3}.*${pkg.groups.g1}`));
 	await expect(row).toHaveAttribute('aria-label', new RegExp(`60 ${pkg.currency.name}`));

@@ -19,7 +19,7 @@ test.beforeEach(async () => {
 	await resetDice();
 });
 
-/** The host adds a pool player to a team via the team box's "Añadir jugador" menu. */
+/** The host adds a pool player to a team through the team box's add-player menu. */
 async function assign(host: Page, teamIndex: number, playerName: string): Promise<void> {
 	// The panel re-renders on every LobbyUpdated: locate the button fresh each time.
 	await host.locator('#host-team-panel .team-box').nth(teamIndex).locator('.team-box__add').click();

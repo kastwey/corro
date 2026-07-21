@@ -2,8 +2,8 @@
 //
 // Two real browsers, Spanish, real SignalR. The E2E identity shuffle keeps the deck in
 // cards.json order and DEALS from its tail, so the opening hands and the draw pile are KNOWN
-// (pinned in MinePackageTests): both openers hold a defuse ("Cortar la mecha") and the single
-// planted bomb ("Grisú") sits on TOP of the pile. The story: draw the bomb, defuse it and tuck
+// (pinned in MinePackageTests): both openers hold a defuse and the single planted bomb sits on
+// TOP of the pile. The story: draw the bomb, defuse it and tuck
 // it back on top, and — a defuse spent — explode into the last-player-standing win.
 
 import { test, expect } from '../helpers/test';
@@ -105,8 +105,8 @@ test('exploding: announces an ordinary draw before adding the card to the hand',
 	await joinGame(berto, code, 'Berto');
 	await startGame(ana, [ana, berto]);
 
-	// Move the planted Grisú to the bottom so Berto's next draw is the known ordinary
-	// card immediately below it (Cortar la mecha #5).
+	// Move the planted bomb to the bottom so Berto's next draw is the known ordinary
+	// card immediately below it (defuse #5).
 	await ana.locator('#board').focus();
 	await ana.keyboard.press(' ');
 	await expectAnnouncement(ana, /Destapas gris.*cortas la mecha/i);

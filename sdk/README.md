@@ -22,7 +22,7 @@ Schema scope and limitations are documented in
 ## New to package authoring?
 
 Follow the [beginner guide](../docs/package-authoring.md)
-([guía en español](../docs/package-authoring.es.md)). It requires no engine-programming knowledge
+([Spanish guide](../docs/package-authoring.es.md)). It requires no engine-programming knowledge
 and covers family choice, JSON editing, translations, accessibility, validation and upload.
 
 ## Starter templates and reference packages

@@ -127,7 +127,7 @@ test('assembly: install, auto-targeted breakdown, refusal, face-down discard, re
 	await expectAnnouncement(ana, /1 de 4 sistemas operativos/);
 	await expectAnnouncement(ana, /Reactor \(operativo\)/);
 
-	// ── Shift+S surveys the OTHERS only (live-play: "mi info ya me la sé con la S"). ──
+	// ── Shift+S surveys the OTHERS only; S already covers the local player's status. ──
 	await ana.keyboard.press('Shift+S');
 	await expectAnnouncement(ana, /Berto: 1 de 4 sistemas operativos/);
 	const heard: string[] = await ana.evaluate(() => (window as any).__announcements ?? []);

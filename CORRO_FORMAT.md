@@ -5,7 +5,7 @@
 > (see `server/Packages/galactic-empire/`, the reference board shipped with the server).
 
 This is the advanced reference. First-time authors should use the
-[beginner guide](docs/package-authoring.md) ([español](docs/package-authoring.es.md)), which starts
+[beginner guide](docs/package-authoring.md) ([Spanish](docs/package-authoring.es.md)), which starts
 from a valid generated package and explains the workflow without assuming programming knowledge.
 
 ```

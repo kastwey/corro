@@ -5,7 +5,7 @@
 // This is the scenario that concentrated the most bugs from a real family game:
 //  * #3/#9  trade dialogs showed the raw hex colour instead of the group name;
 //  * #4     a received trade showed no per-property price, and prices read "euros"
-//           instead of the board's own currency (créditos/₡);
+//           instead of the board's own localized currency;
 //  * #11    Enter only worked when a button was focused, not from the offer lines;
 //  * the STATION regression: package ownables are typed by the board ("transit"), and a
 //    legacy property/railroad/utility filter silently dropped them from every trade —
@@ -71,7 +71,7 @@ test('trade: prices in board currency, group names (not hex), Enter accepts, own
 	await expect(berto.locator('.player-card[data-player-id]').first().locator('.player-card__turn')).toBeVisible();
 	await buyPendingProperty(ana);
 	// Berto HEARS the purchase in the board's own words: localized square name and
-	// the board currency word ("créditos"), never a hardcoded euro (bug #4b class).
+	// the board's localized currency word, never a hardcoded euro (bug #4b class).
 	await expectAnnouncement(berto, new RegExp(`Ana.*${sq5}.*200 ${pkg.currency.name}`));
 	await expect(square(berto, 5)).toHaveAttribute('aria-label', new RegExp(`${sq5}.*${propertyOf('Ana')}`));
 	await actionButton(ana, 'endTurn').click();

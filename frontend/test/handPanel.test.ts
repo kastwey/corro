@@ -183,7 +183,7 @@ test('Space draws when the family allows it, and speaks the refusal otherwise', 
 
 test('keys the hand consumes never leak to the global keymap layer', () => {
 	// Regression: Space is ALSO the global "roll dice" key — without stopPropagation a draw
-	// bubbled up and fired a dice roll behind the player's back ("robas… ¡y tiras el dado!").
+	// bubbled up and fired a dice roll behind the player's back ("you draw… and roll the die!").
 	const leaked: string[] = [];
 	const spy = (e: KeyboardEvent) => { leaked.push(e.key); };
 	document.addEventListener('keydown', spy);

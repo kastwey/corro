@@ -179,7 +179,7 @@ public class AssemblyRulebookTests
 		Assert.Empty(slot.Afflictions); // cured (remedy + affliction burned)
 		Assert.Equal(2, state.DiscardPile.Count);
 		// The result NAMES what the medicine did and to which piece, for the outcome voice
-		// ("¡Inmunizas tu estómago!" — the plain "plays a remedy" line said nothing).
+		// (for example, "You immunize your stomach!"; the plain "plays a remedy" line said nothing).
 		Assert.Equal("cured", cured.RemedyOutcome);
 		Assert.Equal("c.p-red", cured.RemediedPieceKey);
 

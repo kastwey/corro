@@ -283,7 +283,7 @@ public class DraftTurnFlowTests
 		await Pick(context, state, "a", "bite1#0");
 		await Pick(context, state, "b", "bite3#0");
 
-		// c abandons through the SHARED leave flow (the "Abandonar partida" button).
+		// c abandons through the SHARED leave flow (the "Leave game" button).
 		var outcome = await new CorroServer.Services.Rules.CorroRulebook()
 			.DeclareBankruptcyAsync(state.Players.First(p => p.Id == "c"), context);
 

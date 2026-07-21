@@ -39,6 +39,7 @@ jobs:
         run: |
           ./tools/tests/emulator-startup.tests.ps1
           ./tools/tests/hook-installation.tests.ps1
+          ./tools/tests/repository-language.tests.ps1
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
