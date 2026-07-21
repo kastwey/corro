@@ -26,8 +26,8 @@ public class RejoinTests
 			InviteCode = "INV111",
 			Players = new List<LobbyPlayer>
 			{
-				new() { Id = "host", Name = "Ana", Token = "estrella", IsHost = true, PlayerSecretId = "secret-ana", RejoinCode = "AAAABBBB" },
-				new() { Id = "p2", Name = "Berto", Token = "luna", PlayerSecretId = "secret-berto", RejoinCode = "CCCCDDDD" },
+				new() { Id = "host", Name = "Ana", Token = "star", IsHost = true, PlayerSecretId = "secret-ana", RejoinCode = "AAAABBBB" },
+				new() { Id = "p2", Name = "Berto", Token = "moon", PlayerSecretId = "secret-berto", RejoinCode = "CCCCDDDD" },
 			},
 		};
 		repo.CreateGameAsync(game).GetAwaiter().GetResult();

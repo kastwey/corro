@@ -1,9 +1,9 @@
-// draft.spec.ts — the draft family (simultaneous pick-and-pass genre) on "Gran Tapeo",
+// draft.spec.ts — the draft family (simultaneous pick-and-pass genre) on "The Grand Tapas Feast",
 // end to end.
 //
 // Two real browsers, Spanish, real SignalR. The E2E identity shuffle keeps the deck in
 // cards.json order and DEALS from its tail — the package deliberately ends with
-// [salsa-brava×6, tortilla×10, gamba×4] = exactly the 20 cards two players are dealt, so
+// [spicy-sauce×6, tortilla×10, gamba×4] = exactly the 20 cards two players are dealt, so
 // both opening hands are KNOWN: 2 prawn skewers, 5 omelette bites and 3 brava sauces.
 //
 // The story exercises the whole loop: the secret pick (identity private, "who picked"
@@ -23,7 +23,7 @@ import {
 	startGame,
 } from '../helpers/game';
 
-const BOARD = 'gran-tapeo';
+const BOARD = 'grand-tapas-feast';
 
 test.beforeEach(async () => {
 	await resetDice();

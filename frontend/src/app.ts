@@ -31,6 +31,7 @@ import { turnIndicator } from './turnIndicator.js';
 import { cardReveal } from './cardReveal.js';
 import { squareGroupLabel } from './localizeSquare.js';
 import { boardPageTitle } from './boardTitle.js';
+import { updateGameSurfaceIntro } from './gameSurfaceIntro.js';
 import { setPackageTokens } from './tokenIcons.js';
 import { setBoardVocabulary } from './boardVocabulary.js';
 import { cardFlight } from './cardFlight.js';
@@ -167,6 +168,8 @@ const presentationSettling = (): boolean => tokenAnimator.isAnimating || familyA
 
 const board = document.getElementById('board') as HTMLElement;
 if (!board) throw new Error('#board not found in DOM');
+const gameSurfaceIntro = document.getElementById('game-surface-intro') as HTMLElement;
+if (!gameSurfaceIntro) throw new Error('#game-surface-intro not found in DOM');
 
 board.style.display = 'grid';
 board.style.gridTemplateColumns = `repeat(${GRID_SIZE}, var(--square-size))`;
@@ -496,7 +499,7 @@ async function initBoard() {
 	  // screen-reader user hears it while arrow-navigating (it is otherwise only shown
 	  // in the board centre). Stays silent when empty / the house rule is off (pot 0).
 	  const pot = gameManager.getFreeParkingPot();
-	  if (pot > 0) label += ` ${t('free_parking_pot_label', { amount: pot.toLocaleString('es-ES') })}`;
+	  if (pot > 0) label += ` ${t('free_parking_pot_label', { amount: i18nBinder.formatNumber(pot) })}`;
 	}
 	const playersHere = tokenAnimator.visiblePlayers(gameManager.getAllPlayers()).filter(p => p.position === i);
 	if (playersHere.length > 0) {
@@ -956,6 +959,11 @@ async function initBoard() {
 
   gameManager.on('gameStateUpdated', (gs) => {
 	if (!gs) return;
+
+	// The page starts with a truthful loading message. Once the authoritative state tells us
+	// the family, explain the surface focus actually enters: a spatial board or a card hand.
+	// Focus is moved there automatically below, so neither variant tells the player to press Tab.
+	updateGameSurfaceIntro(gameSurfaceIntro, gs.gameType, key => i18nBinder.tSync(key));
 
 	// If I'm building a trade and the partner's balance changed (they mortgaged to raise cash),
 	// re-sync the builder's caps/valuation to the live state without disturbing my selections.
@@ -1910,6 +1918,7 @@ async function initBoard() {
 	getPlayerReleasePasses: (id: string) => gameManager.getPlayer(id)?.releasePasses || 0,
 	getPendingDebts: () => gameManager.getCurrentGameState()?.pendingDebts || [],
 	getFreeParkingPot: () => gameManager.getFreeParkingPot(),
+	formatNumber: (value) => i18nBinder.formatNumber(value),
 	getActiveAuction: () => {
 	  const a = auctionDialog.getStatus();
 	  if (!a) return null;

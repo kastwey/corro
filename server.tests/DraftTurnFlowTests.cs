@@ -20,7 +20,7 @@ public class DraftTurnFlowTests
 		new() { Id = "bite1", Type = "points", Value = 1, Count = 10, NameKey = "c.bite1" },
 		new() { Id = "bite3", Type = "points", Value = 3, Count = 10, NameKey = "c.bite3" },
 		new() { Id = "sauce", Type = "multiplier", Factor = 3, Count = 4, NameKey = "c.sauce" },
-		new() { Id = "flan", Type = "dessert", Count = 8, NameKey = "c.flan" },
+		new() { Id = "caramel-custard", Type = "dessert", Count = 8, NameKey = "c.flan" },
 		new() { Id = "stick", Type = "extra", Count = 4, NameKey = "c.stick" },
 	};
 
@@ -79,7 +79,7 @@ public class DraftTurnFlowTests
 	[Fact]
 	public async Task A_pick_speaks_its_identity_to_the_picker_alone()
 	{
-		var (state, context) = Game(hands: new[] { ("a", new[] { "bite1", "flan" }), ("b", new[] { "bite3", "flan" }) });
+		var (state, context) = Game(hands: new[] { ("a", new[] { "bite1", "caramel-custard" }), ("b", new[] { "bite3", "caramel-custard" }) });
 
 		var response = await Pick(context, state, "a", "bite1#0");
 
@@ -102,17 +102,17 @@ public class DraftTurnFlowTests
 	[Fact]
 	public async Task A_repick_is_private_and_replaces_the_choice()
 	{
-		var (state, context) = Game(hands: new[] { ("a", new[] { "bite1", "flan" }), ("b", new[] { "bite3", "flan" }) });
+		var (state, context) = Game(hands: new[] { ("a", new[] { "bite1", "caramel-custard" }), ("b", new[] { "bite3", "caramel-custard" }) });
 		await Pick(context, state, "a", "bite1#0");
 
-		var response = await Pick(context, state, "a", "flan#1");
+		var response = await Pick(context, state, "a", "caramel-custard#1");
 
 		Assert.Equal("repick", Assert.IsType<DraftActionResponse>(response).Action);
 		var announcer = TestFixtures.Announcer(context);
 		Assert.True(announcer.Has(AnnouncementAudience.Player, "a", "game.draft_repicked_self"));
 		// The table heard ONE "has picked" — the re-pick changed nothing for them.
 		Assert.Single(announcer.Sent, d => d.Key == "game.draft_picked");
-		Assert.Equal("flan#1", state.Draft!.Seats[0].CommittedInstanceId);
+		Assert.Equal("caramel-custard#1", state.Draft!.Seats[0].CommittedInstanceId);
 	}
 
 	[Fact]
@@ -132,8 +132,8 @@ public class DraftTurnFlowTests
 	{
 		var (state, context) = Game(hands: new[]
 		{
-			("a", new[] { "bite1", "flan" }),
-			("b", new[] { "bite3", "flan" }),
+			("a", new[] { "bite1", "caramel-custard" }),
+			("b", new[] { "bite3", "caramel-custard" }),
 		});
 
 		await Pick(context, state, "a", "bite1#0");
@@ -163,8 +163,8 @@ public class DraftTurnFlowTests
 	{
 		var (state, context) = Game(hands: new[]
 		{
-			("a", new[] { "bite3", "flan" }),
-			("b", new[] { "bite1", "flan" }),
+			("a", new[] { "bite3", "caramel-custard" }),
+			("b", new[] { "bite1", "caramel-custard" }),
 		});
 		state.Draft!.Seats[0].Table.Add(new DraftTableSlot { Card = Inst("sauce", 9) });
 
@@ -182,8 +182,8 @@ public class DraftTurnFlowTests
 	{
 		var (state, context) = Game(hands: new[]
 		{
-			("a", new[] { "sauce", "bite3", "flan" }),
-			("b", new[] { "bite1", "flan", "flan" }),
+			("a", new[] { "sauce", "bite3", "caramel-custard" }),
+			("b", new[] { "bite1", "caramel-custard", "caramel-custard" }),
 		});
 		state.Draft!.Seats[0].Table.Add(new DraftTableSlot { Card = Inst("stick", 9) });
 
@@ -211,7 +211,7 @@ public class DraftTurnFlowTests
 		var (state, context) = Game(hands: new[]
 		{
 			("a", new[] { "sauce", "bite3" }),
-			("b", new[] { "bite1", "flan" }),
+			("b", new[] { "bite1", "caramel-custard" }),
 		});
 
 		var response = await Pick(context, state, "a", "sauce#0", "bite3#1");
@@ -226,8 +226,8 @@ public class DraftTurnFlowTests
 			rules: new DraftRulesConfig { Rounds = 2, HandSizeBase = 3 }, // 2 players → hands of 1
 			hands: new[] { ("a", new[] { "bite3" }), ("b", new[] { "bite1" }) });
 		// Stock the pile for round two's redeal (2 seats × 1 card).
-		state.Draft!.DrawPile.Add(Inst("flan", 6));
-		state.Draft!.DrawPile.Add(Inst("flan", 7));
+		state.Draft!.DrawPile.Add(Inst("caramel-custard", 6));
+		state.Draft!.DrawPile.Add(Inst("caramel-custard", 7));
 
 		await Pick(context, state, "a", "bite3#0");
 		var response = await Pick(context, state, "b", "bite1#0");
@@ -250,9 +250,9 @@ public class DraftTurnFlowTests
 	{
 		var (state, context) = Game(
 			rules: new DraftRulesConfig { Rounds = 1, HandSizeBase = 3 },
-			hands: new[] { ("a", new[] { "flan" }), ("b", new[] { "bite3" }) });
+			hands: new[] { ("a", new[] { "caramel-custard" }), ("b", new[] { "bite3" }) });
 
-		await Pick(context, state, "a", "flan#0");
+		await Pick(context, state, "a", "caramel-custard#0");
 		var response = await Pick(context, state, "b", "bite3#0");
 
 		var action = Assert.IsType<DraftActionResponse>(response);
@@ -276,9 +276,9 @@ public class DraftTurnFlowTests
 	{
 		var (state, context) = Game(hands: new[]
 		{
-			("a", new[] { "bite1", "flan" }),
-			("b", new[] { "bite3", "flan" }),
-			("c", new[] { "flan", "flan" }),
+			("a", new[] { "bite1", "caramel-custard" }),
+			("b", new[] { "bite3", "caramel-custard" }),
+			("c", new[] { "caramel-custard", "caramel-custard" }),
 		});
 		await Pick(context, state, "a", "bite1#0");
 		await Pick(context, state, "b", "bite3#0");

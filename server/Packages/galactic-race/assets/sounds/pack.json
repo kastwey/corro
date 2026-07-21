@@ -1,0 +1,9 @@
+{
+  "packId": "galactic-race",
+  "events": {
+    "dice.roll": "dice-roll.ogg",
+    "turn.you": "turn-you.ogg",
+    "piece.captured": "piece-captured.ogg",
+    "game.over": "game-over.ogg"
+  }
+}

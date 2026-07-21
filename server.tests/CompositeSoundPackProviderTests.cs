@@ -46,7 +46,7 @@ public class CompositeSoundPackProviderTests
 		Assert.Empty(composite.ResolveAnnouncements(null)); // the default declares none
 
 		composite.RegisterPackage("game1", CorroTestPaths.FixturePath("sounds-package"));
-		Assert.Equal("journey.flat", composite.ResolveAnnouncements("game1")["cards.pinchazo_played"]);
+		Assert.Equal("journey.flat", composite.ResolveAnnouncements("game1")["cards.flat_tyre_played"]);
 
 		composite.UnregisterPackage("game1");
 		Assert.Empty(composite.ResolveAnnouncements("game1"));

@@ -75,7 +75,7 @@ export class AssemblyBoard {
 	}
 
 	/** Every RIVAL's rack status (Shift+S), each led by their name. My own rack is
-	 *  deliberately left out — S already reads it ("esa ya me la sé con la S"). */
+	 *  deliberately left out — S already reads it ("S already tells me my own status"). */
 	private allSeatsStatus(gs: GameState, myId: string): string | null {
 		const lines = (gs.assembly?.seats ?? []).filter(seat => seat.playerId !== myId).map(seat => {
 			const status = assemblyStatusText(gs, seat.playerId, this.deps.tSync);

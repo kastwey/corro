@@ -21,7 +21,7 @@ internal static class CorroTestPaths
 
 	/// <summary>The server/Packages/ folder that holds the shipped, approved board packages.</summary>
 	public static string PackagesRoot()
-			  => Path.GetDirectoryName(PackageDir("imperio-galactico"))!;
+			  => Path.GetDirectoryName(PackageDir("galactic-empire"))!;
 
 	/// <summary>Locates a test-only .corro package under server.tests/Fixtures/ (not shipped).</summary>
 	public static string FixtureDir(string id)

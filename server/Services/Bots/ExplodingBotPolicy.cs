@@ -1,14 +1,16 @@
 using CorroServer.Models;
+using CorroServer.Services.Rules;
 
 namespace CorroServer.Services.Bots;
 
 /// <summary>
 /// The exploding bot, a straightforward v1 over its projected view
 /// (the draw pile is a count, its order hidden — the bot cannot peek): on its turn it simply
-/// draws to end the turn, taking its chances like everyone else; and when it draws a bomb it
-/// holds a Defuse for, it tucks the bomb back a card or two down so the NEXT player meets it
-/// soon. It does not (yet) play action cards or Nope out of turn — a later increment can grow
-/// the brain without touching the driver.
+/// draws to end the turn, taking its chances like everyone else; when it draws a bomb it holds
+/// a Defuse for, it tucks the bomb into the middle of the remaining pile;
+/// and when another player asks it for a Favor, it gives a card while preserving a Defuse when
+/// possible. It does not (yet) play action cards or Nope out of turn — a later increment can
+/// grow the brain without touching the driver.
 /// </summary>
 public sealed class ExplodingBotPolicy : IBotPolicy
 {
@@ -28,10 +30,28 @@ public sealed class ExplodingBotPolicy : IBotPolicy
 			return null;
 		}
 
-		// A bomb the bot just defused: hide it a little way down to threaten the next player.
+		// Use the same midpoint offered to human players. Keeping it near the top made the
+		// bot predictably meet its own bomb again on the next rotation.
 		if (exploding.PendingBomb is { } bomb && bomb.PlayerId == botId)
 		{
-			return new ExplodingDefuseCommand { PlayerId = botId, Depth = Math.Min(1, exploding.DrawCount) };
+			return new ExplodingDefuseCommand { PlayerId = botId, Depth = exploding.DrawCount / 2 };
+		}
+
+		// A Favor freezes the table and belongs to its target, even though it is still the
+		// requester's turn. Answer mine; while somebody else must answer, wait.
+		if (exploding.PendingFavor is { } favor)
+		{
+			if (favor.TargetId != botId || seat.Hand.Count == 0)
+			{
+				return null;
+			}
+
+			// A Defuse is the one unambiguously life-saving card. Give the first other card
+			// from the projected hand; if every card is a Defuse, the Favor still has to be paid.
+			var catalog = ExplodingRulebook.Catalog(view.ExplodingDeck ?? new());
+			var card = seat.Hand.FirstOrDefault(instance =>
+				!ExplodingRulebook.IsDefuse(catalog.GetValueOrDefault(instance.CardId))) ?? seat.Hand[0];
+			return new ExplodingGiveCommand { PlayerId = botId, InstanceId = card.InstanceId };
 		}
 
 		if (view.CurrentTurn != botId)

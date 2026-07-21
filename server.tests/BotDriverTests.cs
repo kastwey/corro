@@ -9,21 +9,32 @@ using Xunit;
 namespace CorroServer.Tests;
 
 /// <summary>
-/// The driver plays a REAL game from outside the engine: a la-gran-ruta match between a
-/// human and a bot, through the very same GameService pipeline a human's commands take.
-/// The human plays a turn by hand; the driver must then complete the bot's whole turn
-/// (draw → play/discard) on its own and hand the turn back.
+/// The driver plays REAL games from outside the engine through the very same GameService
+/// pipeline a human's commands take: it completes a journey bot's whole turn and makes an
+/// exploding bot answer an off-turn Favor without wedging the table.
 /// </summary>
 public class BotDriverTests
 {
 	private static async Task<GameService> StartHumanVsBotAsync()
 	{
-		var def = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("la-gran-ruta"));
+		var def = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("great-route"));
 		var svc = new GameService(new CorroRulebook(), new AuctionRulebook());
 		await svc.InitializeFromDefinitionAsync(new List<Player>
 		{
-			new() { Id = "a", Name = "Ana", Token = "coche" },
-			new() { Id = "b", Name = "Bot 1", Token = "moto", IsBot = true },
+			new() { Id = "a", Name = "Ana", Token = "car" },
+			new() { Id = "b", Name = "Bot 1", Token = "motorbike", IsBot = true },
+		}, def, "es");
+		return svc;
+	}
+
+	private static async Task<GameService> StartHumanVsExplodingBotAsync()
+	{
+		var def = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("the-mine"));
+		var svc = new GameService(new CorroRulebook(), new AuctionRulebook());
+		await svc.InitializeFromDefinitionAsync(new List<Player>
+		{
+			new() { Id = "a", Name = "Ana", Token = "mine-cart" },
+			new() { Id = "b", Name = "Bot 1", Token = "helmet", IsBot = true },
 		}, def, "es");
 		return svc;
 	}
@@ -63,14 +74,36 @@ public class BotDriverTests
 	}
 
 	[Fact]
+	public async Task The_exploding_bot_pays_a_pending_favor_through_the_command_pipeline()
+	{
+		var svc = await StartHumanVsExplodingBotAsync();
+		var exploding = svc.GameState!.Exploding!;
+		var catalog = ExplodingRulebook.Catalog(svc.GameState.ExplodingDeck!);
+		var human = ExplodingRulebook.SeatOf(exploding, "a");
+		var bot = ExplodingRulebook.SeatOf(exploding, "b");
+		var defuse = bot.Hand.Single(card => ExplodingRulebook.IsDefuse(catalog[card.CardId]));
+		var expectedGift = bot.Hand.First(card => !ExplodingRulebook.IsDefuse(catalog[card.CardId]));
+		exploding.PendingFavor = new PendingExplodingFavor { RequesterId = "a", TargetId = "b" };
+
+		var driver = new BotDriver(new BotOptions { ActionDelay = TimeSpan.Zero });
+		driver.Attach("exploding-favor", svc);
+
+		await WaitUntilAsync(() => exploding.PendingFavor == null, "the bot to pay the Favor");
+
+		Assert.Contains(expectedGift, human.Hand);
+		Assert.DoesNotContain(expectedGift, bot.Hand);
+		Assert.Contains(defuse, bot.Hand);
+	}
+
+	[Fact]
 	public async Task Attach_is_a_safe_no_op_without_bots_or_without_a_policy()
 	{
-		var def = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("la-gran-ruta"));
+		var def = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("great-route"));
 		var svc = new GameService(new CorroRulebook(), new AuctionRulebook());
 		await svc.InitializeFromDefinitionAsync(new List<Player>
 		{
-			new() { Id = "a", Name = "Ana", Token = "coche" },
-			new() { Id = "b", Name = "Berto", Token = "moto" },
+			new() { Id = "a", Name = "Ana", Token = "car" },
+			new() { Id = "b", Name = "Berto", Token = "motorbike" },
 		}, def, "es");
 
 		var driver = new BotDriver(new BotOptions { ActionDelay = TimeSpan.Zero });

@@ -37,7 +37,7 @@ public static class GameDefinitionAdapter
 			.Where(g => g.Color != null)
 			.ToDictionary(g => g.Id, g => g.Color!);
 
-		// Group id -> i18n key for its name, so the client can announce the group ("Grupo: Marrón")
+		// Group id -> i18n key for its name, so the client can announce the group ("Group: Brown")
 		// resolving it against the merged app + package translations. Only groups that name one.
 		var groupNameKey = def.Manifest.Groups
 			.Where(g => !string.IsNullOrEmpty(g.ColorName))
@@ -118,7 +118,7 @@ public static class GameDefinitionAdapter
 
 	/// <summary>The i18n key naming a square: its own <c>nameKey</c>, or — for an unnamed corner — the
 	/// board's terminology key for its type (e.g. a "holding" square -> "terminology.holding"), or — for an
-	/// unnamed card square — its deck's name key (so a "deck" square reads "Anomalía Cuántica" instead of
+	/// unnamed card square — its deck's name key (so a "deck" square reads "Quantum Anomaly" instead of
 	/// being blank, e.g. as a bus destination — bug #8). Null if none of these name it.</summary>
 	private static string? NameKeyFor(GameDefinition def, SquareDef sd)
 		=> !string.IsNullOrEmpty(sd.NameKey) ? sd.NameKey

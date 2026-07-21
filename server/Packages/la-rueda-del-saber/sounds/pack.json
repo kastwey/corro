@@ -1,8 +1,0 @@
-{
-  "packId": "la-rueda-del-saber",
-  "events": {
-    "dice.roll": "dice-roll.ogg",
-    "turn.you": "turn-you.ogg",
-    "game.over": "game-over.ogg"
-  }
-}

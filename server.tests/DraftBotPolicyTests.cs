@@ -22,7 +22,7 @@ public class DraftBotPolicyTests
 		new() { Id = "sauce", Type = "multiplier", Factor = 3, Count = 4, NameKey = "c.sauce" },
 		new() { Id = "trio", Type = "set", SetSize = 3, SetPoints = 10, Count = 8, NameKey = "c.trio" },
 		new() { Id = "olive", Type = "scale", Scale = new() { 1, 3, 6 }, Count = 8, NameKey = "c.olive" },
-		new() { Id = "flan", Type = "dessert", Count = 8, NameKey = "c.flan" },
+		new() { Id = "caramel-custard", Type = "dessert", Count = 8, NameKey = "c.flan" },
 		new() { Id = "stick", Type = "extra", Count = 4, NameKey = "c.stick" },
 	};
 
@@ -101,12 +101,12 @@ public class DraftBotPolicyTests
 	[Fact]
 	public void An_extra_on_the_table_turns_the_pick_into_a_double()
 	{
-		var seat = BotSeat("bite3", "flan", "bite1");
+		var seat = BotSeat("bite3", "caramel-custard", "bite1");
 		seat.Table.Add(new DraftTableSlot { Card = Inst("stick", 9) });
 
 		var command = Assert.IsType<DraftPickCommand>(Policy.Decide(View(seat), "bot"));
 		Assert.Equal("bite3#0", command.InstanceId);   // 3 points…
-		Assert.Equal("flan#1", command.SecondInstanceId); // …then the dessert (2 in round 1)
+		Assert.Equal("caramel-custard#1", command.SecondInstanceId); // …then the dessert (2 in round 1)
 	}
 
 	[Fact]
@@ -126,10 +126,10 @@ public class DraftBotPolicyTests
 	[Fact]
 	public void Desserts_weigh_more_as_the_game_ages()
 	{
-		var early = BotSeat("flan", "bite3");
+		var early = BotSeat("caramel-custard", "bite3");
 		Assert.Equal("bite3", PickedCard(View(early, round: 1)));
 
-		var late = BotSeat("flan", "bite3");
-		Assert.Equal("flan", PickedCard(View(late, round: 3)));
+		var late = BotSeat("caramel-custard", "bite3");
+		Assert.Equal("caramel-custard", PickedCard(View(late, round: 3)));
 	}
 }

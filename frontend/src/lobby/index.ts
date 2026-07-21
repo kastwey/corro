@@ -638,7 +638,7 @@ class UnifiedLobbyUI {
 	private promptBotName(): void {
 		const { content, input, submit } = buildBotNameForm({
 			t,
-			rollName: (current) => randomBotName(i18nBinder.getCurrentLanguage(), current),
+			rollName: (current) => randomBotName(key => i18nBinder.tSync(key), current),
 			onSubmit: (name) => {
 				dialogManager.close();
 				void this.addBot(name);
@@ -1355,7 +1355,7 @@ class UnifiedLobbyUI {
 				li.className = 'player-item';
 				// The spans are laid out with a CSS flex `gap`, so there is NO real text
 				// node between them — only visual spacing. Screen readers (JAWS) ignore the
-				// gap and read adjacent spans glued together ("NúriaPerro Escocés"). A normal
+				// gap and read adjacent spans glued together ("NúriaScottie Dog"). A normal
 				// space doesn't help because it collapses; we suffix each part with a comma
 				// plus a non-breaking space, which is a real, non-collapsible
 				// character in the accessibility tree, so each part is read distinctly.
@@ -1412,7 +1412,7 @@ class UnifiedLobbyUI {
 
 	// === Journey team mode (waiting room) ─ the host arranges, the room watches ===
 
-	/** The team's spoken identity («Equipo Rojo») — palette colour word by team index. */
+	/** The team's spoken identity ("Red team") — palette colour word by team index. */
 	private teamName(index: number): string {
 		return teamDisplayName(index, (k, v) => i18nBinder.tSync(k, v));
 	}

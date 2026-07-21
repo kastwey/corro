@@ -129,7 +129,7 @@ public static class TriviaRulebook
 	/// <summary>The category a landing on <paramref name="node"/> asks about. The centre is a
 	/// wild square (returns -1). A spoke is MULTICOLOURED like the real board — each square asks
 	/// its own category, cycling as (spoke + index) % 6; the destination wedge only lends the
-	/// spoke its NAME ("the spoke toward Geografía"), not its squares' colours.</summary>
+	/// spoke its NAME ("the spoke toward Geography"), not its squares' colours.</summary>
 	public static int CategoryOfNode(TriviaBoardDef board, string node)
 	{
 		if (IsCenter(node))

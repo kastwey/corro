@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setupDom, installFakeI18next } from './helpers/dom.js';
-import { familyTraitsFor, isRollOnlyFamily } from '../src/familyTraits.js';
+import { familyHomeSurface, familyTraitsFor, isRollOnlyFamily } from '../src/familyTraits.js';
 import { familyFor } from '../src/gameFamilies.js';
 
 // The family registry replaced app.ts's per-gameType branches: these pin its lookup contract
@@ -37,6 +37,16 @@ test('traits: race and track are roll-only; race hides "go to player"', () => {
 	assert.equal(isRollOnlyFamily(undefined), false);
 	assert.equal(familyTraitsFor('race')?.showGoToPlayer, false);
 	assert.equal(familyTraitsFor('track')?.showGoToPlayer, true);
+});
+
+test('traits distinguish spatial boards from card hands', () => {
+	for (const gameType of ['property', 'race', 'track', 'trivia']) {
+		assert.equal(familyHomeSurface(gameType), 'board', gameType);
+	}
+	for (const gameType of ['journey', 'assembly', 'draft', 'shedding', 'exploding']) {
+		assert.equal(familyHomeSurface(gameType), 'hand', gameType);
+	}
+	assert.equal(familyHomeSurface('unknown'), 'board');
 });
 
 test('race identity: the seat name is the panel line and the C announcement', () => {

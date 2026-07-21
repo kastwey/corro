@@ -35,7 +35,7 @@ public class ConfigController : ControllerBase
 		var languages = new[]
 		{
 			new { code = "en", name = "English" },
-			new { code = "es", name = "Español" }
+			new { code = "es", name = "Spanish" }
 		};
 
 		return Ok(languages);

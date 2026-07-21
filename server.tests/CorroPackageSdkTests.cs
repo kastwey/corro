@@ -58,11 +58,11 @@ public class CorroPackageSdkTests
 	[Fact]
 	public async Task Inspect_reports_how_many_card_definitions_have_package_art()
 	{
-		var text = await RunCli("inspect", CorroTestPaths.PackageDir("la-mina"));
+		var text = await RunCli("inspect", CorroTestPaths.PackageDir("the-mine"));
 		Assert.Equal(CliApplication.Success, text.ExitCode);
 		Assert.Contains("cardIllustrations: 13", text.Output);
 
-		var json = await RunCli("inspect", CorroTestPaths.PackageDir("la-mina"), "--json");
+		var json = await RunCli("inspect", CorroTestPaths.PackageDir("the-mine"), "--json");
 		Assert.Equal(CliApplication.Success, json.ExitCode);
 		using var document = JsonDocument.Parse(json.Output);
 		Assert.Equal(13, document.RootElement.GetProperty("package").GetProperty("content")
@@ -139,7 +139,7 @@ public class CorroPackageSdkTests
 		using var package = CopyFixture();
 		using var temp = new TemporaryDirectory();
 		var output = Path.Combine(temp.Path, "illustrated.corro");
-		var artDirectory = Path.Combine(package.Path, "cards");
+		var artDirectory = Path.Combine(package.Path, "assets", "cards");
 		Directory.CreateDirectory(artDirectory);
 		await File.WriteAllTextAsync(Path.Combine(artDirectory, "chance_advance_go.svg"),
 			"<svg viewBox=\"0 0 64 64\"><path d=\"M1 1h62v62z\"/></svg>");
@@ -149,7 +149,7 @@ public class CorroPackageSdkTests
 		Assert.True(packed.Succeeded, string.Join(Environment.NewLine, packed.Validation.Problems));
 		using (var archive = ZipFile.OpenRead(output))
 		{
-			Assert.Contains(archive.Entries, entry => entry.FullName == "cards/chance_advance_go.svg");
+			Assert.Contains(archive.Entries, entry => entry.FullName == "assets/cards/chance_advance_go.svg");
 		}
 		var roundTrip = await new PackageAuthoringService().ValidateAsync(output);
 		Assert.True(roundTrip.IsValid, string.Join(Environment.NewLine, roundTrip.Problems));
@@ -179,7 +179,7 @@ public class CorroPackageSdkTests
 		using var outputDir = new TemporaryDirectory();
 		var output = Path.Combine(outputDir.Path, "existing.corro");
 		await File.WriteAllTextAsync(output, "keep me");
-		File.Delete(Path.Combine(package.Path, "tokens", "disc.svg"));
+		File.Delete(Path.Combine(package.Path, "assets", "tokens", "disc.svg"));
 
 		var result = await new PackageAuthoringService().PackAsync(package.Path, output);
 
@@ -232,7 +232,7 @@ public class CorroPackageSdkTests
 		Assert.Contains("validate", help.Output);
 		Assert.Contains("inspect", help.Output);
 		Assert.Contains("pack", help.Output);
-		Assert.Contains("cards/<card-id>.svg", help.Output);
+		Assert.Contains("assets/cards/<card-id>.svg", help.Output);
 
 		var unknown = await RunCli("launch");
 		Assert.Equal(CliApplication.InvalidArguments, unknown.ExitCode);
@@ -247,15 +247,15 @@ public class CorroPackageSdkTests
 		var readme = File.ReadAllText(Path.Combine(repositoryRoot, "sdk", "README.md"));
 		var references = new Dictionary<string, string>
 		{
-			["property"] = "imperio-galactico",
-			["race"] = "carrera-galactica",
-			["track"] = "escaleras-y-serpientes",
-			["journey"] = "la-gran-ruta",
-			["assembly"] = "taller-galactico",
-			["draft"] = "gran-tapeo",
-			["shedding"] = "cuatro-colores",
-			["exploding"] = "la-mina",
-			["trivia"] = "la-rueda-del-saber",
+			["property"] = "galactic-empire",
+			["race"] = "galactic-race",
+			["track"] = "snakes-and-ladders",
+			["journey"] = "great-route",
+			["assembly"] = "galactic-workshop",
+			["draft"] = "grand-tapas-feast",
+			["shedding"] = "four-colours",
+			["exploding"] = "the-mine",
+			["trivia"] = "wheel-of-wits",
 		};
 
 		foreach (var (family, packageId) in references)
@@ -335,7 +335,7 @@ public class CorroPackageSdkTests
 		})
 		{
 			var text = File.ReadAllText(Path.Combine(repositoryRoot, relative));
-			Assert.Contains("cards/", text);
+			Assert.Contains("assets/cards/", text);
 			Assert.Contains(".svg", text);
 		}
 	}
@@ -388,9 +388,9 @@ public class CorroPackageSdkTests
 		Assert.True(File.Exists(Path.Combine(destination, "README.md")));
 		var creditsPath = Path.Combine(destination, "CREDITS.md");
 		Assert.True(File.Exists(creditsPath));
-		Assert.Contains("cards/*.svg", await File.ReadAllTextAsync(creditsPath));
+		Assert.Contains("assets/cards/*.svg", await File.ReadAllTextAsync(creditsPath));
 		var readme = await File.ReadAllTextAsync(Path.Combine(destination, "README.md"));
-		Assert.Contains("cards/<card-id>.svg", readme);
+		Assert.Contains("assets/cards/<card-id>.svg", readme);
 		Assert.Contains("neutral fallback", readme);
 		var settingsPath = Path.Combine(destination, ".vscode", "settings.json");
 		Assert.True(File.Exists(settingsPath));
@@ -413,12 +413,12 @@ public class CorroPackageSdkTests
 			Assert.Equal(JsonValueKind.Object, parsed.RootElement.ValueKind);
 		}
 		var cardsSchema = await File.ReadAllTextAsync(Path.Combine(schemaDirectory, "cards.schema.json"));
-		Assert.Contains("cards/<this-id>.svg", cardsSchema);
+		Assert.Contains("assets/cards/<this-id>.svg", cardsSchema);
 		Assert.Contains("Do not add an svg property", cardsSchema);
 		Assert.Contains("artColor", cardsSchema);
 		Assert.Contains("#RRGGBB", cardsSchema);
 
-		var cardArtDirectory = Path.Combine(destination, "cards");
+		var cardArtDirectory = Path.Combine(destination, "assets", "cards");
 		if (CardBearingFamilies.Contains(family))
 		{
 			var art = Assert.Single(Directory.GetFiles(cardArtDirectory, "*.svg"));
@@ -458,7 +458,7 @@ public class CorroPackageSdkTests
 			Assert.Contains(archive.Entries, entry => entry.FullName == "manifest.json");
 			if (CardBearingFamilies.Contains(family))
 			{
-				Assert.Contains(archive.Entries, entry => entry.FullName.StartsWith("cards/") && entry.FullName.EndsWith(".svg"));
+				Assert.Contains(archive.Entries, entry => entry.FullName.StartsWith("assets/cards/") && entry.FullName.EndsWith(".svg"));
 			}
 		}
 
@@ -503,13 +503,13 @@ public class CorroPackageSdkTests
 		var textDestination = Path.Combine(root.Path, "text-journey");
 		var text = await RunCli("new", "journey", textDestination);
 		Assert.Equal(CliApplication.Success, text.ExitCode);
-		Assert.Contains("Card art: 1 example at cards/<card-id>.svg", text.Output);
+		Assert.Contains("Card art: 1 example at assets/cards/<card-id>.svg", text.Output);
 
 		var jsonDestination = Path.Combine(root.Path, "json-journey");
 		var json = await RunCli("new", "journey", jsonDestination, "--json");
 		Assert.Equal(CliApplication.Success, json.ExitCode);
 		using var output = JsonDocument.Parse(json.Output);
-		Assert.Equal("cards/<card-id>.svg", output.RootElement.GetProperty("cardArt").GetProperty("convention").GetString());
+		Assert.Equal("assets/cards/<card-id>.svg", output.RootElement.GetProperty("cardArt").GetProperty("convention").GetString());
 		Assert.Equal(1, output.RootElement.GetProperty("cardArt").GetProperty("examples").GetInt32());
 	}
 

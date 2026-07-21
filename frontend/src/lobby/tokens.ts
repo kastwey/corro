@@ -36,7 +36,7 @@ export function renderTokenSelector(
 	usedTokens?: Set<TokenKey>
 ): void {
 	container.innerHTML = '';
-	// Name the radio GROUP so a screen reader announces "Elige tu ficha" on entry. The
+	// Name the radio GROUP so a screen reader announces "Choose your token" on entry. The
 	// <fieldset>/<legend> alone isn't reliably promoted to the group name by VoiceOver once a
 	// <ul> list sits between them, so mark the container an explicit, labelled radiogroup and
 	// strip the list semantics from the items (role="presentation") so the group isn't fragmented.

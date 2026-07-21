@@ -1,0 +1,104 @@
+[
+  {
+    "id": "caramel-custard",
+    "artColor": "#9A5A22",
+    "type": "dessert",
+    "count": 12,
+    "nameKey": "cards.caramel_custard"
+  },
+  {
+    "id": "olives",
+    "artColor": "#557A2A",
+    "type": "scale",
+    "scale": [
+      1,
+      3,
+      6,
+      10,
+      15
+    ],
+    "count": 14,
+    "nameKey": "cards.olives"
+  },
+  {
+    "id": "portion-1",
+    "artColor": "#A64B2A",
+    "type": "majority",
+    "icons": 1,
+    "count": 6,
+    "nameKey": "cards.portion_1"
+  },
+  {
+    "id": "portion-2",
+    "artColor": "#A64B2A",
+    "type": "majority",
+    "icons": 2,
+    "count": 12,
+    "nameKey": "cards.portion_2"
+  },
+  {
+    "id": "portion-3",
+    "artColor": "#A64B2A",
+    "type": "majority",
+    "icons": 3,
+    "count": 8,
+    "nameKey": "cards.portion_3"
+  },
+  {
+    "id": "croquette",
+    "artColor": "#B26B25",
+    "type": "set",
+    "setSize": 2,
+    "setPoints": 5,
+    "count": 14,
+    "nameKey": "cards.croquette"
+  },
+  {
+    "id": "small-sandwich",
+    "artColor": "#8C4F2A",
+    "type": "set",
+    "setSize": 3,
+    "setPoints": 10,
+    "count": 14,
+    "nameKey": "cards.small_sandwich"
+  },
+  {
+    "id": "olive-skewer",
+    "artColor": "#687A2D",
+    "type": "points",
+    "value": 1,
+    "count": 5,
+    "nameKey": "cards.olive_skewer"
+  },
+  {
+    "id": "serving-tongs",
+    "artColor": "#4E6B78",
+    "type": "extra",
+    "count": 4,
+    "nameKey": "cards.serving_tongs"
+  },
+  {
+    "id": "spicy-sauce",
+    "artColor": "#B8322A",
+    "type": "multiplier",
+    "factor": 3,
+    "count": 6,
+    "nameKey": "cards.spicy_sauce"
+  },
+  {
+    "id": "potato-omelette",
+    "artColor": "#A87300",
+    "type": "points",
+    "value": 2,
+    "count": 10,
+    "nameKey": "cards.potato_omelette"
+  },
+  {
+    "id": "prawn-skewer",
+    "artColor": "#B34A35",
+    "type": "points",
+    "value": 3,
+    "count": 4,
+    "nameKey": "cards.prawn_skewer"
+  }
+]

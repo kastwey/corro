@@ -17,7 +17,7 @@ const DECK = [
 	{ id: 'bite3', type: 'points', value: 3, count: 6, nameKey: 'c.bite3', svg: 'M3 3h58v58z' },
 	{ id: 'sauce', type: 'multiplier', factor: 3, count: 4, nameKey: 'c.sauce', svg: 'M6 6h52v52z' },
 	{ id: 'pair', type: 'set', setSize: 2, setPoints: 5, count: 8, nameKey: 'c.pair' },
-	{ id: 'flan', type: 'dessert', count: 8, nameKey: 'c.flan' },
+	{ id: 'caramel-custard', type: 'dessert', count: 8, nameKey: 'c.flan' },
 	{ id: 'stick', type: 'extra', count: 4, nameKey: 'c.stick' },
 ];
 
@@ -70,8 +70,8 @@ beforeEach(() => {
 	picked = [];
 	announced = [];
 	gs = game([
-		seat('me', { hand: [inst('bite3'), inst('pair'), inst('flan')], handCount: 3 }),
-		seat('r1', { handCount: 3, hasPicked: true, score: 7, desserts: [inst('flan', 5)] }),
+		seat('me', { hand: [inst('bite3'), inst('pair'), inst('caramel-custard')], handCount: 3 }),
+		seat('r1', { handCount: 3, hasPicked: true, score: 7, desserts: [inst('caramel-custard', 5)] }),
 	]);
 	const deps: DraftBoardDeps = {
 		getGameState: () => gs,

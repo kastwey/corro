@@ -14,7 +14,7 @@ import {
 	startGame,
 } from '../helpers/game';
 
-const BOARD = 'carrera-galactica';
+const BOARD = 'galactic-race';
 
 test.beforeEach(async () => {
 	await resetDice();

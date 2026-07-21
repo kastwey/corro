@@ -44,10 +44,10 @@ public class PackagesControllerTests
 				using var writer = new StreamWriter(entry.Open());
 				writer.Write(File.ReadAllText(Path.Combine(fixture, file)));
 			}
-			// Token icons live as files (tokens/<id>.svg); include them so the upload validates.
-			foreach (var svg in Directory.GetFiles(Path.Combine(fixture, "tokens"), "*.svg"))
+			// Token icons live as files (assets/tokens/<id>.svg); include them so the upload validates.
+			foreach (var svg in Directory.GetFiles(Path.Combine(fixture, "assets", "tokens"), "*.svg"))
 			{
-				var entry = zip.CreateEntry("tokens/" + Path.GetFileName(svg));
+				var entry = zip.CreateEntry("assets/tokens/" + Path.GetFileName(svg));
 				using var writer = new StreamWriter(entry.Open());
 				writer.Write(File.ReadAllText(svg));
 			}
@@ -134,7 +134,7 @@ public class PackagesControllerTests
 
 		var ok = Assert.IsType<OkObjectResult>(result.Result);
 		var list = Assert.IsAssignableFrom<IEnumerable<ShippedPackageSummary>>(ok.Value);
-			var galactic = Assert.Single(list, p => p.Id == "imperio-galactico");
+			var galactic = Assert.Single(list, p => p.Id == "galactic-empire");
 		Assert.False(string.IsNullOrWhiteSpace(galactic.Name["es"])); // a localized display name for the lobby
 	}
 
@@ -144,7 +144,7 @@ public class PackagesControllerTests
 		var store = NewStore();
 		var controller = NewController(store);
 
-			var result = await controller.StageShipped("imperio-galactico");
+			var result = await controller.StageShipped("galactic-empire");
 
 		var ok = Assert.IsType<OkObjectResult>(result.Result);
 		var response = Assert.IsType<PackageUploadResponse>(ok.Value);
@@ -154,7 +154,7 @@ public class PackagesControllerTests
 		Assert.Equal(2, response.MinPlayers);                // galactic caps at its 4 tokens
 		Assert.Equal(4, response.MaxPlayers);
 		// A shipped board records its id (re-staged from server/Packages on restore — no blob).
-			Assert.Equal("imperio-galactico", store.GetOrigin(response.Token)!.ShippedId);
+			Assert.Equal("galactic-empire", store.GetOrigin(response.Token)!.ShippedId);
 
 		store.Release(response.Token);
 	}
@@ -267,7 +267,7 @@ public class PackagesControllerTests
 	/// the full package-loading path — not just the manifest head.</summary>
 	private static (ShippedPackageProvider Shipped, string Id) HiddenGalacticRoot(string code, string? warning = null)
 	{
-			const string id = "imperio-galactico";
+			const string id = "galactic-empire";
 		var root = Path.Combine(Path.GetTempPath(), "corro_hidfull_" + Guid.NewGuid().ToString("N"));
 		var dest = Path.Combine(root, id);
 		CopyDir(CorroTestPaths.PackageDir(id), dest);
@@ -303,7 +303,7 @@ public class PackagesControllerTests
 	{
 		var store = NewStore();
 		var controller = NewController(store);
-			var staged = await controller.StageShipped("imperio-galactico");
+			var staged = await controller.StageShipped("galactic-empire");
 		var token = ((PackageUploadResponse)((OkObjectResult)staged.Result!).Value!).Token;
 
 		var result = controller.GetHelp(token, "es");

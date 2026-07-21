@@ -12,7 +12,7 @@ namespace CorroServer.Models.Corro;
 public sealed record SheddingCardDef
 {
 	public string Id { get; init; } = string.Empty;
-	/// <summary>Sanitized path-data loaded from optional cards/&lt;id&gt;.svg.</summary>
+	/// <summary>Sanitized path-data loaded from optional assets/cards/&lt;id&gt;.svg.</summary>
 	public string? Svg { get; init; }
 	/// <summary>Optional package-owned #RRGGBB accent for the card face.</summary>
 	public string? ArtColor { get; init; }
@@ -83,7 +83,7 @@ public sealed record SheddingRulesConfig
 
 	/// <summary>House rule: a player who plays down to one card must declare it,
 	/// or anyone may catch them (a real-time window that closes when the next player acts) and
-	/// they draw <see cref="LastCardPenalty"/> cards. Off = the classic silence ("aquí nadie grita",
+	/// they draw <see cref="LastCardPenalty"/> cards. Off = the classic silence ("nobody shouts here",
 	/// counts on demand via S / Shift+S).</summary>
 	public bool LastCardCall { get; init; } = false;
 

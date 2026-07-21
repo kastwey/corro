@@ -19,7 +19,7 @@ import {
 	startGame,
 } from '../helpers/game';
 
-const BOARD = 'imperio-galactico';
+const BOARD = 'galactic-empire';
 
 test.beforeEach(async () => {
 	await resetDice();
@@ -36,6 +36,10 @@ test('english smoke: purchase reads the package EN name and currency word', asyn
 	const code = await createGame(ana, 'Ana', BOARD);
 	await joinGame(berto, code, 'Berto');
 	await startGame(ana, [ana, berto]);
+
+	await expect(ana.locator('#game-surface-intro')).toHaveText(
+		"Focus moves automatically to the board. Use the arrow keys to explore it; your screen reader will announce each position. Press Control plus F1 to view this game's shortcuts.",
+	);
 
 	await roll(ana, 1, 2);
 	await buyPendingProperty(ana);

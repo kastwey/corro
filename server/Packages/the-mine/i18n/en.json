@@ -1,0 +1,41 @@
+{
+  "tokens": {
+    "helmet": "Helmet",
+    "pickaxe": "Pickaxe",
+    "mine_cart": "Mine cart",
+    "lantern": "Lantern",
+    "shovel": "Shovel"
+  },
+  "cards": {
+    "firedamp": "Firedamp",
+    "cut_fuse": "Cut the fuse",
+    "leave_shaft": "Leave the shaft",
+    "cave_in": "Cave-in",
+    "canary": "The canary",
+    "gallery_reshuffle": "Gallery reshuffle",
+    "borrowed_pickaxe": "Borrowed pick",
+    "no_way": "No way!",
+    "mine_rat": "Mine rat",
+    "bat": "Bat",
+    "mole": "Mole",
+    "worm": "Worm",
+    "dung_beetle": "Dung beetle"
+  },
+  "game": {
+    "exploding_game_started": "{{count}} cards dealt. {{bombs}} pockets of firedamp are hidden in the gallery.",
+    "exploding_exploded": "The firedamp blows! {{player}} is buried and out of the mine.",
+    "exploding_exploded_self": "The firedamp blows and buries you! Out of the mine.",
+    "exploding_drew_bomb_defused": "{{player}} strikes firedamp but cuts the fuse in time.",
+    "exploding_drew_bomb_defused_self": "You strike firedamp but cut the fuse in time.",
+    "exploding_tucked_self": "You tuck the firedamp back into the gallery, {{depth}} cards from the mouth.",
+    "exploding_skipped": "{{player}} leaves the shaft without digging.",
+    "exploding_skipped_self": "You leave the shaft without digging.",
+    "exploding_attacked": "{{player}} triggers a cave-in: the next miner digs extra.",
+    "exploding_attacked_self": "You trigger a cave-in: the next miner digs extra.",
+    "exploding_shuffled": "{{player}} reshuffles the gallery.",
+    "exploding_shuffled_self": "You reshuffle the gallery.",
+    "exploding_saw_future": "{{player}} sends the canary ahead and eyes the coming seams.",
+    "exploding_noped": "{{player}} calls 'no way!'.",
+    "exploding_noped_self": "You call 'no way!'."
+  }
+}

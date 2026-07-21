@@ -1,4 +1,4 @@
-/* global.css - Estilos globales y reset básico */
+/* global.css - Global styles and basic reset */
 
 * {
 	margin: 0;
@@ -11,12 +11,12 @@
 body {
 	min-height: 100vh;
 	display: flex;
-	justify-content: center;
+	flex-direction: column;
 	align-items: center;
-	padding: 2rem 1rem;
+	padding: 2rem 1rem 1rem;
 }
 
-/* Utilidades de accesibilidad */
+/* Accessibility utilities */
 .sr-only {
 	position: absolute;
 	width: 1px;
@@ -42,7 +42,7 @@ body {
 	display: flex !important;
 }
 
-/* Focus programático para accesibilidad */
+/* Programmatic focus for accessibility */
 .success:focus,
 .error:focus {
 	outline: 3px solid var(--accent);
@@ -58,9 +58,16 @@ body {
 	box-shadow: var(--shadow-md);
 	max-width: 520px;
 	width: 90%;
+	margin-top: auto;
+	flex: 0 0 auto;
 }
 
-/* Tipografía */
+/* Balance the footer below the card without clipping tall forms above the viewport. */
+body > .app-footer {
+	margin-bottom: auto;
+}
+
+/* Typography */
 h1 {
 	text-align: center;
 	margin-bottom: 2rem;
@@ -71,6 +78,46 @@ h1 {
 	-webkit-background-clip: text;
 	background-clip: text;
 	color: transparent;
+}
+
+.brand-heading {
+	display: flex;
+	justify-content: center;
+	background: none;
+	color: var(--text);
+}
+
+.lobby-header {
+	display: grid;
+	gap: 1.25rem;
+	margin-bottom: 2rem;
+}
+
+.lobby-header .brand-heading {
+	margin-bottom: 0;
+}
+
+.brand-logo {
+	display: block;
+	width: clamp(11rem, 55vw, 15rem);
+}
+
+.brand-logo__image {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+.brand-logo__image--dark {
+	display: none;
+}
+
+[data-theme="dark"] .brand-logo__image--light {
+	display: none;
+}
+
+[data-theme="dark"] .brand-logo__image--dark {
+	display: block;
 }
 
 h2 {
@@ -95,4 +142,11 @@ hr {
 	height: 2px;
 	background: linear-gradient(to right, transparent, var(--accent), transparent);
 	margin: 3rem 0;
+}
+
+@media (max-width: 420px) {
+	.container {
+		width: 100%;
+		padding: 1.25rem;
+	}
 }

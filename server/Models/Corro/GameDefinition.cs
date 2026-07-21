@@ -8,7 +8,7 @@ namespace CorroServer.Models.Corro;
 // content-agnostic game definition: everything the classic gamepecific lives in the package, not here.
 // Loaded and validated by CorroServer.Services.Corro.CorroPackageLoader.
 
-/// <summary>A localized string: locale code (e.g. "es"/"en") -> text.</summary>
+/// <summary>A localized string: locale code (e.g. "en"/"es") -> text.</summary>
 public sealed class LocalizedText : Dictionary<string, string>
 {
 	/// <summary>Text for <paramref name="lang"/>, falling back to the given default, then any value.</summary>
@@ -20,7 +20,7 @@ public sealed record Currency
 {
 	public string Symbol { get; init; } = string.Empty;
 	public string Code { get; init; } = string.Empty;
-	/// <summary>i18n key for the spoken currency name (e.g. "currency.name" -> "créditos"), resolved
+	/// <summary>i18n key for the spoken currency name (e.g. "currency.name" -> "credits"), resolved
 	/// against the package's own translations. Symbol/code aren't translatable, so they stay inline.</summary>
 	public string? NameKey { get; init; }
 }
@@ -278,7 +278,7 @@ public sealed record CardDef
 {
 	public string Id { get; init; } = string.Empty;
 	public string Deck { get; init; } = string.Empty;
-	/// <summary>Sanitized path-data loaded from optional cards/&lt;id&gt;.svg. Package content
+	/// <summary>Sanitized path-data loaded from optional assets/cards/&lt;id&gt;.svg. Package content
 	/// overrides the client's neutral face; null lets the engine render its fallback.</summary>
 	public string? Svg { get; init; }
 	/// <summary>Optional package-owned #RRGGBB accent for this card's frame and silhouette.</summary>
@@ -301,7 +301,7 @@ public sealed record GameDefinition
 	public TrackBoardDef? TrackBoard { get; init; }
 	/// <summary>The trivia wheel board (trivia family); null for other families.</summary>
 	public TriviaBoardDef? TriviaBoard { get; init; }
-	/// <summary>The trivia question decks, keyed by locale ("es"/"en") — real content per language,
+	/// <summary>The trivia question decks, keyed by locale ("en"/"es") — real content per language,
 	/// not a translation. The runtime resolves one language at game start. Null for other families.</summary>
 	public Dictionary<string, List<TriviaQuestionDef>>? TriviaQuestions { get; init; }
 	/// <summary>The journey deck catalog (cards.json as card definitions with copy counts).

@@ -1,21 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BOT_NAMES, randomBotName } from '../src/botNames.js';
+import { BOT_NAME_COUNT, localizedBotNames, randomBotName } from '../src/botNames.js';
 
-// The silly-name hat: pure picks per language, English fallback, never the same name
-// twice in a row when re-rolling.
+// The silly-name hat: localized content in, pure random selection out.
 
-test('picks from the language list, falling back to English', () => {
+test('reads every name from i18n and picks only from that list', () => {
+	const translate = (key: string) => `translated ${key}`;
+	const names = localizedBotNames(translate);
+	assert.equal(names.length, BOT_NAME_COUNT);
+	assert.equal(names[0], 'translated lobby.botNames.0');
+	assert.equal(names.at(-1), `translated lobby.botNames.${BOT_NAME_COUNT - 1}`);
 	for (let i = 0; i < 20; i++) {
-		assert.ok(BOT_NAMES.es.includes(randomBotName('es')));
-		assert.ok(BOT_NAMES.en.includes(randomBotName('en')));
-		assert.ok(BOT_NAMES.en.includes(randomBotName('fr'))); // unknown language → English
+		assert.ok(names.includes(randomBotName(translate)));
 	}
 });
 
 test('re-rolling never repeats the name currently in the box', () => {
-	const current = BOT_NAMES.es[0];
+	const translate = (key: string) => key;
+	const current = localizedBotNames(translate)[0];
 	for (let i = 0; i < 50; i++) {
-		assert.notEqual(randomBotName('es', current), current);
+		assert.notEqual(randomBotName(translate, current), current);
 	}
 });

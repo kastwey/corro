@@ -15,9 +15,9 @@ public class BotPolicyTests
 {
 	private static List<JourneyCardDef> Deck() => new()
 	{
-		new() { Id = "d25", Type = "distance", Value = 25, Count = 6, NameKey = "cards.d25" },
-		new() { Id = "d100", Type = "distance", Value = 100, Count = 6, NameKey = "cards.d100" },
-		new() { Id = "d200", Type = "distance", Value = 200, Count = 4, Premium = true, MaxPlaysPerHand = 2, NameKey = "cards.d200" },
+		new() { Id = "distance-25", Type = "distance", Value = 25, Count = 6, NameKey = "cards.distance_25" },
+		new() { Id = "distance-100", Type = "distance", Value = 100, Count = 6, NameKey = "cards.distance_100" },
+		new() { Id = "distance-200", Type = "distance", Value = 200, Count = 4, Premium = true, MaxPlaysPerHand = 2, NameKey = "cards.distance_200" },
 		new() { Id = "stop", Type = "attack", Kind = "stop", HazardClass = "stopper", Count = 3, NameKey = "cards.stop" },
 		new() { Id = "limit", Type = "attack", Kind = "speedLimit", HazardClass = "limiter", Count = 2, NameKey = "cards.limit" },
 		new() { Id = "go", Type = "remedy", Kind = "stop", Count = 6, NameKey = "cards.go" },
@@ -52,7 +52,7 @@ public class BotPolicyTests
 			JourneyDeck = Deck(),
 			JourneyRules = new JourneyRulesConfig(),
 			CurrentTurn = turnOf,
-			Players = seats.Select(s => new Player { Id = s.PlayerId, Name = s.PlayerId, Token = "coche" }).ToList(),
+			Players = seats.Select(s => new Player { Id = s.PlayerId, Name = s.PlayerId, Token = "car" }).ToList(),
 		};
 	}
 
@@ -95,11 +95,11 @@ public class BotPolicyTests
 	{
 		var bot = Seat("bot");
 		bot.Km = 900;
-		bot.Members[0].Hand.AddRange(new[] { Inst("d25"), Inst("d100") });
+		bot.Members[0].Hand.AddRange(new[] { Inst("distance-25"), Inst("distance-100") });
 		var view = View("bot", bot, Seat("rival"));
 
 		var play = Assert.IsType<JourneyPlayCommand>(Journey.Decide(view, "bot"));
-		Assert.Equal("d100#0", play.InstanceId); // 900 + 100 == the goal
+		Assert.Equal("distance-100#0", play.InstanceId); // 900 + 100 == the goal
 	}
 
 	[Fact]
@@ -145,7 +145,7 @@ public class BotPolicyTests
 	public void Discards_the_least_useful_card_when_nothing_is_playable_never_an_immunity()
 	{
 		var bot = Seat("bot", "stop"); // stopped: distances illegal; no cure for "stop" in hand
-		bot.Members[0].Hand.AddRange(new[] { Inst("priority"), Inst("spare", 0), Inst("spare", 1), Inst("d200") });
+		bot.Members[0].Hand.AddRange(new[] { Inst("priority"), Inst("spare", 0), Inst("spare", 1), Inst("distance-200") });
 		var rival = Seat("rival", "stop"); // nobody attackable either
 		var view = View("bot", bot, rival);
 		// "priority" would be legal (immunities always are) — but its play ranks above the
@@ -167,7 +167,7 @@ public class BotPolicyTests
 		{
 			GameType = "track",
 			CurrentTurn = "bot",
-			Players = new List<Player> { new() { Id = "bot", Name = "Bot", Token = "coche" } },
+			Players = new List<Player> { new() { Id = "bot", Name = "Bot", Token = "car" } },
 		};
 		Assert.IsType<RollDiceCommand>(policy.Decide(view, "bot"));
 

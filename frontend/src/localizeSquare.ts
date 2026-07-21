@@ -22,7 +22,7 @@ export function pickLocale(map: Record<string, string> | undefined, lang: string
 /**
  * A non-hex `color` value is really a special TYPE the board carries in the colour slot with no
  * group-name key — a railroad ("transit") or utility ("utility"). Return the translated TYPE word
- * ("estación"/"compañía") when there's a `game.term_<color>` key for it, else null so the caller
+ * ("station"/"utility") when there is a `game.term_<color>` key for it, else null so the caller
  * can fall back to a plain colour word.
  */
 function typeTerm(color: string, translate: (key: string) => string): string | null {
@@ -32,9 +32,9 @@ function typeTerm(color: string, translate: (key: string) => string): string | n
 
 /**
  * The screen-reader text for a square's group/colour: the group's name resolved from its i18n key
- * ("Group: Marrón") against the merged app + package translations — falling back to the key's text
+ * ("Group: Brown") against the merged app + package translations — falling back to the key's text
  * literally when there's no translation (so an upload can use a plain name). With no group key it
- * announces the TYPE word for a special group ("estación"/"compañía", no "Color:" prefix — a station
+ * announces the TYPE word for a special group ("station"/"utility", no "Color:" prefix — a station
  * is not a colour), else a real colour word ("Color: brown"); a raw colour value such as a hex
  * ("#8a5a2b") is meaningless read aloud, so it returns '' (nothing announced).
  *
@@ -55,7 +55,7 @@ export function squareGroupLabel(
 	}
 	const color = square.color;
 	if (color && !/^#?[0-9a-fA-F]{3,8}$/.test(color)) {
-		// A station/utility announces its type ("estación"/"compañía") with no "Color:" prefix
+		// A station/utility announces its type ("station"/"utility") with no "Color:" prefix
 		// instead of the nonsense "Color: transit"; a classic colour keeps the "Color:" prefix.
 		return typeTerm(color, translate) ?? `${translate('game.color')}: ${localizeColor(color)}`;
 	}
@@ -81,8 +81,8 @@ export function groupDisplayName(
 	const color = prop.color;
 	if (color && !/^#?[0-9a-fA-F]{3,8}$/.test(color)) {
 		// A special TYPE (railroad "transit", "utility") carries its type string as the colour
-		// and has no group name key — name the TYPE ("estación"/"compañía") instead of echoing
-		// the raw word "transit" (the trade list used to read "Estación de las Delicias, transit").
+		// and has no group name key — name the TYPE ("station"/"utility") instead of echoing
+		// the raw word "transit" (the trade list used to read "Central Station, transit").
 		return typeTerm(color, translate) ?? localizeColor(color);
 	}
 	return '';

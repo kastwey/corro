@@ -8,7 +8,7 @@
  * Kittens" right after load, while the default board staged at startup is still
  * resolving — both chains race, and the one that finishes LAST wins. That let a stale
  * default overwrite the chosen board's tokens (the selector showed the wrong pieces,
- * "por alguna razón"). Wrapping each stage in a ticket makes superseded requests stop: they take
+ * "for some reason"). Wrapping each stage in a ticket makes superseded requests stop: they take
  * a ticket with {@link begin} and, after every await, apply their result only while
  * {@link isCurrent} still holds — a newer selection has bumped the counter otherwise.
  */

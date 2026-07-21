@@ -1,6 +1,7 @@
 {
   "footer": {
-    "poweredBy": "Funciona con"
+    "poweredBy": "Funciona con",
+    "repository": "Repositorio en GitHub"
   },
   "_comment": "Archivo de traducciones al español. El inglés se usa nativamente desde el HTML.",
   "page": {
@@ -8,10 +9,12 @@
   },
   "language": {
     "selectLabel": "Seleccionar idioma",
-    "applyButton": "Aplicar"
+    "applyButton": "Aplicar",
+    "english": "Inglés",
+    "spanish": "Español"
   },
   "lobby": {
-    "title": "🎮 Corro",
+    "title": "Corro",
     "intro": "Bienvenido al lobby de Corro. Crea una nueva partida o únete a una existente.",
     "backToHome": "Volver al inicio",
     "home": {
@@ -49,6 +52,24 @@
     "botNameLabel": "Nombre (vacío: Bot 1, Bot 2…)",
     "botNameRandom": "Dame uno aleatorio",
     "botNameAdd": "Añadir",
+    "botNames": {
+      "0": "Doña Rotonda",
+      "1": "Turbo Paco",
+      "2": "La Abuela Nitro",
+      "3": "Freno de Mano",
+      "4": "El Copiloto Fantasma",
+      "5": "Pepe Gasolina",
+      "6": "Kilometrina",
+      "7": "Don Derrape",
+      "8": "Intermitente Eterno",
+      "9": "Embrague Triste",
+      "10": "La Grúa Implacable",
+      "11": "Chispas el Veloz",
+      "12": "Curva Peligrosa",
+      "13": "El Rey del Atasco",
+      "14": "Rueda Suelta",
+      "15": "Matrícula Borrosa"
+    },
     "playersOption": "{{count}} jugadores",
     "rules": {
       "heading": "Configuración de las reglas de la partida",
@@ -150,7 +171,7 @@
       "confirm": "Crear partida"
     },
     "boards": {
-      "imperio-galactico": "Imperio Galáctico"
+      "galactic-empire": "Imperio Galáctico"
     },
     "tokenInUse": "(En uso)",
     "playersCount": "Jugadores",
@@ -197,7 +218,11 @@
     }
   },
   "game": {
-    "board_intro": "Usa Tab para entrar al tablero y luego las flechas para moverte. Tu lector de pantalla anunciará la casilla activa.",
+    "surface_intro": {
+      "loading": "El foco se colocará automáticamente en la zona principal del juego cuando termine de cargar. Pulsa Control más F1 para consultar los atajos.",
+      "board": "El foco se coloca automáticamente en el tablero. Usa las flechas para explorarlo; tu lector de pantalla anunciará cada posición. Pulsa Control más F1 para consultar los atajos de este juego.",
+      "hand": "El foco se coloca automáticamente en tu mano. Usa Flecha arriba y Flecha abajo para recorrer las cartas; tu lector de pantalla anunciará cada una. Pulsa Control más F1 para consultar los atajos de este juego."
+    },
     "actions": {
       "toolbar_label": "Acciones disponibles",
       "pay_release_cost": "Pagar coste de liberación",

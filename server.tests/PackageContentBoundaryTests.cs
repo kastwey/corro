@@ -16,7 +16,7 @@ public class PackageContentBoundaryTests
 		// Family mechanics / command vocabulary.
 		"attack", "defuse", "favor", "nope", "shuffle", "skip",
 		// Engine UI / internal routing identifiers that happen to collide with content ids.
-		"f6", "b1", "b2",
+		"f6", "b1", "b2", "circle", "die", "square", "wild",
 	};
 
 	[Fact]

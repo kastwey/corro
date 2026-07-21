@@ -13,7 +13,7 @@ namespace CorroServer.Tests;
 public class CardEffectInterpreterTests
 {
 	private static List<SquareDef> Board() =>
-		  new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("imperio-galactico"))
+		  new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("galactic-empire"))
 			.GetAwaiter().GetResult().Board;
 
 	private static CardOutcome Resolve(CardEffect e, IReadOnlyList<SquareDef> board, int from)
@@ -105,7 +105,7 @@ public class CardEffectInterpreterTests
 	[Fact]
 	public async Task Resolves_the_real_Galactic_deck()
 	{
-		 var def = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("imperio-galactico"));
+		 var def = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("galactic-empire"));
 		var board = def.Board;
 		CardEffect Effect(string id) => def.Cards.Single(c => c.Id == id).Effect;
 

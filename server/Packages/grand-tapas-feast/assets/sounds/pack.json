@@ -1,0 +1,6 @@
+{
+  "packId": "grand-tapas-feast",
+  "events": {
+    "game.over": "game-over.ogg"
+  }
+}

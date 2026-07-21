@@ -1,0 +1,51 @@
+{
+  "format": "corro/v1",
+  "gameType": "assembly",
+  "engineVersion": "^1.0",
+  "id": "galactic-workshop",
+  "name": {
+    "es": "Taller Galáctico",
+    "en": "Galactic Workshop"
+  },
+  "author": "kastwey",
+  "version": "0.1.0",
+  "locales": [
+    "en",
+    "es"
+  ],
+  "players": {
+    "min": 2,
+    "max": 6
+  },
+  "assemblyRules": {
+    "handSize": 3,
+    "slotsToWin": 4,
+    "maxDiscard": 3
+  },
+  "tokens": [
+    {
+      "id": "wrench",
+      "nameKey": "tokens.wrench"
+    },
+    {
+      "id": "robot",
+      "nameKey": "tokens.robot"
+    },
+    {
+      "id": "drone",
+      "nameKey": "tokens.drone"
+    },
+    {
+      "id": "helmet",
+      "nameKey": "tokens.helmet"
+    },
+    {
+      "id": "magnet",
+      "nameKey": "tokens.magnet"
+    },
+    {
+      "id": "welder",
+      "nameKey": "tokens.welder"
+    }
+  ]
+}

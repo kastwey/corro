@@ -156,6 +156,43 @@
   align-items: center;
   justify-content: center;
 }
+.exploding-reveal {
+  width: 92px;
+  height: 128px;
+  isolation: isolate;
+}
+.exploding-reveal__bomb,
+.exploding-reveal__defuse {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.exploding-reveal__bomb { z-index: 1; }
+.exploding-reveal__defuse {
+  z-index: 2;
+  opacity: 0;
+  pointer-events: none;
+}
+.exploding-reveal__safe {
+  position: absolute;
+  right: -0.4rem;
+  bottom: -0.4rem;
+  z-index: 3;
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--good);
+  color: var(--on-good);
+  font-size: 1.25rem;
+  font-weight: 900;
+  opacity: 0;
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.28);
+}
 .exploding-piles .xcard {
   width: 92px;
   height: 128px;
@@ -164,10 +201,62 @@
 .exploding-piles .xcard__svg { width: 64px; height: 64px; }
 .exploding-piles .xcard__name { font-size: 0.6rem; min-height: 2.5em; }
 
-.exploding-reveal .xcard {
+.exploding-reveal__bomb > .xcard {
   transform: rotate(2deg) scale(1.08);
   box-shadow: 0 5px 16px rgba(164, 45, 32, 0.44);
 }
+
+/* The server has already consumed the player's generic defuse card. Visually drop that
+ * package-owned face over the revealed danger, let it absorb the wobble, then leave a safe
+ * green seal exactly as the delayed depth picker becomes available. The whole table echo is
+ * aria-hidden; the server announcement remains the only spoken account. */
+.exploding-reveal--defusing:not(.exploding-reveal--static) .exploding-reveal__bomb {
+  transform-origin: 50% 85%;
+  animation: exploding-bomb-defused 2s ease-in-out both;
+}
+.exploding-reveal--defusing:not(.exploding-reveal--static) .exploding-reveal__defuse {
+  animation: exploding-defuse-drop 2s cubic-bezier(0.22, 0.78, 0.25, 1) both;
+}
+.exploding-reveal--defusing:not(.exploding-reveal--static) .exploding-reveal__safe {
+  animation: exploding-safe-pop 2s ease-out both;
+}
+
+@keyframes exploding-bomb-defused {
+  0%, 12%  { transform: rotate(0deg) scale(1); filter: none; }
+  18%      { transform: rotate(-5deg) scale(1.04); }
+  24%      { transform: rotate(5deg) scale(1.04); }
+  30%      { transform: rotate(-4deg) scale(1.03); }
+  36%      { transform: rotate(4deg) scale(1.03); }
+  44%      { transform: rotate(-2deg) scale(1.02); filter: drop-shadow(0 0 7px var(--danger)); }
+  54%      { transform: rotate(0deg) scale(1); filter: drop-shadow(0 0 10px var(--danger)); }
+  68%, 100% { transform: rotate(0deg) scale(0.96); filter: drop-shadow(0 0 8px var(--good)); }
+}
+
+@keyframes exploding-defuse-drop {
+  0%, 18%  { opacity: 0; transform: translateY(-72%) rotate(-16deg) scale(0.62); }
+  28%      { opacity: 1; transform: translateY(-42%) rotate(-10deg) scale(0.7); }
+  50%, 62% { opacity: 1; transform: translateY(0) rotate(5deg) scale(0.82); }
+  76%, 100% { opacity: 0; transform: translateY(42%) rotate(13deg) scale(0.7); }
+}
+
+@keyframes exploding-safe-pop {
+  0%, 58%  { opacity: 0; transform: scale(0.2) rotate(-35deg); }
+  68%      { opacity: 1; transform: scale(1.2) rotate(7deg); }
+  78%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+/* Motion preferences suppress the wobble/drop, not the two-second focus grace: the pause is
+ * what lets assistive technology finish the announcement. Keep a static before/after tableau
+ * so sighted reduced-motion players still see why the game is waiting. */
+.exploding-reveal--static .exploding-reveal__bomb {
+  transform: scale(0.96);
+  filter: drop-shadow(0 0 8px var(--good));
+}
+.exploding-reveal--static .exploding-reveal__defuse {
+  opacity: 0.9;
+  transform: translate(18px, -16px) rotate(8deg) scale(0.62);
+}
+.exploding-reveal--static .exploding-reveal__safe { opacity: 1; }
 
 .exploding-discard--pending .xcard {
   outline: 3px solid #1e88e5;
@@ -181,6 +270,20 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .exploding-discard--pending .xcard { animation: none; }
+  .exploding-reveal--defusing .exploding-reveal__bomb {
+    animation: none;
+    transform: scale(0.96);
+    filter: drop-shadow(0 0 8px var(--good));
+  }
+  .exploding-reveal--defusing .exploding-reveal__defuse {
+    animation: none;
+    opacity: 0.9;
+    transform: translate(18px, -16px) rotate(8deg) scale(0.62);
+  }
+  .exploding-reveal--defusing .exploding-reveal__safe {
+    animation: none;
+    opacity: 1;
+  }
 }
 
 .exploding-seats {
@@ -234,6 +337,7 @@
 @media (max-width: 620px) {
   .xcard { width: 100px; height: 140px; }
   .xcard__svg { width: 72px; height: 72px; }
+  .exploding-reveal { width: 82px; height: 114px; }
   .exploding-piles .xcard { width: 82px; height: 114px; }
   .exploding-piles .xcard__svg { width: 56px; height: 56px; }
 }

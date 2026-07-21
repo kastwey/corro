@@ -18,7 +18,7 @@ public class JourneyFamilyTests
 {
 	private static List<JourneyCardDef> Deck() => new()
 	{
-		new() { Id = "d25", Type = "distance", Value = 25, Count = 10, NameKey = "cards.d25" },
+		new() { Id = "distance-25", Type = "distance", Value = 25, Count = 10, NameKey = "cards.distance_25" },
 		new() { Id = "stop", Type = "attack", Kind = "stop", HazardClass = "stopper", Count = 3, NameKey = "cards.stop" },
 		new() { Id = "go", Type = "remedy", Kind = "stop", Count = 6, NameKey = "cards.go" },
 		new() { Id = "priority", Type = "immunity", ShieldsKinds = new() { "stop" }, NameKey = "cards.priority" },
@@ -75,7 +75,7 @@ public class JourneyFamilyTests
 
 	/// <summary>The 20-card fixture deck covers two hands; four players need more copies.</summary>
 	private static List<JourneyCardDef> BigDeck()
-		=> Deck().Select(c => c.Id == "d25" ? c with { Count = 30 } : c).ToList();
+		=> Deck().Select(c => c.Id == "distance-25" ? c with { Count = 30 } : c).ToList();
 
 	[Fact]
 	public void CreateGame_with_teams_interleaves_the_turn_order_and_dresses_partners_alike()
@@ -343,7 +343,7 @@ public class JourneyFamilyTests
 	{
 		var deck = new List<JourneyCardDef>
 		{
-			new() { Id = "d25", Type = "distance", Value = 25, Count = 5, NameKey = "cards.d25" },
+			new() { Id = "distance-25", Type = "distance", Value = 25, Count = 5, NameKey = "cards.distance_25" },
 			new() { Id = "go", Type = "remedy", Kind = "stop", Count = 2, NameKey = "cards.go" },
 		};
 

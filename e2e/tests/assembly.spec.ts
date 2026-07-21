@@ -1,4 +1,4 @@
-// assembly.spec.ts — the assembly family on "Taller Galáctico", end to end.
+// assembly.spec.ts — the assembly family on "Galactic Workshop", end to end.
 //
 // Two real browsers, Spanish, real SignalR. The E2E identity shuffle keeps the deck in
 // cards.json order and DEALS from its tail — the package deliberately ends with
@@ -21,7 +21,7 @@ import {
 	startGame,
 } from '../helpers/game';
 
-const BOARD = 'taller-galactico';
+const BOARD = 'galactic-workshop';
 
 test.beforeEach(async () => {
 	await resetDice();

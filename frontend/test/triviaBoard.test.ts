@@ -30,8 +30,8 @@ function gameState(): GameState {
 			categoryCursors: [0, 0, 0, 0, 0, 0],
 		},
 		players: [
-			{ id: 'A', name: 'Ana', token: 'brujula' as any, color: '#e00', position: 0, money: 0, properties: [], releasePasses: 0 },
-			{ id: 'B', name: 'Berto', token: 'libro' as any, color: '#00e', position: 0, money: 0, properties: [], releasePasses: 0 },
+			{ id: 'A', name: 'Ana', token: 'compass' as any, color: '#e00', position: 0, money: 0, properties: [], releasePasses: 0 },
+			{ id: 'B', name: 'Berto', token: 'book' as any, color: '#00e', position: 0, money: 0, properties: [], releasePasses: 0 },
 		],
 		bank: { money: 0 }, currentTurn: 'A', ownership: [], squares: [],
 	} as unknown as GameState;

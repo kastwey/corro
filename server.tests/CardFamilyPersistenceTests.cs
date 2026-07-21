@@ -46,12 +46,12 @@ public class CardFamilyPersistenceTests
 					new JourneySeatState
 					{
 						PlayerId = "a",
-						Members = { new JourneyMemberState { PlayerId = "a", Hand = { new JourneyCardInstance { InstanceId = "d25#0", CardId = "d25" } } } },
+						Members = { new JourneyMemberState { PlayerId = "a", Hand = { new JourneyCardInstance { InstanceId = "distance-25#0", CardId = "distance-25" } } } },
 						Km = 125, Hazards = { "stop" }, Immunities = { "priority" }, Score = 300,
 					},
 				},
 				DrawPile = { new JourneyCardInstance { InstanceId = "go#0", CardId = "go" } },
-				DiscardPile = { new JourneyCardInstance { InstanceId = "d25#1", CardId = "d25" } },
+				DiscardPile = { new JourneyCardInstance { InstanceId = "distance-25#1", CardId = "distance-25" } },
 				PendingCoup = new PendingJourneyCoup
 				{
 					VictimId = "a",
@@ -69,7 +69,7 @@ public class CardFamilyPersistenceTests
 		var seat = Assert.Single(back.Seats);
 		Assert.Equal(125, seat.Km);
 		Assert.Equal(new[] { "stop" }, seat.Hazards);
-		Assert.Equal("d25#0", Assert.Single(Assert.Single(seat.Members).Hand).InstanceId);
+		Assert.Equal("distance-25#0", Assert.Single(Assert.Single(seat.Members).Hand).InstanceId);
 		Assert.Equal("go#0", Assert.Single(back.DrawPile).InstanceId);
 		Assert.Equal("priority#0", back.PendingCoup!.ImmunityInstanceId);
 	}
@@ -96,14 +96,14 @@ public class CardFamilyPersistenceTests
 							{
 								Color = "red",
 								Piece = new AssemblyCardInstance { InstanceId = "reactor#1", CardId = "reactor" },
-								Afflictions = { new AssemblyCardInstance { InstanceId = "sobrecarga#0", CardId = "sobrecarga" } },
+								Afflictions = { new AssemblyCardInstance { InstanceId = "overload#0", CardId = "overload" } },
 							},
 						},
 					},
 					new AssemblySeatState { PlayerId = "b", Retired = true },
 				},
-				DrawPile = { new AssemblyCardInstance { InstanceId = "nucleo#0", CardId = "nucleo" } },
-				DiscardPile = { new AssemblyCardInstance { InstanceId = "grieta#0", CardId = "grieta" } },
+				DrawPile = { new AssemblyCardInstance { InstanceId = "data-core#0", CardId = "data-core" } },
+				DiscardPile = { new AssemblyCardInstance { InstanceId = "structural-crack#0", CardId = "structural-crack" } },
 			},
 		};
 
@@ -112,9 +112,9 @@ public class CardFamilyPersistenceTests
 		Assert.Equal("reactor#0", Assert.Single(seat.Hand).InstanceId);
 		var slot = Assert.Single(seat.Slots);
 		Assert.Equal("red", slot.Color);
-		Assert.Equal("sobrecarga#0", Assert.Single(slot.Afflictions).InstanceId);
+		Assert.Equal("overload#0", Assert.Single(slot.Afflictions).InstanceId);
 		Assert.True(back.Seats.Single(s => s.PlayerId == "b").Retired);
-		Assert.Equal("nucleo#0", Assert.Single(back.DrawPile).InstanceId);
+		Assert.Equal("data-core#0", Assert.Single(back.DrawPile).InstanceId);
 	}
 
 	[Fact]
@@ -134,25 +134,25 @@ public class CardFamilyPersistenceTests
 					new DraftSeatState
 					{
 						PlayerId = "a",
-						Hand = { new DraftCardInstance { InstanceId = "gamba#0", CardId = "gamba" } },
-						CommittedInstanceId = "gamba#0", HasPicked = true,
+						Hand = { new DraftCardInstance { InstanceId = "prawn-skewer#0", CardId = "prawn-skewer" } },
+						CommittedInstanceId = "prawn-skewer#0", HasPicked = true,
 						Table = { new DraftTableSlot { Card = new DraftCardInstance { InstanceId = "salsa#0", CardId = "salsa" } } },
-						Desserts = { new DraftCardInstance { InstanceId = "flan#0", CardId = "flan" } },
+						Desserts = { new DraftCardInstance { InstanceId = "caramel-custard#0", CardId = "caramel-custard" } },
 						Score = 21, RoundScores = { 9, 12 },
 					},
 				},
-				DrawPile = { new DraftCardInstance { InstanceId = "flan#1", CardId = "flan" } },
+				DrawPile = { new DraftCardInstance { InstanceId = "caramel-custard#1", CardId = "caramel-custard" } },
 			},
 		};
 
 		var back = RoundTrip(state).Draft!;
 		Assert.Equal(3, back.Trick);
 		var seat = Assert.Single(back.Seats);
-		Assert.Equal("gamba#0", Assert.Single(seat.Hand).InstanceId);
-		Assert.Equal("gamba#0", seat.CommittedInstanceId);
+		Assert.Equal("prawn-skewer#0", Assert.Single(seat.Hand).InstanceId);
+		Assert.Equal("prawn-skewer#0", seat.CommittedInstanceId);
 		Assert.True(seat.HasPicked);
 		Assert.Equal("salsa#0", Assert.Single(seat.Table).Card.InstanceId);
-		Assert.Equal("flan#0", Assert.Single(seat.Desserts).InstanceId);
+		Assert.Equal("caramel-custard#0", Assert.Single(seat.Desserts).InstanceId);
 		Assert.Equal(new[] { 9, 12 }, seat.RoundScores);
 	}
 
@@ -167,32 +167,32 @@ public class CardFamilyPersistenceTests
 			Shedding = new SheddingState
 			{
 				Round = 2,
-				CurrentColor = "azul",
+				CurrentColor = "blue",
 				Direction = -1,
 				Seats =
 				{
 					new SheddingSeatState
 					{
 						PlayerId = "a",
-						Hand = { new SheddingCardInstance { InstanceId = "azul-5#0", CardId = "azul-5" } },
+						Hand = { new SheddingCardInstance { InstanceId = "blue-5#0", CardId = "blue-5" } },
 						Score = 40, RoundScores = { 40 },
 					},
 				},
-				DrawPile = { new SheddingCardInstance { InstanceId = "rojo-7#0", CardId = "rojo-7" } },
-				DiscardPile = { new SheddingCardInstance { InstanceId = "azul-2#0", CardId = "azul-2" } },
-				PendingDrawnPlay = new PendingDrawnPlay { PlayerId = "a", InstanceId = "azul-5#0" },
+				DrawPile = { new SheddingCardInstance { InstanceId = "red-7#0", CardId = "red-7" } },
+				DiscardPile = { new SheddingCardInstance { InstanceId = "blue-2#0", CardId = "blue-2" } },
+				PendingDrawnPlay = new PendingDrawnPlay { PlayerId = "a", InstanceId = "blue-5#0" },
 			},
 		};
 
 		var back = RoundTrip(state).Shedding!;
-		Assert.Equal("azul", back.CurrentColor);
+		Assert.Equal("blue", back.CurrentColor);
 		Assert.Equal(-1, back.Direction);
 		var seat = Assert.Single(back.Seats);
-		Assert.Equal("azul-5#0", Assert.Single(seat.Hand).InstanceId);
+		Assert.Equal("blue-5#0", Assert.Single(seat.Hand).InstanceId);
 		Assert.Equal(40, seat.Score);
-		Assert.Equal("rojo-7#0", Assert.Single(back.DrawPile).InstanceId);
-		Assert.Equal("azul-2#0", Assert.Single(back.DiscardPile).InstanceId);
-		Assert.Equal("azul-5#0", back.PendingDrawnPlay!.InstanceId);
+		Assert.Equal("red-7#0", Assert.Single(back.DrawPile).InstanceId);
+		Assert.Equal("blue-2#0", Assert.Single(back.DiscardPile).InstanceId);
+		Assert.Equal("blue-5#0", back.PendingDrawnPlay!.InstanceId);
 	}
 
 	[Fact]

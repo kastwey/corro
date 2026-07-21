@@ -34,40 +34,40 @@ test('falls back to the base key when _self has no translation', () => {
 
 test('the _victim variant resolves, and falls back to the base when missing', () => {
 	const translate = makeTranslate({
-		'cards.limite_played': '¡Pepe lanza un límite a Ana!',
-		'cards.limite_played_victim': '¡Pepe te lanza un límite! ¡Modo tortuga!',
-		'cards.pinchazo_played': '¡Pepe pincha una rueda a Ana!',
-		// no cards.pinchazo_played_victim
+		'cards.speed_limit_played': '¡Pepe lanza un límite a Ana!',
+		'cards.speed_limit_played_victim': '¡Pepe te lanza un límite! ¡Modo tortuga!',
+		'cards.flat_tyre_played': '¡Pepe pincha una rueda a Ana!',
+		// no cards.flat_tyre_played_victim
 	});
 
 	assert.equal(
-		translateWithSelfFallback('cards.limite_played_victim', {}, translate),
+		translateWithSelfFallback('cards.speed_limit_played_victim', {}, translate),
 		'¡Pepe te lanza un límite! ¡Modo tortuga!');
 	assert.equal(
-		translateWithSelfFallback('cards.pinchazo_played_victim', {}, translate),
+		translateWithSelfFallback('cards.flat_tyre_played_victim', {}, translate),
 		'¡Pepe pincha una rueda a Ana!');
 });
 
 test('the _victim_team variant falls down the chain: plural → singular → base', () => {
 	const translate = makeTranslate({
-		'cards.limite_played': '¡Pepe lanza un límite al Equipo Rojo!',
-		'cards.limite_played_victim': '¡Pepe te lanza un límite!',
-		'cards.limite_played_victim_team': '¡Pepe os lanza un límite! ¡Vais en modo tortuga!',
-		'cards.pinchazo_played': '¡Pepe pincha una rueda al Equipo Rojo!',
-		'cards.pinchazo_played_victim': '¡Pepe te pincha una rueda!',
-		// no cards.pinchazo_played_victim_team → the singular victim line
-		'cards.accidente_played': '¡Crash! Pepe provoca un accidente',
+		'cards.speed_limit_played': '¡Pepe lanza un límite al Equipo Rojo!',
+		'cards.speed_limit_played_victim': '¡Pepe te lanza un límite!',
+		'cards.speed_limit_played_victim_team': '¡Pepe os lanza un límite! ¡Vais en modo tortuga!',
+		'cards.flat_tyre_played': '¡Pepe pincha una rueda al Equipo Rojo!',
+		'cards.flat_tyre_played_victim': '¡Pepe te pincha una rueda!',
+		// no cards.flat_tyre_played_victim_team → the singular victim line
+		'cards.accident_played': '¡Crash! Pepe provoca un accidente',
 		// no accidente victim variants at all → the base line
 	});
 
 	assert.equal(
-		translateWithSelfFallback('cards.limite_played_victim_team', {}, translate),
+		translateWithSelfFallback('cards.speed_limit_played_victim_team', {}, translate),
 		'¡Pepe os lanza un límite! ¡Vais en modo tortuga!');
 	assert.equal(
-		translateWithSelfFallback('cards.pinchazo_played_victim_team', {}, translate),
+		translateWithSelfFallback('cards.flat_tyre_played_victim_team', {}, translate),
 		'¡Pepe te pincha una rueda!');
 	assert.equal(
-		translateWithSelfFallback('cards.accidente_played_victim_team', {}, translate),
+		translateWithSelfFallback('cards.accident_played_victim_team', {}, translate),
 		'¡Crash! Pepe provoca un accidente');
 });
 

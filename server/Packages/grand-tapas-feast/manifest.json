@@ -1,0 +1,50 @@
+{
+  "format": "corro/v1",
+  "gameType": "draft",
+  "engineVersion": "^1.0",
+  "id": "grand-tapas-feast",
+  "name": {
+    "es": "Gran Tapeo",
+    "en": "The Grand Tapas Feast"
+  },
+  "author": "kastwey",
+  "version": "0.1.0",
+  "locales": [
+    "en",
+    "es"
+  ],
+  "players": {
+    "min": 2,
+    "max": 5
+  },
+  "draftRules": {
+    "rounds": 3,
+    "handSizeBase": 12,
+    "majorityFirst": 6,
+    "majoritySecond": 3,
+    "dessertBonus": 6,
+    "dessertPenalty": 6
+  },
+  "tokens": [
+    {
+      "id": "cocktail-stick",
+      "nameKey": "tokens.cocktail_stick"
+    },
+    {
+      "id": "fork",
+      "nameKey": "tokens.fork"
+    },
+    {
+      "id": "napkin",
+      "nameKey": "tokens.napkin"
+    },
+    {
+      "id": "wine-glass",
+      "nameKey": "tokens.wine_glass"
+    },
+    {
+      "id": "olive",
+      "nameKey": "tokens.olive"
+    }
+  ]
+}

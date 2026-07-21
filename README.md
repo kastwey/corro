@@ -3,7 +3,7 @@
 A multiplayer engine for **spatial games, card games and other turn-based interaction
 forms**, built accessibility-first so blind and sighted players can share the same game.
 Content — boards or decks, pieces, optional card illustrations, languages and sounds — lives in
-`.corro` packages. Card-bearing packages may override neutral faces with `cards/<card-id>.svg` and
+`.corro` packages. Card-bearing packages may override neutral faces with `assets/cards/<card-id>.svg` and
 may add a validated `artColor: "#RRGGBB"` accent; localized names remain the accessible truth.
 The authoritative server runs the rules; the browser renders each player's permitted
 view and provides parallel visual and screen-reader presentations.
@@ -32,7 +32,8 @@ Install these prerequisites first:
 
 - **[.NET 10 SDK](https://dot.net/download)**
 - **[Node.js 20+](https://nodejs.org/)**
-- **[Docker](https://www.docker.com/)**, with its daemon running
+- **[Docker](https://www.docker.com/)**. Its daemon may be stopped: the startup script attempts
+  to launch Docker Desktop on Windows/macOS or the installed Docker service on Linux.
 - **[PowerShell 7+](https://learn.microsoft.com/powershell/scripting/install/installing-powershell)**
   (the `pwsh` command; available on Windows, macOS and Linux)
 
@@ -290,7 +291,14 @@ or Azurite instances are already running — even under another Compose project 
 them and starts only the missing service. If an unrelated process owns `8081` or `10000`, it
 stops with a precise conflict message instead of mistaking that process for an emulator.
 
-Prereq: **Docker** running. Ports used: **8081** (Cosmos), **1234** (Cosmos data explorer),
+When an emulator is missing, the script verifies Docker before invoking Compose. A missing Docker
+installation or Compose plugin produces an installation-specific error. If Docker is installed but
+its engine is stopped, it attempts to start Docker Desktop on Windows/macOS, `docker.service` (with
+an elevation prompt when needed), Docker Desktop for Linux, or a configured rootless/legacy Linux
+service, then waits for the engine to become ready. Permission and startup-timeout failures are
+reported as Docker problems rather than misleading Cosmos DB failures.
+
+Prereq: **Docker** installed. Ports used: **8081** (Cosmos), **1234** (Cosmos data explorer),
 **10000** (Azurite), **5000** (server). `pwsh` (PowerShell 7+) runs on all three OSes; the
 scripts are optional — you can also `docker compose up -d` and start the server yourself with
 the two `ConnectionStrings:*` set in user-secrets.

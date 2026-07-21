@@ -1,6 +1,7 @@
 {
   "footer": {
-    "poweredBy": "Powered by"
+    "poweredBy": "Powered by",
+    "repository": "GitHub repository"
   },
   "_comment": "This file contains English translations and serves as reference for translators. Now processed like any other language for consistency.",
   "page": {
@@ -8,10 +9,12 @@
   },
   "language": {
     "selectLabel": "Select language",
-    "applyButton": "Apply"
+    "applyButton": "Apply",
+    "english": "English",
+    "spanish": "Spanish"
   },
   "lobby": {
-    "title": "🎮 Corro",
+    "title": "Corro",
     "intro": "Welcome to the Corro lobby. Create a new game or join an existing one.",
     "backToHome": "Back to home",
     "home": {
@@ -49,6 +52,24 @@
     "botNameLabel": "Name (empty: Bot 1, Bot 2…)",
     "botNameRandom": "Give me a random one",
     "botNameAdd": "Add",
+    "botNames": {
+      "0": "Granny Nitro",
+      "1": "Captain Handbrake",
+      "2": "Sir Stalls-a-Lot",
+      "3": "Turbo Ted",
+      "4": "The Phantom Co-driver",
+      "5": "Clutch Cassidy",
+      "6": "Miles McGiggles",
+      "7": "Turn Signal Tim",
+      "8": "Roundabout Rita",
+      "9": "Diesel Duck",
+      "10": "Gravel Gertie",
+      "11": "Wrong-Way Wanda",
+      "12": "Pothole Pete",
+      "13": "Zoom Zoom Zelda",
+      "14": "Blinker Bob",
+      "15": "Foggy Windshield"
+    },
     "playersOption": "{{count}} players",
     "rules": {
       "heading": "Match rules settings",
@@ -150,7 +171,7 @@
       "confirm": "Create game"
     },
     "boards": {
-      "imperio-galactico": "Galactic Empire"
+      "galactic-empire": "Galactic Empire"
     },
     "tokenInUse": "(In use)",
     "playersCount": "Players",
@@ -197,7 +218,11 @@
     }
   },
   "game": {
-    "board_intro": "Use Tab to enter the board, then use the arrow keys to move. Your screen reader will announce the active square.",
+    "surface_intro": {
+      "loading": "Focus will move automatically to the game's main area when loading finishes. Press Control plus F1 to view the shortcuts.",
+      "board": "Focus moves automatically to the board. Use the arrow keys to explore it; your screen reader will announce each position. Press Control plus F1 to view this game's shortcuts.",
+      "hand": "Focus moves automatically to your hand. Use Up Arrow and Down Arrow to move through the cards; your screen reader will announce each one. Press Control plus F1 to view this game's shortcuts."
+    },
     "actions": {
       "toolbar_label": "Available actions",
       "pay_release_cost": "Pay release cost",

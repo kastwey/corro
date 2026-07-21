@@ -2,7 +2,7 @@
 
 The engine ships **only platform sounds**: cues that exist regardless of which game is being
 played (chat, invalid-action feedback). Every GAME earcon (dice, money, holding, card draw/shuffle,
-win/lose, …) lives in the PACKAGES now, not here — a package's `sounds/` folder overlays this
+win/lose, …) lives in the PACKAGES now, not here — a package's `assets/sounds/` folder overlays this
 platform pack. Shared cross-family earcons have a canonical source in
 [`sound-commons/`](../../../sound-commons/ATTRIBUTIONS.md); each package ships its own copy.
 
@@ -22,7 +22,7 @@ are accepted (CC-BY-NC is not compatible with this repository).
 ## Token hop (`frontend/assets/sounds`)
 
 The travelling-token hop is a CLIENT animation sound (`finger.ogg`), played by the renderer as a
-fallback. A package MAY override it by shipping a themed `token.hop` event in its `sounds/`
+fallback. A package MAY override it by shipping a themed `token.hop` event in its `assets/sounds/`
 pack; the client uses the pack's cue when present and falls back to `finger.ogg` otherwise.
 
 | Event | File | Sound | Author | Source | License |

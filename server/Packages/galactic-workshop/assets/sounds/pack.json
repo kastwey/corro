@@ -1,0 +1,21 @@
+{
+  "packId": "galactic-workshop",
+  "events": {
+    "turn.you": "turn-you.ogg",
+    "game.over": "game-over.ogg",
+    "card.draw": "draw.ogg",
+    "card.discard": "discard.ogg"
+  },
+  "announcements": {
+    "cards.overload_played": "assembly.attack",
+    "cards.oxygen_leak_played": "assembly.attack",
+    "cards.data_corruption_played": "assembly.attack",
+    "cards.structural_crack_played": "assembly.attack",
+    "cards.systems_failure_played": "assembly.attack",
+    "cards.exchange_crane_played": "assembly.special",
+    "cards.imperial_requisition_played": "assembly.special",
+    "cards.chain_leak_played": "assembly.special",
+    "cards.imperial_inspection_played": "assembly.special",
+    "cards.total_trade_in_played": "assembly.special"
+  }
+}

@@ -1,7 +1,7 @@
 # E2E (Playwright)
 
 Real games, end to end: two browsers (one context per player), the real server with
-SignalR, and the `imperio-galactico` board in Spanish. The suite verifies
+SignalR, and the `galactic-empire` board in Spanish. The suite verifies
 **package ↔ screen coherence**: texts are asserted against the package's own i18n
 (`server/Packages/…/i18n/*.json`), never hardcoded.
 
@@ -48,6 +48,14 @@ npm run report                   # HTML report of the last run
 Always run from `e2e/` (from the repo root, Playwright would pick up the frontend's
 unit tests). The command rebuilds the frontend into wwwroot before starting, so it
 always exercises the current code.
+
+## Visual-review screenshots
+
+The `*-screenshot.spec.ts` scenarios capture named full-page images with
+`helpers/screenshot.ts`. Each image is an attachment in Playwright's managed
+`test-results/` output and is available through `npm run report`. Tests must not write
+screenshots directly into the `e2e/` root: managed artifacts are refreshed by
+Playwright, while root-level files accumulate stale visual states.
 
 ## Scenarios
 

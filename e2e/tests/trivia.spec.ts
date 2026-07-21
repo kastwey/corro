@@ -1,4 +1,4 @@
-// trivia.spec.ts — the trivia family end to end on the shipped "La Rueda del Saber" wheel.
+// trivia.spec.ts — the trivia family end to end on the shipped "The Wheel of Wits" wheel.
 //
 // Two real browsers, scripted SINGLE-die rolls, Spanish locale. Covers the core loop: roll →
 // choose a headquarters → answer in writing → the rotating judge rules → a wedge is earned and
@@ -20,7 +20,7 @@ import {
 	startGame,
 } from '../helpers/game';
 
-const BOARD = 'la-rueda-del-saber';
+const BOARD = 'wheel-of-wits';
 
 test.beforeEach(async () => {
 	await resetDice();

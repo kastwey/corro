@@ -10,8 +10,8 @@ import type { GameState, JourneyCardDef, JourneySeatState } from '../src/models.
 // and the Space (draw) gate — all computed from PUBLIC wire data + my projected view.
 
 const DECK: JourneyCardDef[] = [
-	{ id: 'd25', type: 'distance', value: 25, count: 10, nameKey: 'cards.d25' },
-	{ id: 'd200', type: 'distance', value: 200, count: 4, premium: true, maxPlaysPerHand: 2, nameKey: 'cards.d200' },
+	{ id: 'distance-25', type: 'distance', value: 25, count: 10, nameKey: 'cards.distance_25' },
+	{ id: 'distance-200', type: 'distance', value: 200, count: 4, premium: true, maxPlaysPerHand: 2, nameKey: 'cards.distance_200' },
 	{ id: 'stop', type: 'attack', kind: 'stop', hazardClass: 'stopper', value: 0, count: 5, nameKey: 'cards.stop' },
 	{ id: 'limit', type: 'attack', kind: 'speedLimit', hazardClass: 'limiter', value: 0, count: 4, nameKey: 'cards.limit' },
 	{ id: 'flat', type: 'attack', kind: 'flat', hazardClass: 'stopper', value: 0, count: 3, nameKey: 'cards.flat' },
@@ -43,20 +43,20 @@ function game(seats: JourneySeatState[], over: Record<string, unknown> = {}): Ga
 
 test('distance: blocked while stopped, capped under a limit, exact at the goal', () => {
 	const gs = game([seat('me', { hazards: ['stop'] }), seat('rival')]);
-	assert.equal(canPlayCard(gs, 'me', 'd25').reasonKey, 'game.journey_stopped');
+	assert.equal(canPlayCard(gs, 'me', 'distance-25').reasonKey, 'game.journey_stopped');
 
 	const rolling = game([seat('me', { hazards: ['speedLimit'] }), seat('rival')]);
-	assert.equal(canPlayCard(rolling, 'me', 'd200').reasonKey, 'game.journey_over_limit');
-	assert.equal(canPlayCard(rolling, 'me', 'd25').playable, true);
+	assert.equal(canPlayCard(rolling, 'me', 'distance-200').reasonKey, 'game.journey_over_limit');
+	assert.equal(canPlayCard(rolling, 'me', 'distance-25').playable, true);
 
 	const near = game([seat('me', { km: 900 }), seat('rival')]);
-	assert.equal(canPlayCard(near, 'me', 'd200').reasonKey, 'game.journey_overshoot');
-	assert.equal(canPlayCard(near, 'me', 'd25').playable, true);
+	assert.equal(canPlayCard(near, 'me', 'distance-200').reasonKey, 'game.journey_overshoot');
+	assert.equal(canPlayCard(near, 'me', 'distance-25').playable, true);
 });
 
 test('the per-hand play limit mirrors the server (two 200s)', () => {
-	const gs = game([seat('me', { playsByCard: { d200: 2 } }), seat('rival')]);
-	assert.equal(canPlayCard(gs, 'me', 'd200').reasonKey, 'game.journey_card_limit');
+	const gs = game([seat('me', { playsByCard: { 'distance-200': 2 } }), seat('rival')]);
+	assert.equal(canPlayCard(gs, 'me', 'distance-200').reasonKey, 'game.journey_card_limit');
 });
 
 test('attacks are playable only with an attackable rival, and the picker list matches', () => {
@@ -147,7 +147,7 @@ test('team seats: any member resolves the SHARED seat; the partner is never a ta
 test('helpers: catalog lookup, seat lookup, stopped/limited classification', () => {
 	const gs = game([seat('me', { hazards: ['speedLimit'] }), seat('rival', { hazards: ['flat'] })]);
 	const catalog = journeyCatalog(gs);
-	assert.equal(catalog.get('d25')?.value, 25);
+	assert.equal(catalog.get('distance-25')?.value, 25);
 	const me = journeySeat(gs, 'me')!;
 	const rival = journeySeat(gs, 'rival')!;
 	assert.equal(isLimited(me, catalog), true);
@@ -172,9 +172,9 @@ test('card help: a stopper attack names its remedy, a limiter carries the cap', 
 
 test('card help: distances carry goal and per-hand limits; the go-remedy is special', () => {
 	const gs = game([seat('me'), seat('rival')]);
-	assert.equal(journeyCardHelp(gs, 'd25', t), 'game.journey_help_distance(25|1000)');
+	assert.equal(journeyCardHelp(gs, 'distance-25', t), 'game.journey_help_distance(25|1000)');
 	assert.equal(
-		journeyCardHelp(gs, 'd200', t),
+		journeyCardHelp(gs, 'distance-200', t),
 		'game.journey_help_distance(200|1000) game.journey_help_distance_limit(2) game.journey_help_distance_over_cap(50)');
 	assert.equal(journeyCardHelp(gs, 'go', t), 'game.journey_help_remedy_go');
 });

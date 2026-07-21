@@ -23,6 +23,10 @@ import { showGameRulesDialog } from './gameRulesDialog.js';
 import type { GameState } from './models.js';
 import type { HelpShortcut } from './shortcuts.js';
 
+/** Focus entering the picker interrupts screen-reader speech. Leave enough time for the
+ *  just-drawn-bomb announcement to be heard while the visual defuse plays. */
+const DEFUSE_PICKER_DELAY_MS = 2000;
+
 export interface ExplodingBoardDeps {
 	getGameState(): GameState | null;
 	getMyPlayerId(): string | null;
@@ -30,6 +34,9 @@ export interface ExplodingBoardDeps {
 	tSync(key: string, vars?: Record<string, unknown>): string;
 	onIdle(): void;
 	motionDisabled(): boolean;
+	/** Injectable timer hooks keep the focus-delay regression deterministic in DOM tests. */
+	setTimer?(callback: () => void, delayMs: number): unknown;
+	clearTimer?(handle: unknown): void;
 	commands: {
 		/** Play an action card. `targetId` names a Favor / cat-steal victim; `secondInstanceId`
 		 *  is the matching cat of a pair. */
@@ -49,21 +56,29 @@ export class ExplodingBoard {
 	private built = false;
 	private readonly hand = new HandPanel();
 	private table!: HTMLElement;
-	/** The bomb instance whose depth picker is already open (so update() doesn't reopen it). */
+	/** The bomb instance whose depth picker is scheduled or open (so update() doesn't repeat it). */
 	private bombPickerFor: string | null = null;
+	private bombPickerTimer: unknown | null = null;
+	private readonly setTimer: (callback: () => void, delayMs: number) => unknown;
+	private readonly clearTimer: (handle: unknown) => void;
 
 	constructor(
 		private readonly element: HTMLElement,
 		private readonly deps: ExplodingBoardDeps,
-	) {}
+	) {
+		this.setTimer = deps.setTimer ?? ((callback, delayMs) => window.setTimeout(callback, delayMs));
+		this.clearTimer = deps.clearTimer ?? (handle => window.clearTimeout(handle as number));
+	}
 
 	update(gs: GameState): void {
 		const firstBuild = !this.built;
 		if (firstBuild) this.build();
+		// Schedule before painting so the very first pending-bomb frame already carries the
+		// defuse animation. The menu itself opens only after the announcement grace period.
+		this.maybeOpenDefusePicker(gs);
 		this.renderTable(gs);
 		this.hand.update();
 		if (firstBuild && document.activeElement === this.element) this.hand.focus();
-		this.maybeOpenDefusePicker(gs);
 	}
 
 	focusHand(): void {
@@ -307,11 +322,31 @@ export class ExplodingBoard {
 		const myId = this.deps.getMyPlayerId();
 		const bomb = gs.exploding?.pendingBomb;
 		if (!myId || !bomb || bomb.playerId !== myId) {
+			this.cancelDefusePickerTimer();
 			this.bombPickerFor = null;
 			return;
 		}
-		if (this.bombPickerFor === bomb.instanceId) return; // already asking
+		if (this.bombPickerFor === bomb.instanceId) return; // already scheduled or asking
+
+		this.cancelDefusePickerTimer();
 		this.bombPickerFor = bomb.instanceId;
+		const instanceId = bomb.instanceId;
+		this.bombPickerTimer = this.setTimer(() => {
+			this.bombPickerTimer = null;
+			this.openDefusePicker(instanceId);
+		}, DEFUSE_PICKER_DELAY_MS);
+	}
+
+	/** Open only if the same bomb is still pending. A reconnect/state refresh may resolve it
+	 *  during the grace period, in which case a stale picker must never steal focus later. */
+	private openDefusePicker(instanceId: string): void {
+		const gs = this.deps.getGameState();
+		const myId = this.deps.getMyPlayerId();
+		const bomb = gs?.exploding?.pendingBomb;
+		if (!gs || !myId || !bomb || bomb.playerId !== myId || bomb.instanceId !== instanceId) {
+			if (this.bombPickerFor === instanceId) this.bombPickerFor = null;
+			return;
+		}
 
 		const drawCount = gs.exploding?.drawCount ?? 0;
 		const middle = Math.floor(drawCount / 2);
@@ -331,6 +366,12 @@ export class ExplodingBoard {
 		});
 	}
 
+	private cancelDefusePickerTimer(): void {
+		if (this.bombPickerTimer === null) return;
+		this.clearTimer(this.bombPickerTimer);
+		this.bombPickerTimer = null;
+	}
+
 	// ── Visual echoes (aria-hidden) ───────────────────────────────────────────
 
 	private renderTable(gs: GameState): void {
@@ -344,10 +385,25 @@ export class ExplodingBoard {
 		const revealedBomb = exploding.pendingBomb
 			? catalog.get(exploding.pendingBomb.cardId) ?? null
 			: null;
+		// PendingBomb only exists after a defuse was consumed. Reuse the package's generic
+		// `defuse` card face for the visual save, so every package supplies its own artwork and
+		// wording without requiring a themed branch in the engine.
+		const defuseCard = revealedBomb
+			? [...catalog.values()].find(card => card.type === 'defuse') ?? null
+			: null;
+		const staticDefuse = this.deps.motionDisabled() ? ' exploding-reveal--static' : '';
 		const bombFace = revealedBomb
-			? `<div class="exploding-reveal">${explodingCardArtHtml(
-				revealedBomb, this.deps.tSync(revealedBomb.nameKey),
-			)}</div>`
+			? `<div class="exploding-reveal exploding-reveal--defusing${staticDefuse}">`
+				+ `<span class="exploding-reveal__bomb">${explodingCardArtHtml(
+					revealedBomb, this.deps.tSync(revealedBomb.nameKey),
+				)}</span>`
+				+ (defuseCard
+					? `<span class="exploding-reveal__defuse">${explodingCardArtHtml(
+						defuseCard, this.deps.tSync(defuseCard.nameKey),
+					)}</span>`
+					: '')
+				+ `<span class="exploding-reveal__safe">✓</span>`
+				+ `</div>`
 			: '';
 		const pending = exploding.pendingAction ? ' exploding-discard--pending' : '';
 

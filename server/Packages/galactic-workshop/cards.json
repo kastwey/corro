@@ -1,0 +1,172 @@
+[
+  {
+    "id": "life-support",
+    "artColor": "#147A4A",
+    "type": "piece",
+    "color": "green",
+    "count": 5,
+    "nameKey": "cards.life_support"
+  },
+  {
+    "id": "data-core",
+    "artColor": "#1769AA",
+    "type": "piece",
+    "color": "blue",
+    "count": 5,
+    "nameKey": "cards.data_core"
+  },
+  {
+    "id": "hull-frame",
+    "artColor": "#9A6B00",
+    "type": "piece",
+    "color": "yellow",
+    "count": 5,
+    "nameKey": "cards.hull_frame"
+  },
+  {
+    "id": "universal-module",
+    "artColor": "#6A3FA0",
+    "type": "piece",
+    "color": "wild",
+    "count": 1,
+    "nameKey": "cards.universal_module"
+  },
+  {
+    "id": "oxygen-leak",
+    "artColor": "#147A4A",
+    "type": "attack",
+    "color": "green",
+    "count": 4,
+    "nameKey": "cards.oxygen_leak",
+    "playedKey": "cards.oxygen_leak_played"
+  },
+  {
+    "id": "data-corruption",
+    "artColor": "#1769AA",
+    "type": "attack",
+    "color": "blue",
+    "count": 4,
+    "nameKey": "cards.data_corruption",
+    "playedKey": "cards.data_corruption_played"
+  },
+  {
+    "id": "structural-crack",
+    "artColor": "#9A6B00",
+    "type": "attack",
+    "color": "yellow",
+    "count": 4,
+    "nameKey": "cards.structural_crack",
+    "playedKey": "cards.structural_crack_played"
+  },
+  {
+    "id": "systems-failure",
+    "artColor": "#6A3FA0",
+    "type": "attack",
+    "color": "wild",
+    "count": 1,
+    "nameKey": "cards.systems_failure",
+    "playedKey": "cards.systems_failure_played"
+  },
+  {
+    "id": "sealant",
+    "artColor": "#147A4A",
+    "type": "remedy",
+    "color": "green",
+    "count": 4,
+    "nameKey": "cards.sealant"
+  },
+  {
+    "id": "debugger",
+    "artColor": "#1769AA",
+    "type": "remedy",
+    "color": "blue",
+    "count": 4,
+    "nameKey": "cards.debugger"
+  },
+  {
+    "id": "bracing",
+    "artColor": "#9A6B00",
+    "type": "remedy",
+    "color": "yellow",
+    "count": 4,
+    "nameKey": "cards.bracing"
+  },
+  {
+    "id": "nanobots",
+    "artColor": "#6A3FA0",
+    "type": "remedy",
+    "color": "wild",
+    "count": 4,
+    "nameKey": "cards.nanobots"
+  },
+  {
+    "id": "exchange-crane",
+    "artColor": "#397487",
+    "type": "special",
+    "specialKind": "swapPiece",
+    "count": 3,
+    "nameKey": "cards.exchange_crane",
+    "playedKey": "cards.exchange_crane_played"
+  },
+  {
+    "id": "imperial-requisition",
+    "artColor": "#8B4C34",
+    "type": "special",
+    "specialKind": "stealPiece",
+    "count": 3,
+    "nameKey": "cards.imperial_requisition",
+    "playedKey": "cards.imperial_requisition_played"
+  },
+  {
+    "id": "chain-leak",
+    "artColor": "#A04444",
+    "type": "special",
+    "specialKind": "plague",
+    "count": 2,
+    "nameKey": "cards.chain_leak",
+    "playedKey": "cards.chain_leak_played"
+  },
+  {
+    "id": "imperial-inspection",
+    "artColor": "#596373",
+    "type": "special",
+    "specialKind": "scrapHands",
+    "count": 1,
+    "nameKey": "cards.imperial_inspection",
+    "playedKey": "cards.imperial_inspection_played"
+  },
+  {
+    "id": "total-trade-in",
+    "artColor": "#6A3FA0",
+    "type": "special",
+    "specialKind": "fullSwap",
+    "count": 1,
+    "nameKey": "cards.total_trade_in",
+    "playedKey": "cards.total_trade_in_played"
+  },
+  {
+    "id": "coolant",
+    "artColor": "#B33434",
+    "type": "remedy",
+    "color": "red",
+    "count": 4,
+    "nameKey": "cards.coolant"
+  },
+  {
+    "id": "overload",
+    "artColor": "#B33434",
+    "type": "attack",
+    "color": "red",
+    "count": 4,
+    "nameKey": "cards.overload",
+    "playedKey": "cards.overload_played"
+  },
+  {
+    "id": "reactor",
+    "artColor": "#B33434",
+    "type": "piece",
+    "color": "red",
+    "count": 5,
+    "nameKey": "cards.reactor"
+  }
+]

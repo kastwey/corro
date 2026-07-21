@@ -34,7 +34,7 @@ public static class RaceTurnFlow
 		race.ConsecutiveSixes = isExtra ? race.ConsecutiveSixes + 1 : 0;
 
 		// Teams mode: a player whose own seat is complete rolls for their PARTNER's pieces
-		// ("ayudar al compañero"). Every seat-bound step below uses this mover, while the
+		// ("help your teammate"). Every seat-bound step below uses this mover, while the
 		// announcements keep naming the actor (they rolled and chose).
 		var moverId = EffectiveMoverId(context, player);
 

@@ -20,7 +20,7 @@ import {
 	startGame,
 } from '../helpers/game';
 
-const BOARD = 'imperio-galactico';
+const BOARD = 'galactic-empire';
 
 test.beforeEach(async () => {
 	await resetDice();
@@ -122,7 +122,7 @@ test('a transport blip auto-rejoins: the game stays audible after the reconnecti
 test('an action while disconnected kicks an immediate reconnect and carries through', async ({ browser }) => {
 	const ana = await newPlayerPage(browser);
 	const berto = await newPlayerPage(browser);
-	const code = await createGame(ana, 'Ana', 'escaleras-y-serpientes');
+	const code = await createGame(ana, 'Ana', 'snakes-and-ladders');
 	await joinGame(berto, code, 'Berto');
 	await startGame(ana, [ana, berto]);
 

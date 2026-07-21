@@ -84,7 +84,7 @@ public partial class GameHub : Hub
 			// NEW connection (JoinGameWithAuth → connected=true, a no-op since the flag is still
 			// true) BEFORE this fires for the dead OLD one. Marking away unconditionally then
 			// leaves the just-rejoined player stuck "disconnected" forever (their turn even reads
-			// "Turno de X. Desconectado"). TryRemoveAuthConnection above already dropped THIS
+			// "X's turn. Disconnected"). TryRemoveAuthConnection above already dropped THIS
 			// connection, so a remaining count of 0 means they are truly gone. Also supports
 			// multiple tabs correctly.
 			if (hadGame && _registry.TryGetService(gameId, out var gameService)

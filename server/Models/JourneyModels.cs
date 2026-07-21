@@ -9,7 +9,7 @@ namespace CorroServer.Models;
 /// <summary>One physical card in play: a unique instance of a catalog definition.</summary>
 public record JourneyCardInstance
 {
-	/// <summary>Unique per physical card ("d100#3"), stable across the hand — the client's
+	/// <summary>Unique per physical card ("distance-100#3"), stable across the hand — the client's
 	/// hand list keeps focus through it.</summary>
 	public required string InstanceId { get; init; }
 	/// <summary>The catalog definition this instance copies (JourneyCardDef.Id).</summary>

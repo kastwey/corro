@@ -21,7 +21,7 @@ displays state and drives visuals.
 Frontend (from `frontend/`):
 ```bash
 npm install
-npm run build        # compile TS + copy assets to dist/ ("Build completado exitosamente!")
+npm run build        # compile TS + copy assets to dist/ ("Build completed successfully!")
 npm test             # all node:test suites (tsx)
 node --import tsx --test test/<file>.test.ts   # a single suite
 ```
@@ -168,8 +168,8 @@ delete it in the same change. Grep for now-unused symbols before finishing.
 
 **Package boundary.** The engine owns generic mechanics and neutral fallbacks; packages own all
 themed identity and assets. Never branch shared client/server code on a shipped package, card or
-token id/title. Optional card art lives in `cards/<id>.svg` (64×64 path geometry), token art in
-`tokens/<id>.svg`; package art overrides the neutral fallback. For package-facing changes, inspect
+token id/title. Optional card art lives in `assets/cards/<id>.svg` (64×64 path geometry), token art in
+`assets/tokens/<id>.svg`; package art overrides the neutral fallback. For package-facing changes, inspect
 the loader/format first, update every relevant family/model/schema/SDK/doc surface, grep for leaked
 content ids, and add a boundary regression.
 

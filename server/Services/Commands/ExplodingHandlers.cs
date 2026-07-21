@@ -10,7 +10,7 @@ namespace CorroServer.Services.Commands;
 /// real-time Nope window (<see cref="NopeWindowService"/>) before it resolves — and then you
 /// MUST draw to end the turn; a bomb you cannot Defuse knocks you out, and the last player
 /// standing wins. The server owns the voice: an ACTION is public (the actor is always named,
-/// "¡X lanza …!"), a DRAWN card's identity and a Defuse's chosen depth go ToPlayer only.
+/// "X plays..."), a DRAWN card's identity and a Defuse's chosen depth go ToPlayer only.
 ///
 /// The flow logic is timer-free: playing sets the pending action, and the window service (armed
 /// by the session registry when it sees a pending action) fires <see cref="ResolveWindowAsync"/>

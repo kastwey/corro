@@ -14,7 +14,7 @@ public class KeyIntegrityTests
 {
 	public static IEnumerable<object[]> ShippedBoards()
 	{
-		   // Every board under server/Packages that ships with the engine (only imperio-galactico is
+		   // Every board under server/Packages that ships with the engine (only galactic-empire is
 		// committed; the private espana boards are gitignored, so they're included when present).
 		var root = CorroTestPaths.PackagesRoot();
 		foreach (var dir in Directory.GetDirectories(root))

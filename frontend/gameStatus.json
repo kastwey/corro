@@ -30,7 +30,7 @@
     },
     { 
       "id": "p4", 
-      "name": "Jugador 4", 
+      "name": "Player 4",
       "token": "cross", 
       "position": 12,
       "money": 1280,
@@ -39,7 +39,7 @@
     },
     { 
       "id": "p5", 
-      "name": "Jugador 5", 
+      "name": "Player 5",
       "token": "heart", 
       "position": 18,
       "money": 1240,
@@ -48,7 +48,7 @@
     },
     { 
       "id": "p6", 
-      "name": "Jugador 6", 
+      "name": "Player 6",
       "token": "triangle", 
       "position": 25,
       "money": 1200,
@@ -57,7 +57,7 @@
     },
     { 
       "id": "p7", 
-      "name": "Jugador 7", 
+      "name": "Player 7",
       "token": "square", 
       "position": 33,
       "money": 1160,

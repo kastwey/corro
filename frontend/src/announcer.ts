@@ -89,7 +89,7 @@ function isLocalizedMap(value: any): value is Record<string, string> {
 /**
  * The team-var convention: a server announcement that names a SHARED journey seat sends
  * `__team:<colorId>` as the var's value ("__team:red"); each client resolves it here into
- * the localized team word («Equipo rojo» / "Red team») before interpolation. Plain values
+ * the localized team word ("Red team") before interpolation. Plain values
  * pass through untouched.
  */
 export function resolveTeamVars(
@@ -109,7 +109,7 @@ export function resolveTeamVars(
 
 /**
  * The token-var convention: a server announcement that wants to speak a player's PIECE
- * ("Llenas el tanque de tu camión") sends `tokenId`; the client resolves it here into the
+ * ("You fill your lorry's tank") sends `tokenId`; the client resolves it here into the
  * token's localized name as `{{token}}`, in each listener's own language. Announcements
  * without a tokenId (or that already carry an explicit token) pass through untouched.
  */
@@ -350,8 +350,8 @@ class AnnouncerQueue {
 		}
 
 		// Resolve any localized-text vars (e.g. a package board's square name) to this player's
-		// language before interpolation, the __team convention into the team's word ("Equipo
-		// rojo") and the tokenId convention into the piece's name ({{token}}: "…tu camión").
+		// language before interpolation, the __team convention into the team's word ("Red team")
+		// and the tokenId convention into the piece's name ({{token}}: "…your lorry").
 		const vars = resolveTokenVar(
 			resolveTeamVars(
 				resolveLocalizedVars(event.vars, i18nBinder.getCurrentLanguage()),

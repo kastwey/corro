@@ -85,7 +85,7 @@ never the source of authoritative rules and never interferes with the screen rea
   the **hand** (an accessible list — `handPanel.ts`), and the "table" (racks, tables,
   discards, direction) is an aria-hidden echo of information already spoken by the status
   line and the announcements.
-- `cardArt.ts` renders optional sanitized `cards/<id>.svg` geometry from the package. If it
+- `cardArt.ts` renders optional sanitized `assets/cards/<id>.svg` geometry from the package. If it
   is absent, it chooses a neutral icon from generic type/value data. The renderer never reads
   a package/card/token id to choose a picture, and all art remains `aria-hidden`; the localized
   row label and card help are authoritative.

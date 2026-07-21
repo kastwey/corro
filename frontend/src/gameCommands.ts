@@ -32,7 +32,7 @@ export interface GameCommandsOptions {
 	announce: (msg: string) => void;
 	t: (key: string, vars?: Record<string, any>) => string;
 	getGroupMap: () => Map<string, number[]>;
-	/** The square's spoken group/colour label ("Grupo: Marrón" / "Color: brown"), '' when it has none
+	/** The square's spoken group/colour label ("Group: Brown" / "Color: brown"), '' when it has none
 	 *  (e.g. a hex-only colour with no group key). Built with squareGroupLabel so it matches the board. */
 	groupLabel?: (square: Square) => string;
 	nextOccupiedFn: (start: number, forward: boolean) => number;
@@ -43,6 +43,7 @@ export interface GameCommandsOptions {
 	getPlayerReleasePasses: (playerId: string) => number; // release passes
 	getPendingDebts?: () => DebtState[]; // pending debts in the game
 	getFreeParkingPot: () => number; // accumulated Free Parking pot
+	formatNumber?: (value: number) => string; // localized grouping supplied by the app
 	getActiveAuction?: () => AuctionStatus | null; // currently active auction, if any
 }
 
@@ -281,6 +282,7 @@ export class GameCommands {
 		const player = this.opts.getPlayers().find(p => p.id === myId);
 		if (player) {
 			const money = this.opts.getPlayerMoney(myId);
+			const formatNumber = this.opts.formatNumber ?? String;
 			// A player's cash never goes negative; an unpayable charge becomes a pending
 			// debt instead. Reading only the cash would hide that the player owes money,
 			// so when there is outstanding debt we read both figures together.
@@ -289,12 +291,12 @@ export class GameCommands {
 				.reduce((sum, d) => sum + d.amount, 0);
 			if (myDebt > 0) {
 				this.opts.announce(this.opts.t('announce_player_money_with_debt', {
-					amount: money.toLocaleString('es-ES'),
-					debt: myDebt.toLocaleString('es-ES')
+					amount: formatNumber(money),
+					debt: formatNumber(myDebt)
 				}));
 			} else {
 				this.opts.announce(this.opts.t('announce_player_money', {
-					amount: money.toLocaleString('es-ES') // format with thousands separators
+					amount: formatNumber(money)
 				}));
 			}
 		} else {
@@ -341,7 +343,8 @@ export class GameCommands {
 	announceFreeParkingPot(): boolean {
 		const pot = this.opts.getFreeParkingPot();
 		if (pot > 0) {
-			this.opts.announce(this.opts.t('announce_free_parking_pot', { amount: pot.toLocaleString('es-ES') }));
+			const formatted = this.opts.formatNumber?.(pot) ?? String(pot);
+			this.opts.announce(this.opts.t('announce_free_parking_pot', { amount: formatted }));
 		} else {
 			this.opts.announce(this.opts.t('announce_free_parking_pot_empty'));
 		}

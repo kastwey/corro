@@ -21,7 +21,7 @@ and sounds. Different packages can therefore share mechanics without sharing nam
 The server registry in `server/Services/Corro/Families/GameFamilies.cs` is authoritative.
 The format details for each family live in [`../CORRO_FORMAT.md`](../CORRO_FORMAT.md).
 
-For every “yes” row, `cards/<card-id>.svg` is optional package content. Its sanitized
+For every “yes” row, `assets/cards/<card-id>.svg` is optional package content. Its sanitized
 64×64 path geometry overrides the neutral type/value drawing; absence is valid and selects
 the fallback. The same card art follows the card across hand, discard and public-table views.
 An optional `artColor: "#RRGGBB"` travels with that geometry to preserve package identity in

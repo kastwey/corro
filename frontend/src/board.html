@@ -4,6 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Corro</title>
+	<link rel="icon" href="assets/brand/corro-favicon-light.svg" type="image/svg+xml" media="(prefers-color-scheme: light)" />
+	<link rel="icon" href="assets/brand/corro-favicon-dark.svg" type="image/svg+xml" media="(prefers-color-scheme: dark)" />
   <script>
 	// Apply the saved/system theme before first paint to avoid a flash.
 	(function () {
@@ -44,7 +46,7 @@
 	  <div class="app-header__controls" id="app-controls"></div>
 	</header>
 	<main>
-	<p class="app-intro" data-i18n="game.board_intro">Use Tab to enter the board, then use the arrow keys to move. Your screen reader will announce the active square.</p>
+	<p id="game-surface-intro" class="app-intro" data-i18n="game.surface_intro.loading">Focus will move automatically to the game's main area when loading finishes. Press Control plus F1 to view the shortcuts.</p>
 
 	<div class="game-layout">
 	  <div class="game-layout__board">
@@ -76,12 +78,14 @@
   <script type="module" src="app.js"></script>
 
 	<footer class="app-footer">
-		<p>
+		<p class="app-footer__brand">
 			<span data-i18n="footer.poweredBy">Powered by</span>
-			<strong>Corro</strong>
-			&middot;
-			<a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="license noopener">AGPL-3.0</a>
+			<strong>Corro</strong>.
 		</p>
+		<ul class="app-footer__links">
+			<li><a href="https://github.com/kastwey/corro" target="_blank" rel="noopener noreferrer" data-i18n="footer.repository">GitHub repository</a></li>
+			<li><a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="license noopener noreferrer">AGPL-3.0</a></li>
+		</ul>
 	</footer>
 </body>
 </html>

@@ -21,7 +21,7 @@ public record SoundPackDefinition
 	/// <summary>
 	/// Optional: announcement key → event name. Lets a pack give an earcon to its OWN
 	/// announcement keys (a card family's themed playedKey lines, e.g.
-	/// "cards.pinchazo_played" → "journey.flat") or re-map an engine key for this game
+	/// "cards.flat_tyre_played" → "journey.flat") or re-map an engine key for this game
 	/// only (e.g. "game.game_started" → a shuffle). The client consults this map before
 	/// its built-in announcement table; `_self`/`_victim` variants inherit the base entry.
 	/// </summary>

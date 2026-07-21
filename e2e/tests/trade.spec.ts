@@ -1,5 +1,5 @@
 // trade.spec.ts — the full player-to-player trade flow, end to end, on the shipped
-// "Imperio Galáctico" board in Spanish. Two real browser contexts (Ana hosts, Berto
+// "Galactic Empire" board in Spanish. Two real browser contexts (Ana hosts, Berto
 // joins), scripted dice, real SignalR.
 //
 // This is the scenario that concentrated the most bugs from a real family game:
@@ -30,7 +30,7 @@ import {
 	startGame,
 } from '../helpers/game';
 
-const BOARD = 'imperio-galactico';
+const BOARD = 'galactic-empire';
 
 test.beforeEach(async () => {
 	await resetDice();

@@ -1,0 +1,94 @@
+{
+  "format": "corro/v1",
+  "gameType": "shedding",
+  "engineVersion": "^1.0",
+  "id": "four-colours",
+  "name": {
+    "es": "Cuatro Colores",
+    "en": "Four Colours"
+  },
+  "author": "kastwey",
+  "version": "0.1.0",
+  "locales": [
+    "en",
+    "es"
+  ],
+  "players": {
+    "min": 2,
+    "max": 5
+  },
+  "sheddingRules": {
+    "handSize": 7,
+    "targetScore": 500,
+    "drawnCardPlayable": true,
+    "wildDrawRequiresNoMatch": true
+  },
+  "ruleGroups": [
+    {
+      "id": "shedding",
+      "nameKey": "rules.group.shedding"
+    }
+  ],
+  "houseRules": [
+    {
+      "id": "sheddingAllowDoubles",
+      "group": "shedding",
+      "type": "toggle",
+      "default": false,
+      "editableByHost": true,
+      "nameKey": "rules.sheddingAllowDoubles"
+    },
+    {
+      "id": "sheddingStacking",
+      "group": "shedding",
+      "type": "choice",
+      "default": "none",
+      "options": [
+        {
+          "id": "none",
+          "nameKey": "rules.sheddingStackingNone"
+        },
+        {
+          "id": "sameType",
+          "nameKey": "rules.sheddingStackingSameType"
+        },
+        {
+          "id": "cross",
+          "nameKey": "rules.sheddingStackingCross"
+        }
+      ],
+      "editableByHost": true,
+      "nameKey": "rules.sheddingStacking"
+    },
+    {
+      "id": "sheddingLastCardCall",
+      "group": "shedding",
+      "type": "toggle",
+      "default": false,
+      "editableByHost": true,
+      "nameKey": "rules.sheddingLastCardCall"
+    }
+  ],
+  "tokens": [
+    {
+      "id": "circle",
+      "nameKey": "tokens.circle"
+    },
+    {
+      "id": "square",
+      "nameKey": "tokens.square"
+    },
+    {
+      "id": "triangle",
+      "nameKey": "tokens.triangle"
+    },
+    {
+      "id": "star",
+      "nameKey": "tokens.star"
+    },
+    {
+      "id": "diamond",
+      "nameKey": "tokens.diamond"
+    }
+  ]
+}

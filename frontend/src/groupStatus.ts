@@ -21,8 +21,8 @@ export interface GroupStatusContext {
 
 /**
  * The ownership hint for the square being considered, or '' when there is nothing to say (not an
- * ownable group square, or a group of one). Examples (es): "Aún no tienes ninguna central del grupo
- * Suministros (2 en total)." / "Ya tienes 1 de 2 centrales del grupo Suministros."
+ * ownable group square, or a group of one). Examples: "You do not own any utility in the Utilities
+ * group (2 total)." / "You own 1 of 2 utilities in the Utilities group."
  */
 export function groupStatusMessage(targetSquare: Square | undefined, ctx: GroupStatusContext): string {
 	if (!targetSquare) return '';

@@ -69,6 +69,11 @@ export class I18nBinder {
   money(value: number | string): string {
 	return this.formatMoney(value);
   }
+
+	/** Formats a number with the active UI locale (English is the source/default locale). */
+	formatNumber(value: number): string {
+	return value.toLocaleString(this.currentLanguage);
+	}
   
   constructor(private config: I18nConfig = {
 	defaultLanguage: 'en',

@@ -1,0 +1,178 @@
+[
+  {
+    "id": "distance-25",
+    "artColor": "#1769AA",
+    "type": "distance",
+    "value": 25,
+    "count": 10,
+    "nameKey": "cards.distance_25"
+  },
+  {
+    "id": "distance-50",
+    "artColor": "#1769AA",
+    "type": "distance",
+    "value": 50,
+    "count": 10,
+    "nameKey": "cards.distance_50"
+  },
+  {
+    "id": "distance-75",
+    "artColor": "#1769AA",
+    "type": "distance",
+    "value": 75,
+    "count": 10,
+    "nameKey": "cards.distance_75"
+  },
+  {
+    "id": "distance-100",
+    "artColor": "#1769AA",
+    "type": "distance",
+    "value": 100,
+    "count": 12,
+    "nameKey": "cards.distance_100"
+  },
+  {
+    "id": "distance-200",
+    "artColor": "#1769AA",
+    "type": "distance",
+    "value": 200,
+    "count": 4,
+    "premium": true,
+    "maxPlaysPerHand": 2,
+    "nameKey": "cards.distance_200"
+  },
+  {
+    "id": "red-light",
+    "artColor": "#A52D32",
+    "type": "attack",
+    "kind": "stop",
+    "hazardClass": "stopper",
+    "count": 5,
+    "nameKey": "cards.red_light",
+    "playedKey": "cards.red_light_played"
+  },
+  {
+    "id": "speed-limit",
+    "artColor": "#A52D32",
+    "type": "attack",
+    "kind": "speedLimit",
+    "hazardClass": "limiter",
+    "count": 4,
+    "nameKey": "cards.speed_limit",
+    "playedKey": "cards.speed_limit_played"
+  },
+  {
+    "id": "out-of-fuel",
+    "artColor": "#A52D32",
+    "type": "attack",
+    "kind": "outOfGas",
+    "hazardClass": "stopper",
+    "count": 3,
+    "nameKey": "cards.out_of_fuel",
+    "playedKey": "cards.out_of_fuel_played"
+  },
+  {
+    "id": "flat-tyre",
+    "artColor": "#A52D32",
+    "type": "attack",
+    "kind": "flat",
+    "hazardClass": "stopper",
+    "count": 3,
+    "nameKey": "cards.flat_tyre",
+    "playedKey": "cards.flat_tyre_played"
+  },
+  {
+    "id": "accident",
+    "artColor": "#A52D32",
+    "type": "attack",
+    "kind": "accident",
+    "hazardClass": "stopper",
+    "count": 3,
+    "nameKey": "cards.accident",
+    "playedKey": "cards.accident_played"
+  },
+  {
+    "id": "green-light",
+    "artColor": "#147353",
+    "type": "remedy",
+    "kind": "stop",
+    "count": 14,
+    "nameKey": "cards.green_light",
+    "playedKey": "cards.green_light_played"
+  },
+  {
+    "id": "end-speed-limit",
+    "artColor": "#147353",
+    "type": "remedy",
+    "kind": "speedLimit",
+    "count": 6,
+    "nameKey": "cards.end_speed_limit",
+    "playedKey": "cards.end_speed_limit_played"
+  },
+  {
+    "id": "fuel",
+    "artColor": "#147353",
+    "type": "remedy",
+    "kind": "outOfGas",
+    "count": 6,
+    "nameKey": "cards.fuel",
+    "playedKey": "cards.fuel_played"
+  },
+  {
+    "id": "spare-wheel",
+    "artColor": "#147353",
+    "type": "remedy",
+    "kind": "flat",
+    "count": 6,
+    "nameKey": "cards.spare_wheel",
+    "playedKey": "cards.spare_wheel_played"
+  },
+  {
+    "id": "repairs",
+    "artColor": "#147353",
+    "type": "remedy",
+    "kind": "accident",
+    "count": 6,
+    "nameKey": "cards.repairs",
+    "playedKey": "cards.repairs_played"
+  },
+  {
+    "id": "right-of-way",
+    "artColor": "#9A6B00",
+    "type": "immunity",
+    "shieldsKinds": [
+      "stop",
+      "speedLimit"
+    ],
+    "count": 1,
+    "nameKey": "cards.right_of_way",
+    "playedKey": "cards.right_of_way_played"
+  },
+  {
+    "id": "tanker-truck",
+    "artColor": "#9A6B00",
+    "type": "immunity",
+    "kind": "outOfGas",
+    "count": 1,
+    "nameKey": "cards.tanker_truck",
+    "playedKey": "cards.tanker_truck_played"
+  },
+  {
+    "id": "puncture-proof-wheel",
+    "artColor": "#9A6B00",
+    "type": "immunity",
+    "kind": "flat",
+    "count": 1,
+    "nameKey": "cards.puncture_proof_wheel",
+    "playedKey": "cards.puncture_proof_wheel_played"
+  },
+  {
+    "id": "driving-ace",
+    "artColor": "#9A6B00",
+    "type": "immunity",
+    "kind": "accident",
+    "count": 1,
+    "nameKey": "cards.driving_ace",
+    "playedKey": "cards.driving_ace_played"
+  }
+]

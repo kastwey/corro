@@ -64,7 +64,7 @@ public sealed class PackageValidator : IPackageValidator
 
 	/// <summary>
 	/// Every board must ship its own player pieces (the engine has no built-in set), and each token
-	/// needs an icon — its tokens/&lt;id&gt;.svg (or an inline svg), which the loader resolves into Svg.
+	/// needs an icon — its assets/tokens/&lt;id&gt;.svg (or an inline svg), which the loader resolves into Svg.
 	/// </summary>
 	private static void CheckTokens(GameDefinition d, List<string> problems)
 	{
@@ -77,7 +77,7 @@ public sealed class PackageValidator : IPackageValidator
 		{
 			if (string.IsNullOrEmpty(t.Svg))
 			{
-				problems.Add($"token '{t.Id}' has no icon (add tokens/{t.Id}.svg)");
+				problems.Add($"token '{t.Id}' has no icon (add assets/tokens/{t.Id}.svg)");
 			}
 		}
 	}
@@ -86,7 +86,7 @@ public sealed class PackageValidator : IPackageValidator
 	/// Every i18n KEY the manifest/board/cards reference (square names, group names, terminology,
 	/// currency, building tiers, deck/token names, card text) must resolve in at least one declared
 	/// locale, so a board never shows or speaks a raw key. Partial translations are allowed — a key
-	/// present in some locales but not others falls back at runtime (e.g. es-only street names) — so
+	/// present in some locales but not others falls back at runtime (e.g. locale-specific street names) — so
 	/// this flags only a TRULY dangling key (referenced but defined in no locale, e.g. a rename).
 	/// </summary>
 	private static void CheckI18nReferences(GameDefinition d, List<string> problems)
@@ -128,6 +128,11 @@ public sealed class PackageValidator : IPackageValidator
 		{
 			Add(jc.NameKey, $"journey card '{jc.Id}'");
 			Add(jc.PlayedKey, $"journey card '{jc.Id}' playedKey");
+		}
+		foreach (var ac in d.AssemblyDeck ?? new List<Models.Corro.AssemblyCardDef>())
+		{
+			Add(ac.NameKey, $"assembly card '{ac.Id}'");
+			Add(ac.PlayedKey, $"assembly card '{ac.Id}' playedKey");
 		}
 		foreach (var dc in d.DraftDeck ?? new List<Models.Corro.DraftCardDef>())
 		{

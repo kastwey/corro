@@ -110,7 +110,7 @@ export function joinList(items: string[], lang: string = i18nBinder.getCurrentLa
 }
 
 /** Human-readable summary of one side of a trade (for review text + aria), flowing as ONE
- *  sentence: "Elda (150₡), 200₡ en efectivo y 1 pase de liberación". Money is worded as cash so
+ *  sentence: "Elda (150₡), 200₡ in cash and 1 release pass". Money is worded as cash so
  *  it can't be mistaken for one more property price when heard in a row of figures. */
 export function summarizeSide(
 	side: TradeSideDto,

@@ -1,0 +1,329 @@
+[
+  {
+    "id": "f1",
+    "artColor": "#2477A8",
+    "deck": "fortune",
+    "textKey": "cards.f1",
+    "effect": {
+      "type": "moveTo",
+      "target": 0,
+      "collectPass": true
+    }
+  },
+  {
+    "id": "f2",
+    "artColor": "#2477A8",
+    "deck": "fortune",
+    "textKey": "cards.f2",
+    "effect": {
+      "type": "moveTo",
+      "target": 39,
+      "collectPass": true
+    }
+  },
+  {
+    "id": "f3",
+    "artColor": "#2477A8",
+    "deck": "fortune",
+    "textKey": "cards.f3",
+    "effect": {
+      "type": "moveTo",
+      "target": "nearest:transit",
+      "collectPass": true,
+      "rentMultiplier": 2
+    }
+  },
+  {
+    "id": "f4",
+    "artColor": "#2477A8",
+    "deck": "fortune",
+    "textKey": "cards.f4",
+    "effect": {
+      "type": "moveTo",
+      "target": "nearest:utility",
+      "collectPass": true
+    }
+  },
+  {
+    "id": "f5",
+    "artColor": "#2477A8",
+    "deck": "fortune",
+    "textKey": "cards.f5",
+    "effect": {
+      "type": "moveTo",
+      "target": 11,
+      "collectPass": true
+    }
+  },
+  {
+    "id": "f6",
+    "artColor": "#2477A8",
+    "deck": "fortune",
+    "textKey": "cards.f6",
+    "effect": {
+      "type": "moveTo",
+      "target": 24,
+      "collectPass": true
+    }
+  },
+  {
+    "id": "f7",
+    "artColor": "#2477A8",
+    "deck": "fortune",
+    "textKey": "cards.f7",
+    "effect": {
+      "type": "moveBy",
+      "steps": -3
+    }
+  },
+  {
+    "id": "f8",
+    "artColor": "#2477A8",
+    "deck": "fortune",
+    "textKey": "cards.f8",
+    "effect": {
+      "type": "sendToHolding"
+    }
+  },
+  {
+    "id": "f9",
+    "artColor": "#2477A8",
+    "deck": "fortune",
+    "textKey": "cards.f9",
+    "effect": {
+      "type": "grantReleasePass"
+    }
+  },
+  {
+    "id": "f10",
+    "artColor": "#2477A8",
+    "deck": "fortune",
+    "textKey": "cards.f10",
+    "effect": {
+      "type": "money",
+      "amount": 150
+    }
+  },
+  {
+    "id": "f11",
+    "artColor": "#2477A8",
+    "deck": "fortune",
+    "textKey": "cards.f11",
+    "effect": {
+      "type": "money",
+      "amount": -15
+    }
+  },
+  {
+    "id": "f12",
+    "artColor": "#2477A8",
+    "deck": "fortune",
+    "textKey": "cards.f12",
+    "effect": {
+      "type": "payPerBuilding",
+      "perSmallBuilding": 25,
+      "perBigBuilding": 100
+    }
+  },
+  {
+    "id": "f13",
+    "artColor": "#2477A8",
+    "deck": "fortune",
+    "textKey": "cards.f13",
+    "effect": {
+      "type": "money",
+      "amount": 50
+    }
+  },
+  {
+    "id": "f14",
+    "artColor": "#2477A8",
+    "deck": "fortune",
+    "textKey": "cards.f14",
+    "effect": {
+      "type": "money",
+      "amount": -50
+    }
+  },
+  {
+    "id": "f15",
+    "artColor": "#2477A8",
+    "deck": "fortune",
+    "textKey": "cards.f15",
+    "effect": {
+      "type": "moveTo",
+      "target": 5,
+      "collectPass": true
+    }
+  },
+  {
+    "id": "f16",
+    "artColor": "#2477A8",
+    "deck": "fortune",
+    "textKey": "cards.f16",
+    "effect": {
+      "type": "collectFromEach",
+      "amount": 25
+    }
+  },
+  {
+    "id": "b1",
+    "artColor": "#6B3F78",
+    "deck": "blackmarket",
+    "textKey": "cards.b1",
+    "effect": {
+      "type": "moveTo",
+      "target": 0,
+      "collectPass": true
+    }
+  },
+  {
+    "id": "b2",
+    "artColor": "#6B3F78",
+    "deck": "blackmarket",
+    "textKey": "cards.b2",
+    "effect": {
+      "type": "money",
+      "amount": 200
+    }
+  },
+  {
+    "id": "b3",
+    "artColor": "#6B3F78",
+    "deck": "blackmarket",
+    "textKey": "cards.b3",
+    "effect": {
+      "type": "money",
+      "amount": 100
+    }
+  },
+  {
+    "id": "b4",
+    "artColor": "#6B3F78",
+    "deck": "blackmarket",
+    "textKey": "cards.b4",
+    "effect": {
+      "type": "money",
+      "amount": 50
+    }
+  },
+  {
+    "id": "b5",
+    "artColor": "#6B3F78",
+    "deck": "blackmarket",
+    "textKey": "cards.b5",
+    "effect": {
+      "type": "money",
+      "amount": 25
+    }
+  },
+  {
+    "id": "b6",
+    "artColor": "#6B3F78",
+    "deck": "blackmarket",
+    "textKey": "cards.b6",
+    "effect": {
+      "type": "money",
+      "amount": -50
+    }
+  },
+  {
+    "id": "b7",
+    "artColor": "#6B3F78",
+    "deck": "blackmarket",
+    "textKey": "cards.b7",
+    "effect": {
+      "type": "money",
+      "amount": -100
+    }
+  },
+  {
+    "id": "b8",
+    "artColor": "#6B3F78",
+    "deck": "blackmarket",
+    "textKey": "cards.b8",
+    "effect": {
+      "type": "money",
+      "amount": 20
+    }
+  },
+  {
+    "id": "b9",
+    "artColor": "#6B3F78",
+    "deck": "blackmarket",
+    "textKey": "cards.b9",
+    "effect": {
+      "type": "money",
+      "amount": 10
+    }
+  },
+  {
+    "id": "b10",
+    "artColor": "#6B3F78",
+    "deck": "blackmarket",
+    "textKey": "cards.b10",
+    "effect": {
+      "type": "money",
+      "amount": 25
+    }
+  },
+  {
+    "id": "b11",
+    "artColor": "#6B3F78",
+    "deck": "blackmarket",
+    "textKey": "cards.b11",
+    "effect": {
+      "type": "sendToHolding"
+    }
+  },
+  {
+    "id": "b12",
+    "artColor": "#6B3F78",
+    "deck": "blackmarket",
+    "textKey": "cards.b12",
+    "effect": {
+      "type": "grantReleasePass"
+    }
+  },
+  {
+    "id": "b13",
+    "artColor": "#6B3F78",
+    "deck": "blackmarket",
+    "textKey": "cards.b13",
+    "effect": {
+      "type": "collectFromEach",
+      "amount": 10
+    }
+  },
+  {
+    "id": "b14",
+    "artColor": "#6B3F78",
+    "deck": "blackmarket",
+    "textKey": "cards.b14",
+    "effect": {
+      "type": "money",
+      "amount": -25
+    }
+  },
+  {
+    "id": "b15",
+    "artColor": "#6B3F78",
+    "deck": "blackmarket",
+    "textKey": "cards.b15",
+    "effect": {
+      "type": "payPerBuilding",
+      "perSmallBuilding": 40,
+      "perBigBuilding": 115
+    }
+  },
+  {
+    "id": "b16",
+    "artColor": "#6B3F78",
+    "deck": "blackmarket",
+    "textKey": "cards.b16",
+    "effect": {
+      "type": "money",
+      "amount": 100
+    }
+  }
+]

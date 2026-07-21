@@ -16,7 +16,7 @@ public class PackageCardApplicationTests
 {
 	private static (GameDefinition Def, List<Square> Board) Galactic()
 	{
-		 var def = new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("imperio-galactico"))
+		 var def = new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("galactic-empire"))
 			.GetAwaiter().GetResult();
 		return (def, GameDefinitionAdapter.ToSquares(def, "es"));
 	}

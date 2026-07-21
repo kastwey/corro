@@ -1,0 +1,58 @@
+{
+  "format": "corro/v1",
+  "gameType": "track",
+  "engineVersion": "^1.0",
+  "id": "snakes-and-ladders",
+  "name": {
+    "es": "Escaleras y serpientes",
+    "en": "Snakes and Ladders"
+  },
+  "author": "kastwey",
+  "version": "0.1.0",
+  "locales": [
+    "en",
+    "es"
+  ],
+  "players": {
+    "min": 2,
+    "max": 8
+  },
+  "trackRules": {
+    "exactFinish": "bounce",
+    "rollAgainOnMax": true
+  },
+  "tokens": [
+    {
+      "id": "star",
+      "nameKey": "tokens.star"
+    },
+    {
+      "id": "moon",
+      "nameKey": "tokens.moon"
+    },
+    {
+      "id": "sun",
+      "nameKey": "tokens.sun"
+    },
+    {
+      "id": "diamond",
+      "nameKey": "tokens.diamond"
+    },
+    {
+      "id": "heart",
+      "nameKey": "tokens.heart"
+    },
+    {
+      "id": "lightning",
+      "nameKey": "tokens.lightning"
+    },
+    {
+      "id": "bell",
+      "nameKey": "tokens.bell"
+    },
+    {
+      "id": "flower",
+      "nameKey": "tokens.flower"
+    }
+  ]
+}

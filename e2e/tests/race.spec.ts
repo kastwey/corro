@@ -1,4 +1,4 @@
-// race.spec.ts — the race family end to end on the shipped "Carrera Galáctica" board.
+// race.spec.ts — the race family end to end on the shipped "Galactic Race" board.
 //
 // Two real browsers, scripted SINGLE-die rolls (the race family consumes one value per
 // roll from the same /e2e/random queue), Spanish locale. Covers: mandatory exit on 5,
@@ -20,7 +20,7 @@ import {
 	startGame,
 } from '../helpers/game';
 
-const BOARD = 'carrera-galactica';
+const BOARD = 'galactic-race';
 
 test.beforeEach(async () => {
 	await resetDice();
@@ -35,7 +35,7 @@ test('the lobby hides the property rules panel for a race board', async ({ brows
 	await page.click('#go-create-btn');
 
 	await page.selectOption('#board-selector', BOARD);
-	await expect(page.locator('.token-list:not(#join-token-list) input[value="nave"]')).toBeAttached();
+	await expect(page.locator('.token-list:not(#join-token-list) input[value="spaceship"]')).toBeAttached();
 	await expect(page.locator('#rules-details')).toBeHidden();
 	// …and offers the board's seats (squadron colours) to pick from, plus the classic
 	// pairs toggle (opposite seats team up — only meaningful on a 4-seat race board).
@@ -44,7 +44,7 @@ test('the lobby hides the property rules panel for a race board', async ({ brows
 	await expect(page.locator('#teams-group')).toBeVisible();
 
 	// Switching back to a property board restores its rules panel (and drops the seats).
-	await page.selectOption('#board-selector', 'imperio-galactico');
+	await page.selectOption('#board-selector', 'galactic-empire');
 	await expect(page.locator('.token-list:not(#join-token-list) input[value="ufo"]')).toBeAttached();
 	await expect(page.locator('#rules-details')).toBeVisible();
 	await expect(page.locator('#seat-fieldset')).toBeHidden();
@@ -57,33 +57,33 @@ test('lobby seats: a taken colour says who holds it, bounces away, and the choic
 	const berto = await newPlayerPage(browser);
 
 	// Ana creates picking the GREEN squadron (not the default first seat).
-	const code = await createGame(ana, 'Ana', BOARD, { seat: 'verde' });
+	const code = await createGame(ana, 'Ana', BOARD, { seat: 'green' });
 
 	// Berto's join form: the green seat is Ana's — focusable, aria-disabled (NEVER the
 	// disabled attribute) and labelled with her name; grabbing it bounces the selection.
 	await openJoinForm(berto, code, 'Berto');
-	const verde = berto.locator('#join-seat-list input[value="verde"]');
-	await expect(verde).toHaveAttribute('aria-disabled', 'true');
+	const green = berto.locator('#join-seat-list input[value="green"]');
+	await expect(green).toHaveAttribute('aria-disabled', 'true');
 	// No `disabled` attribute: the option must remain REACHABLE by keyboard/screen reader
 	// (Playwright's toBeEnabled follows aria-disabled, so pin the DOM property + focus).
-	await expect(verde).toHaveJSProperty('disabled', false);
-	await verde.focus();
-	await expect(verde).toBeFocused();
+	await expect(green).toHaveJSProperty('disabled', false);
+	await green.focus();
+	await expect(green).toBeFocused();
 	await expect(berto.locator('#join-seat-list .token-label', { hasText: '(lo tiene Ana)' })).toBeVisible();
-	await verde.dispatchEvent('click');
-	await expect(verde).not.toBeChecked();
+	await green.dispatchEvent('click');
+	await expect(green).not.toBeChecked();
 
 	// Berto takes blue instead; both identities survive into the game.
 	await berto.locator('#join-token-list input.token-radio:not([data-taken])').first().dispatchEvent('click');
-	await berto.locator('#join-seat-list input[value="azul"]').dispatchEvent('click');
+	await berto.locator('#join-seat-list input[value="blue"]').dispatchEvent('click');
 	await berto.click('#join-final-button');
 	await expect(berto.locator('#lobby-joined')).toBeVisible();
 	await startGame(ana, [ana, berto]);
 
 	await expect(berto.locator('.player-card', { hasText: 'Ana' }))
-		.toHaveAttribute('aria-label', new RegExp(pkg.seats.verde));
+		.toHaveAttribute('aria-label', new RegExp(pkg.seats.green));
 	await expect(ana.locator('.player-card', { hasText: 'Berto' }))
-		.toHaveAttribute('aria-label', new RegExp(pkg.seats.azul));
+		.toHaveAttribute('aria-label', new RegExp(pkg.seats.blue));
 });
 
 test('race: exits, auto-moves, piece choice on a barrier, and circuit exploration', async ({ browser }) => {
@@ -125,8 +125,8 @@ test('race: exits, auto-moves, piece choice on a barrier, and circuit exploratio
 
 	// ── The players panel wears the squadron identity (no money in a race) ───
 	const anaRow = berto.locator('.player-card', { hasText: 'Ana' });
-	await expect(anaRow).toHaveAttribute('aria-label', new RegExp(pkg.seats.rojo));
-	await expect(anaRow.locator('.player-card__seat')).toHaveText(pkg.seats.rojo);
+	await expect(anaRow).toHaveAttribute('aria-label', new RegExp(pkg.seats.red));
+	await expect(anaRow.locator('.player-card__seat')).toHaveText(pkg.seats.red);
 
 	// ── Keyboard exploration: arrows walk the circuit and voice the cells ────
 	// The cursor is parked on MY start square (5 for the red seat), so the first →
@@ -138,12 +138,12 @@ test('race: exits, auto-moves, piece choice on a barrier, and circuit exploratio
 	await expectAnnouncement(ana, /Casilla 1 de 68/);
 	// S / Shift+S survey EVERY seat's route landmarks in ring order (salidas and
 	// corridor entries of all players in the game), same forward/backward convention
-	// as N. Landmarks here: 5 (rojo start), 17 (azul entry), 22 (azul start), 68
-	// (rojo entry). From square 1 (off-cycle) S enters at the first one.
+	// as N. Landmarks here: 5 (red start), 17 (blue entry), 22 (blue start), 68
+	// (red entry). From square 1 (off-cycle) S enters at the first one.
 	await ana.keyboard.press('s');
-	await expectAnnouncement(ana, new RegExp(`Casilla 5 de 68.*Seguro.*Salida de ${pkg.seats.rojo}.*Barrera de Ana`));
+	await expectAnnouncement(ana, new RegExp(`Casilla 5 de 68.*Seguro.*Salida de ${pkg.seats.red}.*Barrera de Ana`));
 	await ana.keyboard.press('s');          // → Berto's corridor entry (17)
-	await expectAnnouncement(ana, new RegExp(`Casilla 17 de 68.*Entrada al pasillo de ${pkg.seats.azul}`));
+	await expectAnnouncement(ana, new RegExp(`Casilla 17 de 68.*Entrada al pasillo de ${pkg.seats.blue}`));
 	await ana.keyboard.press('Shift+S');    // and back to Ana's salida
 	await expectAnnouncement(ana, /Casilla 5 de 68.*Barrera de Ana/);
 
@@ -183,7 +183,7 @@ test('race: exits, auto-moves, piece choice on a barrier, and circuit exploratio
 	await expect(dialog).toBeVisible();
 	// The title carries the squadron identity; each option names the piece after the
 	// player's token and says WHERE it stands, so the choice is between real positions.
-	await expect(dialog.locator('.dialog-title')).toContainText(pkg.seats.rojo);
+	await expect(dialog.locator('.dialog-title')).toContainText(pkg.seats.red);
 	const options = dialog.locator('.dialog-buttons button');
 	await expect(options).toHaveCount(2);
 	await expect(options.first()).toContainText(/Nave estelar \d, desde tu salida: avanza a la casilla 7/);
@@ -221,7 +221,7 @@ test('race: exits, auto-moves, piece choice on a barrier, and circuit exploratio
 	await ana.keyboard.press('Control+d');
 	await expect(options.first()).toBeFocused();
 	// Entering the dialog re-states its title (its reason for being), not just "dialog".
-	await expectAnnouncement(ana, new RegExp(`Diálogo: ${pkg.seats.rojo}`));
+	await expectAnnouncement(ana, new RegExp(`Diálogo: ${pkg.seats.red}`));
 
 	await options.first().click();
 	await expect(dialog).toBeHidden();

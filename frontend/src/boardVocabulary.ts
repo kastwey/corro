@@ -47,7 +47,7 @@ export function setBoardVocabulary(gs: GameState | null | undefined, lang: strin
 	const symbol = gs?.currency?.symbol || '€';
 
 	const vars: Record<string, string> = {
-		// The spoken currency word ("euros"/"créditos") for "{{amount}} {{currencyName}}" strings,
+		// The spoken currency word ("euros"/"credits") for "{{amount}} {{currencyName}}" strings,
 		// from the board's currency.nameKey; falls back to its symbol when it names none.
 		currencyName: resolveKey(gs?.currency?.nameKey, lang) || symbol,
 	};

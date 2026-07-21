@@ -1,4 +1,4 @@
-// draft-bot.spec.ts — a HUMAN versus a BOT on "Gran Tapeo", end to end.
+// draft-bot.spec.ts — a HUMAN versus a BOT on "The Grand Tapas Feast", end to end.
 //
 // The host seats a bot and starts. There is NO turn in this family: the bot commits its
 // secret pick unattended as soon as the round opens (its greedy policy grabs the brava
@@ -9,7 +9,7 @@
 import { test, expect } from '../helpers/test';
 import { createGame, expectAnnouncement, newPlayerPage, resetDice, startGame } from '../helpers/game';
 
-const BOARD = 'gran-tapeo';
+const BOARD = 'grand-tapas-feast';
 
 test.beforeEach(async () => {
 	await resetDice();

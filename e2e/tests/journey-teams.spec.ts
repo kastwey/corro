@@ -1,4 +1,4 @@
-// journey-teams.spec.ts — the journey PAIRS mode end to end on "La Gran Ruta".
+// journey-teams.spec.ts — the journey PAIRS mode end to end on "The Great Route".
 //
 // Four real browsers, Spanish locale. The host creates a 4-player game with 2 teams and
 // arranges [Ana, Berto] (Equipo Rojo) vs [Carla, David] (Equipo azul) in the waiting room —
@@ -13,7 +13,7 @@ import {
 	createGame, expectAnnouncement, joinGame, newPlayerPage, resetDice, startGame,
 } from '../helpers/game';
 
-const BOARD = 'la-gran-ruta';
+const BOARD = 'great-route';
 
 test.beforeEach(async () => {
 	await resetDice();

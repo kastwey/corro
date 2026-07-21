@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/kastwey/corro/main/sdk/Corro.PackageSdk/Schemas/cards.schema.json",
   "title": "Corro card catalog",
-  "$comment": "Optional visual art is a sibling file at cards/<card-id>.svg (64x64 path geometry), not a JSON property.",
+  "$comment": "Optional visual art is a sibling file at assets/cards/<card-id>.svg (64x64 path geometry), not a JSON property.",
   "oneOf": [
     { "$ref": "#/$defs/propertyDeck" },
     { "$ref": "#/$defs/journeyDeck" },
@@ -15,7 +15,7 @@
     "cardId": {
       "type": "string",
       "pattern": "^[A-Za-z0-9_-]+$",
-      "description": "Stable card id. To override Corro's neutral drawing, add a sibling file at cards/<this-id>.svg using viewBox='0 0 64 64' and path geometry only. Do not add an svg property to cards.json."
+      "description": "Stable card id. To override Corro's neutral drawing, add a sibling file at assets/cards/<this-id>.svg using viewBox='0 0 64 64' and path geometry only. Do not add an svg property to cards.json."
     },
     "artColor": {
       "type": "string",
@@ -29,7 +29,7 @@
     "sheddingDeck": { "type": "array", "items": { "$ref": "#/$defs/sheddingCard" } },
     "explodingDeck": { "type": "array", "items": { "$ref": "#/$defs/explodingCard" } },
     "propertyCard": {
-      "title": "Property card (optional art: cards/<id>.svg)",
+      "title": "Property card (optional art: assets/cards/<id>.svg)",
       "type": "object",
       "required": ["id", "deck", "textKey", "effect"],
       "properties": {
@@ -57,7 +57,7 @@
       "additionalProperties": false
     },
     "journeyCard": {
-      "title": "Journey card (optional art: cards/<id>.svg)",
+      "title": "Journey card (optional art: assets/cards/<id>.svg)",
       "type": "object",
       "required": ["id", "type", "count", "nameKey"],
       "properties": {
@@ -77,7 +77,7 @@
       "additionalProperties": false
     },
     "assemblyCard": {
-      "title": "Assembly card (optional art: cards/<id>.svg)",
+      "title": "Assembly card (optional art: assets/cards/<id>.svg)",
       "type": "object",
       "required": ["id", "type", "count", "nameKey"],
       "properties": {
@@ -93,7 +93,7 @@
       "additionalProperties": false
     },
     "draftCard": {
-      "title": "Draft card (optional art: cards/<id>.svg)",
+      "title": "Draft card (optional art: assets/cards/<id>.svg)",
       "type": "object",
       "required": ["id", "type", "count", "nameKey"],
       "properties": {
@@ -112,7 +112,7 @@
       "additionalProperties": false
     },
     "sheddingCard": {
-      "title": "Shedding card (optional art: cards/<id>.svg)",
+      "title": "Shedding card (optional art: assets/cards/<id>.svg)",
       "type": "object",
       "required": ["id", "type", "count", "nameKey"],
       "properties": {
@@ -128,7 +128,7 @@
       "additionalProperties": false
     },
     "explodingCard": {
-      "title": "Exploding card (optional art: cards/<id>.svg)",
+      "title": "Exploding card (optional art: assets/cards/<id>.svg)",
       "type": "object",
       "required": ["id", "type", "count", "nameKey"],
       "properties": {

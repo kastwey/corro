@@ -17,7 +17,7 @@ import {
 	packageManifest,
 } from '../helpers/game';
 
-const TRACK_BOARD = 'escaleras-y-serpientes';
+const TRACK_BOARD = 'snakes-and-ladders';
 
 /** A small, real .corro archive used to exercise the browser's successful upload state. */
 async function uploadedTrackPackage(): Promise<Buffer> {
@@ -38,7 +38,9 @@ async function uploadedTrackPackage(): Promise<Buffer> {
 		'i18n/es.json': strToU8(JSON.stringify(es)),
 	};
 	for (const token of manifest.tokens as Array<{ id: string }>) {
-		files[`tokens/${token.id}.svg`] = await readFile(path.join(source, 'tokens', `${token.id}.svg`));
+		files[`assets/tokens/${token.id}.svg`] = await readFile(
+			path.join(source, 'assets', 'tokens', `${token.id}.svg`),
+		);
 	}
 	return Buffer.from(zipSync(files, { level: 0 }));
 }
@@ -83,14 +85,30 @@ test('switching shipped games keeps the loading feedback visual-only', async ({ 
 test('home, dark theme, runtime language and create/join validation states are Axe-clean', async ({ browser }) => {
 	const host = await newPlayerPage(browser);
 	await gotoLobbyHome(host);
+	const brand = host.locator('.brand-heading');
+	await expect(brand).toHaveAccessibleName('Corro');
+	await expect(brand.locator('.brand-logo__image--light')).toBeVisible();
+	await expect(brand.locator('.brand-logo__image--dark')).toBeHidden();
+	const preferences = host.locator('.language-selector');
+	const repository = host.locator('.app-footer a[data-i18n="footer.repository"]');
+	await expect(repository).toHaveAttribute('href', 'https://github.com/kastwey/corro');
+	await expect(repository).toHaveText(appI18n('es').footer.repository as string);
+	const brandBox = (await brand.boundingBox())!;
+	const logoBox = (await brand.locator('.brand-logo').boundingBox())!;
+	const preferencesBox = (await preferences.boundingBox())!;
+	expect(logoBox.width).toBeLessThanOrEqual(241);
+	expect(brandBox.y + brandBox.height).toBeLessThan(preferencesBox.y);
 
 	// Initial Spanish/light home is scanned by gotoLobbyHome; now exercise the other palette and
 	// a live language rebind before entering the forms.
 	await host.locator('#theme-toggle').click();
 	await expect(host.locator('html')).toHaveAttribute('data-theme', 'dark');
+	await expect(brand.locator('.brand-logo__image--light')).toBeHidden();
+	await expect(brand.locator('.brand-logo__image--dark')).toBeVisible();
 	await host.locator('#language-selector').selectOption('en');
 	await host.locator('#language-apply-btn').click();
 	await expect(host.locator('#home-heading')).toHaveText('Your games');
+	await expect(repository).toHaveText(appI18n('en').footer.repository as string);
 
 	await host.locator('#go-create-btn').click();
 	await expect(host.locator('#view-create')).toBeVisible();
@@ -139,6 +157,31 @@ test('home, dark theme, runtime language and create/join validation states are A
 	await expect(guestSaved.locator('.saved-game-remove')).toBeVisible();
 	await guestSaved.locator('.saved-game-remove').dispatchEvent('click');
 	await expect(guest.locator('#your-games-empty')).toBeVisible();
+});
+
+test('compact lobby keeps brand, preferences, content and footer in one vertical flow', async ({ browser }) => {
+	const page = await newPlayerPage(browser);
+	await page.setViewportSize({ width: 360, height: 800 });
+	await gotoLobbyHome(page);
+
+	const brand = page.locator('.brand-heading');
+	const brandBox = (await brand.boundingBox())!;
+	const logoBox = (await brand.locator('.brand-logo').boundingBox())!;
+	const preferencesBox = (await page.locator('.language-selector').boundingBox())!;
+	const mainBox = (await page.locator('main.container').boundingBox())!;
+	const footerBox = (await page.locator('.app-footer').boundingBox())!;
+
+	expect(logoBox.width).toBeLessThanOrEqual(199);
+	expect(brandBox.y + brandBox.height).toBeLessThan(preferencesBox.y);
+	expect(footerBox.y).toBeGreaterThanOrEqual(mainBox.y + mainBox.height - 1);
+	const horizontalExtent = await page.evaluate(() => ({
+		client: document.documentElement.clientWidth,
+		scroll: document.documentElement.scrollWidth,
+	}));
+	expect(horizontalExtent.scroll).toBeLessThanOrEqual(horizontalExtent.client);
+	await expect(page.locator('.app-footer a[data-i18n="footer.repository"]')).toHaveText(
+		appI18n('es').footer.repository as string,
+	);
 });
 
 test('invalid and successful .corro upload states, including removal, are Axe-clean', async ({ browser }) => {

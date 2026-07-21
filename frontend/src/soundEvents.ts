@@ -168,7 +168,7 @@ const ANNOUNCEMENT_SOUND_MAP: Readonly<Record<string, string>> = {
 
 	// Shedding family: the play, the wild's colour call, the direction flip, the lost
 	// turn, the penalty and the draw flow. The drawer's private lines carry the draw cue
-	// too (the public "roba una carta" goes ToAllExcept, so it never reaches them).
+	// too (the public "draws a card" goes ToAllExcept, so it never reaches them).
 	'game.shedding_played': 'shedding.play',
 	'game.shedding_color_chosen': 'shedding.wild',
 	'game.shedding_reversed': 'shedding.reverse',
@@ -249,7 +249,7 @@ const ANNOUNCEMENT_SOUND_MAP: Readonly<Record<string, string>> = {
 	'game.player_bankrupt': 'bankruptcy',
 
 	// Platform (not game) cues: a player dropping or coming back. The server voices both
-	// ("X se ha desconectado / vuelto a conectar"); the earcon rides that line. player_reconnected
+	// ("X disconnected / reconnected"); the earcon rides that line. player_reconnected
 	// covers its _self variant (my own reconnect) via the suffix strip.
 	'game.player_disconnected': 'disconnect',
 	'game.player_reconnected': 'connect',

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="120" viewBox="0 0 420 120" role="img" aria-labelledby="title description">
+  <title id="title">Corro</title>
+  <desc id="description">Six equal participants joined in a circle around a shared centre, followed by the Corro wordmark.</desc>
+  <defs>
+    <linearGradient id="mark-gradient" x1="9" y1="55" x2="73" y2="9" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#91a0ff"/>
+      <stop offset="1" stop-color="#4de2ff"/>
+    </linearGradient>
+    <linearGradient id="word-gradient" x1="120" y1="90" x2="376" y2="25" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#91a0ff"/>
+      <stop offset="1" stop-color="#4de2ff"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(12 12) scale(1.5)">
+    <g fill="none" stroke="url(#mark-gradient)" stroke-linecap="round">
+      <path data-spoke="true" d="M32 11.5 32 32" stroke-width="2.25" opacity=".68"/>
+      <path data-spoke="true" d="M49.75 21.75 32 32" stroke-width="2.25" opacity=".68"/>
+      <path data-spoke="true" d="M49.75 42.25 32 32" stroke-width="2.25" opacity=".68"/>
+      <path data-spoke="true" d="M32 52.5 32 32" stroke-width="2.25" opacity=".68"/>
+      <path data-spoke="true" d="M14.25 42.25 32 32" stroke-width="2.25" opacity=".68"/>
+      <path data-spoke="true" d="M14.25 21.75 32 32" stroke-width="2.25" opacity=".68"/>
+      <circle data-connection="true" cx="32" cy="32" r="20.5" stroke-width="4"/>
+    </g>
+    <g fill="url(#mark-gradient)">
+      <circle data-participant="true" cx="32" cy="11.5" r="4.75"/>
+      <circle data-participant="true" cx="49.75" cy="21.75" r="4.75"/>
+      <circle data-participant="true" cx="49.75" cy="42.25" r="4.75"/>
+      <circle data-participant="true" cx="32" cy="52.5" r="4.75"/>
+      <circle data-participant="true" cx="14.25" cy="42.25" r="4.75"/>
+      <circle data-participant="true" cx="14.25" cy="21.75" r="4.75"/>
+      <circle data-shared-centre="true" cx="32" cy="32" r="5.25"/>
+    </g>
+  </g>
+
+  <g data-wordmark="true" fill="none" stroke="url(#word-gradient)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M178 38c-9-10-23-13-35-8-14 6-21 20-18 35 3 16 19 26 35 22 7-2 13-6 18-11"/>
+    <circle cx="211" cy="62" r="22"/>
+    <path d="M249 84V43m0 19c2-13 11-20 24-18"/>
+    <path d="M287 84V43m0 19c2-13 11-20 24-18"/>
+    <circle cx="348" cy="62" r="22"/>
+  </g>
+</svg>

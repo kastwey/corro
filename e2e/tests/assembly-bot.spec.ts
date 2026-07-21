@@ -1,4 +1,4 @@
-// assembly-bot.spec.ts — a HUMAN versus a BOT on "Taller Galáctico", end to end.
+// assembly-bot.spec.ts — a HUMAN versus a BOT on "Galactic Workshop", end to end.
 //
 // The host seats a bot, starts with the two of them, installs a piece; the bot then plays
 // its WHOLE turn unattended (its policy installs its own known Reactor) and hands the turn
@@ -7,7 +7,7 @@
 import { test, expect } from '../helpers/test';
 import { createGame, expectAnnouncement, newPlayerPage, resetDice, startGame } from '../helpers/game';
 
-const BOARD = 'taller-galactico';
+const BOARD = 'galactic-workshop';
 
 test.beforeEach(async () => {
 	await resetDice();

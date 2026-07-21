@@ -1,7 +1,7 @@
 import type { Player, Square } from './models.js';
 import type { GameManager } from './gameManager.js';
 import { tokenIconHtml } from './tokenIcons.js';
-import { tSync, money } from './i18nBinder.js';
+import { i18nBinder, tSync, money } from './i18nBinder.js';
 import { escapeHtml } from './escapeHtml.js';
 
 /** The eight classic groups have themed CSS colours (theme-aware, light/dark) keyed by
@@ -295,7 +295,7 @@ export class Board {
 	  return;
 	}
 	const amountEl = center.querySelector('[data-free-parking-amount]') as HTMLElement | null;
-	if (amountEl) amountEl.textContent = money(pot.toLocaleString('es-ES'));
+	if (amountEl) amountEl.textContent = money(i18nBinder.formatNumber(pot));
 	center.classList.toggle('board-center--has-pot', pot > 0);
   }
 

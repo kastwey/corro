@@ -16,7 +16,7 @@ const DECK = [
 	{ id: 'pair', type: 'set', setSize: 2, setPoints: 5, count: 8, nameKey: 'c.pair' },
 	{ id: 'olive', type: 'scale', scale: [1, 3, 6], count: 8, nameKey: 'c.olive' },
 	{ id: 'icon3', type: 'majority', icons: 3, count: 6, nameKey: 'c.icon3' },
-	{ id: 'flan', type: 'dessert', count: 8, nameKey: 'c.flan' },
+	{ id: 'caramel-custard', type: 'dessert', count: 8, nameKey: 'c.flan' },
 ];
 
 const inst = (cardId: string, n = 0) => ({ instanceId: `${cardId}@${n}`, cardId });
@@ -74,7 +74,7 @@ test('the status line composes round, score, table, desserts and the sent pick',
 	const me = seat('me', {
 		score: 14, handCount: 5, hasPicked: true,
 		table: [onTable('olive', 0), onTable('olive', 1)],
-		desserts: [inst('flan', 0), inst('flan', 1)],
+		desserts: [inst('caramel-custard', 0), inst('caramel-custard', 1)],
 	});
 	const status = draftStatusText(game([me, seat('r1')]), 'me', t);
 
@@ -92,7 +92,7 @@ test('an empty table and no desserts stay silent; one dessert is singular', () =
 	assert.ok(!quiet.includes('draft_status_table'));
 	assert.ok(!quiet.includes('desserts'));
 
-	const one = seat('me', { desserts: [inst('flan')] });
+	const one = seat('me', { desserts: [inst('caramel-custard')] });
 	assert.ok(draftStatusText(game([one, seat('r1')]), 'me', t)!.includes('game.draft_status_dessert_one'));
 });
 
@@ -115,12 +115,12 @@ test('card help composes from the scoring data, one shape per type', () => {
 	assert.equal(draftCardHelp(gs, 'pair', t), 'game.draft_help_set(2|5)');
 	assert.equal(draftCardHelp(gs, 'olive', t), 'game.draft_help_scale(1, 3, 6)');
 	assert.equal(draftCardHelp(gs, 'icon3', t), 'game.draft_help_majority(3|6|3)');
-	assert.equal(draftCardHelp(gs, 'flan', t), 'game.draft_help_dessert(6|6)');
+	assert.equal(draftCardHelp(gs, 'caramel-custard', t), 'game.draft_help_dessert(6|6)');
 	assert.equal(draftCardHelp(gs, 'ghost', t), null);
 });
 
 test('a package may override a card help via <nameKey>_help', () => {
 	const gs = game([seat('me'), seat('r1')]);
 	const override = (key: string) => key === 'c.flan_help' ? 'La abuela manda.' : key;
-	assert.equal(draftCardHelp(gs, 'flan', override), 'La abuela manda.');
+	assert.equal(draftCardHelp(gs, 'caramel-custard', override), 'La abuela manda.');
 });

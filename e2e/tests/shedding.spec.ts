@@ -1,10 +1,10 @@
-// shedding.spec.ts — the shedding family on "Cuatro Colores", end to end.
+// shedding.spec.ts — the shedding family on "Four Colours", end to end.
 //
 // Two real browsers, Spanish, real SignalR. The E2E identity shuffle keeps the deck in
 // cards.json order and DEALS from its tail: both openers hold the MIRRORED hand
 // [Rojo 5, Salto rojo, Azul 5, Verde 7, Roba dos azul, Verde 2, Amarillo 7], the flip is
-// Amarillo 0 (amarillo in force) and the first draws are the azul-2 pair, then rojo-1.
-// Reordering that tail breaks this spec (pinned in CuatroColoresPackageTests).
+// Amarillo 0 (`yellow` in force) and the first draws are the blue-2 pair, then red-1.
+// Reordering that tail breaks this spec (pinned in FourColoursPackageTests).
 //
 // The story: colour and VALUE matches, the drawn-card pause (draw with Space, play the
 // drawn card with Enter), a Roba dos suffered before the lost turn, and the on-demand
@@ -20,7 +20,7 @@ import {
 	startGame,
 } from '../helpers/game';
 
-const BOARD = 'cuatro-colores';
+const BOARD = 'four-colours';
 
 test.beforeEach(async () => {
 	await resetDice();
@@ -74,7 +74,7 @@ test('shedding: matches, the drawn-card pause, a penalty and the on-demand count
 	await ana.keyboard.press('Enter');
 	await expectAnnouncement(berto, /Ana juega Verde 2/);
 
-	// ── Berto has nothing verde and no 2: he DRAWS (Space) — and the drawn Azul 2
+	// ── Berto has nothing green and no 2: he DRAWS (Space) — and the drawn Azul 2
 	// matches by value, so the game pauses on his play-it-or-keep-it choice. ──
 	await berto.locator('#board').focus();
 	await berto.keyboard.press(' ');

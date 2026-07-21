@@ -14,9 +14,9 @@ import type { LobbySeatInfo, LobbyPlayer } from '../src/models.js';
 before(() => setupDom());
 
 const SEATS: LobbySeatInfo[] = [
-	{ id: 'rojo', color: '#e00', nameKey: 'seats.rojo' },
-	{ id: 'azul', color: '#00e', nameKey: 'seats.azul' },
-	{ id: 'verde', color: '#0a0', nameKey: 'seats.verde' },
+	{ id: 'red', color: '#e00', nameKey: 'seats.red' },
+	{ id: 'blue', color: '#00e', nameKey: 'seats.blue' },
+	{ id: 'green', color: '#0a0', nameKey: 'seats.green' },
 ];
 
 const t = (key: string, fallback?: string) => fallback ?? key;
@@ -37,15 +37,15 @@ function radios(ul: HTMLElement): HTMLInputElement[] {
 }
 
 test('renders every seat and auto-selects the first free one', () => {
-	const ul = render(new Map([['rojo', 'Ana']]));
+	const ul = render(new Map([['red', 'Ana']]));
 	const rs = radios(ul);
 	assert.equal(rs.length, 3);
-	assert.equal(rs.find(r => r.checked)?.value, 'azul', 'rojo is taken, azul is the first free');
+	assert.equal(rs.find(r => r.checked)?.value, 'blue', 'rojo is taken, azul is the first free');
 });
 
 test('a taken seat is aria-disabled and says who holds it — but is NEVER disabled', () => {
-	const ul = render(new Map([['rojo', 'Ana']]));
-	const rojo = radios(ul).find(r => r.value === 'rojo')!;
+	const ul = render(new Map([['red', 'Ana']]));
+	const rojo = radios(ul).find(r => r.value === 'red')!;
 	assert.equal(rojo.getAttribute('aria-disabled'), 'true');
 	assert.equal(rojo.disabled, false, 'the disabled attribute is forbidden: the option must stay focusable');
 	const label = rojo.closest('label')!;
@@ -53,10 +53,10 @@ test('a taken seat is aria-disabled and says who holds it — but is NEVER disab
 });
 
 test('selecting a taken seat bounces back to the previous valid pick', () => {
-	const ul = render(new Map([['rojo', 'Ana']]));
+	const ul = render(new Map([['red', 'Ana']]));
 	const rs = radios(ul);
-	const verde = rs.find(r => r.value === 'verde')!;
-	const rojo = rs.find(r => r.value === 'rojo')!;
+	const verde = rs.find(r => r.value === 'green')!;
+	const rojo = rs.find(r => r.value === 'red')!;
 
 	verde.checked = true;
 	verde.dispatchEvent(changeEvent());
@@ -69,11 +69,11 @@ test('selecting a taken seat bounces back to the previous valid pick', () => {
 
 test('getUsedSeats maps seatId to the holding player name (players without a seat are skipped)', () => {
 	const players = [
-		{ id: '1', name: 'Ana', seatId: 'rojo' },
+		{ id: '1', name: 'Ana', seatId: 'red' },
 		{ id: '2', name: 'Berto', seatId: null },
 	] as unknown as LobbyPlayer[];
 	const used = getUsedSeats(players);
-	assert.equal(used.get('rojo'), 'Ana');
+	assert.equal(used.get('red'), 'Ana');
 	assert.equal(used.size, 1);
 });
 

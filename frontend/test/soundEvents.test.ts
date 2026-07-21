@@ -117,15 +117,15 @@ test('a Nope plays its response cue and restarts the rising reaction warning', (
 
 test('a pack announcement map wins, and _self/_victim variants inherit its base entry', () => {
 	const pack = {
-		'cards.limite_played': 'journey.limited',
+		'cards.speed_limit_played': 'journey.limited',
 		'game.dice_rolled': 'pack.override', // an engine key re-mapped for this game only
 	};
-	assert.equal(soundEventForAnnouncement('cards.limite_played', undefined, pack), 'journey.limited');
-	assert.equal(soundEventForAnnouncement('cards.limite_played_self', undefined, pack), 'journey.limited');
-	assert.equal(soundEventForAnnouncement('cards.limite_played_victim', undefined, pack), 'journey.limited');
+	assert.equal(soundEventForAnnouncement('cards.speed_limit_played', undefined, pack), 'journey.limited');
+	assert.equal(soundEventForAnnouncement('cards.speed_limit_played_self', undefined, pack), 'journey.limited');
+	assert.equal(soundEventForAnnouncement('cards.speed_limit_played_victim', undefined, pack), 'journey.limited');
 	assert.equal(soundEventForAnnouncement('game.dice_rolled', undefined, pack), 'pack.override');
 	// Without a pack map, unthemed package keys stay silent.
-	assert.equal(soundEventForAnnouncement('cards.limite_played_victim'), null);
+	assert.equal(soundEventForAnnouncement('cards.speed_limit_played_victim'), null);
 });
 
 test('every server validation error has no earcon (no error sound assigned yet)', () => {

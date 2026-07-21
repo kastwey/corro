@@ -1,0 +1,93 @@
+[
+  {
+    "id": "firedamp",
+    "artColor": "#8B2D2D",
+    "type": "bomb",
+    "count": 4,
+    "nameKey": "cards.firedamp"
+  },
+  {
+    "id": "cut-fuse",
+    "artColor": "#147353",
+    "type": "defuse",
+    "count": 6,
+    "nameKey": "cards.cut_fuse"
+  },
+  {
+    "id": "leave-shaft",
+    "artColor": "#276B83",
+    "type": "skip",
+    "count": 4,
+    "nameKey": "cards.leave_shaft"
+  },
+  {
+    "id": "cave-in",
+    "artColor": "#9A4D22",
+    "type": "attack",
+    "count": 4,
+    "nameKey": "cards.cave_in"
+  },
+  {
+    "id": "canary",
+    "artColor": "#8A6A00",
+    "type": "seeFuture",
+    "count": 5,
+    "nameKey": "cards.canary"
+  },
+  {
+    "id": "gallery-reshuffle",
+    "artColor": "#65508A",
+    "type": "shuffle",
+    "count": 4,
+    "nameKey": "cards.gallery_reshuffle"
+  },
+  {
+    "id": "borrowed-pickaxe",
+    "artColor": "#7A4C2B",
+    "type": "favor",
+    "count": 4,
+    "nameKey": "cards.borrowed_pickaxe"
+  },
+  {
+    "id": "no-way",
+    "artColor": "#7A2F4F",
+    "type": "nope",
+    "count": 5,
+    "nameKey": "cards.no_way"
+  },
+  {
+    "id": "mine-rat",
+    "artColor": "#72523A",
+    "type": "cat",
+    "count": 4,
+    "nameKey": "cards.mine_rat"
+  },
+  {
+    "id": "bat",
+    "artColor": "#4D4568",
+    "type": "cat",
+    "count": 4,
+    "nameKey": "cards.bat"
+  },
+  {
+    "id": "mole",
+    "artColor": "#785533",
+    "type": "cat",
+    "count": 4,
+    "nameKey": "cards.mole"
+  },
+  {
+    "id": "worm",
+    "artColor": "#8A4B55",
+    "type": "cat",
+    "count": 4,
+    "nameKey": "cards.worm"
+  },
+  {
+    "id": "dung-beetle",
+    "artColor": "#355B4A",
+    "type": "cat",
+    "count": 4,
+    "nameKey": "cards.dung_beetle"
+  }
+]

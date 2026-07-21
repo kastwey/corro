@@ -1,7 +1,7 @@
 // cardArt.ts — package-owned card illustrations plus neutral engine fallbacks.
 //
 // The package contract is deliberately the same safe subset as player tokens: an optional
-// cards/<id>.svg is flattened by the server to path-data on a 64×64 canvas. The client still
+// assets/cards/<id>.svg is flattened by the server to path-data on a 64×64 canvas. The client still
 // sanitizes that data before putting it in an attribute. Package geometry always wins; when it
 // is absent, these helpers draw only generic MECHANICS (attack, remedy, number, etc.) and never
 // branch on a shipped package id, card id, token id or title.

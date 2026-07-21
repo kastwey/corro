@@ -1,0 +1,14 @@
+{
+  "seats": {
+    "red": "Red Squadron",
+    "blue": "Blue Squadron",
+    "yellow": "Yellow Squadron",
+    "green": "Green Squadron"
+  },
+  "tokens": {
+    "spaceship": "Starship",
+    "probe": "Probe",
+    "comet": "Comet",
+    "satellite": "Satellite"
+  }
+}

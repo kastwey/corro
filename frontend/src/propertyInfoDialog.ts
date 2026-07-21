@@ -21,7 +21,7 @@ export interface PropertyInfoData {
 	name: string;
 	color?: string;
 	/** The square's group name key (e.g. "game.color_brown", "groups.g1") — what we read to the
-	 *  player ("Grupo: Marrón"). The colour is just its visual form and is shown, not spoken. */
+	 *  player ("Group: Brown"). The colour is just its visual form and is shown, not spoken. */
 	groupNameKey?: string;
 	price?: number;
 	/** The sum a tax square charges on landing (kept distinct from a purchase price). */
@@ -81,7 +81,7 @@ export function projectPropertyInfo(
 export function propertyInfoLines(
 	d: PropertyInfoData,
 	translate: (k: string, v?: Record<string, any>) => string = t,
-	// The group line ("Grupo: Marrón"), resolved from the square's group name key like the board
+	// The group line ("Group: Brown"), resolved from the square's group name key like the board
 	// status does — so it works for hex-coloured package boards, not just the classic colour words.
 	groupLabel: (d: Pick<PropertyInfoData, 'groupNameKey' | 'color'>) => string =
 		(dd) => squareGroupLabel(dd, tSync, localizeColor)

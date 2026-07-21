@@ -50,9 +50,9 @@ public class CorroPackageZipTests
 			(prefix + "board.json", File.ReadAllText(Path.Combine(dir, "board.json"))),
 			(prefix + "cards.json", File.ReadAllText(Path.Combine(dir, "cards.json"))),
 		};
-		foreach (var svg in Directory.GetFiles(Path.Combine(dir, "tokens"), "*.svg"))
+		foreach (var svg in Directory.GetFiles(Path.Combine(dir, "assets", "tokens"), "*.svg"))
 		{
-			files.Add((prefix + "tokens/" + Path.GetFileName(svg), File.ReadAllText(svg)));
+			files.Add((prefix + "assets/tokens/" + Path.GetFileName(svg), File.ReadAllText(svg)));
 		}
 
 		return files.ToArray();

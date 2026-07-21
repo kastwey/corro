@@ -1,0 +1,14 @@
+{
+  "seats": {
+    "red": "Rojas",
+    "blue": "Azules",
+    "yellow": "Amarillas",
+    "green": "Verdes"
+  },
+  "tokens": {
+    "pawn": "Ficha",
+    "horse": "Caballo",
+    "die": "Dado",
+    "dice_cup": "Cubilete"
+  }
+}

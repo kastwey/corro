@@ -1,0 +1,18 @@
+{
+  "packId": "the-mine",
+  "events": {
+    "turn.you": "turn-you.ogg",
+    "game.over": "game-over.ogg",
+    "card.draw": "draw.ogg",
+    "card.discard": "discard.ogg",
+    "cards.shuffle": "shuffle.ogg",
+    "exploding.nope": "exploding-nope.ogg",
+    "exploding.fizzle": "exploding-fizzle.ogg",
+    "exploding.skip": "exploding-skip.ogg",
+    "exploding.played": "exploding-attack.ogg",
+    "exploding.future": "exploding-future.ogg",
+    "exploding.defuse": "exploding-defuse.ogg",
+    "exploding.boom": "exploding-boom.ogg",
+    "exploding.steal": "exploding-steal.ogg"
+  }
+}

@@ -33,6 +33,7 @@ public sealed class CorroPackageLoader
 			throw new DirectoryNotFoundException($"Package folder not found: {packageDir}");
 		}
 
+		PackageLayout.RejectRootAssetDirectories(packageDir);
 		var manifest = await PackageJson.ReadAsync<Manifest>(packageDir, "manifest.json");
 		manifest = manifest with { Tokens = ResolveTokenSvgs(manifest.Tokens, packageDir) };
 		var i18n = await LoadI18nAsync(packageDir, manifest.Locales);
@@ -153,7 +154,7 @@ public sealed class CorroPackageLoader
 
 	/// <summary>
 	/// Fill each token's icon path-data: the manifest keeps tokens lean (id + nameKey), so the art
-	/// lives as files under tokens/&lt;id&gt;.svg. Only the geometry of &lt;path&gt; elements is taken and it
+	/// lives as files under assets/tokens/&lt;id&gt;.svg. Only the geometry of &lt;path&gt; elements is taken and it
 	/// is whitelisted to path chars, so an uploaded package can't inject markup. An inline `svg` on
 	/// the token still wins if present (small icons / back-compat).
 	/// </summary>
@@ -164,11 +165,11 @@ public sealed class CorroPackageLoader
 			return t with { Svg = raw is null ? null : SanitizePathData(raw) };
 		}).ToList();
 
-	/// <summary>Read tokens/&lt;id&gt;.svg and return the concatenated path-data of its &lt;path&gt; elements, or null.</summary>
+	/// <summary>Read assets/tokens/&lt;id&gt;.svg and return the concatenated path-data of its &lt;path&gt; elements, or null.</summary>
 	private static string? ReadTokenSvgFile(string packageDir, string id)
 	{
-		var safeId = Regex.Replace(id, "[^A-Za-z0-9_-]", ""); // never let a token id escape the tokens folder
-		var path = Path.Combine(packageDir, "tokens", safeId + ".svg");
+		var safeId = Regex.Replace(id, "[^A-Za-z0-9_-]", ""); // never let a token id escape the asset folder
+		var path = Path.Combine(PackageLayout.TokenArtDirectory(packageDir), safeId + ".svg");
 		if (safeId.Length == 0 || !File.Exists(path))
 		{
 			return null;
@@ -183,7 +184,7 @@ public sealed class CorroPackageLoader
 
 	/// <summary>
 	/// Resolve optional card illustrations for EVERY deck shape in one place, so adding a family
-	/// cannot accidentally bypass package content. A package owns cards/&lt;id&gt;.svg; the JSON stays
+	/// cannot accidentally bypass package content. A package owns assets/cards/&lt;id&gt;.svg; the JSON stays
 	/// rules-only. Missing files are valid and deliberately leave Svg null for the neutral client
 	/// fallback. Existing files must be path-only, bounded and correspond to a real card id.
 	/// </summary>
@@ -213,7 +214,7 @@ public sealed class CorroPackageLoader
 	private static Dictionary<string, string> ReadCardSvgFiles(string packageDir, HashSet<string> cardIds)
 	{
 		var result = new Dictionary<string, string>(StringComparer.Ordinal);
-		var cardsDir = Path.Combine(packageDir, "cards");
+		var cardsDir = PackageLayout.CardArtDirectory(packageDir);
 		if (!Directory.Exists(cardsDir))
 		{
 			return result;
@@ -233,12 +234,12 @@ public sealed class CorroPackageLoader
 			if (!LooksLikeSvgPath(pathData))
 			{
 				throw new InvalidOperationException(
-					$"card illustration 'cards/{id}.svg' contains no usable <path> geometry.");
+					$"card illustration 'assets/cards/{id}.svg' contains no usable <path> geometry.");
 			}
 			if (pathData.Length > MaxCardSvgPathChars)
 			{
 				throw new InvalidOperationException(
-					$"card illustration 'cards/{id}.svg' exceeds the {MaxCardSvgPathChars}-character path limit.");
+					$"card illustration 'assets/cards/{id}.svg' exceeds the {MaxCardSvgPathChars}-character path limit.");
 			}
 
 			total = checked(total + pathData.Length);
@@ -277,7 +278,7 @@ public sealed class CorroPackageLoader
 		if (expectedViewBox is not null && !ViewBoxMatches(root, expectedViewBox))
 		{
 			throw new InvalidOperationException(
-				$"card illustration 'cards/{Path.GetFileName(file)}' must use viewBox=\"0 0 64 64\".");
+				$"card illustration 'assets/cards/{Path.GetFileName(file)}' must use viewBox=\"0 0 64 64\".");
 		}
 
 		return string.Join(" ", root.Descendants()
@@ -324,7 +325,7 @@ public sealed class CorroPackageLoader
 			}
 			var id = card.TryGetProperty("id", out var cardId) ? cardId.GetString() : null;
 			throw new InvalidOperationException(
-				$"card '{id ?? "?"}' puts art in cards.json; remove the svg field and add cards/{id ?? "<id>"}.svg instead.");
+				$"card '{id ?? "?"}' puts art in cards.json; remove the svg field and add assets/cards/{id ?? "<id>"}.svg instead.");
 		}
 	}
 

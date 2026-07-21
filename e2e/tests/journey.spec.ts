@@ -1,4 +1,4 @@
-// journey.spec.ts — the journey family end to end on the shipped "La Gran Ruta" deck.
+// journey.spec.ts — the journey family end to end on the shipped "The Great Route" deck.
 //
 // Two real browsers, Spanish locale. In the E2E environment the deck keeps its cards.json
 // order (identity shuffle) and deals from the END, so the opening hands are known:
@@ -20,7 +20,7 @@ import {
 	startGame,
 } from '../helpers/game';
 
-const BOARD = 'la-gran-ruta';
+const BOARD = 'great-route';
 
 test.beforeEach(async () => {
 	await resetDice();
@@ -33,7 +33,7 @@ test('the lobby offers the journey deck with tokens and ITS OWN house rules (no 
 	await page.click('#go-create-btn');
 
 	await page.selectOption('#board-selector', BOARD);
-	await expect(page.locator('.token-list:not(#join-token-list) input[value="coche"]')).toBeAttached();
+	await expect(page.locator('.token-list:not(#join-token-list) input[value="car"]')).toBeAttached();
 	// The journey rules render as the package's own panel (the built-in property fieldsets
 	// are replaced), with the official defaults pre-filled and the package's ES labels.
 	await expect(page.locator('#rules-details')).toHaveClass(/rules-details--package/);
@@ -52,6 +52,13 @@ test('journey: F1 guide discovers rules, shortcuts, card help and screen-reader 
 	const code = await createGame(ana, 'Ana', BOARD);
 	await joinGame(berto, code, 'Berto');
 	await startGame(ana, [ana, berto]);
+
+	// Card families enter the hand automatically; the page must not teach the spatial-board
+	// workflow or tell the player to press Tab before they can begin.
+	const intro = ana.locator('#game-surface-intro');
+	await expect(intro).toHaveAttribute('data-i18n', 'game.surface_intro.hand');
+	await expect(intro).toHaveText('El foco se coloca automáticamente en tu mano. Usa Flecha arriba y Flecha abajo para recorrer las cartas; tu lector de pantalla anunciará cada una. Pulsa Control más F1 para consultar los atajos de este juego.');
+	await expect(ana.locator('.hand-card:not(.hand-card--info)').first()).toBeFocused();
 
 	// F1 is the package guide. It teaches all three companion help routes and gives
 	// this card family a concrete screen-reader workflow rather than generic board advice.

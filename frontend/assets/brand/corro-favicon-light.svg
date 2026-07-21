@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-labelledby="title description">
+  <title id="title">Corro</title>
+  <desc id="description">Six equal participants joined around a shared centre.</desc>
+  <defs>
+    <linearGradient id="brand-gradient" x1="10" y1="54" x2="54" y2="10" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4456d7"/>
+      <stop offset="1" stop-color="#007a9b"/>
+    </linearGradient>
+  </defs>
+  <rect x="1.5" y="1.5" width="61" height="61" rx="15" fill="#f7f9ff" stroke="#c2cbe0" stroke-width="3"/>
+  <g fill="none" stroke="url(#brand-gradient)" stroke-linecap="round">
+    <path data-spoke="true" d="M32 11.5 32 32" stroke-width="2.25" opacity=".62"/>
+    <path data-spoke="true" d="M49.75 21.75 32 32" stroke-width="2.25" opacity=".62"/>
+    <path data-spoke="true" d="M49.75 42.25 32 32" stroke-width="2.25" opacity=".62"/>
+    <path data-spoke="true" d="M32 52.5 32 32" stroke-width="2.25" opacity=".62"/>
+    <path data-spoke="true" d="M14.25 42.25 32 32" stroke-width="2.25" opacity=".62"/>
+    <path data-spoke="true" d="M14.25 21.75 32 32" stroke-width="2.25" opacity=".62"/>
+    <circle data-connection="true" cx="32" cy="32" r="20.5" stroke-width="4"/>
+  </g>
+  <g fill="url(#brand-gradient)">
+    <circle data-participant="true" cx="32" cy="11.5" r="4.75"/>
+    <circle data-participant="true" cx="49.75" cy="21.75" r="4.75"/>
+    <circle data-participant="true" cx="49.75" cy="42.25" r="4.75"/>
+    <circle data-participant="true" cx="32" cy="52.5" r="4.75"/>
+    <circle data-participant="true" cx="14.25" cy="42.25" r="4.75"/>
+    <circle data-participant="true" cx="14.25" cy="21.75" r="4.75"/>
+    <circle data-shared-centre="true" cx="32" cy="32" r="5.25"/>
+  </g>
+</svg>

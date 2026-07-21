@@ -14,7 +14,9 @@
 	border-radius: 12px;
 	padding: 0.75rem 1rem;
 	margin-bottom: 1rem;
-	transition: all 0.3s ease;
+	/* Never interpolate a surface independently from its text during a theme switch:
+	 * the intermediate gray pair can fall below AA even when both endpoint themes pass. */
+	transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .turn-indicator--visible {

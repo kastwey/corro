@@ -1,0 +1,14 @@
+{
+  "seats": {
+    "red": "Red",
+    "blue": "Blue",
+    "yellow": "Yellow",
+    "green": "Green"
+  },
+  "tokens": {
+    "pawn": "Counter",
+    "horse": "Horse",
+    "die": "Die",
+    "dice_cup": "Dice cup"
+  }
+}

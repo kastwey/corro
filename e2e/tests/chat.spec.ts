@@ -16,7 +16,7 @@ test.beforeEach(async () => {
 test('chat: mention autocompletes, both sides get it, history survives a reload', async ({ browser }) => {
 	const ana = await newPlayerPage(browser);
 	const berto = await newPlayerPage(browser);
-	const code = await createGame(ana, 'Ana', 'imperio-galactico');
+	const code = await createGame(ana, 'Ana', 'galactic-empire');
 	await joinGame(berto, code, 'Berto');
 	await startGame(ana, [ana, berto]);
 

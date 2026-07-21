@@ -7,13 +7,13 @@ namespace CorroServer.Tests;
 
 /// <summary>
 /// The adapter turns a loaded .corro package into the engine's runtime board + settings + rent
-/// rules. These pin the mapping against the shipped "Imperio Galáctico" package, so a package can
+/// rules. These pin the mapping against the shipped "Galactic Empire" package, so a package can
 /// drive the game without the rulebook knowing any of its content.
 /// </summary>
 public class GameDefinitionAdapterTests
 {
 	private static GameDefinition Galactic()
-		  => new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("imperio-galactico"))
+		  => new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("galactic-empire"))
 			.GetAwaiter().GetResult();
 
 	[Fact]

@@ -4,6 +4,8 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title data-i18n="page.title">Corro - Create/Join Game</title>
+	<link rel="icon" href="assets/brand/corro-favicon-light.svg" type="image/svg+xml" media="(prefers-color-scheme: light)">
+	<link rel="icon" href="assets/brand/corro-favicon-dark.svg" type="image/svg+xml" media="(prefers-color-scheme: dark)">
 
 	<script>
 		// Apply the saved/system theme before first paint to avoid a flash.
@@ -29,20 +31,30 @@
 </head>
 <body>
 	<main class="container">
-		<!-- Language selector -->
-		<div class="language-selector">
-			<label for="language-selector" data-i18n="language.selectLabel">Select language</label>
-			<div class="language-controls">
-				<select id="language-selector" data-i18n-attr:aria-label="language.selectLabel" aria-label="Select language">
-					<option value="en">English</option>
-					<option value="es">Español</option>
-				</select>
-				<button type="button" id="language-apply-btn" class="language-apply-btn" data-i18n="language.applyButton">Apply</button>
-				<span id="theme-toggle-mount"></span>
-			</div>
-		</div>
+		<header class="lobby-header">
+			<h1 class="brand-heading">
+				<span class="sr-only" data-i18n="lobby.title">Corro</span>
+				<span class="brand-logo" aria-hidden="true">
+					<img class="brand-logo__image brand-logo__image--light" src="assets/brand/corro-logo-on-light.svg"
+						width="420" height="120" alt="">
+					<img class="brand-logo__image brand-logo__image--dark" src="assets/brand/corro-logo-on-dark.svg"
+						width="420" height="120" alt="">
+				</span>
+			</h1>
 
-		<h1 data-i18n="lobby.title">Corro</h1>
+			<!-- Language and theme are preferences, not page navigation. -->
+			<div class="language-selector">
+				<label for="language-selector" data-i18n="language.selectLabel">Select language</label>
+				<div class="language-controls">
+					<select id="language-selector" data-i18n-attr:aria-label="language.selectLabel" aria-label="Select language">
+						<option value="en" data-i18n="language.english">English</option>
+						<option value="es" data-i18n="language.spanish">Spanish</option>
+					</select>
+					<button type="button" id="language-apply-btn" class="language-apply-btn" data-i18n="language.applyButton">Apply</button>
+					<span id="theme-toggle-mount"></span>
+				</div>
+			</div>
+		</header>
 
 		<!-- VIEW: HOME — list of your games + entry points to create / join -->
 		<section id="view-home" class="lobby-view" aria-labelledby="home-heading">
@@ -346,7 +358,7 @@
 		<div id="loading" class="loading hidden" data-i18n="lobby.processing" aria-live="polite">Processing...</div>
 	</main>
 
-	<!-- Los diálogos se crean dinámicamente por DialogManager -->
+		<!-- DialogManager creates dialogs dynamically. -->
 
 	<!-- Scripts -->
 	<script src="libs/i18next.min.js"></script>
@@ -354,12 +366,14 @@
 	<script type="module" src="lobby/index.js"></script>
 
 	<footer class="app-footer">
-		<p>
+		<p class="app-footer__brand">
 			<span data-i18n="footer.poweredBy">Powered by</span>
-			<strong>Corro</strong>
-			&middot;
-			<a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="license noopener">AGPL-3.0</a>
+			<strong>Corro</strong>.
 		</p>
+		<ul class="app-footer__links">
+			<li><a href="https://github.com/kastwey/corro" target="_blank" rel="noopener noreferrer" data-i18n="footer.repository">GitHub repository</a></li>
+			<li><a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="license noopener noreferrer">AGPL-3.0</a></li>
+		</ul>
 	</footer>
 </body>
 </html>

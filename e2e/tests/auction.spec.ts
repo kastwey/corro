@@ -23,7 +23,7 @@ import {
 	startGame,
 } from '../helpers/game';
 
-const BOARD = 'imperio-galactico';
+const BOARD = 'galactic-empire';
 
 test.beforeEach(async () => {
 	await resetDice();

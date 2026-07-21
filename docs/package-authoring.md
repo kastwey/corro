@@ -105,10 +105,10 @@ are authoring aids and are automatically left out of the packed `.corro` file.
 | `manifest.json` | Identity, family, player count, rules and token list | Yes |
 | `board.json` | Spatial layout for `property`, `race`, `track` and `trivia` | Depends on family |
 | `cards.json` | Cards for `property` and the five card families | Depends on family |
-| `cards/*.svg` | Optional illustration for a card with the matching id | Later |
+| `assets/cards/*.svg` | Optional illustration for a card with the matching id | Later |
 | `questions.en.json`, `questions.es.json` | Real question banks for `trivia` | Trivia only |
 | `i18n/en.json`, `i18n/es.json` | Names and text referenced by keys | Yes |
-| `tokens/*.svg` | Player-piece geometry | Later |
+| `assets/tokens/*.svg` | Player-piece geometry | Later |
 | `CREDITS.md` | Sources and redistribution licences for art and sounds | Before sharing |
 | `help.en.md`, `help.es.md` | F1 rules and screen-reader instructions | Before sharing |
 | `README.md` | Short authoring checklist for this generated project | Read it |
@@ -171,8 +171,8 @@ when you need a realistic example.
 ### Optional card drawings
 
 Every card works without an image: Corro shows a neutral drawing based on its generic mechanic.
-To replace it, add `cards/<card-id>.svg`; for example, card id `step25` uses
-`cards/step25.svg`. Do not add an `svg` field to `cards.json`.
+To replace it, add `assets/cards/<card-id>.svg`; for example, card id `step25` uses
+`assets/cards/step25.svg`. Do not add an `svg` field to `cards.json`.
 
 Use a `viewBox="0 0 64 64"` and flatten the drawing to `<path>` geometry. The package loader
 discards colours and all other SVG markup for security; the card frame supplies a readable colour.
@@ -245,8 +245,8 @@ hidden package it says `Hidden: yes` but never prints the unlock code.
 | --- | --- | --- |
 | `Invalid JSON (line …)` | The file has broken JSON syntax | Quotes, commas and matching braces near that line |
 | `resolves in no locale` | A `nameKey`/`textKey` has no text | Add the same dotted key under `i18n/en.json` and `i18n/es.json` |
-| `token … has no icon` | A listed token has no usable SVG path | Check the id and corresponding `tokens/<id>.svg` file |
-| `card illustration …` | An optional card SVG is malformed, oversized or names no card | Match `cards/<id>.svg` to a `cards.json` id and flatten it to paths |
+| `token … has no icon` | A listed token has no usable SVG path | Check the id and corresponding `assets/tokens/<id>.svg` file |
+| `card illustration …` | An optional card SVG is malformed, oversized or names no card | Match `assets/cards/<id>.svg` to a `cards.json` id and flatten it to paths |
 | `unknown type` or `unknown effect` | The package names a mechanic the family does not implement | Use an option suggested by the schema or format reference |
 | `deck … is too small` | The largest supported table cannot be dealt | Add card copies, reduce hand size or lower `players.max` |
 | `players.max … tokens/seats` | More players are allowed than distinct pieces/seats exist | Add tokens/seats or lower `players.max` |

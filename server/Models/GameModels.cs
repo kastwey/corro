@@ -109,7 +109,7 @@ public record Square
 	public string? OwnerId { get; set; }
 	public string? Color { get; init; }
 	// i18n key for the square's group name, so the client announces a meaningful group
-	// ("Grupo: Marrón") instead of a raw colour value. Resolved against the merged app + package
+	// ("Group: Brown") instead of a raw colour value. Resolved against the merged app + package
 	// translations (with a literal fallback). Null when the group has no name.
 	public string? GroupNameKey { get; init; }
 	public string? Key { get; init; }
@@ -573,7 +573,7 @@ public record CardDrawnNotification
 	public required string PlayerName { get; init; }
 	public required string CardId { get; init; }
 	public required string DeckType { get; init; } // "chance" | "community" | a package deck id
-	/// <summary>Sanitized path-data from cards/&lt;id&gt;.svg; null uses the neutral client drawing.</summary>
+		/// <summary>Sanitized path-data from assets/cards/&lt;id&gt;.svg; null uses the neutral client drawing.</summary>
 	public string? Svg { get; init; }
 	/// <summary>Optional package-owned #RRGGBB accent for the revealed face.</summary>
 	public string? ArtColor { get; init; }

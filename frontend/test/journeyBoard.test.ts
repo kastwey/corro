@@ -16,7 +16,7 @@ import type { GameState, JourneyCardInstance, JourneySeatState } from '../src/mo
 before(() => setupDom());
 
 const DECK = [
-	{ id: 'd25', type: 'distance', value: 25, count: 10, nameKey: 'cards.d25' },
+	{ id: 'distance-25', type: 'distance', value: 25, count: 10, nameKey: 'cards.distance_25' },
 	{ id: 'stop', type: 'attack', kind: 'stop', hazardClass: 'stopper', value: 0, count: 5, nameKey: 'cards.stop' },
 	{ id: 'flat', type: 'attack', kind: 'flat', hazardClass: 'stopper', value: 0, count: 3, nameKey: 'cards.flat' },
 	{ id: 'limit', type: 'attack', kind: 'speedLimit', hazardClass: 'limiter', value: 0, count: 4, nameKey: 'cards.limit' },

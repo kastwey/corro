@@ -1,4 +1,4 @@
-/* modal.css - Estilos para modales */
+/* modal.css - Modal styles */
 
 /* Overlay del modal */
 .modal-overlay {
@@ -63,7 +63,7 @@
 	line-height: 1.6;
 }
 
-/* Información del juego en el modal de reconexión */
+/* Game information in the reconnect modal */
 .reconnect-game-info {
 	background: #f9fafb;
 	border: 1px solid #e5e7eb;
@@ -201,7 +201,7 @@
 	}
 }
 
-/* Animación de salida */
+/* Exit animation */
 .modal-overlay.closing {
 	animation: modalFadeOut 0.2s ease-in forwards;
 }
@@ -231,7 +231,7 @@
 }
 
 /* ==========================================
-   DIALOG MANAGER - Sistema unificado de diálogos
+	DIALOG MANAGER - Unified dialog system
    ========================================== */
 
 .game-dialog {
@@ -399,7 +399,7 @@
 	background: var(--danger-hover);
 }
 
-/* Variante: compra de propiedad */
+/* Variant: property purchase */
 .game-dialog.dialog-purchase .dialog-property-info {
 	font-size: 1.1rem;
 	font-weight: 500;
@@ -545,7 +545,7 @@
 }
 
 /* ==========================================
-   UNLOCK DIALOG - Código de desbloqueo
+	UNLOCK DIALOG - Unlock code
    ========================================== */
 
 .dialog-unlock-input {
@@ -758,15 +758,32 @@
 	color: var(--on-accent);
 }
 
-/* Unobtrusive license footer: last in the DOM (reachable, never in the way). */
+/* Unobtrusive project footer: last in the DOM (reachable, never in the way). */
 .app-footer {
+	width: min(100%, 520px);
 	text-align: center;
-	padding: 0.75rem 0 0.5rem;
-	font-size: 0.72rem;
+	padding: 0.75rem 1rem 0.5rem;
+	font-size: 0.75rem;
+	line-height: 1.5;
 	color: var(--text-muted);
+}
+
+.app-footer__brand {
+	margin: 0;
+}
+
+.app-footer__links {
+	display: flex;
+	justify-content: center;
+	flex-wrap: wrap;
+	gap: 0.125rem 1rem;
+	margin: 0.125rem 0 0;
+	padding: 0;
+	list-style: none;
 }
 
 .app-footer a {
 	color: inherit;
 	text-decoration: underline;
+	text-underline-offset: 0.15em;
 }

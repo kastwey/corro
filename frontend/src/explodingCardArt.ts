@@ -1,6 +1,6 @@
 // explodingCardArt.ts — the exploding family's neutral card frame.
 //
-// Card identity and illustration belong to the package. cards/<id>.svg is loaded as safe
+// Card identity and illustration belong to the package. assets/cards/<id>.svg is loaded as safe
 // path-data and wins automatically; an absent SVG gets a mechanics-only fallback selected by
 // type. This module must never know a shipped package id, card id, character or title.
 

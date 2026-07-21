@@ -14,7 +14,7 @@
 import { test, expect, type Browser } from '../helpers/test';
 import { createGame, joinGame, newPlayerPage, resetDice, roll, startGame } from '../helpers/game';
 
-const BOARD = 'imperio-galactico';
+const BOARD = 'galactic-empire';
 
 test.beforeEach(async () => {
 	await resetDice();

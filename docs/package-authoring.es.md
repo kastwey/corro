@@ -105,10 +105,10 @@ ayudas de autoría y se excluyen automáticamente del `.corro` final.
 | `manifest.json` | Identidad, familia, jugadores, reglas y lista de fichas | Sí |
 | `board.json` | Disposición espacial de `property`, `race`, `track` y `trivia` | Depende de la familia |
 | `cards.json` | Cartas de `property` y las cinco familias de cartas | Depende de la familia |
-| `cards/*.svg` | Ilustración opcional de la carta cuyo id coincida | Más adelante |
+| `assets/cards/*.svg` | Ilustración opcional de la carta cuyo id coincida | Más adelante |
 | `questions.en.json`, `questions.es.json` | Bancos reales de preguntas para `trivia` | Solo trivia |
 | `i18n/en.json`, `i18n/es.json` | Nombres y textos referenciados mediante claves | Sí |
-| `tokens/*.svg` | Geometría de las fichas de jugador | Más adelante |
+| `assets/tokens/*.svg` | Geometría de las fichas de jugador | Más adelante |
 | `CREDITS.md` | Fuentes y licencias de redistribución de arte y sonidos | Antes de compartir |
 | `help.en.md`, `help.es.md` | Reglas F1 e instrucciones para lector de pantalla | Antes de compartir |
 | `README.md` | Lista breve de pasos para el proyecto generado | Léelo |
@@ -170,8 +170,8 @@ compárala con el paquete más completo de la [tabla de referencias del SDK](../
 ### Dibujos opcionales para las cartas
 
 Todas las cartas funcionan sin imagen: Corro muestra un dibujo neutro según su mecánica genérica.
-Para sustituirlo, añade `cards/<id-de-carta>.svg`; por ejemplo, la carta `step25` usa
-`cards/step25.svg`. No añadas un campo `svg` a `cards.json`.
+Para sustituirlo, añade `assets/cards/<id-de-carta>.svg`; por ejemplo, la carta `step25` usa
+`assets/cards/step25.svg`. No añadas un campo `svg` a `cards.json`.
 
 Usa `viewBox="0 0 64 64"` y aplana el dibujo a geometría `<path>`. Por seguridad, el cargador
 descarta colores y cualquier otro marcado SVG; el marco de la carta aporta un color legible. El
@@ -245,8 +245,8 @@ paquete oculto muestra `Hidden: yes`, pero nunca imprime el código de desbloque
 | --- | --- | --- |
 | `Invalid JSON (line …)` | El JSON está mal formado | Comillas, comas y cierres cerca de esa línea |
 | `resolves in no locale` | Una clave `nameKey`/`textKey` no tiene texto | Añade la misma clave en `i18n/en.json` e `i18n/es.json` |
-| `token … has no icon` | Una ficha declarada no tiene un SVG utilizable | Revisa el id y `tokens/<id>.svg` |
-| `card illustration …` | Un SVG opcional de carta está mal formado, es demasiado grande o no corresponde a ninguna carta | Haz coincidir `cards/<id>.svg` con un id de `cards.json` y aplánalo a trazados |
+| `token … has no icon` | Una ficha declarada no tiene un SVG utilizable | Revisa el id y `assets/tokens/<id>.svg` |
+| `card illustration …` | Un SVG opcional de carta está mal formado, es demasiado grande o no corresponde a ninguna carta | Haz coincidir `assets/cards/<id>.svg` con un id de `cards.json` y aplánalo a trazados |
 | `unknown type` o `unknown effect` | Has nombrado una mecánica no implementada por la familia | Usa una opción sugerida por el esquema o la referencia |
 | `deck … is too small` | No se puede repartir a la mesa máxima | Añade copias, reduce la mano o baja `players.max` |
 | `players.max … tokens/seats` | Hay más jugadores permitidos que fichas/asientos | Añade fichas/asientos o reduce `players.max` |

@@ -198,7 +198,7 @@ public class GameServicePackageTests
 		// The host chose a 700 km goal in the lobby; the manifest's default is 1000. After a
 		// restore, AttachPackageDefinition re-stages the package — the runtime must rebuild
 		// from the SNAPSHOT's effective rules, or the goal silently reverts to 1000.
-		var def = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("la-gran-ruta"));
+		var def = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("great-route"));
 
 		var seed = new GameService(new CorroRulebook(), new AuctionRulebook());
 		await seed.InitializeFromDefinitionAsync(TwoPlayers(), def, "es",
@@ -216,13 +216,13 @@ public class GameServicePackageTests
 		var seat = snapshot.Journey.Seats.First(s => s.PlayerId == "a");
 		seat.Km = 650;
 		seat.Hazards.Clear();
-		seat.Members[0].Hand.Add(new JourneyCardInstance { InstanceId = "d100#99", CardId = "d100" });
+		seat.Members[0].Hand.Add(new JourneyCardInstance { InstanceId = "distance-100#99", CardId = "distance-100" });
 
 		var restored = new GameService(new CorroRulebook(), new AuctionRulebook());
 		await restored.RestoreGameAsync(snapshot);
 		restored.AttachPackageDefinition(def);
 
-		var response = await restored.ExecuteCommandAsync(new JourneyPlayCommand { PlayerId = "a", InstanceId = "d100#99" });
+		var response = await restored.ExecuteCommandAsync(new JourneyPlayCommand { PlayerId = "a", InstanceId = "distance-100#99" });
 
 		var error = Assert.IsType<ErrorResponse>(response);
 		Assert.Equal("JOURNEY_ILLEGAL_PLAY", error.Code); // overshooting the CHOSEN 700 km goal

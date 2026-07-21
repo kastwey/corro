@@ -1,4 +1,4 @@
-// journey-bot.spec.ts — a HUMAN versus a BOT on "La Gran Ruta", end to end.
+// journey-bot.spec.ts — a HUMAN versus a BOT on "The Great Route", end to end.
 //
 // One real browser, Spanish locale. The host seats a bot in the waiting room, starts with
 // just the two of them, and plays a turn; the bot then completes its WHOLE turn unattended
@@ -8,7 +8,7 @@
 import { test, expect } from '../helpers/test';
 import { createGame, expectAnnouncement, newPlayerPage, resetDice, startGame } from '../helpers/game';
 
-const BOARD = 'la-gran-ruta';
+const BOARD = 'great-route';
 
 test.beforeEach(async () => {
 	await resetDice();

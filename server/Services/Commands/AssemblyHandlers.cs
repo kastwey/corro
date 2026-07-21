@@ -95,7 +95,7 @@ public static class AssemblyTurnFlow
 			await context.Announcer.ToAllExcept(target.Id, $"game.assembly_hit_{outcome}", vars);
 		}
 
-		// What the medicine DID (live-play: "¡Has inmunizado tu estómago!" was never said —
+		// What the remedy DID (live-play: "You immunized your module!" was never said —
 		// curing, protecting and the definitive lock all sounded like a plain "plays a
 		// remedy", for the actor AND for the table). actorId gives the first person.
 		if (result.RemedyOutcome is { } remedyOutcome && result.RemediedPieceKey is { } remedied)

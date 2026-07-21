@@ -1,0 +1,22 @@
+{
+  "tokens": {
+    "star": "Estrella",
+    "moon": "Luna",
+    "sun": "Sol",
+    "diamond": "Rombo",
+    "heart": "Corazón",
+    "lightning": "Rayo",
+    "bell": "Campana",
+    "flower": "Flor"
+  },
+  "effects": {
+    "ladder": "Escalera",
+    "snake": "Serpiente"
+  },
+  "game": {
+    "track_effect_up": "¡{{player}} encuentra una escalera y trepa de la casilla {{from}} a la {{to}}!",
+    "track_effect_up_self": "¡Encuentras una escalera y trepas de la casilla {{from}} a la {{to}}!",
+    "track_effect_down": "¡Una serpiente engulle a {{player}}! Resbala de la casilla {{from}} a la {{to}}",
+    "track_effect_down_self": "¡Una serpiente te engulle! Resbalas de la casilla {{from}} a la {{to}}"
+  }
+}

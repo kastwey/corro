@@ -12,7 +12,7 @@ public static class EnginePalette
 		{ "#e53935", "#1e88e5", "#fdd835", "#43a047", "#8e24aa", "#fb8c00", "#00acc1", "#6d4c41" };
 
 	/// <summary>Colour IDS aligned with <see cref="Colors"/>: the client localizes them into
-	/// the spoken colour word (game.color_*) — team names ("Equipo Rojo") are built from these.</summary>
+	/// the spoken colour word (game.color_*) — team names ("Red team") are built from these.</summary>
 	private static readonly string[] Names =
 		{ "red", "blue", "yellow", "green", "purple", "orange", "cyan", "brown" };
 

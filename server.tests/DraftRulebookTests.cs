@@ -22,7 +22,7 @@ public class DraftRulebookTests
 		new() { Id = "olive", Type = "scale", Scale = new() { 1, 3, 6, 10, 15 }, Count = 8, NameKey = "c.olive" },
 		new() { Id = "icon1", Type = "majority", Icons = 1, Count = 6, NameKey = "c.icon1" },
 		new() { Id = "icon3", Type = "majority", Icons = 3, Count = 6, NameKey = "c.icon3" },
-		new() { Id = "flan", Type = "dessert", Count = 8, NameKey = "c.flan" },
+		new() { Id = "caramel-custard", Type = "dessert", Count = 8, NameKey = "c.flan" },
 		new() { Id = "stick", Type = "extra", Count = 4, NameKey = "c.stick" },
 	};
 
@@ -155,15 +155,15 @@ public class DraftRulebookTests
 	[Fact]
 	public void A_dessert_goes_to_the_stash_not_the_table()
 	{
-		var a = Seat("a", "flan", "bite1");
+		var a = Seat("a", "caramel-custard", "bite1");
 		var state = State(a, Seat("b", "bite3", "trio"));
-		DraftRulebook.Commit(state, "a", "flan@0", null, Catalog);
+		DraftRulebook.Commit(state, "a", "caramel-custard@0", null, Catalog);
 		DraftRulebook.Commit(state, "b", "bite3@0", null, Catalog);
 
 		DraftRulebook.Reveal(state, Catalog);
 
 		Assert.Empty(a.Table);
-		Assert.Equal("flan", Assert.Single(a.Desserts).CardId);
+		Assert.Equal("caramel-custard", Assert.Single(a.Desserts).CardId);
 	}
 
 	[Fact]
@@ -280,7 +280,7 @@ public class DraftRulebookTests
 		var b = Seat("b");
 		b.Table.Add(OnTable("bite1")); // 1
 		b.Table.Add(OnTable("trio", 0)); b.Table.Add(OnTable("trio", 1)); b.Table.Add(OnTable("trio", 2)); // 10
-		b.Desserts.Add(Inst("flan"));
+		b.Desserts.Add(Inst("caramel-custard"));
 		var state = State(a, b);
 
 		var scores = DraftRulebook.ScoreRound(state, Catalog, Rules);
@@ -361,8 +361,8 @@ public class DraftRulebookTests
 	[Fact]
 	public void Desserts_pay_the_most_and_charge_the_fewest()
 	{
-		var a = Seat("a"); a.Desserts.Add(Inst("flan", 0)); a.Desserts.Add(Inst("flan", 1));
-		var b = Seat("b"); b.Desserts.Add(Inst("flan", 2));
+		var a = Seat("a"); a.Desserts.Add(Inst("caramel-custard", 0)); a.Desserts.Add(Inst("caramel-custard", 1));
+		var b = Seat("b"); b.Desserts.Add(Inst("caramel-custard", 2));
 		var c = Seat("c");
 		var state = State(a, b, c);
 
@@ -376,7 +376,7 @@ public class DraftRulebookTests
 	[Fact]
 	public void Two_player_games_skip_the_dessert_penalty()
 	{
-		var a = Seat("a"); a.Desserts.Add(Inst("flan"));
+		var a = Seat("a"); a.Desserts.Add(Inst("caramel-custard"));
 		var b = Seat("b");
 		var state = State(a, b);
 
@@ -388,9 +388,9 @@ public class DraftRulebookTests
 	[Fact]
 	public void Everyone_tied_on_desserts_just_splits_the_bonus()
 	{
-		var a = Seat("a"); a.Desserts.Add(Inst("flan", 0));
-		var b = Seat("b"); b.Desserts.Add(Inst("flan", 1));
-		var c = Seat("c"); c.Desserts.Add(Inst("flan", 2));
+		var a = Seat("a"); a.Desserts.Add(Inst("caramel-custard", 0));
+		var b = Seat("b"); b.Desserts.Add(Inst("caramel-custard", 1));
+		var c = Seat("c"); c.Desserts.Add(Inst("caramel-custard", 2));
 		var state = State(a, b, c);
 
 		var scores = DraftRulebook.ScoreDesserts(state, Rules);
@@ -403,7 +403,7 @@ public class DraftRulebookTests
 	public void Placings_order_by_score_with_the_dessert_stash_as_tiebreaker()
 	{
 		var a = Seat("a"); a.Score = 30;
-		var b = Seat("b"); b.Score = 30; b.Desserts.Add(Inst("flan"));
+		var b = Seat("b"); b.Score = 30; b.Desserts.Add(Inst("caramel-custard"));
 		var c = Seat("c"); c.Score = 40;
 		var state = State(a, b, c);
 
@@ -417,7 +417,7 @@ public class DraftRulebookTests
 	{
 		var a = Seat("a", "bite1", "pair");
 		var b = Seat("b", "bite3", "trio");
-		var c = Seat("c", "olive", "flan");
+		var c = Seat("c", "olive", "caramel-custard");
 		c.Table.Add(OnTable("icon3"));
 		var state = State(a, b, c);
 		DraftRulebook.Commit(state, "a", "bite1@0", null, Catalog);
@@ -448,7 +448,7 @@ public class DraftRulebookTests
 	{
 		var a = Seat("a", "bite1", "pair");
 		var b = Seat("b", "bite3", "trio");
-		var c = Seat("c", "olive", "flan");
+		var c = Seat("c", "olive", "caramel-custard");
 		var state = State(a, b, c);
 		DraftRulebook.Retire(state, "b"); // the middle chair empties
 		DraftRulebook.Commit(state, "a", "bite1@0", null, Catalog);
@@ -458,7 +458,7 @@ public class DraftRulebookTests
 
 		// a's leftover skipped b and landed on c; c's wrapped around to a.
 		Assert.Equal("pair@1", Assert.Single(c.Hand).InstanceId);
-		Assert.Equal("flan@1", Assert.Single(a.Hand).InstanceId);
+		Assert.Equal("caramel-custard@1", Assert.Single(a.Hand).InstanceId);
 		Assert.Empty(b.Hand);
 	}
 
@@ -480,8 +480,8 @@ public class DraftRulebookTests
 
 		// Desserts: the retired stash is inert, and TWO active racers get the
 		// two-player kindness (no penalty) even at a three-chair table.
-		DraftRulebook.SeatOf(state, "c").Desserts.AddRange(new[] { Inst("flan", 5), Inst("flan", 6) });
-		DraftRulebook.SeatOf(state, "a").Desserts.Add(Inst("flan", 7));
+		DraftRulebook.SeatOf(state, "c").Desserts.AddRange(new[] { Inst("caramel-custard", 5), Inst("caramel-custard", 6) });
+		DraftRulebook.SeatOf(state, "a").Desserts.Add(Inst("caramel-custard", 7));
 		var desserts = DraftRulebook.ScoreDesserts(state, Rules);
 		Assert.Equal(6, Assert.Single(desserts).Delta);
 		Assert.Equal("a", Assert.Single(desserts).Seat.PlayerId);

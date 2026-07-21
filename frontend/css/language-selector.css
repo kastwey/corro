@@ -1,20 +1,14 @@
-/* language-selector.css - Estilos para el selector de idioma */
+/* language-selector.css - Language selector styles */
 
 .language-selector {
-	position: absolute;
-	top: 20px;
-	right: 20px;
-	z-index: 1000;
 	display: flex;
-	flex-direction: column;
-	align-items: flex-end;
-	gap: 8px;
-	background: var(--surface-elevated);
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	background: var(--surface-2);
 	border: 1px solid var(--border);
-	padding: 12px;
+	padding: 10px 12px;
 	border-radius: var(--radius);
-	box-shadow: var(--shadow-md);
-	backdrop-filter: blur(8px);
 }
 
 .language-selector label {
@@ -22,13 +16,15 @@
 	font-weight: 500;
 	color: var(--text-muted);
 	margin-bottom: 0;
-	text-align: right;
+	text-align: left;
 }
 
 .language-controls {
-	display: flex;
+	display: grid;
+	grid-template-columns: minmax(7rem, 1fr) auto auto;
 	align-items: center;
 	gap: 8px;
+	min-width: 0;
 }
 
 .language-selector select {
@@ -41,8 +37,8 @@
 	cursor: pointer;
 	outline: none;
 	transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-	min-width: 100px;
-	width: auto;
+	min-width: 0;
+	width: 100%;
 }
 
 .language-selector select:hover {
@@ -90,20 +86,20 @@
 	height: 18px;
 }
 
-/*
- * On narrow screens the card fills almost the whole width, so the absolutely-positioned
- * selector (pinned top-right, out of flow) overlaps the lobby heading and the games list
- * beneath it. Return it to normal flow so the rest of the page flows below it instead.
- */
 @media (max-width: 600px) {
 	.language-selector {
-		position: static;
-		margin-bottom: 1rem;
+		flex-direction: column;
 		align-items: stretch;
-		backdrop-filter: none;
+	}
+}
+
+@media (max-width: 360px) {
+	.language-controls {
+		grid-template-columns: minmax(0, 1fr) auto auto;
+		gap: 6px;
 	}
 
-	.language-selector label {
-		text-align: left;
+	.language-apply-btn {
+		padding-inline: 10px;
 	}
 }

@@ -52,7 +52,7 @@ export interface StatusKeysDeps {
 
 /**
  * Wire the S / Shift+S status keys on a card surface. The convention is shared by every
- * card family (live-play request: "Shift+S solo los otros, mi info ya me la sé con la S"),
+ * card family (live-play request: "Shift+S reads only the others; S already tells me my status"),
  * so it lives here once — a change to the keys or the gating is fix-once.
  */
 export function registerStatusKeys(element: HTMLElement, deps: StatusKeysDeps): void {

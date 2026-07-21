@@ -84,7 +84,7 @@ function hazardIconOf(kind: string, catalog: Map<string, JourneyCardDef>): strin
 	return journeyHazardIconSvg(card?.svg, card?.artColor);
 }
 
-/** A SHARED seat's spoken identity («Equipo Rojo» — its palette colour word, the same
+/** A SHARED seat's spoken identity ("Red team" — its palette colour word, the same
  *  colour as its car); null for a one-member seat (the player's name does the job). */
 export function journeyTeamName(
 	gs: GameState,
@@ -120,7 +120,7 @@ export function journeyStatusText(
 
 	const parts: string[] = [];
 	// A shared seat leads with the TEAM's name: both partners' identity lines read as the
-	// team's single story («Equipo Rojo, 200 kilómetros, en marcha…»).
+	// team's single story ("Red team, 200 kilometres, rolling...").
 	const team = journeyTeamName(gs, seat, tSync);
 	if (team) parts.push(team);
 	parts.push(tSync('game.journey_status_km', { km: seat.km }));
@@ -157,7 +157,7 @@ export function journeyStatusText(
 	}
 
 	// The score is the LIVE total: match points from finished hands PLUS what this hand
-	// has already banked (km, immunities, coups fourrés) — hearing «0 puntos» while the
+	// has already banked (km, immunities, coups fourrés) — hearing "0 points" while the
 	// car advances reads as broken. Completion bonuses arrive at hand end, as always.
 	parts.push(tSync('game.journey_status_score', { score: liveScore(gs, seat, catalog) }));
 	return parts.join(', ');
@@ -246,7 +246,7 @@ export class JourneyBoard {
 		this.hand.update();
 		this.reconcileCoupDialog(gs);
 		// The page's initial focus may have landed on the container BEFORE this family
-		// built (announcing "Tablero"): dive into the hand now that it exists.
+		// built (announcing "Board"): dive into the hand now that it exists.
 		if (firstBuild && document.activeElement === this.element) this.hand.focus();
 	}
 
@@ -267,7 +267,7 @@ export class JourneyBoard {
 
 	/** Every RIVAL seat's status (Shift+S), each led by its identity — a shared seat's
 	 *  line already starts with the team word, a lone player gets named. My own seat is
-	 *  deliberately left out ("esa ya me la sé con la S"); in team play "mine" is the
+	 *  deliberately left out ("S already tells me my status"); in team play "mine" is the
 	 *  whole shared seat, partner included. */
 	private allSeatsStatus(gs: GameState, myId: string): string | null {
 		const lines = (gs.journey?.seats ?? []).filter(seat => !seat.members.some(m => m.playerId === myId)).map(seat => {

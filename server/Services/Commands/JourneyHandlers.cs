@@ -93,9 +93,9 @@ public static class JourneyTurnFlow
 
 			if (card.Type == "attack" && victimSeat != null)
 			{
-				// An attack has THREE audiences, one line each: the attacker ("¡Lanzas…!"),
+				// An attack has THREE audiences, one line each: the attacker ("You attack..."),
 				// the VICTIM SEAT — every member of it, in team play, addressed in the
-				// PLURAL ("¡{{player}} os lanza…!") — and the table. The client falls back
+				// PLURAL ("{{player}} attacks your team...") — and the table. The client falls back
 				// _victim_team → _victim → base when a package skips a variant.
 				var victimIds = victimSeat.Members.Select(m => m.PlayerId).ToHashSet();
 				var victimSuffix = victimSeat.Members.Count > 1 ? "_victim_team" : "_victim";
@@ -168,7 +168,7 @@ public static class JourneyTurnFlow
 		}
 
 		// The moment that matters at the table: a remedy/immunity that clears your LAST
-		// stopper puts you back on the road — say so ("¡En marcha!"), not just the card.
+		// stopper puts you back on the road — say so ("Rolling!"), not just the card.
 		if (wasStopped && !JourneyRulebook.IsStopped(seat, runtime.Catalog))
 		{
 			await context.Announce("game.journey_now_rolling", new()
@@ -312,7 +312,7 @@ public static class JourneyTurnFlow
 
 	/// <summary>A seat's spoken identity: the lone player's name, or — shared seat — the TEAM
 	/// word, sent as the `__team:&lt;colorId&gt;` convention so each client localizes it into
-	/// its own language ("Equipo rojo" / "Red team"); see the announcer's resolveTeamVars.</summary>
+	/// its own language ("Red team"); see the announcer's resolveTeamVars.</summary>
 	private static string SeatName(GameContext context, JourneyState journey, JourneySeatState seat)
 		=> seat.Members.Count > 1
 			? $"__team:{EnginePalette.NameFor(journey.Seats.IndexOf(seat))}"

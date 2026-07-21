@@ -4,8 +4,14 @@
 // PROPERTY carries the historical defaults explicitly (economy toolbar, "go to player" shown,
 // trades on); an UNKNOWN family still falls back to those same defaults via the helpers below.
 
+export type GameHomeSurface = 'board' | 'hand';
+
 export interface FamilyTraits {
   readonly gameType: string;
+  /** The keyboard player's home surface. Spatial families keep focus on the shared board;
+   *  card families forward it into the player's hand. Kept separate from `noToolbar`: one
+   *  describes navigation, the other describes where turn actions are rendered. */
+  readonly homeSurface: GameHomeSurface;
   /** Roll → resolve turn with no economy: the toolbar offers only the roll. */
   readonly rollOnly: boolean;
   /** The family has NO turn actions on the toolbar at all (journey: the hand owns the
@@ -27,20 +33,25 @@ export interface FamilyTraits {
 }
 
 export const FAMILY_TRAITS: readonly FamilyTraits[] = [
-  { gameType: 'property', rollOnly: false, showGoToPlayer: true, hasTrades: true, supportsBots: true },
-  { gameType: 'race', rollOnly: true, showGoToPlayer: false, hasTrades: false },
-  { gameType: 'track', rollOnly: true, showGoToPlayer: true, hasTrades: false, supportsBots: true },
-  { gameType: 'trivia', rollOnly: true, showGoToPlayer: true, hasTrades: false },
-  { gameType: 'journey', rollOnly: false, noToolbar: true, showGoToPlayer: false, hasTrades: false, supportsBots: true },
-  { gameType: 'assembly', rollOnly: false, noToolbar: true, showGoToPlayer: false, hasTrades: false, supportsBots: true },
-  { gameType: 'draft', rollOnly: false, noToolbar: true, showGoToPlayer: false, hasTrades: false, simultaneous: true, supportsBots: true },
-  { gameType: 'shedding', rollOnly: false, noToolbar: true, showGoToPlayer: false, hasTrades: false, supportsBots: true },
-  { gameType: 'exploding', rollOnly: false, noToolbar: true, showGoToPlayer: false, hasTrades: false, supportsBots: true },
+  { gameType: 'property', homeSurface: 'board', rollOnly: false, showGoToPlayer: true, hasTrades: true, supportsBots: true },
+  { gameType: 'race', homeSurface: 'board', rollOnly: true, showGoToPlayer: false, hasTrades: false },
+  { gameType: 'track', homeSurface: 'board', rollOnly: true, showGoToPlayer: true, hasTrades: false, supportsBots: true },
+  { gameType: 'trivia', homeSurface: 'board', rollOnly: true, showGoToPlayer: true, hasTrades: false },
+  { gameType: 'journey', homeSurface: 'hand', rollOnly: false, noToolbar: true, showGoToPlayer: false, hasTrades: false, supportsBots: true },
+  { gameType: 'assembly', homeSurface: 'hand', rollOnly: false, noToolbar: true, showGoToPlayer: false, hasTrades: false, supportsBots: true },
+  { gameType: 'draft', homeSurface: 'hand', rollOnly: false, noToolbar: true, showGoToPlayer: false, hasTrades: false, simultaneous: true, supportsBots: true },
+  { gameType: 'shedding', homeSurface: 'hand', rollOnly: false, noToolbar: true, showGoToPlayer: false, hasTrades: false, supportsBots: true },
+  { gameType: 'exploding', homeSurface: 'hand', rollOnly: false, noToolbar: true, showGoToPlayer: false, hasTrades: false, supportsBots: true },
 ];
 
 /** The traits of a registered family — null for property/unknown (default behaviour). */
 export function familyTraitsFor(gameType: string | null | undefined): FamilyTraits | null {
   return FAMILY_TRAITS.find(f => f.gameType === gameType) ?? null;
+}
+
+/** Where focus enters this family. Unknown families follow the property fallback: board. */
+export function familyHomeSurface(gameType: string | null | undefined): GameHomeSurface {
+  return familyTraitsFor(gameType)?.homeSurface ?? 'board';
 }
 
 /** Roll-only families have no economy: the action toolbar offers only the roll. */

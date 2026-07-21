@@ -1,6 +1,6 @@
 // journeyCardArt.ts — neutral engine-rendered faces for journey decks.
 //
-// A package may supply cards/<id>.svg; its sanitized geometry always replaces the picture.
+// A package may supply assets/cards/<id>.svg; its sanitized geometry always replaces the picture.
 // Without it, the engine draws only generic mechanics (distance, attack, remedy, immunity).
 // Package-defined hazard KIND ids never appear here.
 

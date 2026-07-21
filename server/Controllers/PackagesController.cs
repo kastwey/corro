@@ -129,8 +129,7 @@ public class PackagesController : ControllerBase
 		try
 		{
 			var definition = await _store.StageFromDirectoryAsync(token, sourceDir);
-			// Record that this staged token is a shipped board (re-staged from server/Packages by id).
-			_store.SetOrigin(token, new PackageOrigin { ShippedId = id });
+			_store.SetOrigin(token, new PackageOrigin { ShippedId = definition.Manifest.Id });
 			return Ok(Summarize(token, definition));
 		}
 		catch (Exception ex)

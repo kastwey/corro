@@ -11,14 +11,14 @@ namespace CorroServer.Models.Corro;
 public sealed record ExplodingCardDef
 {
 	public string Id { get; init; } = string.Empty;
-	/// <summary>Sanitized path-data loaded from optional cards/&lt;id&gt;.svg.</summary>
+	/// <summary>Sanitized path-data loaded from optional assets/cards/&lt;id&gt;.svg.</summary>
 	public string? Svg { get; init; }
 	/// <summary>Optional package-owned #RRGGBB accent for the card face.</summary>
 	public string? ArtColor { get; init; }
 
 	/// <summary>
 	/// The engine effect this card carries:
-	/// "bomb" (the exploding kitten — drawing it knocks you out unless you Defuse; never dealt
+	/// "bomb" (drawing it knocks you out unless you Defuse; never dealt
 	/// into an opening hand, planted into the draw pile players−1 times),
 	/// "defuse" (cancels a bomb you just drew and lets you tuck it back into the draw pile at a
 	/// secret depth; one is dealt to every hand at the start),

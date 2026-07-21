@@ -1,0 +1,472 @@
+[
+  {
+    "id": "red-0",
+    "artColor": "#C62828",
+    "type": "number",
+    "color": "red",
+    "value": 0,
+    "count": 1,
+    "nameKey": "cards.red_0"
+  },
+  {
+    "id": "red-2",
+    "artColor": "#C62828",
+    "type": "number",
+    "color": "red",
+    "value": 2,
+    "count": 2,
+    "nameKey": "cards.red_2"
+  },
+  {
+    "id": "red-3",
+    "artColor": "#C62828",
+    "type": "number",
+    "color": "red",
+    "value": 3,
+    "count": 2,
+    "nameKey": "cards.red_3"
+  },
+  {
+    "id": "red-4",
+    "artColor": "#C62828",
+    "type": "number",
+    "color": "red",
+    "value": 4,
+    "count": 2,
+    "nameKey": "cards.red_4"
+  },
+  {
+    "id": "red-6",
+    "artColor": "#C62828",
+    "type": "number",
+    "color": "red",
+    "value": 6,
+    "count": 2,
+    "nameKey": "cards.red_6"
+  },
+  {
+    "id": "red-7",
+    "artColor": "#C62828",
+    "type": "number",
+    "color": "red",
+    "value": 7,
+    "count": 2,
+    "nameKey": "cards.red_7"
+  },
+  {
+    "id": "red-8",
+    "artColor": "#C62828",
+    "type": "number",
+    "color": "red",
+    "value": 8,
+    "count": 2,
+    "nameKey": "cards.red_8"
+  },
+  {
+    "id": "red-9",
+    "artColor": "#C62828",
+    "type": "number",
+    "color": "red",
+    "value": 9,
+    "count": 2,
+    "nameKey": "cards.red_9"
+  },
+  {
+    "id": "red-reverse",
+    "artColor": "#C62828",
+    "type": "reverse",
+    "color": "red",
+    "count": 2,
+    "nameKey": "cards.red_reverse"
+  },
+  {
+    "id": "red-draw-two",
+    "artColor": "#C62828",
+    "type": "drawTwo",
+    "color": "red",
+    "count": 2,
+    "nameKey": "cards.red_draw_two"
+  },
+  {
+    "id": "yellow-1",
+    "artColor": "#A66F00",
+    "type": "number",
+    "color": "yellow",
+    "value": 1,
+    "count": 2,
+    "nameKey": "cards.yellow_1"
+  },
+  {
+    "id": "yellow-2",
+    "artColor": "#A66F00",
+    "type": "number",
+    "color": "yellow",
+    "value": 2,
+    "count": 2,
+    "nameKey": "cards.yellow_2"
+  },
+  {
+    "id": "yellow-3",
+    "artColor": "#A66F00",
+    "type": "number",
+    "color": "yellow",
+    "value": 3,
+    "count": 2,
+    "nameKey": "cards.yellow_3"
+  },
+  {
+    "id": "yellow-4",
+    "artColor": "#A66F00",
+    "type": "number",
+    "color": "yellow",
+    "value": 4,
+    "count": 2,
+    "nameKey": "cards.yellow_4"
+  },
+  {
+    "id": "yellow-5",
+    "artColor": "#A66F00",
+    "type": "number",
+    "color": "yellow",
+    "value": 5,
+    "count": 2,
+    "nameKey": "cards.yellow_5"
+  },
+  {
+    "id": "yellow-6",
+    "artColor": "#A66F00",
+    "type": "number",
+    "color": "yellow",
+    "value": 6,
+    "count": 2,
+    "nameKey": "cards.yellow_6"
+  },
+  {
+    "id": "yellow-8",
+    "artColor": "#A66F00",
+    "type": "number",
+    "color": "yellow",
+    "value": 8,
+    "count": 2,
+    "nameKey": "cards.yellow_8"
+  },
+  {
+    "id": "yellow-9",
+    "artColor": "#A66F00",
+    "type": "number",
+    "color": "yellow",
+    "value": 9,
+    "count": 2,
+    "nameKey": "cards.yellow_9"
+  },
+  {
+    "id": "yellow-skip",
+    "artColor": "#A66F00",
+    "type": "skip",
+    "color": "yellow",
+    "count": 2,
+    "nameKey": "cards.yellow_skip"
+  },
+  {
+    "id": "yellow-reverse",
+    "artColor": "#A66F00",
+    "type": "reverse",
+    "color": "yellow",
+    "count": 2,
+    "nameKey": "cards.yellow_reverse"
+  },
+  {
+    "id": "yellow-draw-two",
+    "artColor": "#A66F00",
+    "type": "drawTwo",
+    "color": "yellow",
+    "count": 2,
+    "nameKey": "cards.yellow_draw_two"
+  },
+  {
+    "id": "green-0",
+    "artColor": "#137A43",
+    "type": "number",
+    "color": "green",
+    "value": 0,
+    "count": 1,
+    "nameKey": "cards.green_0"
+  },
+  {
+    "id": "green-1",
+    "artColor": "#137A43",
+    "type": "number",
+    "color": "green",
+    "value": 1,
+    "count": 2,
+    "nameKey": "cards.green_1"
+  },
+  {
+    "id": "green-3",
+    "artColor": "#137A43",
+    "type": "number",
+    "color": "green",
+    "value": 3,
+    "count": 2,
+    "nameKey": "cards.green_3"
+  },
+  {
+    "id": "green-4",
+    "artColor": "#137A43",
+    "type": "number",
+    "color": "green",
+    "value": 4,
+    "count": 2,
+    "nameKey": "cards.green_4"
+  },
+  {
+    "id": "green-5",
+    "artColor": "#137A43",
+    "type": "number",
+    "color": "green",
+    "value": 5,
+    "count": 2,
+    "nameKey": "cards.green_5"
+  },
+  {
+    "id": "green-6",
+    "artColor": "#137A43",
+    "type": "number",
+    "color": "green",
+    "value": 6,
+    "count": 2,
+    "nameKey": "cards.green_6"
+  },
+  {
+    "id": "green-8",
+    "artColor": "#137A43",
+    "type": "number",
+    "color": "green",
+    "value": 8,
+    "count": 2,
+    "nameKey": "cards.green_8"
+  },
+  {
+    "id": "green-9",
+    "artColor": "#137A43",
+    "type": "number",
+    "color": "green",
+    "value": 9,
+    "count": 2,
+    "nameKey": "cards.green_9"
+  },
+  {
+    "id": "green-skip",
+    "artColor": "#137A43",
+    "type": "skip",
+    "color": "green",
+    "count": 2,
+    "nameKey": "cards.green_skip"
+  },
+  {
+    "id": "green-reverse",
+    "artColor": "#137A43",
+    "type": "reverse",
+    "color": "green",
+    "count": 2,
+    "nameKey": "cards.green_reverse"
+  },
+  {
+    "id": "green-draw-two",
+    "artColor": "#137A43",
+    "type": "drawTwo",
+    "color": "green",
+    "count": 2,
+    "nameKey": "cards.green_draw_two"
+  },
+  {
+    "id": "blue-0",
+    "artColor": "#1769AA",
+    "type": "number",
+    "color": "blue",
+    "value": 0,
+    "count": 1,
+    "nameKey": "cards.blue_0"
+  },
+  {
+    "id": "blue-1",
+    "artColor": "#1769AA",
+    "type": "number",
+    "color": "blue",
+    "value": 1,
+    "count": 2,
+    "nameKey": "cards.blue_1"
+  },
+  {
+    "id": "blue-3",
+    "artColor": "#1769AA",
+    "type": "number",
+    "color": "blue",
+    "value": 3,
+    "count": 2,
+    "nameKey": "cards.blue_3"
+  },
+  {
+    "id": "blue-4",
+    "artColor": "#1769AA",
+    "type": "number",
+    "color": "blue",
+    "value": 4,
+    "count": 2,
+    "nameKey": "cards.blue_4"
+  },
+  {
+    "id": "blue-6",
+    "artColor": "#1769AA",
+    "type": "number",
+    "color": "blue",
+    "value": 6,
+    "count": 2,
+    "nameKey": "cards.blue_6"
+  },
+  {
+    "id": "blue-7",
+    "artColor": "#1769AA",
+    "type": "number",
+    "color": "blue",
+    "value": 7,
+    "count": 2,
+    "nameKey": "cards.blue_7"
+  },
+  {
+    "id": "blue-8",
+    "artColor": "#1769AA",
+    "type": "number",
+    "color": "blue",
+    "value": 8,
+    "count": 2,
+    "nameKey": "cards.blue_8"
+  },
+  {
+    "id": "blue-9",
+    "artColor": "#1769AA",
+    "type": "number",
+    "color": "blue",
+    "value": 9,
+    "count": 2,
+    "nameKey": "cards.blue_9"
+  },
+  {
+    "id": "blue-skip",
+    "artColor": "#1769AA",
+    "type": "skip",
+    "color": "blue",
+    "count": 2,
+    "nameKey": "cards.blue_skip"
+  },
+  {
+    "id": "blue-reverse",
+    "artColor": "#1769AA",
+    "type": "reverse",
+    "color": "blue",
+    "count": 2,
+    "nameKey": "cards.blue_reverse"
+  },
+  {
+    "id": "wild",
+    "artColor": "#6A3FA0",
+    "type": "wild",
+    "count": 4,
+    "nameKey": "cards.wild"
+  },
+  {
+    "id": "wild-draw-four",
+    "artColor": "#6A3FA0",
+    "type": "wildDrawFour",
+    "count": 4,
+    "nameKey": "cards.wild_draw_four"
+  },
+  {
+    "id": "red-1",
+    "artColor": "#C62828",
+    "type": "number",
+    "color": "red",
+    "value": 1,
+    "count": 2,
+    "nameKey": "cards.red_1"
+  },
+  {
+    "id": "blue-2",
+    "artColor": "#1769AA",
+    "type": "number",
+    "color": "blue",
+    "value": 2,
+    "count": 2,
+    "nameKey": "cards.blue_2"
+  },
+  {
+    "id": "yellow-0",
+    "artColor": "#A66F00",
+    "type": "number",
+    "color": "yellow",
+    "value": 0,
+    "count": 1,
+    "nameKey": "cards.yellow_0"
+  },
+  {
+    "id": "yellow-7",
+    "artColor": "#A66F00",
+    "type": "number",
+    "color": "yellow",
+    "value": 7,
+    "count": 2,
+    "nameKey": "cards.yellow_7"
+  },
+  {
+    "id": "green-2",
+    "artColor": "#137A43",
+    "type": "number",
+    "color": "green",
+    "value": 2,
+    "count": 2,
+    "nameKey": "cards.green_2"
+  },
+  {
+    "id": "blue-draw-two",
+    "artColor": "#1769AA",
+    "type": "drawTwo",
+    "color": "blue",
+    "count": 2,
+    "nameKey": "cards.blue_draw_two"
+  },
+  {
+    "id": "green-7",
+    "artColor": "#137A43",
+    "type": "number",
+    "color": "green",
+    "value": 7,
+    "count": 2,
+    "nameKey": "cards.green_7"
+  },
+  {
+    "id": "blue-5",
+    "artColor": "#1769AA",
+    "type": "number",
+    "color": "blue",
+    "value": 5,
+    "count": 2,
+    "nameKey": "cards.blue_5"
+  },
+  {
+    "id": "red-skip",
+    "artColor": "#C62828",
+    "type": "skip",
+    "color": "red",
+    "count": 2,
+    "nameKey": "cards.red_skip"
+  },
+  {
+    "id": "red-5",
+    "artColor": "#C62828",
+    "type": "number",
+    "color": "red",
+    "value": 5,
+    "count": 2,
+    "nameKey": "cards.red_5"
+  }
+]

@@ -7,7 +7,7 @@ namespace CorroServer.Tests;
 /// <summary>
 /// The rent strategies are the most board-specific rule, so they are pure and parametric (no
 /// hardcoded Corro numbers). These tests pin each strategy and the dispatch-by-square-type using
-/// the real Imperio Galáctico rules config.
+/// the real Galactic Empire rules config.
 /// </summary>
 public class RentCalculatorTests
 {
@@ -55,7 +55,7 @@ public class RentCalculatorTests
 	[Fact]
 	public async Task Compute_dispatches_by_square_type_from_the_package_rules()
 	{
-		 var def = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("imperio-galactico"));
+		 var def = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("galactic-empire"));
 		var rules = def.Manifest.Rules;
 
 		var property = def.Board.Single(s => s.Id == 1);   // type "property"

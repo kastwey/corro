@@ -22,7 +22,7 @@ public class DraftFamilyTests
 		new() { Id = "pair", Type = "set", SetSize = 2, SetPoints = 5, Count = 20, NameKey = "c.pair" },
 		new() { Id = "olive", Type = "scale", Scale = new() { 1, 3, 6 }, Count = 20, NameKey = "c.olive" },
 		new() { Id = "icon", Type = "majority", Icons = 2, Count = 20, NameKey = "c.icon" },
-		new() { Id = "flan", Type = "dessert", Count = flanCount, NameKey = "c.flan" },
+		new() { Id = "caramel-custard", Type = "dessert", Count = flanCount, NameKey = "c.flan" },
 	};
 
 	private static GameDefinition Definition(
@@ -91,7 +91,7 @@ public class DraftFamilyTests
 	{
 		// 5 players × hands of 7 × 3 rounds = 105 > the 100 cards this dessert-less deck
 		// holds (smaller tables all fit — the check must sweep EVERY size in the range).
-		var thin = GoodDeck().Where(c => c.Id != "flan").ToList();
+		var thin = GoodDeck().Where(c => c.Id != "caramel-custard").ToList();
 		var ex = Assert.Throws<InvalidOperationException>(() => Family.ValidateDefinition(Definition(thin, max: 5)));
 		Assert.Contains("too small", ex.Message);
 	}

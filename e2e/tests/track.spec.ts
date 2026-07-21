@@ -18,7 +18,7 @@ import {
 	startGame,
 } from '../helpers/game';
 
-const BOARD = 'escaleras-y-serpientes';
+const BOARD = 'snakes-and-ladders';
 
 test.beforeEach(async () => {
 	await resetDice();
@@ -31,7 +31,7 @@ test('the lobby offers the track board with tokens only (no rules, no seats)', a
 	await page.click('#go-create-btn');
 
 	await page.selectOption('#board-selector', BOARD);
-	await expect(page.locator('.token-list:not(#join-token-list) input[value="estrella"]')).toBeAttached();
+	await expect(page.locator('.token-list:not(#join-token-list) input[value="star"]')).toBeAttached();
 	await expect(page.locator('#rules-details')).toBeHidden(); // no property house rules
 	await expect(page.locator('#seat-fieldset')).toBeHidden(); // no race seats either
 });
@@ -43,6 +43,12 @@ test('track: entry walk, a themed ladder climb, roll-again on 6, and board explo
 	const code = await createGame(ana, 'Ana', BOARD);
 	await joinGame(berto, code, 'Berto');
 	await startGame(ana, [ana, berto]);
+
+	// Spatial families enter the board automatically and retain arrow exploration.
+	const intro = ana.locator('#game-surface-intro');
+	await expect(intro).toHaveAttribute('data-i18n', 'game.surface_intro.board');
+	await expect(intro).toHaveText('El foco se coloca automáticamente en el tablero. Usa las flechas para explorarlo; tu lector de pantalla anunciará cada posición. Pulsa Control más F1 para consultar los atajos de este juego.');
+	await expect(ana.locator('#board')).toBeFocused();
 
 	const roll = async (page: typeof ana, value: number) => {
 		await scriptDice(value);

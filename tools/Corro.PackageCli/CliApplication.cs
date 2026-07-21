@@ -114,7 +114,7 @@ public static class CliApplication
 				valid = result.Validation.IsValid,
 				cardArt = cardArtCount is null ? null : new
 				{
-					convention = "cards/<card-id>.svg",
+					convention = "assets/cards/<card-id>.svg",
 					examples = cardArtCount.Value,
 				},
 			});
@@ -130,7 +130,7 @@ public static class CliApplication
 			if (cardArtCount is not null)
 			{
 				await output.WriteLineAsync(
-					$"Card art: {cardArtCount} example at cards/<card-id>.svg; missing files use the neutral fallback.");
+					$"Card art: {cardArtCount} example at assets/cards/<card-id>.svg; missing files use the neutral fallback.");
 			}
 			await output.WriteLineAsync($"Next: corro-package validate \"{result.Path}\"");
 		}
@@ -429,7 +429,7 @@ Exit codes:
   2  Invalid arguments
   3  File system error
 
-Card-bearing starters include one optional cards/<card-id>.svg example. The id matches
+Card-bearing starters include one optional assets/cards/<card-id>.svg example. The id matches
 cards.json; omit the file to use Corro's neutral fallback.
 """;
 }

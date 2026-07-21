@@ -2,7 +2,7 @@
 
 > Specification of the content package the engine loads. A `.corro` file is a **zip**
 > with the structure below. During development you can work with the uncompressed folder
-> (see `server/Packages/imperio-galactico/`, the reference board shipped with the server).
+> (see `server/Packages/galactic-empire/`, the reference board shipped with the server).
 
 This is the advanced reference. First-time authors should use the
 [beginner guide](docs/package-authoring.md) ([español](docs/package-authoring.es.md)), which starts
@@ -13,15 +13,16 @@ myboard.corro (zip)
 ├── manifest.json     # identity, currency, terminology, groups, decks, rules, tokens
 ├── board.json        # the squares (array), referencing groups and decks by id
 ├── cards.json        # each deck's cards (generic effects + text keys)
-├── cards/            # optional card illustrations: <card-id>.svg (package overrides neutral fallback)
 ├── i18n/
 │   ├── es.json       # every translatable text, resolved by key
 │   └── en.json
-├── tokens/
-│   └── <id>.svg      # one SVG per player token (required)
-├── sounds/           # the package's game earcons (engine ships only platform cues)
-│   ├── pack.json
-│   └── *.ogg
+├── assets/           # package-owned visual and audio media
+│   ├── cards/        # optional card illustrations: <card-id>.svg
+│   ├── tokens/
+│   │   └── <id>.svg  # one SVG per player token (required)
+│   └── sounds/       # game earcons (engine ships only platform cues)
+│       ├── pack.json
+│       └── *.ogg
 ├── CREDITS.md        # art and sound attributions/licences
 └── help.<lang>.md    # optional: the board's own rules/how-to-play (F1 / Help button)
 ```
@@ -116,11 +117,11 @@ the wrong rules.
   "format": "corro/v1",
   "gameType": "property",           // REQUIRED: the game family (see "Game families")
   "engineVersion": "^1.0",          // engine compatibility (semver)
-  "id": "imperio-galactico",
-  "name": { "es": "Imperio Galáctico", "en": "Galactic Empire" },  // INLINE (lobby selector)
+  "id": "galactic-empire",
+  "name": { "en": "Galactic Empire", "es": "Imperio Galáctico" },  // INLINE (lobby selector)
   "author": "Corro",
   "version": "0.1.0",
-  "locales": ["es", "en"],
+  "locales": ["en", "es"],
 
   "currency": { "symbol": "₡", "code": "CR", "nameKey": "currency.name" }, // symbol/code inline; name by key
   "centerBrand": "CORRO",          // the diagonal "logo" text at the board centre
@@ -187,13 +188,20 @@ the wrong rules.
     { "id": "startingMoney",  "nameKey": "rules.startingMoney",  "default": 1500, "type": "number" }
   ],
 
-  // Player tokens (REQUIRED — the engine has no built-in set). See tokens/ below.
+  // Player tokens (REQUIRED — the engine has no built-in set). See assets/tokens/ below.
   "tokens": [
     { "id": "ufo",    "nameKey": "tokens.ufo" },
     { "id": "rocket", "nameKey": "tokens.rocket" }
   ]
 }
 ```
+
+### Stable package-owned identifiers
+
+Use English for machine identifiers and asset basenames, regardless of the package's display
+languages. Treat the manifest id and every token, card, seat, colour and question id as stable once
+players may have saved games. `corro/v1` resolves only exact current identifiers; renaming one can
+make an existing saved game impossible to restore.
 
 **House-rule catalog** (the ids the engine understands; anything else is rejected):
 `startingMoney`, `passStartBonus`, `doubleOnExactStart`, `finesToCenterPot`,
@@ -299,10 +307,10 @@ content, by key (`i18n/{lang}.json` under `cards.<id>`).
 ]
 ```
 
-### Optional card illustrations (`cards/<id>.svg`)
+### Optional card illustrations (`assets/cards/<id>.svg`)
 
 Any card declared in `cards.json`, in any card-bearing family, may ship a visual
-illustration at `cards/<card-id>.svg`. Illustration files are **content**, so they live in
+illustration at `assets/cards/<card-id>.svg`. Illustration files are **content**, so they live in
 the package — never in an engine renderer keyed by a shipped card/package/token id. When the
 file exists, its geometry replaces the engine's neutral drawing everywhere that card appears
 (hand, public discard/table/module or property-card reveal). When it is absent, the engine
@@ -317,7 +325,7 @@ An SVG with no usable path, a file whose basename does not match a card id, or a
 per-card/package limits makes the package invalid instead of silently falling back.
 
 ```xml
-<!-- cards/my-card.svg -->
+<!-- assets/cards/my-card.svg -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <path d="M8 8h48v48H8z M20 20h24v24H20z"/>
 </svg>
@@ -347,13 +355,13 @@ still convey the same identity, and packages must not rely on colour alone.
 
 ---
 
-## tokens/ (player pieces — required)
+## assets/tokens/ (player pieces — required)
 
 Every board **must** ship its own tokens (the engine has no built-in set). The manifest
-declares only `id` + `nameKey`; the **drawing** lives in `tokens/<id>.svg`:
+declares only `id` + `nameKey`; the **drawing** lives in `assets/tokens/<id>.svg`:
 
 ```xml
-<!-- tokens/ufo.svg -->
+<!-- assets/tokens/ufo.svg -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 14 h18 a9 5 0 0 0 -18 0 z"/></svg>
 ```
 
@@ -361,13 +369,13 @@ The loader extracts **only the `<path>` geometry** and **sanitises** it to path
 characters (whitelist), so an uploaded package **cannot inject markup**: draw your tokens
 **with paths** (flatten shapes to `path` in your editor). `nameKey` resolves against the
 i18n (package or app). A `.corro` **without tokens** — or a token missing its
-`tokens/<id>.svg` — **is invalid**.
+`assets/tokens/<id>.svg` — **is invalid**.
 
 ---
 
-## sounds/ (optional)
+## assets/sounds/ (optional)
 
-A package ships its game earcons in its own `sounds/` folder with a `pack.json`. The engine's
+A package ships its game earcons in its own `assets/sounds/` folder with a `pack.json`. The engine's
 own pack holds **only platform cues** (chat, invalid-action) that every package inherits; it
 ships **no game sounds**, so a package must declare its own `dice.roll`, `money.pay`, card
 cues, etc. The pack still **overlays** the engine platform pack event-by-event (the package's
@@ -376,13 +384,13 @@ game starts and serves it; the client requests the manifest **by package token**
 
 Shared, cross-family earcons (`dice-roll`, `draw`, `shuffle`, `turn-you`, `game-over`,
 `bankruptcy`, `piece-captured`) have a canonical source in the repo's `sound-commons/` folder:
-copy the ones you need into `sounds/` and map them; ship themed files for the rest. Attribute
+copy the ones you need into `assets/sounds/` and map them; ship themed files for the rest. Attribute
 every file in a `CREDITS.md` (generics may point at `sound-commons/ATTRIBUTIONS.md`).
 
 ```jsonc
-// sounds/pack.json
+// assets/sounds/pack.json
 {
-  "packId": "imperio-galactico",
+  "packId": "galactic-empire",
   "events": {
     "holding.enter": "black-hole.ogg",
     "dice.roll": "dice.ogg",
@@ -392,7 +400,7 @@ every file in a `CREDITS.md` (generics may point at `sound-commons/ATTRIBUTIONS.
   // to an event, so the theme's plays carry their earcon. Consulted before the engine's
   // built-in announcement→event table; base keys cover their _self/_victim variants.
   "announcements": {
-    "cards.sobrecarga_played": "assembly.attack"
+    "cards.overload_played": "assembly.attack"
   }
 }
 ```
@@ -584,7 +592,7 @@ Example — rewriting "three doubles → holding":
 ## The race family
 
 A `"gameType": "race"` package reuses the common envelope (identity, `locales`,
-`i18n/{lang}.json` by key, `tokens/` — required, `sounds/` and `help.<lang>.md` —
+`i18n/{lang}.json` by key, `assets/tokens/` — required, `assets/sounds/` and `help.<lang>.md` —
 optional) but replaces the property-family sections: **no** `groups`, `decks`,
 `cards.json`, `building`, `terminology`, `currency` or `rules`. `cards.json` may be
 omitted entirely.
@@ -603,8 +611,8 @@ An object describing the shared circuit and each seat:
     // One seat per playable colour. startSquare: where pieces land when leaving home
     // (MUST be listed in safeSquares). corridorEntry: the circuit square from which the
     // seat turns off — a piece ON it enters corridor square 1 with its next step.
-    { "id": "rojo", "color": "#e0402f", "nameKey": "seats.rojo", "startSquare": 5,  "corridorEntry": 68 },
-    { "id": "azul", "color": "#2f6fe0", "nameKey": "seats.azul", "startSquare": 22, "corridorEntry": 17 }
+    { "id": "red", "color": "#e0402f", "nameKey": "seats.red", "startSquare": 5,  "corridorEntry": 68 },
+    { "id": "blue", "color": "#2f6fe0", "nameKey": "seats.blue", "startSquare": 22, "corridorEntry": 17 }
   ]
 }
 ```
@@ -651,7 +659,7 @@ Classic parcheesi defaults; every field optional:
 
 A `"gameType": "track"` package is the smallest family: one piece per player, a single
 shared track, **no player decisions** (roll-and-resolve). It reuses the common envelope
-(identity, `locales`, `i18n/{lang}.json`, `tokens/` — required, `sounds/` and
+(identity, `locales`, `i18n/{lang}.json`, `assets/tokens/` — required, `assets/sounds/` and
 `help.<lang>.md` — optional) and, like the race family, carries **none** of the
 property-family sections. Because there are no seats, players are identified by their
 chosen token and an engine-assigned colour.
@@ -706,8 +714,8 @@ square, and a non-empty `kind`.
 
 A `"gameType": "journey"` package has **no `board.json` at all**:
 `cards.json` **is** the game content — a flat list of card definitions with copy counts.
-It reuses the common envelope (identity, `locales`, `i18n/{lang}.json`, `tokens/` —
-required, `sounds/` and `help.<lang>.md` — optional) and carries none of the
+It reuses the common envelope (identity, `locales`, `i18n/{lang}.json`, `assets/tokens/` —
+required, `assets/sounds/` and `help.<lang>.md` — optional) and carries none of the
 property-family sections. Hands are **hidden information**: the server projects every
 state per player before it leaves.
 
@@ -715,8 +723,8 @@ state per player before it leaves.
 
 ```jsonc
 [
-  { "id": "d25",      "type": "distance", "value": 25,  "count": 10, "nameKey": "cards.d25" },
-  { "id": "d200",     "type": "distance", "value": 200, "count": 4,  "nameKey": "cards.d200",
+  { "id": "distance-25",      "type": "distance", "value": 25,  "count": 10, "nameKey": "cards.distance_25" },
+  { "id": "distance-200",     "type": "distance", "value": 200, "count": 4,  "nameKey": "cards.distance_200",
                       "maxPlaysPerHand": 2, "premium": true },
   { "id": "stop",     "type": "attack",   "kind": "stop", "hazardClass": "stopper", "count": 5,
                       "nameKey": "cards.stop", "playedKey": "cards.stop_played" },
@@ -799,10 +807,10 @@ hand refills automatically.
 [
   { "id": "reactor",  "type": "piece",  "color": "red",  "count": 5, "nameKey": "cards.reactor" },
   { "id": "omni",     "type": "piece",  "color": "wild", "count": 1, "nameKey": "cards.omni" },
-  { "id": "fuga",     "type": "attack", "color": "green", "count": 4, "nameKey": "cards.fuga",
-                      "playedKey": "cards.fuga_played" },
-  { "id": "sellador", "type": "remedy", "color": "green", "count": 4, "nameKey": "cards.sellador" },
-  { "id": "grua",     "type": "special", "specialKind": "swapPiece", "count": 3, "nameKey": "cards.grua" }
+  { "id": "oxygen-leak",     "type": "attack", "color": "green", "count": 4, "nameKey": "cards.oxygen_leak",
+                      "playedKey": "cards.oxygen_leak_played" },
+  { "id": "sealant", "type": "remedy", "color": "green", "count": 4, "nameKey": "cards.sealant" },
+  { "id": "exchange-crane",     "type": "special", "specialKind": "swapPiece", "count": 3, "nameKey": "cards.exchange_crane" }
 ]
 ```
 
@@ -848,7 +856,7 @@ Outcomes: `assembly_hit_afflicted|destroyed|shieldBurned` (+`_victim`),
 `assembly_card_not_in_hand`, `assembly_unknown_card`, `assembly_no_attackable`,
 `assembly_not_your_turn`. Pickers/status: `assembly_pick_*`, `assembly_piles_row`,
 `assembly_status_*`, `assembly_state_ok|afflicted|shielded|locked` (the vocabulary that
-most defines the theme — Taller Galáctico says averiado/blindado/certificado, a medical
+most defines the theme — Galactic Workshop says averiado/blindado/certificado, a medical
 theme says infectado/vacunado/inmunizado). Per-card help: `assembly_help_*` or
 `<nameKey>_help`.
 
@@ -868,13 +876,13 @@ and scores are public.
 
 ```jsonc
 [
-  { "id": "gamba",       "type": "points",     "value": 3, "count": 4,  "nameKey": "cards.gamba" },
-  { "id": "salsa-brava", "type": "multiplier", "factor": 3, "count": 6, "nameKey": "cards.salsa_brava" },
-  { "id": "croqueta",    "type": "set",        "setSize": 2, "setPoints": 5, "count": 14, "nameKey": "cards.croqueta" },
-  { "id": "aceitunas",   "type": "scale",      "scale": [1, 3, 6, 10, 15], "count": 14, "nameKey": "cards.aceitunas" },
-  { "id": "racion-3",    "type": "majority",   "icons": 3, "count": 8,  "nameKey": "cards.racion_3" },
-  { "id": "flan",        "type": "dessert",    "count": 12, "nameKey": "cards.flan" },
-  { "id": "pinzas",      "type": "extra",      "count": 4,  "nameKey": "cards.pinzas" }
+  { "id": "prawn-skewer",       "type": "points",     "value": 3, "count": 4,  "nameKey": "cards.prawn_skewer" },
+  { "id": "spicy-sauce", "type": "multiplier", "factor": 3, "count": 6, "nameKey": "cards.spicy_sauce" },
+  { "id": "croquette",    "type": "set",        "setSize": 2, "setPoints": 5, "count": 14, "nameKey": "cards.croquette" },
+  { "id": "olives",   "type": "scale",      "scale": [1, 3, 6, 10, 15], "count": 14, "nameKey": "cards.olives" },
+  { "id": "portion-3",    "type": "majority",   "icons": 3, "count": 8,  "nameKey": "cards.portion_3" },
+  { "id": "caramel-custard",        "type": "dessert",    "count": 12, "nameKey": "cards.caramel_custard" },
+  { "id": "serving-tongs",      "type": "extra",      "count": 4,  "nameKey": "cards.serving_tongs" }
 ]
 ```
 
@@ -944,12 +952,12 @@ game for every player, sighted or not — never a reflex race.
 
 ```jsonc
 [
-  { "id": "rojo-5",       "type": "number",       "color": "rojo", "value": 5, "count": 2, "nameKey": "cards.rojo_5" },
-  { "id": "rojo-salta",   "type": "skip",         "color": "rojo", "count": 2, "nameKey": "cards.rojo_salta" },
-  { "id": "verde-reversa","type": "reverse",      "color": "verde", "count": 2, "nameKey": "cards.verde_reversa" },
-  { "id": "azul-roba2",   "type": "drawTwo",      "color": "azul", "count": 2, "nameKey": "cards.azul_roba2" },
-  { "id": "comodin",      "type": "wild",         "count": 4, "nameKey": "cards.comodin" },
-  { "id": "comodin-roba4","type": "wildDrawFour", "count": 4, "nameKey": "cards.comodin_roba4" }
+  { "id": "red-5",       "type": "number",       "color": "red", "value": 5, "count": 2, "nameKey": "cards.red_5" },
+  { "id": "red-skip",   "type": "skip",         "color": "red", "count": 2, "nameKey": "cards.red_skip" },
+  { "id": "green-reverse","type": "reverse",      "color": "green", "count": 2, "nameKey": "cards.green_reverse" },
+  { "id": "blue-draw-two",   "type": "drawTwo",      "color": "blue", "count": 2, "nameKey": "cards.blue_draw_two" },
+  { "id": "wild",      "type": "wild",         "count": 4, "nameKey": "cards.wild" },
+  { "id": "wild-draw-four","type": "wildDrawFour", "count": 4, "nameKey": "cards.wild_draw_four" }
 ]
 ```
 
@@ -1020,15 +1028,15 @@ number cancels it.
 
 ```jsonc
 [
-  { "id": "grisu",        "type": "bomb",      "count": 4, "nameKey": "cards.grisu" },
-  { "id": "cortar-mecha", "type": "defuse",    "count": 6, "nameKey": "cards.cortar_mecha" },
-  { "id": "salir-pozo",   "type": "skip",      "count": 4, "nameKey": "cards.salir_pozo" },
-  { "id": "derrumbe",     "type": "attack",    "count": 4, "nameKey": "cards.derrumbe" },
-  { "id": "canario",      "type": "seeFuture", "count": 5, "nameKey": "cards.canario" },
-  { "id": "revuelto",     "type": "shuffle",   "count": 4, "nameKey": "cards.revuelto" },
-  { "id": "pico-prestado","type": "favor",     "count": 4, "nameKey": "cards.pico_prestado" },
-  { "id": "ni-hablar",    "type": "nope",      "count": 5, "nameKey": "cards.ni_hablar" },
-  { "id": "rata",         "type": "cat",       "count": 4, "nameKey": "cards.rata" }
+  { "id": "firedamp",        "type": "bomb",      "count": 4, "nameKey": "cards.firedamp" },
+  { "id": "cut-fuse", "type": "defuse",    "count": 6, "nameKey": "cards.cut_fuse" },
+  { "id": "leave-shaft",   "type": "skip",      "count": 4, "nameKey": "cards.leave_shaft" },
+  { "id": "cave-in",     "type": "attack",    "count": 4, "nameKey": "cards.cave_in" },
+  { "id": "canary",      "type": "seeFuture", "count": 5, "nameKey": "cards.canary" },
+  { "id": "gallery-reshuffle",     "type": "shuffle",   "count": 4, "nameKey": "cards.gallery_reshuffle" },
+  { "id": "borrowed-pickaxe","type": "favor",     "count": 4, "nameKey": "cards.borrowed_pickaxe" },
+  { "id": "no-way",    "type": "nope",      "count": 5, "nameKey": "cards.no_way" },
+  { "id": "mine-rat",         "type": "cat",       "count": 4, "nameKey": "cards.mine_rat" }
 ]
 ```
 
@@ -1083,8 +1091,8 @@ Plays and effects: `exploding_played`, `exploding_played_cat_pair`, `exploding_n
 ## The trivia family
 
 A `"gameType": "trivia"` package is a category quiz on a hub-and-spoke **wheel**.
-It reuses the common envelope (identity, `locales`, `i18n/{lang}.json`, `tokens/` — required,
-`sounds/` and `help.<lang>.md` — optional) and carries **none** of the property-family
+It reuses the common envelope (identity, `locales`, `i18n/{lang}.json`, `assets/tokens/` — required,
+`assets/sounds/` and `help.<lang>.md` — optional) and carries **none** of the property-family
 sections. Players are identified by their token and an engine-assigned colour. The family
 **supports no bots** (a bot holding the answer card is meaningless), so `players.min` must be
 at least 2.
@@ -1124,12 +1132,12 @@ resolved once at game start. Each question:
 
 ```jsonc
 {
-  "id": "geo_francia",
+  "id": "geo-france",
   "category": 0,               // 0..5, must match a board colour
-  "prompt": "¿Cuál es la capital de Francia?",
-  "answer": "París",           // the canonical answer, shown at the reveal
+  "prompt": "What is the capital of France?",
+  "answer": "Paris",           // the canonical answer, shown at the reveal
   "accept": ["paris"],         // extra accepted spellings for "typed" mode (normalised)
-  "choices": ["París", "Londres", "Madrid", "Roma"],  // "choice" mode; [0] is the correct one
+  "choices": ["Paris", "London", "Madrid", "Rome"],  // "choice" mode; [0] is the correct one
   "difficulty": 1
 }
 ```

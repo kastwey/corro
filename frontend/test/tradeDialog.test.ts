@@ -36,7 +36,7 @@ test('tradeableProperties returns owned, ownable squares as indexes', () => {
 });
 
 test('tradeableProperties includes PACKAGE ownables by behavior, whatever their type', () => {
-	// Regression (imperio-galactico): stations are type "transit" — not in the legacy
+	// Regression (galactic-empire): stations are type "transit" — not in the legacy
 	// property/railroad/utility triple — and vanished from every trade. Package squares
 	// carry behavior: 'ownable', which must win over the type guess.
 	const b = board();

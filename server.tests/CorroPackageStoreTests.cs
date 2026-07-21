@@ -14,7 +14,7 @@ public class CorroPackageStoreTests
 {
 	private static string TempDir() => Path.Combine(Path.GetTempPath(), "corro_store_" + Guid.NewGuid().ToString("N"));
 
-	/// <summary>Assemble a complete package zip: the board fixture + a small sounds/ folder.</summary>
+	/// <summary>Assemble a complete package zip: the board fixture + a small assets/sounds/ folder.</summary>
 	private static string AssembleZip()
 	{
 		var fixture = CorroTestPaths.FixtureDir("corro-classic");
@@ -28,7 +28,7 @@ public class CorroPackageStoreTests
 			File.Copy(Path.Combine(fixture, file), Path.Combine(pkgDir, file));
 		}
 
-		var sounds = Path.Combine(pkgDir, "sounds");
+		var sounds = Path.Combine(pkgDir, "assets", "sounds");
 		Directory.CreateDirectory(sounds);
 		foreach (var file in Directory.GetFiles(soundsSrc))
 		{

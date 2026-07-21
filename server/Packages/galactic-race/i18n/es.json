@@ -1,0 +1,14 @@
+{
+  "seats": {
+    "red": "Escuadrón Rojo",
+    "blue": "Escuadrón Azul",
+    "yellow": "Escuadrón Amarillo",
+    "green": "Escuadrón Verde"
+  },
+  "tokens": {
+    "spaceship": "Nave estelar",
+    "probe": "Sonda",
+    "comet": "Cometa",
+    "satellite": "Satélite"
+  }
+}

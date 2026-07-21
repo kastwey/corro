@@ -73,3 +73,13 @@ test('changeLanguage dispatches a bubbling languageChanged event that reaches wi
 
 	assert.equal(heardOnWindow, 'es');
 });
+
+test('formatNumber follows the active language instead of a hardcoded locale', async () => {
+	document.cookie = 'corro_language=en';
+	const binder = newBinder();
+	await binder.init();
+
+	assert.equal(binder.formatNumber(1234), (1234).toLocaleString('en'));
+	await binder.changeLanguage('es');
+	assert.equal(binder.formatNumber(1234), (1234).toLocaleString('es'));
+});

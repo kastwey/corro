@@ -1,0 +1,49 @@
+{
+  "format": "corro/v1",
+  "gameType": "exploding",
+  "engineVersion": "^1.0",
+  "id": "the-mine",
+  "name": {
+    "es": "La Mina",
+    "en": "The Mine"
+  },
+  "author": "kastwey",
+  "version": "0.1.0",
+  "locales": [
+    "en",
+    "es"
+  ],
+  "players": {
+    "min": 2,
+    "max": 5
+  },
+  "explodingRules": {
+    "handSize": 7,
+    "defusesPerPlayer": 1,
+    "seeFutureCount": 3,
+    "attackDraws": 2,
+    "nopeWindowMillis": 1000
+  },
+  "tokens": [
+    {
+      "id": "helmet",
+      "nameKey": "tokens.helmet"
+    },
+    {
+      "id": "pickaxe",
+      "nameKey": "tokens.pickaxe"
+    },
+    {
+      "id": "mine-cart",
+      "nameKey": "tokens.mine_cart"
+    },
+    {
+      "id": "lantern",
+      "nameKey": "tokens.lantern"
+    },
+    {
+      "id": "shovel",
+      "nameKey": "tokens.shovel"
+    }
+  ]
+}

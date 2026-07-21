@@ -1,0 +1,47 @@
+{
+  "format": "corro/v1",
+  "gameType": "race",
+  "engineVersion": "^1.0",
+  "id": "classic-pachisi",
+  "name": {
+    "es": "Parchís clásico",
+    "en": "Classic Pachisi"
+  },
+  "author": "kastwey",
+  "version": "0.1.0",
+  "locales": [
+    "en",
+    "es"
+  ],
+  "players": {
+    "min": 2,
+    "max": 4
+  },
+  "raceRules": {
+    "exitOn": 5,
+    "extraRollOn": 6,
+    "threeSixesPenalty": true,
+    "captureBonus": 20,
+    "goalBonus": 10,
+    "sixWorthSevenWhenNoneHome": true,
+    "barriers": true
+  },
+  "tokens": [
+    {
+      "id": "pawn",
+      "nameKey": "tokens.pawn"
+    },
+    {
+      "id": "horse",
+      "nameKey": "tokens.horse"
+    },
+    {
+      "id": "die",
+      "nameKey": "tokens.die"
+    },
+    {
+      "id": "dice-cup",
+      "nameKey": "tokens.dice_cup"
+    }
+  ]
+}

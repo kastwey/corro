@@ -72,8 +72,11 @@ server/Packages/mi-ciudad/
 ├── i18n/
 │   ├── en.json
 │   └── es.json
-├── tokens/
-│   └── <one .svg per player piece>
+├── assets/
+│   ├── cards/     (optional card illustrations)
+│   ├── tokens/
+│   │   └── <one .svg per player piece>
+│   └── sounds/    (optional game earcons)
 └── help.en.md   (optional)
 ```
 
@@ -157,7 +160,7 @@ Everything is explained in [CORRO_FORMAT.md](../CORRO_FORMAT.md#manifestjson).
     "freeParkingJackpot": false
   },
 
-  // The player pieces (REQUIRED). Each needs a tokens/<id>.svg (Step 6).
+  // The player pieces (REQUIRED). Each needs a file at assets/tokens/<id>.svg (Step 6).
   "tokens": [
     { "id": "circle",   "nameKey": "tokens.circle" },
     { "id": "square",   "nameKey": "tokens.square" },
@@ -267,8 +270,8 @@ Start with these and add more later.
 ]
 ```
 
-Optional visual art belongs beside that JSON, not inside it. For example, make a
-`cards/c1.svg` file for card id `c1`:
+Optional visual art belongs in the package's assets, not inside that JSON. For example, make an
+`assets/cards/c1.svg` file for card id `c1`:
 
 ```xml
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
@@ -345,40 +348,40 @@ only speak one language, it's OK to copy the same values into both for now.
 
 ---
 
-## Step 6 — `tokens/` (the player pieces, required)
+## Step 6 — `assets/tokens/` (the player pieces, required)
 
 Every board must ship its own pieces — the engine has none built in. Each token in the
-manifest needs a `tokens/<id>.svg`. The loader keeps **only the `<path>` shape** and
+manifest needs a file at `assets/tokens/<id>.svg`. The loader keeps **only the `<path>` shape** and
 sanitises it, so draw your tokens as a single path (in any editor: draw, then "flatten to
-path"). Here are six ready-to-use ones — copy each into `tokens/<id>.svg`:
+path"). Here are six ready-to-use ones — copy each into `assets/tokens/<id>.svg`:
 
-`tokens/circle.svg`
+`assets/tokens/circle.svg`
 ```xml
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3 A9 9 0 1 0 12.1 3 z"/></svg>
 ```
-`tokens/square.svg`
+`assets/tokens/square.svg`
 ```xml
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 4 L20 4 L20 20 L4 20 z"/></svg>
 ```
-`tokens/triangle.svg`
+`assets/tokens/triangle.svg`
 ```xml
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3 L21 20 L3 20 z"/></svg>
 ```
-`tokens/star.svg`
+`assets/tokens/star.svg`
 ```xml
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2 L14.9 8.6 L22 9.3 L16.7 14.1 L18.2 21.2 L12 17.5 L5.8 21.2 L7.3 14.1 L2 9.3 L9.1 8.6 z"/></svg>
 ```
-`tokens/diamond.svg`
+`assets/tokens/diamond.svg`
 ```xml
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2 L20 12 L12 22 L4 12 z"/></svg>
 ```
-`tokens/heart.svg`
+`assets/tokens/heart.svg`
 ```xml
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 21 C5 15 3 10 6 7 C9 4 12 7 12 8 C12 7 15 4 18 7 C21 10 19 15 12 21 z"/></svg>
 ```
 
 To make **themed** pieces (a tram, a landmark, a local mascot), draw them in a vector editor,
-flatten to a single `<path>`, and drop the SVG in with a matching `tokens/<id>.svg` +
+flatten to a single `<path>`, and drop the SVG in with a matching `assets/tokens/<id>.svg` +
 manifest entry + `tokens.<id>` name.
 
 ---
@@ -436,8 +439,8 @@ The common ones:
   must be named.
 - **"key 'squares.N' resolves in no locale"** — you referenced a name that isn't defined in
   *any* `i18n/*.json`. Add it (a placeholder counts).
-- **"token 'x' has no icon"** — a manifest token is missing its `tokens/x.svg`.
-- **"card illustration …"** — check that `cards/<id>.svg` matches a `cards.json` id,
+- **"token 'x' has no icon"** — a manifest token is missing its `assets/tokens/x.svg`.
+- **"card illustration …"** — check that `assets/cards/<id>.svg` matches a `cards.json` id,
   uses viewBox 0 0 64 64 and contains flattened path geometry.
 - **"gameType '…' is not supported"** — check `"gameType": "property"` is spelled exactly.
 - **The board isn't in the lobby list** — the folder isn't under `server/Packages/`, or the
@@ -452,8 +455,8 @@ defined in **no** locale is the only i18n error that stops you.
 
 - **Tweak the economy**: prices, rents, `startingMoney`, `passStartBonus`, holding `releaseCost`,
   building costs. It's all in `manifest.json` + `board.json`.
-- **Add sounds**: drop a `sounds/pack.json` and `.ogg` files to give your city its own
-  audio — see the sounds section of [CORRO_FORMAT.md](../CORRO_FORMAT.md#sounds-optional).
+- **Add sounds**: drop an `assets/sounds/pack.json` and `.ogg` files there to give your city its own
+  audio — see the sounds section of [CORRO_FORMAT.md](../CORRO_FORMAT.md#assetssounds-optional).
 - **Rewrite the voice**: override any spoken line (e.g. the "three doubles → holding" message)
   by adding a `game` object to your i18n — see
   [Engine announcements](../CORRO_FORMAT.md#engine-announcements-overridable).

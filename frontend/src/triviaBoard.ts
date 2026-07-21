@@ -602,7 +602,7 @@ function parseSpoke(node: string): { spoke: number; index: number } {
 	return { spoke, index };
 }
 
-/** The category of a spoke's destination wedge — the spoke's identity colour ("the Geografía
+/** The category of a spoke's destination wedge — the spoke's identity colour ("the Geography
  *  spoke"). Every square of the spoke shares it, so navigation and questions stay consistent. */
 function spokeDestCategory(board: TriviaBoardDef, spoke: number): number {
 	let seen = -1;

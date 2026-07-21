@@ -9,7 +9,7 @@ before(() => {
 });
 
 test('a known board id resolves to its localized name', () => {
-	assert.equal(localizeBoardName('imperio-galactico'), 'Imperio Galáctico');
+	assert.equal(localizeBoardName('galactic-empire'), 'Imperio Galáctico');
 });
 
 test('an unmapped board id falls back to its capitalized id (never the bare key)', () => {
@@ -31,18 +31,18 @@ test('pickPackageName picks the active language, else en, es, any, else empty', 
 test('renderBoardOptions fills the picker in the active language and keeps the current choice', () => {
 	const select = document.createElement('select');
 	const boards = [
-			 { id: 'imperio-galactico', name: { es: 'Imperio Galáctico', en: 'Galactic Empire' } },
-		{ id: 'cuatro-colores', name: { es: 'Cuatro Colores', en: 'Four Colours' } },
+			 { id: 'galactic-empire', name: { es: 'Imperio Galáctico', en: 'Galactic Empire' } },
+		{ id: 'four-colours', name: { es: 'Cuatro Colores', en: 'Four Colours' } },
 	];
 	// Rendered in English, the host picks the second board.
 	renderBoardOptions(select, boards, 'en');
 	assert.deepEqual([...select.options].map(o => o.textContent), ['Galactic Empire', 'Four Colours']);
-	select.value = 'cuatro-colores';
+	select.value = 'four-colours';
 
 	// The runtime language switch re-renders in Spanish and MUST keep the host's choice (#1/#3).
 	renderBoardOptions(select, boards, 'es');
 	assert.deepEqual([...select.options].map(o => o.textContent), ['Imperio Galáctico', 'Cuatro Colores']);
-	assert.equal(select.value, 'cuatro-colores', 'the chosen board survives the language switch');
+	assert.equal(select.value, 'four-colours', 'the chosen board survives the language switch');
 });
 
 test('renderBoardOptions falls back to the first option when the previous choice is gone', () => {

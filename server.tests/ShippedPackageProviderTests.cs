@@ -15,14 +15,14 @@ public class ShippedPackageProviderTests
 	[Fact]
 	public void List_finds_the_galactic_board_with_a_localized_name()
 	{
-		 var galactic = Assert.Single(Provider().List(), p => p.Id == "imperio-galactico");
+		 var galactic = Assert.Single(Provider().List(), p => p.Id == "galactic-empire");
 		Assert.False(string.IsNullOrWhiteSpace(galactic.Name["en"]));
 	}
 
 	[Fact]
 	public void ResolveDir_returns_the_folder_for_a_known_id()
 	{
-		 var dir = Provider().ResolveDir("imperio-galactico");
+		 var dir = Provider().ResolveDir("galactic-empire");
 		Assert.NotNull(dir);
 		Assert.True(File.Exists(Path.Combine(dir!, "manifest.json")));
 	}

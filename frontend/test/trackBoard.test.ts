@@ -26,8 +26,8 @@ function gameState(): GameState {
 		trackBoard: BOARD,
 		track: { positions: [{ playerId: 'A', square: 4 }, { playerId: 'B', square: 0 }] },
 		players: [
-			{ id: 'A', name: 'Ana', token: 'estrella' as any, color: '#e00', position: 0, money: 0, properties: [], releasePasses: 0 },
-			{ id: 'B', name: 'Berto', token: 'luna' as any, color: '#00e', position: 0, money: 0, properties: [], releasePasses: 0 },
+			{ id: 'A', name: 'Ana', token: 'star' as any, color: '#e00', position: 0, money: 0, properties: [], releasePasses: 0 },
+			{ id: 'B', name: 'Berto', token: 'moon' as any, color: '#00e', position: 0, money: 0, properties: [], releasePasses: 0 },
 		],
 		bank: { money: 0 }, currentTurn: 'A', ownership: [], squares: [],
 	} as unknown as GameState;

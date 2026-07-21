@@ -4,8 +4,8 @@
     the Corro Package SDK. Kept as a compatibility wrapper for existing workflows.
 
 .EXAMPLE
-    ./tools/pack-corro.ps1 packages/imperio-galactico
-    # -> imperio-galactico.corro  (upload it in the lobby's "upload a board" field)
+    ./tools/pack-corro.ps1 packages/galactic-empire
+    # -> galactic-empire.corro  (upload it in the lobby's "upload a board" field)
 
 .EXAMPLE
     ./tools/pack-corro.ps1 server.tests/Fixtures/corro-classic -Out corro-classic.corro

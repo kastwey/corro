@@ -215,7 +215,7 @@ reader user can neither focus it nor hear WHY it is unavailable. ALWAYS keep the
 control focusable and convey its state to assistive tech instead:
 - Use `aria-disabled="true"` (not the `disabled` attribute) to mark it unavailable.
 - Add `aria-describedby` pointing to the id of a visible tooltip/hint element that
-  explains why it is disabled (e.g. "No tienes suficiente dinero, te faltan 120€").
+  explains why it is disabled (e.g. "You do not have enough money; you are 120€ short").
 - The click/activation handler must still fire: when `aria-disabled` is set, do
   NOT perform the action — instead surface the explanatory hint (spoken
   announcement + non-intrusive message), so the user learns why nothing happened.
@@ -295,7 +295,7 @@ broke accessibility, so keep these rules:
 Keep the landmark tree flat. Nested regions/landmarks make a screen reader read a
 chain of region names (especially on return-from-modal). The board is a plain
 container (`<div class="game-layout__board">`, NOT a `<section>`/`<main>`), and `#board`
-carries a short, localized `aria-label` (`game.panels.board` → "Tablero"/"Board").
+carries a short, localized `aria-label` (`game.panels.board` → "Board").
 Prefer one clear label over nested wrappers; if you add a landmark, justify it.
 
 Every page still needs one top-level `<main>`, and all visible page content must live in
@@ -359,8 +359,8 @@ The engine implements generic mechanics and neutral fallbacks; **all game identi
 to the `.corro` package**. Before adding any themed name, drawing, sound, colour, token/card id or
 package-specific branch to `frontend/src/`, `server/` (outside `server/Packages/`) or shared CSS:
 - inspect the package format, loader and existing asset channels first;
-- put card illustrations in optional `cards/<card-id>.svg` and player-piece drawings in
-  `tokens/<token-id>.svg`; package geometry overrides the engine's neutral fallback;
+- put card illustrations in optional `assets/cards/<card-id>.svg` and player-piece drawings in
+  `assets/tokens/<token-id>.svg`; package geometry overrides the engine's neutral fallback;
 - never branch engine rendering on a shipped package id, card id, token id, localized title or
   known content key — not even as a convenient fallback or for one private package;
 - load and sanitize package assets at the package boundary, keep renderers data-driven by generic

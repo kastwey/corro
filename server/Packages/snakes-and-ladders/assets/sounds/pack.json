@@ -1,0 +1,8 @@
+{
+  "packId": "snakes-and-ladders",
+  "events": {
+    "dice.roll": "dice-roll.ogg",
+    "turn.you": "turn-you.ogg",
+    "game.over": "game-over.ogg"
+  }
+}

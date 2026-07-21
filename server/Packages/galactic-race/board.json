@@ -1,0 +1,49 @@
+{
+  "circuitLength": 68,
+  "corridorLength": 7,
+  "piecesPerPlayer": 4,
+  "safeSquares": [
+    5,
+    12,
+    17,
+    22,
+    29,
+    34,
+    39,
+    46,
+    51,
+    56,
+    63,
+    68
+  ],
+  "seats": [
+    {
+      "id": "red",
+      "color": "#e0402f",
+      "nameKey": "seats.red",
+      "startSquare": 5,
+      "corridorEntry": 68
+    },
+    {
+      "id": "blue",
+      "color": "#2f6fe0",
+      "nameKey": "seats.blue",
+      "startSquare": 22,
+      "corridorEntry": 17
+    },
+    {
+      "id": "yellow",
+      "color": "#ecc23a",
+      "nameKey": "seats.yellow",
+      "startSquare": 39,
+      "corridorEntry": 34
+    },
+    {
+      "id": "green",
+      "color": "#5fce6a",
+      "nameKey": "seats.green",
+      "startSquare": 56,
+      "corridorEntry": 51
+    }
+  ]
+}

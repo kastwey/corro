@@ -18,7 +18,7 @@ import {
 	startGame,
 } from '../helpers/game';
 
-const BOARD = 'escaleras-y-serpientes';
+const BOARD = 'snakes-and-ladders';
 
 test.beforeEach(async () => {
 	await resetDice();
@@ -96,7 +96,7 @@ test('a mid-game reload keeps the ownership visuals on the board', async ({ brow
 	const ana = await newPlayerPage(browser);
 	const berto = await newPlayerPage(browser);
 
-	const code = await createGame(ana, 'Ana', 'imperio-galactico');
+	const code = await createGame(ana, 'Ana', 'galactic-empire');
 	await joinGame(berto, code, 'Berto');
 	await startGame(ana, [ana, berto]);
 

@@ -4,7 +4,7 @@ namespace CorroServer.Services.Sounds;
 
 /// <summary>
 /// Serves the bundled default sound pack PLUS a per-game pack supplied by a loaded .corro
-/// package. A package's <c>sounds/</c> folder is just another pack (same <c>pack.json</c> shape),
+/// package. A package's <c>assets/sounds/</c> folder is just another pack (same <c>pack.json</c> shape),
 /// so it is served by a <see cref="DefaultSoundPackProvider"/> pointed at that folder. A package
 /// pack OVERLAYS the default: it provides sounds for the events it declares and falls back to the
 /// default for the rest. Registered when a package game starts and removed when it ends.
@@ -18,7 +18,7 @@ public sealed class CompositeSoundPackProvider : ISoundPackProvider
 
 	public string DefaultPackId => _default.DefaultPackId;
 
-	/// <summary>Register a game's package sound pack (its extracted <c>sounds/</c> folder).</summary>
+	/// <summary>Register a game's package sound pack (its extracted <c>assets/sounds/</c> folder).</summary>
 	public void RegisterPackage(string packId, string soundsDir)
 		=> _packages[packId] = new DefaultSoundPackProvider(soundsDir);
 

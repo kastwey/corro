@@ -1,4 +1,4 @@
-// shedding-bot.spec.ts — a HUMAN versus a BOT on "Cuatro Colores", end to end.
+// shedding-bot.spec.ts — a HUMAN versus a BOT on "Four Colours", end to end.
 //
 // The host seats a bot and starts. Ana opens on the colour; the bot answers unattended
 // (its policy sheds across colours by VALUE — the known mirrored hand makes its choice
@@ -8,7 +8,7 @@
 import { test, expect } from '../helpers/test';
 import { createGame, expectAnnouncement, newPlayerPage, resetDice, startGame } from '../helpers/game';
 
-const BOARD = 'cuatro-colores';
+const BOARD = 'four-colours';
 
 test.beforeEach(async () => {
 	await resetDice();

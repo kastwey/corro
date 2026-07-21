@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CorroServer.Models.Corro;
 
 namespace CorroServer.Services.Corro;
 
@@ -61,7 +62,10 @@ public sealed class ShippedPackageProvider
 	/// locked hidden package OR an unknown id. Gates <c>StageShipped</c>; the restore path bypasses it.
 	/// </summary>
 	public bool CanAccess(string id, IReadOnlySet<string> unlockedCodes)
-		=> Discover().Any(p => p.Id == id && IsVisible(p.UnlockCode, unlockedCodes));
+	{
+		var package = Find(id);
+		return package is not null && IsVisible(package.UnlockCode, unlockedCodes);
+	}
 
 	/// <summary>
 	/// The on-disk folder for a shipped package <paramref name="id"/>, or null if there is no such
@@ -69,17 +73,7 @@ public sealed class ShippedPackageProvider
 	/// raw path segment), so it can't be turned into a path-traversal and is independent of folder naming.
 	/// </summary>
 	public string? ResolveDir(string id)
-	{
-		foreach (var p in Discover())
-		{
-			if (p.Id == id)
-			{
-				return p.Dir;
-			}
-		}
-
-		return null;
-	}
+		=> Find(id)?.Dir;
 
 	/// <summary>
 	/// Whether a package with unlock code <paramref name="unlockCode"/> is visible given the codes the
@@ -95,7 +89,10 @@ public sealed class ShippedPackageProvider
 	/// <summary>Scan the configured package roots: each subfolder with a valid manifest becomes one
 	/// package. The primary shipped root wins a duplicate id, so an E2E fixture can never shadow a
 	/// real game accidentally.</summary>
-	private IEnumerable<(string Id, Dictionary<string, string> Name, string Dir, string? UnlockCode)> Discover()
+	private DiscoveredPackage? Find(string id)
+		=> Discover().FirstOrDefault(package => package.Id == id);
+
+	private IEnumerable<DiscoveredPackage> Discover()
 	{
 		var seenIds = new HashSet<string>(StringComparer.Ordinal);
 		foreach (var root in _dirs)
@@ -119,7 +116,11 @@ public sealed class ShippedPackageProvider
 
 				if (m is { Id.Length: > 0 } && seenIds.Add(m.Id))
 				{
-					yield return (m.Id, m.Name ?? new(), sub, m.UnlockCode);
+					yield return new DiscoveredPackage(
+						m.Id,
+						m.Name ?? new(),
+						sub,
+						m.UnlockCode);
 				}
 			}
 		}
@@ -133,4 +134,10 @@ public sealed class ShippedPackageProvider
 		/// <summary>The hidden-package gate code; null/absent means the package is public.</summary>
 		public string? UnlockCode { get; init; }
 	}
+
+	private sealed record DiscoveredPackage(
+		string Id,
+		Dictionary<string, string> Name,
+		string Dir,
+		string? UnlockCode);
 }

@@ -1,8 +1,8 @@
-// exploding.spec.ts — the exploding family on "La Mina", end to end.
+// exploding.spec.ts — the exploding family on "The Mine", end to end.
 //
 // Two real browsers, Spanish, real SignalR. The E2E identity shuffle keeps the deck in
 // cards.json order and DEALS from its tail, so the opening hands and the draw pile are KNOWN
-// (pinned in LaMinaPackageTests): both openers hold a defuse ("Cortar la mecha") and the single
+// (pinned in MinePackageTests): both openers hold a defuse ("Cortar la mecha") and the single
 // planted bomb ("Grisú") sits on TOP of the pile. The story: draw the bomb, defuse it and tuck
 // it back on top, and — a defuse spent — explode into the last-player-standing win.
 
@@ -11,7 +11,7 @@ import {
 	createGame, expectAnnouncement, joinGame, newPlayerPage, resetDice, scriptDice, startGame,
 } from '../helpers/game';
 
-const BOARD = 'la-mina';
+const BOARD = 'the-mine';
 
 test.beforeEach(async () => {
 	await resetDice();
@@ -35,22 +35,56 @@ test('exploding: draw the bomb, defuse and tuck it, then explode into a win', as
 
 	// ── Ana's first draw is the planted bomb; she holds a defuse and tucks it back on top. ──
 	await ana.locator('#board').focus();
+	await ana.evaluate(() => {
+		const timeline = { announcement: 0, reveal: 0, menu: 0 };
+		(window as any).__defuseTimeline = timeline;
+		const sample = () => {
+			const now = performance.now();
+			const liveText = [...document.querySelectorAll('#sr-live, #sr-live-assertive')]
+				.map(node => node.textContent ?? '').join(' ');
+			if (!timeline.announcement && /grisú/i.test(liveText)) timeline.announcement = now;
+			if (!timeline.reveal && document.querySelector('.exploding-reveal--defusing')) timeline.reveal = now;
+			if (!timeline.menu && document.querySelector('.popup-menu[role="menu"]')) timeline.menu = now;
+		};
+		const observer = new MutationObserver(sample);
+		observer.observe(document.body, { subtree: true, childList: true, characterData: true });
+		(window as any).__defuseTimelineObserver = observer;
+	});
 	await ana.keyboard.press(' ');
+	const anaReveal = ana.locator('.exploding-reveal--defusing');
+	await expect(anaReveal).toBeVisible();
+	await expect(anaReveal).toHaveClass(/exploding-reveal--static/);
+	await expect(ana.locator('.exploding-reveal__defuse .xcard--defuse')).toBeVisible();
+	await expect(ana.locator('.popup-menu[role="menu"]')).toHaveCount(0);
 	await expectAnnouncement(berto, /Ana destapa gris.*corta la mecha/i);
 	await expectAnnouncement(ana, /Destapas gris.*cortas la mecha/i);
+	await expect(ana.locator('.popup-menu[role="menu"]')).toBeVisible();
+	const timeline = await ana.evaluate(() => {
+		(window as any).__defuseTimelineObserver?.disconnect();
+		return (window as any).__defuseTimeline as { announcement: number; reveal: number; menu: number };
+	});
+	expect(timeline.announcement).toBeGreaterThan(0);
+	expect(timeline.reveal).toBeGreaterThanOrEqual(timeline.announcement);
+	expect(timeline.menu - timeline.announcement).toBeGreaterThanOrEqual(1800);
 	await tuckOnTop(ana);
 	await expectAnnouncement(ana, /Escondes el gris/i);
+
+	// Exercise the same transient animation and picker in the dark theme. The package-driven
+	// defuse face is shared by every exploding-family board; only its art and wording differ.
+	await berto.locator('#theme-toggle').click();
+	await expect(berto.locator('html')).toHaveAttribute('data-theme', 'dark');
 
 	// ── Berto meets the same bomb on top; he defuses and tucks it back on top too. ──
 	await berto.locator('#board').focus();
 	await berto.keyboard.press(' ');
+	const bertoReveal = berto.locator('.exploding-reveal--defusing');
+	await expect(bertoReveal).toBeVisible();
+	await expect(bertoReveal).toHaveClass(/exploding-reveal--static/);
+	await expect(berto.locator('.popup-menu[role="menu"]')).toHaveCount(0);
 	await expectAnnouncement(ana, /Berto destapa gris/i);
+	await expectAnnouncement(berto, /Destapas gris.*cortas la mecha/i);
+	await expect(berto.locator('.popup-menu[role="menu"]')).toBeVisible();
 	await tuckOnTop(berto);
-
-	// Keep one browser light and the other dark before the modal end screen opens, so Axe
-	// audits the meaningful “(you)” label against both dialog palettes.
-	await berto.locator('#theme-toggle').click();
-	await expect(berto.locator('html')).toHaveAttribute('data-theme', 'dark');
 
 	// ── Ana draws the bomb again — her defuse is spent, so she explodes and Berto wins. ──
 	await ana.locator('#board').focus();

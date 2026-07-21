@@ -118,8 +118,8 @@ public class FamilyRetirementTests
 			PlayerId = "A",
 			Members =
 			{
-				new JourneyMemberState { PlayerId = "A", Hand = { JInst("d25", 1) } },
-				new JourneyMemberState { PlayerId = "C", Hand = { JInst("d25", 2) } },
+				new JourneyMemberState { PlayerId = "A", Hand = { JInst("distance-25", 1) } },
+				new JourneyMemberState { PlayerId = "C", Hand = { JInst("distance-25", 2) } },
 			},
 		};
 		var state = JourneyGame(team, new JourneySeatState
@@ -205,10 +205,10 @@ public class FamilyRetirementTests
 		{
 			Seats =
 			{
-				new RaceSeatState { PlayerId = "a", SeatId = "rojo" },
+				new RaceSeatState { PlayerId = "a", SeatId = "red" },
 				new RaceSeatState
 				{
-					PlayerId = "c", SeatId = "azul",
+					PlayerId = "c", SeatId = "blue",
 					Pieces =
 					{
 						new RacePiece { Location = RacePieceLocation.Circuit, Square = 12 },

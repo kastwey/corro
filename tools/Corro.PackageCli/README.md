@@ -23,7 +23,7 @@ The destination must be absent or empty; the command never overwrites an author'
 The generated project contains:
 
 - the smallest useful board/deck for its family;
-- one optional `cards/<card-id>.svg` example in every card-bearing starter;
+- one optional `assets/cards/<card-id>.svg` example in every card-bearing starter;
 - two original geometric tokens;
 - English and Spanish translations and help guides;
 - local JSON schemas plus VS Code associations;
@@ -65,7 +65,7 @@ deliberately never printed or included in JSON.
 
 ## Optional card illustrations
 
-For any card declared in `cards.json`, place optional art at `cards/<card-id>.svg`. Use
+For any card declared in `cards.json`, place optional art at `assets/cards/<card-id>.svg`. Use
 `viewBox="0 0 64 64"` and flatten the drawing to `<path>` elements. Do not add an `svg` property
 to JSON: the schema and validator reject that form and point to the file convention. Packages that
 omit an illustration receive Corro's neutral mechanic-based drawing. `inspect` reports how many

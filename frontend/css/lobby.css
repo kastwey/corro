@@ -1,4 +1,4 @@
-/* lobby.css - Estilos específicos del lobby y estados */
+/* lobby.css - Lobby-specific styles and states */
 
 /* Top-level lobby views: only one is shown at a time (the rest carry .hidden +
    the hidden attribute). The waiting room therefore never shows the games list. */
@@ -292,7 +292,7 @@
 	font-size: 0.8rem;
 }
 
-/* Estados de la aplicación */
+/* Application states */
 .error {
 	background: var(--danger-soft);
 	color: var(--danger);

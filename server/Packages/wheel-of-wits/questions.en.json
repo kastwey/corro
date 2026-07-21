@@ -1,0 +1,1958 @@
+[
+  {
+    "id": "geo-canberra",
+    "category": 0,
+    "prompt": "What is the capital of Australia?",
+    "answer": "Canberra",
+    "accept": [
+      "canberra"
+    ],
+    "choices": [
+      "Canberra",
+      "Sydney",
+      "Melbourne",
+      "Brisbane"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "geo-ankara",
+    "category": 0,
+    "prompt": "What is the capital of Turkey?",
+    "answer": "Ankara",
+    "accept": [
+      "ankara"
+    ],
+    "choices": [
+      "Ankara",
+      "Istanbul",
+      "Izmir",
+      "Bursa"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "geo-ottawa",
+    "category": 0,
+    "prompt": "What is the capital of Canada?",
+    "answer": "Ottawa",
+    "accept": [
+      "ottawa"
+    ],
+    "choices": [
+      "Ottawa",
+      "Toronto",
+      "Montreal",
+      "Vancouver"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "geo-brasilia",
+    "category": 0,
+    "prompt": "What is the capital of Brazil?",
+    "answer": "Brasília",
+    "accept": [
+      "brasilia"
+    ],
+    "choices": [
+      "Brasília",
+      "Rio de Janeiro",
+      "São Paulo",
+      "Salvador"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "geo-wellington",
+    "category": 0,
+    "prompt": "What is the capital of New Zealand?",
+    "answer": "Wellington",
+    "accept": [
+      "wellington"
+    ],
+    "choices": [
+      "Wellington",
+      "Auckland",
+      "Christchurch",
+      "Hamilton"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "geo-rabat",
+    "category": 0,
+    "prompt": "What is the capital of Morocco?",
+    "answer": "Rabat",
+    "accept": [
+      "rabat"
+    ],
+    "choices": [
+      "Rabat",
+      "Casablanca",
+      "Marrakesh",
+      "Fez"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "geo-bolivia",
+    "category": 0,
+    "prompt": "Which South American country has two capitals, one legislative and one administrative?",
+    "answer": "Bolivia",
+    "accept": [
+      "bolivia"
+    ],
+    "choices": [
+      "Bolivia",
+      "Chile",
+      "Peru",
+      "Ecuador"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "geo-lesotho",
+    "category": 0,
+    "prompt": "Which country is completely surrounded by South Africa?",
+    "answer": "Lesotho",
+    "accept": [
+      "lesotho"
+    ],
+    "choices": [
+      "Lesotho",
+      "Eswatini",
+      "Botswana",
+      "Zimbabwe"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "geo-bering-strait",
+    "category": 0,
+    "prompt": "Which strait separates Asia from North America?",
+    "answer": "The Bering Strait",
+    "accept": [
+      "bering",
+      "bering strait"
+    ],
+    "choices": [
+      "The Bering Strait",
+      "The Strait of Gibraltar",
+      "The Bosphorus",
+      "The Strait of Magellan"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "geo-lake-titicaca",
+    "category": 0,
+    "prompt": "What is the highest navigable lake in the world?",
+    "answer": "Lake Titicaca",
+    "accept": [
+      "titicaca"
+    ],
+    "choices": [
+      "Lake Titicaca",
+      "Lake Baikal",
+      "Lake Victoria",
+      "Lake Ladoga"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "geo-volga",
+    "category": 0,
+    "prompt": "What is the longest river in Europe?",
+    "answer": "The Volga",
+    "accept": [
+      "volga"
+    ],
+    "choices": [
+      "The Volga",
+      "The Danube",
+      "The Rhine",
+      "The Dnieper"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "geo-aconcagua",
+    "category": 0,
+    "prompt": "What is the highest mountain in the Americas?",
+    "answer": "Aconcagua",
+    "accept": [
+      "aconcagua"
+    ],
+    "choices": [
+      "Aconcagua",
+      "Everest",
+      "Denali",
+      "Chimborazo"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "geo-antarctica",
+    "category": 0,
+    "prompt": "Counting polar ones, what is the largest desert in the world?",
+    "answer": "Antarctica",
+    "accept": [
+      "antarctica",
+      "antarctic"
+    ],
+    "choices": [
+      "Antarctica",
+      "The Sahara",
+      "The Gobi",
+      "The Arctic"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "geo-caspian-sea",
+    "category": 0,
+    "prompt": "What is the largest inland body of water in the world?",
+    "answer": "The Caspian Sea",
+    "accept": [
+      "caspian",
+      "caspian sea"
+    ],
+    "choices": [
+      "The Caspian Sea",
+      "The Dead Sea",
+      "Lake Baikal",
+      "The Black Sea"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "geo-lake-victoria",
+    "category": 0,
+    "prompt": "Which lake is the main source of the Nile?",
+    "answer": "Lake Victoria",
+    "accept": [
+      "victoria",
+      "lake victoria"
+    ],
+    "choices": [
+      "Lake Victoria",
+      "Lake Tanganyika",
+      "Lake Chad",
+      "Lake Albert"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "geo-amazon",
+    "category": 0,
+    "prompt": "What is the highest-discharge river in the world?",
+    "answer": "The Amazon",
+    "accept": [
+      "amazon",
+      "the amazon"
+    ],
+    "choices": [
+      "The Amazon",
+      "The Nile",
+      "The Congo",
+      "The Yangtze"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "geo-nigeria",
+    "category": 0,
+    "prompt": "What is the most populous country in Africa?",
+    "answer": "Nigeria",
+    "accept": [
+      "nigeria"
+    ],
+    "choices": [
+      "Nigeria",
+      "Egypt",
+      "Ethiopia",
+      "South Africa"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "geo-balkan-peninsula",
+    "category": 0,
+    "prompt": "On which peninsula is Greece located?",
+    "answer": "The Balkan Peninsula",
+    "accept": [
+      "balkan",
+      "balkans",
+      "balkan peninsula"
+    ],
+    "choices": [
+      "The Balkan Peninsula",
+      "The Iberian Peninsula",
+      "The Italian Peninsula",
+      "The Anatolian Peninsula"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "geo-indonesia",
+    "category": 0,
+    "prompt": "Which archipelago country has the most active volcanoes?",
+    "answer": "Indonesia",
+    "accept": [
+      "indonesia"
+    ],
+    "choices": [
+      "Indonesia",
+      "Japan",
+      "Iceland",
+      "The Philippines"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "geo-magellan",
+    "category": 0,
+    "prompt": "Which navigator gives his name to the strait at the southern tip of South America?",
+    "answer": "Magellan",
+    "accept": [
+      "magellan",
+      "ferdinand magellan"
+    ],
+    "choices": [
+      "Magellan",
+      "Francis Drake",
+      "Columbus",
+      "Elcano"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "ent-orson-welles",
+    "category": 1,
+    "prompt": "Who directed and starred in \"Citizen Kane\" (1941)?",
+    "answer": "Orson Welles",
+    "accept": [
+      "orson welles",
+      "welles"
+    ],
+    "choices": [
+      "Orson Welles",
+      "Alfred Hitchcock",
+      "Charles Chaplin",
+      "John Ford"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "ent-francis-ford-coppola",
+    "category": 1,
+    "prompt": "Who directed \"The Godfather\"?",
+    "answer": "Francis Ford Coppola",
+    "accept": [
+      "coppola",
+      "francis ford coppola"
+    ],
+    "choices": [
+      "Francis Ford Coppola",
+      "Martin Scorsese",
+      "Steven Spielberg",
+      "Brian De Palma"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "ent-11",
+    "category": 1,
+    "prompt": "How many Oscars did \"The Return of the King\" win, a shared record?",
+    "answer": "11",
+    "accept": [
+      "eleven"
+    ],
+    "choices": [
+      "11",
+      "8",
+      "9",
+      "10"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "ent-alfred-hitchcock",
+    "category": 1,
+    "prompt": "Which director is known as \"the master of suspense\"?",
+    "answer": "Alfred Hitchcock",
+    "accept": [
+      "hitchcock",
+      "alfred hitchcock"
+    ],
+    "choices": [
+      "Alfred Hitchcock",
+      "Stanley Kubrick",
+      "David Lynch",
+      "David Fincher"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "ent-quentin-tarantino",
+    "category": 1,
+    "prompt": "Who directed \"Pulp Fiction\"?",
+    "answer": "Quentin Tarantino",
+    "accept": [
+      "tarantino",
+      "quentin tarantino"
+    ],
+    "choices": [
+      "Quentin Tarantino",
+      "Guy Ritchie",
+      "Martin Scorsese",
+      "David Fincher"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "ent-abbey-road",
+    "category": 1,
+    "prompt": "What was the last album the Beatles recorded?",
+    "answer": "Abbey Road",
+    "accept": [
+      "abbey road"
+    ],
+    "choices": [
+      "Abbey Road",
+      "Let It Be",
+      "The White Album",
+      "Revolver"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "ent-vivaldi",
+    "category": 1,
+    "prompt": "Which Baroque composer wrote \"The Four Seasons\"?",
+    "answer": "Vivaldi",
+    "accept": [
+      "vivaldi",
+      "antonio vivaldi"
+    ],
+    "choices": [
+      "Vivaldi",
+      "Bach",
+      "Handel",
+      "Corelli"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "ent-mozart",
+    "category": 1,
+    "prompt": "Who composed the opera \"The Magic Flute\"?",
+    "answer": "Mozart",
+    "accept": [
+      "mozart"
+    ],
+    "choices": [
+      "Mozart",
+      "Verdi",
+      "Wagner",
+      "Rossini"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "ent-david-bowie",
+    "category": 1,
+    "prompt": "Which singer created the character Ziggy Stardust?",
+    "answer": "David Bowie",
+    "accept": [
+      "bowie",
+      "david bowie"
+    ],
+    "choices": [
+      "David Bowie",
+      "Elton John",
+      "Freddie Mercury",
+      "Lou Reed"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "ent-abba",
+    "category": 1,
+    "prompt": "Which Swedish group won Eurovision in 1974 with \"Waterloo\"?",
+    "answer": "ABBA",
+    "accept": [
+      "abba"
+    ],
+    "choices": [
+      "ABBA",
+      "Roxette",
+      "Ace of Base",
+      "a-ha"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "ent-springfield",
+    "category": 1,
+    "prompt": "In which fictional town do the Simpsons live?",
+    "answer": "Springfield",
+    "accept": [
+      "springfield"
+    ],
+    "choices": [
+      "Springfield",
+      "Quahog",
+      "Shelbyville",
+      "Portland"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "ent-herge",
+    "category": 1,
+    "prompt": "Which Belgian cartoonist created Tintin?",
+    "answer": "Hergé",
+    "accept": [
+      "herge"
+    ],
+    "choices": [
+      "Hergé",
+      "Uderzo",
+      "Goscinny",
+      "Franquin"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "ent-soviet-union",
+    "category": 1,
+    "prompt": "In which country was the video game Tetris created?",
+    "answer": "The Soviet Union",
+    "accept": [
+      "soviet union",
+      "ussr",
+      "russia"
+    ],
+    "choices": [
+      "The Soviet Union",
+      "Japan",
+      "United States",
+      "South Korea"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "ent-link",
+    "category": 1,
+    "prompt": "What is the name of the hero of \"The Legend of Zelda\" series?",
+    "answer": "Link",
+    "accept": [
+      "link"
+    ],
+    "choices": [
+      "Link",
+      "Zelda",
+      "Mario",
+      "Ganon"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "ent-humphrey-bogart",
+    "category": 1,
+    "prompt": "Which actor starred in \"Casablanca\" opposite Ingrid Bergman?",
+    "answer": "Humphrey Bogart",
+    "accept": [
+      "bogart",
+      "humphrey bogart"
+    ],
+    "choices": [
+      "Humphrey Bogart",
+      "Cary Grant",
+      "James Stewart",
+      "Clark Gable"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "ent-psycho",
+    "category": 1,
+    "prompt": "In which Hitchcock film is the famous shower scene?",
+    "answer": "Psycho",
+    "accept": [
+      "psycho"
+    ],
+    "choices": [
+      "Psycho",
+      "The Birds",
+      "Vertigo",
+      "North by Northwest"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "ent-freddie-mercury",
+    "category": 1,
+    "prompt": "Who composed \"Bohemian Rhapsody\"?",
+    "answer": "Freddie Mercury",
+    "accept": [
+      "freddie mercury",
+      "mercury"
+    ],
+    "choices": [
+      "Freddie Mercury",
+      "Brian May",
+      "Roger Taylor",
+      "John Deacon"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "ent-snow-white-seven-dwarfs",
+    "category": 1,
+    "prompt": "What was Disney's first animated feature film?",
+    "answer": "Snow White and the Seven Dwarfs",
+    "accept": [
+      "snow white"
+    ],
+    "choices": [
+      "Snow White and the Seven Dwarfs",
+      "Pinocchio",
+      "Fantasia",
+      "Bambi"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "ent-gone-wind",
+    "category": 1,
+    "prompt": "Which 1939 film set during the American Civil War is a cinema classic?",
+    "answer": "Gone with the Wind",
+    "accept": [
+      "gone with the wind"
+    ],
+    "choices": [
+      "Gone with the Wind",
+      "Casablanca",
+      "Rebecca",
+      "The Wizard of Oz"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "ent-gaul",
+    "category": 1,
+    "prompt": "In which country did Asterix and Obelix live?",
+    "answer": "Gaul",
+    "accept": [
+      "gaul"
+    ],
+    "choices": [
+      "Gaul",
+      "Rome",
+      "Britain",
+      "Hispania"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "hist-1066",
+    "category": 2,
+    "prompt": "In what year did the Battle of Hastings take place?",
+    "answer": "1066",
+    "accept": [],
+    "choices": [
+      "1066",
+      "1215",
+      "1099",
+      "1000"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "hist-1215",
+    "category": 2,
+    "prompt": "In what year was the English Magna Carta signed?",
+    "answer": "1215",
+    "accept": [],
+    "choices": [
+      "1215",
+      "1066",
+      "1315",
+      "1492"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "hist-1453",
+    "category": 2,
+    "prompt": "In what year did Constantinople fall to the Ottomans?",
+    "answer": "1453",
+    "accept": [],
+    "choices": [
+      "1453",
+      "1492",
+      "1204",
+      "1071"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "hist-peace-westphalia",
+    "category": 2,
+    "prompt": "Which 1648 peace ended the Thirty Years' War?",
+    "answer": "The Peace of Westphalia",
+    "accept": [
+      "westphalia",
+      "peace of westphalia"
+    ],
+    "choices": [
+      "The Peace of Westphalia",
+      "The Peace of Utrecht",
+      "The Peace of Augsburg",
+      "The Peace of Paris"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "hist-1917",
+    "category": 2,
+    "prompt": "In what year did the Bolshevik Revolution triumph in Russia?",
+    "answer": "1917",
+    "accept": [],
+    "choices": [
+      "1917",
+      "1905",
+      "1922",
+      "1914"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "hist-augustus",
+    "category": 2,
+    "prompt": "Who was the first Roman emperor?",
+    "answer": "Augustus",
+    "accept": [
+      "augustus",
+      "octavian"
+    ],
+    "choices": [
+      "Augustus",
+      "Julius Caesar",
+      "Nero",
+      "Trajan"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "hist-alexander-great",
+    "category": 2,
+    "prompt": "Which Macedonian king forged an empire reaching India in the 4th century BC?",
+    "answer": "Alexander the Great",
+    "accept": [
+      "alexander the great",
+      "alexander"
+    ],
+    "choices": [
+      "Alexander the Great",
+      "Philip II",
+      "Darius III",
+      "Julius Caesar"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "hist-1776",
+    "category": 2,
+    "prompt": "In what year was the United States Declaration of Independence signed?",
+    "answer": "1776",
+    "accept": [],
+    "choices": [
+      "1776",
+      "1783",
+      "1789",
+      "1750"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "hist-800",
+    "category": 2,
+    "prompt": "In what year was Charlemagne crowned emperor?",
+    "answer": "800",
+    "accept": [
+      "eight hundred"
+    ],
+    "choices": [
+      "800",
+      "742",
+      "814",
+      "962"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "hist-england-france",
+    "category": 2,
+    "prompt": "Between which two countries was the Hundred Years' War fought?",
+    "answer": "England and France",
+    "accept": [
+      "england and france"
+    ],
+    "choices": [
+      "England and France",
+      "Spain and France",
+      "England and Scotland",
+      "France and Burgundy"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "hist-1941",
+    "category": 2,
+    "prompt": "In what year did Japan attack Pearl Harbor?",
+    "answer": "1941",
+    "accept": [],
+    "choices": [
+      "1941",
+      "1939",
+      "1945",
+      "1937"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "hist-1961",
+    "category": 2,
+    "prompt": "In what year was the Berlin Wall built?",
+    "answer": "1961",
+    "accept": [],
+    "choices": [
+      "1961",
+      "1945",
+      "1989",
+      "1953"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "hist-treaty-versailles",
+    "category": 2,
+    "prompt": "Which 1919 treaty officially ended the First World War?",
+    "answer": "The Treaty of Versailles",
+    "accept": [
+      "versailles",
+      "treaty of versailles"
+    ],
+    "choices": [
+      "The Treaty of Versailles",
+      "The Treaty of Trianon",
+      "The Treaty of Brest-Litovsk",
+      "The Treaty of Saint-Germain"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "hist-athens",
+    "category": 2,
+    "prompt": "In which Greek city-state was democracy born?",
+    "answer": "Athens",
+    "accept": [
+      "athens"
+    ],
+    "choices": [
+      "Athens",
+      "Sparta",
+      "Thebes",
+      "Corinth"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "hist-1492",
+    "category": 2,
+    "prompt": "In what year did Granada fall, ending the Reconquista?",
+    "answer": "1492",
+    "accept": [],
+    "choices": [
+      "1492",
+      "1469",
+      "1512",
+      "1478"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "hist-treaty-paris",
+    "category": 2,
+    "prompt": "Which 1783 treaty recognized the independence of the United States?",
+    "answer": "The Treaty of Paris",
+    "accept": [
+      "treaty of paris",
+      "paris"
+    ],
+    "choices": [
+      "The Treaty of Paris",
+      "The Treaty of Ghent",
+      "The Treaty of Versailles",
+      "The Treaty of Utrecht"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "hist-martin-luther",
+    "category": 2,
+    "prompt": "Who started the Protestant Reformation in 1517?",
+    "answer": "Martin Luther",
+    "accept": [
+      "martin luther",
+      "luther"
+    ],
+    "choices": [
+      "Martin Luther",
+      "John Calvin",
+      "Henry VIII",
+      "Huldrych Zwingli"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "hist-hernan-cortes",
+    "category": 2,
+    "prompt": "Which Spanish conquistador defeated the Aztec Empire?",
+    "answer": "Hernán Cortés",
+    "accept": [
+      "hernan cortes",
+      "cortes"
+    ],
+    "choices": [
+      "Hernán Cortés",
+      "Francisco Pizarro",
+      "Vasco Núñez de Balboa",
+      "Christopher Columbus"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "hist-francisco-pizarro",
+    "category": 2,
+    "prompt": "Which Spanish conquistador brought down the Inca Empire?",
+    "answer": "Francisco Pizarro",
+    "accept": [
+      "francisco pizarro",
+      "pizarro"
+    ],
+    "choices": [
+      "Francisco Pizarro",
+      "Hernán Cortés",
+      "Diego de Almagro",
+      "Francisco de Orellana"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "hist-1957",
+    "category": 2,
+    "prompt": "In what year did the USSR launch Sputnik, the first artificial satellite?",
+    "answer": "1957",
+    "accept": [],
+    "choices": [
+      "1957",
+      "1961",
+      "1969",
+      "1949"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "art-james-joyce",
+    "category": 3,
+    "prompt": "Who wrote the novel \"Ulysses\" (1922)?",
+    "answer": "James Joyce",
+    "accept": [
+      "joyce",
+      "james joyce"
+    ],
+    "choices": [
+      "James Joyce",
+      "Virginia Woolf",
+      "Marcel Proust",
+      "Franz Kafka"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "art-franz-kafka",
+    "category": 3,
+    "prompt": "Who wrote \"The Trial\"?",
+    "answer": "Franz Kafka",
+    "accept": [
+      "kafka",
+      "franz kafka"
+    ],
+    "choices": [
+      "Franz Kafka",
+      "Albert Camus",
+      "Jean-Paul Sartre",
+      "Thomas Mann"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "art-dante-alighieri",
+    "category": 3,
+    "prompt": "Who wrote \"The Divine Comedy\"?",
+    "answer": "Dante Alighieri",
+    "accept": [
+      "dante",
+      "dante alighieri"
+    ],
+    "choices": [
+      "Dante Alighieri",
+      "Petrarch",
+      "Boccaccio",
+      "Virgil"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "art-impression-sunrise",
+    "category": 3,
+    "prompt": "Which Monet painting gave Impressionism its name?",
+    "answer": "Impression, Sunrise",
+    "accept": [
+      "impression sunrise",
+      "sunrise"
+    ],
+    "choices": [
+      "Impression, Sunrise",
+      "Water Lilies",
+      "Luncheon on the Grass",
+      "Daybreak"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "art-cubism",
+    "category": 3,
+    "prompt": "Which art movement did Picasso and Braque found?",
+    "answer": "Cubism",
+    "accept": [
+      "cubism"
+    ],
+    "choices": [
+      "Cubism",
+      "Surrealism",
+      "Fauvism",
+      "Dadaism"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "art-francisco-de-goya",
+    "category": 3,
+    "prompt": "Who painted \"The Third of May 1808\"?",
+    "answer": "Francisco de Goya",
+    "accept": [
+      "goya",
+      "francisco de goya"
+    ],
+    "choices": [
+      "Francisco de Goya",
+      "Diego Velázquez",
+      "El Greco",
+      "Joaquín Sorolla"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "art-toledo",
+    "category": 3,
+    "prompt": "In which Spanish city did El Greco live and paint?",
+    "answer": "Toledo",
+    "accept": [
+      "toledo"
+    ],
+    "choices": [
+      "Toledo",
+      "Seville",
+      "Madrid",
+      "Granada"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "art-gustave-flaubert",
+    "category": 3,
+    "prompt": "Who wrote \"Madame Bovary\"?",
+    "answer": "Gustave Flaubert",
+    "accept": [
+      "flaubert",
+      "gustave flaubert"
+    ],
+    "choices": [
+      "Gustave Flaubert",
+      "Honoré de Balzac",
+      "Émile Zola",
+      "Stendhal"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "art-george-orwell",
+    "category": 3,
+    "prompt": "Who wrote the novel \"1984\"?",
+    "answer": "George Orwell",
+    "accept": [
+      "orwell",
+      "george orwell"
+    ],
+    "choices": [
+      "George Orwell",
+      "Aldous Huxley",
+      "Ray Bradbury",
+      "H. G. Wells"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "art-fyodor-dostoevsky",
+    "category": 3,
+    "prompt": "Who wrote \"Crime and Punishment\"?",
+    "answer": "Fyodor Dostoevsky",
+    "accept": [
+      "dostoevsky",
+      "fyodor dostoevsky"
+    ],
+    "choices": [
+      "Fyodor Dostoevsky",
+      "Leo Tolstoy",
+      "Anton Chekhov",
+      "Nikolai Gogol"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "art-gustav-klimt",
+    "category": 3,
+    "prompt": "Which Austrian painter created the golden painting \"The Kiss\"?",
+    "answer": "Gustav Klimt",
+    "accept": [
+      "klimt",
+      "gustav klimt"
+    ],
+    "choices": [
+      "Gustav Klimt",
+      "Egon Schiele",
+      "Edvard Munch",
+      "Wassily Kandinsky"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "art-athena",
+    "category": 3,
+    "prompt": "To which Greek goddess was the Parthenon dedicated?",
+    "answer": "Athena",
+    "accept": [
+      "athena"
+    ],
+    "choices": [
+      "Athena",
+      "Aphrodite",
+      "Hera",
+      "Artemis"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "art-auguste-rodin",
+    "category": 3,
+    "prompt": "Which French sculptor created \"The Thinker\"?",
+    "answer": "Auguste Rodin",
+    "accept": [
+      "rodin",
+      "auguste rodin"
+    ],
+    "choices": [
+      "Auguste Rodin",
+      "Camille Claudel",
+      "Bernini",
+      "Constantin Brâncuși"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "art-generation-27",
+    "category": 3,
+    "prompt": "To which literary generation did Federico García Lorca belong?",
+    "answer": "The Generation of '27",
+    "accept": [
+      "generation of 27",
+      "generation of '27"
+    ],
+    "choices": [
+      "The Generation of '27",
+      "The Generation of '98",
+      "The Generation of '36",
+      "Modernism"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "art-virgil",
+    "category": 3,
+    "prompt": "Which Roman poet guides Dante through Hell in \"The Divine Comedy\"?",
+    "answer": "Virgil",
+    "accept": [
+      "virgil"
+    ],
+    "choices": [
+      "Virgil",
+      "Homer",
+      "Ovid",
+      "Horace"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "art-sandro-botticelli",
+    "category": 3,
+    "prompt": "Who painted \"The Birth of Venus\"?",
+    "answer": "Sandro Botticelli",
+    "accept": [
+      "botticelli",
+      "sandro botticelli"
+    ],
+    "choices": [
+      "Sandro Botticelli",
+      "Raphael",
+      "Titian",
+      "Leonardo da Vinci"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "art-michelangelo",
+    "category": 3,
+    "prompt": "Who painted the ceiling of the Sistine Chapel?",
+    "answer": "Michelangelo",
+    "accept": [
+      "michelangelo"
+    ],
+    "choices": [
+      "Michelangelo",
+      "Raphael",
+      "Leonardo da Vinci",
+      "Botticelli"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "art-herman-melville",
+    "category": 3,
+    "prompt": "Who wrote \"Moby-Dick\"?",
+    "answer": "Herman Melville",
+    "accept": [
+      "melville",
+      "herman melville"
+    ],
+    "choices": [
+      "Herman Melville",
+      "Nathaniel Hawthorne",
+      "Mark Twain",
+      "Jack London"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "art-odysseus",
+    "category": 3,
+    "prompt": "Who is the hero of \"The Odyssey\"?",
+    "answer": "Odysseus",
+    "accept": [
+      "odysseus",
+      "ulysses"
+    ],
+    "choices": [
+      "Odysseus",
+      "Achilles",
+      "Hector",
+      "Agamemnon"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "art-leo-tolstoy",
+    "category": 3,
+    "prompt": "Who wrote \"War and Peace\"?",
+    "answer": "Leo Tolstoy",
+    "accept": [
+      "tolstoy",
+      "leo tolstoy"
+    ],
+    "choices": [
+      "Leo Tolstoy",
+      "Fyodor Dostoevsky",
+      "Ivan Turgenev",
+      "Alexander Pushkin"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sci-au",
+    "category": 4,
+    "prompt": "What is the chemical symbol for gold?",
+    "answer": "Au",
+    "accept": [
+      "au"
+    ],
+    "choices": [
+      "Au",
+      "Go",
+      "Gd",
+      "Ag"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sci-k",
+    "category": 4,
+    "prompt": "What is the chemical symbol for potassium?",
+    "answer": "K",
+    "accept": [
+      "k"
+    ],
+    "choices": [
+      "K",
+      "P",
+      "Po",
+      "Pt"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "sci-300-000-km-s",
+    "category": 4,
+    "prompt": "What is roughly the speed of light in a vacuum?",
+    "answer": "300,000 km/s",
+    "accept": [
+      "300000",
+      "three hundred thousand"
+    ],
+    "choices": [
+      "300,000 km/s",
+      "150,000 km/s",
+      "30,000 km/s",
+      "1,000,000 km/s"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sci-femur",
+    "category": 4,
+    "prompt": "What is the longest bone in the human body?",
+    "answer": "The femur",
+    "accept": [
+      "femur"
+    ],
+    "choices": [
+      "The femur",
+      "The tibia",
+      "The humerus",
+      "The spine"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sci-mercury",
+    "category": 4,
+    "prompt": "Which is the closest planet to the Sun?",
+    "answer": "Mercury",
+    "accept": [
+      "mercury"
+    ],
+    "choices": [
+      "Mercury",
+      "Venus",
+      "Mars",
+      "Earth"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sci-venus",
+    "category": 4,
+    "prompt": "Which is the hottest planet in the solar system?",
+    "answer": "Venus",
+    "accept": [
+      "venus"
+    ],
+    "choices": [
+      "Venus",
+      "Mercury",
+      "Mars",
+      "Jupiter"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "sci-nitrogen",
+    "category": 4,
+    "prompt": "What is the most abundant gas in Earth's atmosphere?",
+    "answer": "Nitrogen",
+    "accept": [
+      "nitrogen"
+    ],
+    "choices": [
+      "Nitrogen",
+      "Oxygen",
+      "Carbon dioxide",
+      "Argon"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "sci-dmitri-mendeleev",
+    "category": 4,
+    "prompt": "Who created the periodic table of the elements?",
+    "answer": "Dmitri Mendeleev",
+    "accept": [
+      "mendeleev",
+      "dmitri mendeleev"
+    ],
+    "choices": [
+      "Dmitri Mendeleev",
+      "Marie Curie",
+      "Niels Bohr",
+      "Antoine Lavoisier"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sci-alexander-fleming",
+    "category": 4,
+    "prompt": "Who discovered penicillin?",
+    "answer": "Alexander Fleming",
+    "accept": [
+      "fleming",
+      "alexander fleming"
+    ],
+    "choices": [
+      "Alexander Fleming",
+      "Louis Pasteur",
+      "Robert Koch",
+      "Joseph Lister"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sci-watson-crick",
+    "category": 4,
+    "prompt": "Which two scientists described the double-helix structure of DNA?",
+    "answer": "Watson and Crick",
+    "accept": [
+      "watson and crick"
+    ],
+    "choices": [
+      "Watson and Crick",
+      "Mendel and Morgan",
+      "Darwin and Wallace",
+      "Pasteur and Koch"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "sci-marie-curie",
+    "category": 4,
+    "prompt": "Which scientist won two Nobel Prizes for her work on radioactivity?",
+    "answer": "Marie Curie",
+    "accept": [
+      "marie curie",
+      "curie"
+    ],
+    "choices": [
+      "Marie Curie",
+      "Lise Meitner",
+      "Rosalind Franklin",
+      "Ada Lovelace"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sci-four",
+    "category": 4,
+    "prompt": "How many blood groups are there in the ABO system?",
+    "answer": "Four",
+    "accept": [
+      "4"
+    ],
+    "choices": [
+      "Four",
+      "Three",
+      "Two",
+      "Eight"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sci-negative",
+    "category": 4,
+    "prompt": "What electric charge does the electron carry?",
+    "answer": "Negative",
+    "accept": [
+      "negative"
+    ],
+    "choices": [
+      "Negative",
+      "Positive",
+      "Neutral",
+      "Variable"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sci-material-medium",
+    "category": 4,
+    "prompt": "What does sound need to travel that light does not?",
+    "answer": "A material medium",
+    "accept": [
+      "a material medium",
+      "material medium"
+    ],
+    "choices": [
+      "A material medium",
+      "A heat source",
+      "A magnetic field",
+      "Gravity"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sci-4-5-billion-years",
+    "category": 4,
+    "prompt": "Roughly how old is the Earth?",
+    "answer": "4.5 billion years",
+    "accept": [
+      "4500 million",
+      "4.5 billion"
+    ],
+    "choices": [
+      "4.5 billion years",
+      "1 billion years",
+      "500 million years",
+      "13.8 billion years"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sci-oxygen",
+    "category": 4,
+    "prompt": "Which gas do plants release during photosynthesis?",
+    "answer": "Oxygen",
+    "accept": [
+      "oxygen"
+    ],
+    "choices": [
+      "Oxygen",
+      "Carbon dioxide",
+      "Nitrogen",
+      "Hydrogen"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sci-blue-whale",
+    "category": 4,
+    "prompt": "What is the largest animal that has ever existed?",
+    "answer": "The blue whale",
+    "accept": [
+      "blue whale"
+    ],
+    "choices": [
+      "The blue whale",
+      "The African elephant",
+      "The diplodocus",
+      "The whale shark"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sci-neuron",
+    "category": 4,
+    "prompt": "What is the basic cell of the nervous system called?",
+    "answer": "The neuron",
+    "accept": [
+      "neuron"
+    ],
+    "choices": [
+      "The neuron",
+      "The dendrite",
+      "The glial cell",
+      "The axon"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sci-richter-scale",
+    "category": 4,
+    "prompt": "Which scale measures the magnitude of earthquakes?",
+    "answer": "The Richter scale",
+    "accept": [
+      "richter",
+      "richter scale"
+    ],
+    "choices": [
+      "The Richter scale",
+      "The Beaufort scale",
+      "The Mohs scale",
+      "The Kelvin scale"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sci-diamond",
+    "category": 4,
+    "prompt": "On the Mohs scale, what is the hardest natural mineral?",
+    "answer": "Diamond",
+    "accept": [
+      "diamond"
+    ],
+    "choices": [
+      "Diamond",
+      "Quartz",
+      "Corundum",
+      "Graphite"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sports-16",
+    "category": 5,
+    "prompt": "How many pieces does each player start a chess game with?",
+    "answer": "16",
+    "accept": [
+      "sixteen"
+    ],
+    "choices": [
+      "16",
+      "8",
+      "12",
+      "20"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sports-42-195-km",
+    "category": 5,
+    "prompt": "What is the exact distance of a marathon?",
+    "answer": "42.195 km",
+    "accept": [
+      "42195",
+      "42.195"
+    ],
+    "choices": [
+      "42.195 km",
+      "42 km",
+      "40 km",
+      "21 km"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sports-uruguay",
+    "category": 5,
+    "prompt": "Which country won the first football World Cup, in 1930?",
+    "answer": "Uruguay",
+    "accept": [
+      "uruguay"
+    ],
+    "choices": [
+      "Uruguay",
+      "Brazil",
+      "Argentina",
+      "Italy"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "sports-uruguay-which-country-was-first-football",
+    "category": 5,
+    "prompt": "In which country was the first football World Cup held?",
+    "answer": "Uruguay",
+    "accept": [
+      "uruguay"
+    ],
+    "choices": [
+      "Uruguay",
+      "Brazil",
+      "Italy",
+      "France"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sports-four",
+    "category": 5,
+    "prompt": "How many tournaments make up the tennis Grand Slam?",
+    "answer": "Four",
+    "accept": [
+      "4"
+    ],
+    "choices": [
+      "Four",
+      "Three",
+      "Five",
+      "Six"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sports-18",
+    "category": 5,
+    "prompt": "How many holes does a regulation golf course have?",
+    "answer": "18",
+    "accept": [
+      "eighteen"
+    ],
+    "choices": [
+      "18",
+      "9",
+      "12",
+      "24"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sports-15",
+    "category": 5,
+    "prompt": "How many players per team are there in rugby union?",
+    "answer": "15",
+    "accept": [
+      "fifteen"
+    ],
+    "choices": [
+      "15",
+      "13",
+      "11",
+      "7"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sports-3-05-metres",
+    "category": 5,
+    "prompt": "How high is the basketball hoop?",
+    "answer": "3.05 metres",
+    "accept": [
+      "3.05",
+      "305"
+    ],
+    "choices": [
+      "3.05 metres",
+      "2.5 metres",
+      "3.5 metres",
+      "4 metres"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "sports-italy",
+    "category": 5,
+    "prompt": "In which country is the Giro, one of cycling's three grand tours, held?",
+    "answer": "Italy",
+    "accept": [
+      "italy"
+    ],
+    "choices": [
+      "Italy",
+      "France",
+      "Spain",
+      "Belgium"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sports-olympia",
+    "category": 5,
+    "prompt": "In which ancient Greek city were the Olympic Games held?",
+    "answer": "Olympia",
+    "accept": [
+      "olympia"
+    ],
+    "choices": [
+      "Olympia",
+      "Athens",
+      "Sparta",
+      "Delphi"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "sports-l-shape",
+    "category": 5,
+    "prompt": "How does the knight move in chess?",
+    "answer": "In an L-shape",
+    "accept": [
+      "l",
+      "l-shape",
+      "l shape"
+    ],
+    "choices": [
+      "In an L-shape",
+      "Diagonally",
+      "In a straight line",
+      "In a zigzag"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sports-six",
+    "category": 5,
+    "prompt": "How many players per team are on court in volleyball?",
+    "answer": "Six",
+    "accept": [
+      "6"
+    ],
+    "choices": [
+      "Six",
+      "Five",
+      "Seven",
+      "Four"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sports-11",
+    "category": 5,
+    "prompt": "How many players per team are on the field in American football?",
+    "answer": "11",
+    "accept": [
+      "eleven"
+    ],
+    "choices": [
+      "11",
+      "12",
+      "9",
+      "10"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sports-love",
+    "category": 5,
+    "prompt": "In tennis scoring, what is the term for \"zero\"?",
+    "answer": "Love",
+    "accept": [
+      "love"
+    ],
+    "choices": [
+      "Love",
+      "Deuce",
+      "Ace",
+      "Net"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sports-four-how-many-strokes-are-there",
+    "category": 5,
+    "prompt": "How many strokes are there in competitive swimming?",
+    "answer": "Four",
+    "accept": [
+      "4"
+    ],
+    "choices": [
+      "Four",
+      "Three",
+      "Five",
+      "Six"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sports-12",
+    "category": 5,
+    "prompt": "How many rounds at most does a world-title boxing bout have?",
+    "answer": "12",
+    "accept": [
+      "twelve"
+    ],
+    "choices": [
+      "12",
+      "10",
+      "15",
+      "8"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "sports-180",
+    "category": 5,
+    "prompt": "What is the highest possible score with three darts?",
+    "answer": "180",
+    "accept": [
+      "one hundred eighty"
+    ],
+    "choices": [
+      "180",
+      "150",
+      "120",
+      "200"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sports-battle-marathon",
+    "category": 5,
+    "prompt": "From which ancient Greek battle does the marathon take its name?",
+    "answer": "The Battle of Marathon",
+    "accept": [
+      "marathon",
+      "battle of marathon"
+    ],
+    "choices": [
+      "The Battle of Marathon",
+      "The Battle of Salamis",
+      "Thermopylae",
+      "The Battle of Plataea"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sports-16-how-many-balls-are-used",
+    "category": 5,
+    "prompt": "How many balls are used in pool, including the cue ball?",
+    "answer": "16",
+    "accept": [
+      "sixteen"
+    ],
+    "choices": [
+      "16",
+      "15",
+      "9",
+      "8"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "sports-foil-epee-sabre",
+    "category": 5,
+    "prompt": "What are the three weapons of fencing?",
+    "answer": "Foil, épée and sabre",
+    "accept": [
+      "foil epee and sabre",
+      "foil epee sabre"
+    ],
+    "choices": [
+      "Foil, épée and sabre",
+      "Foil, lance and sabre",
+      "Épée, dagger and foil",
+      "Sabre, épée and staff"
+    ],
+    "difficulty": 2
+  }
+]

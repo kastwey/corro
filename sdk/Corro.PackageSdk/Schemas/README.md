@@ -11,7 +11,7 @@ These JSON Schema 2020-12 documents provide editor completion and catch basic sh
 `corro-package new` copies the schemas locally and writes family-specific VS Code associations using schema fragments such as `#/$defs/journeyDeck`. This avoids applying journey fields to an assembly deck even though both files are named `cards.json`.
 
 For every card object, the `id` completion/hover documents the optional sibling-art convention:
-`cards/<id>.svg`, fixed `viewBox="0 0 64 64"`, path geometry only. Art is intentionally **not** an
+`assets/cards/<id>.svg`, fixed `viewBox="0 0 64 64"`, path geometry only. Art is intentionally **not** an
 `svg` JSON property, so `additionalProperties: false` flags that mistake in the editor. The actual
 SVG file is checked by the production validator; JSON Schema cannot validate sibling-file contents.
 The optional `artColor` property is the one visual field that does belong in JSON: completion

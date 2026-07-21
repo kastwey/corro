@@ -1,0 +1,53 @@
+{
+  "format": "corro/v1",
+  "gameType": "trivia",
+  "engineVersion": "^1.0",
+  "id": "wheel-of-wits",
+  "name": {
+    "es": "La Rueda del Saber",
+    "en": "The Wheel of Wits"
+  },
+  "author": "kastwey",
+  "version": "0.1.0",
+  "locales": [
+    "en",
+    "es"
+  ],
+  "players": {
+    "min": 2,
+    "max": 6
+  },
+  "triviaRules": {
+    "answerMode": "judge",
+    "judgeMode": "rotating",
+    "exactFinish": true,
+    "centerWild": true,
+    "answerSeconds": 0
+  },
+  "tokens": [
+    {
+      "id": "compass",
+      "nameKey": "tokens.compass"
+    },
+    {
+      "id": "book",
+      "nameKey": "tokens.book"
+    },
+    {
+      "id": "brush",
+      "nameKey": "tokens.brush"
+    },
+    {
+      "id": "atom",
+      "nameKey": "tokens.atom"
+    },
+    {
+      "id": "ball",
+      "nameKey": "tokens.ball"
+    },
+    {
+      "id": "mask",
+      "nameKey": "tokens.mask"
+    }
+  ]
+}

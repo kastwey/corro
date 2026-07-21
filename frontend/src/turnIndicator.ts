@@ -34,7 +34,7 @@ class TurnIndicator {
 		this.container.id = 'turn-indicator';
 		this.container.className = 'turn-indicator';
 		// Visual-only: the announcer owns turn announcements so the screen reader
-		// isn't spammed with "Turno actual: X" on every state update.
+		// is not spammed with "Current turn: X" on every state update.
 		this.container.setAttribute('aria-hidden', 'true');
 
 		// Insert directly above the board grid (inside its frame).

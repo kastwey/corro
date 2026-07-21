@@ -6,7 +6,7 @@ namespace CorroServer.Tests;
 
 /// <summary>
 /// The CorroPackageLoader reads a .corro package (manifest + board + cards) into a validated
-/// GameDefinition. These tests load the real shipped "Imperio Galáctico" package and pin the
+/// GameDefinition. These tests load the real shipped "Galactic Empire" package and pin the
 /// validation rules, so a malformed board can never reach the game loop.
 /// </summary>
 public class CorroPackageLoaderTests
@@ -14,12 +14,12 @@ public class CorroPackageLoaderTests
 	[Fact]
 	public async Task LoadAsync_reads_the_shipped_Galactic_package()
 	{
-			 var def = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("imperio-galactico"));
+			 var def = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("galactic-empire"));
 
 		// Identity + currency.
-			 Assert.Equal("imperio-galactico", def.Manifest.Id);
+			 Assert.Equal("galactic-empire", def.Manifest.Id);
 		Assert.Equal("₡", def.Manifest.Currency.Symbol);
-		Assert.Equal("IMPERIO", def.Manifest.CenterBrand);
+			Assert.Equal("EMPIRE", def.Manifest.CenterBrand);
 		Assert.Equal("terminology.holding", def.Manifest.Terminology["holding"]);
 		Assert.Equal("Agujero Negro", def.I18n["es"]["terminology.holding"]);
 
@@ -48,27 +48,52 @@ public class CorroPackageLoaderTests
 		Assert.Equal("0", def.Cards.Single(c => c.Id == "f1").Effect.Target);
 		Assert.Equal("nearest:transit", def.Cards.Single(c => c.Id == "f3").Effect.Target);
 
-		// Token icons live as files (tokens/<id>.svg); the loader inlines their sanitized path-data.
+		// Token icons live as files (assets/tokens/<id>.svg); the loader inlines their sanitized path-data.
 		var ufo = def.Manifest.Tokens.Single(t => t.Id == "ufo");
 		Assert.False(string.IsNullOrEmpty(ufo.Svg));
 		Assert.DoesNotContain('<', ufo.Svg!); // path-data only — no markup pulled from the file
 	}
 
+	[Theory]
+	[InlineData("cards")]
+	[InlineData("tokens")]
+	[InlineData("sounds")]
+	public async Task LoadAsync_rejects_obsolete_root_asset_folders(string assetKind)
+	{
+		var dir = CopyPackage("the-mine");
+		try
+		{
+			Directory.Move(
+				Path.Combine(dir, "assets", assetKind),
+				Path.Combine(dir, assetKind));
+
+			var error = await Assert.ThrowsAsync<InvalidOperationException>(
+				() => new CorroPackageLoader().LoadAsync(dir));
+
+			Assert.Contains($"'{assetKind}/'", error.Message);
+			Assert.Contains($"'assets/{assetKind}/'", error.Message);
+		}
+		finally
+		{
+			CorroPackageLoader.DeleteExtracted(dir);
+		}
+	}
+
 	[Fact]
 	public async Task LoadAsync_resolves_optional_card_art_and_leaves_missing_art_for_the_neutral_fallback()
 	{
-		var dir = CopyPackage("la-mina");
+		var dir = CopyPackage("the-mine");
 		try
 		{
-			Directory.CreateDirectory(Path.Combine(dir, "cards"));
-			File.Delete(Path.Combine(dir, "cards", "salir-pozo.svg"));
-			File.WriteAllText(Path.Combine(dir, "cards", "grisu.svg"),
+			Directory.CreateDirectory(Path.Combine(dir, "assets", "cards"));
+			File.Delete(Path.Combine(dir, "assets", "cards", "leave-shaft.svg"));
+			File.WriteAllText(Path.Combine(dir, "assets", "cards", "firedamp.svg"),
 				"<svg viewBox=\"0 0 64 64\"><path d=\"M1 1h62v62z\"/><script>alert(1)</script></svg>");
 			var definition = await new CorroPackageLoader().LoadAsync(dir);
-			var illustrated = definition.ExplodingDeck!.Single(card => card.Id == "grisu");
+			var illustrated = definition.ExplodingDeck!.Single(card => card.Id == "firedamp");
 			Assert.Equal("M1 1h62v62z", illustrated.Svg);
 			Assert.DoesNotContain('<', illustrated.Svg!);
-			Assert.Null(definition.ExplodingDeck!.Single(card => card.Id == "salir-pozo").Svg);
+			Assert.Null(definition.ExplodingDeck!.Single(card => card.Id == "leave-shaft").Svg);
 		}
 		finally
 		{
@@ -79,19 +104,19 @@ public class CorroPackageLoaderTests
 	[Fact]
 	public async Task LoadAsync_rejects_orphaned_or_markup_only_card_art_instead_of_silent_fallback()
 	{
-		var orphaned = CopyPackage("la-mina");
-		var malformed = CopyPackage("la-mina");
+		var orphaned = CopyPackage("the-mine");
+		var malformed = CopyPackage("the-mine");
 		try
 		{
-			Directory.CreateDirectory(Path.Combine(orphaned, "cards"));
-			File.WriteAllText(Path.Combine(orphaned, "cards", "typo.svg"),
+			Directory.CreateDirectory(Path.Combine(orphaned, "assets", "cards"));
+			File.WriteAllText(Path.Combine(orphaned, "assets", "cards", "typo.svg"),
 				"<svg viewBox=\"0 0 64 64\"><path d=\"M0 0h10v10z\"/></svg>");
 			var orphan = await Assert.ThrowsAsync<InvalidOperationException>(
 				() => new CorroPackageLoader().LoadAsync(orphaned));
 			Assert.Contains("no matching card id", orphan.Message);
 
-			Directory.CreateDirectory(Path.Combine(malformed, "cards"));
-			File.WriteAllText(Path.Combine(malformed, "cards", "grisu.svg"),
+			Directory.CreateDirectory(Path.Combine(malformed, "assets", "cards"));
+			File.WriteAllText(Path.Combine(malformed, "assets", "cards", "firedamp.svg"),
 				"<svg viewBox=\"0 0 64 64\"><script d=\"M0 0h64v64z\">alert(1)</script></svg>");
 			var noPath = await Assert.ThrowsAsync<InvalidOperationException>(
 				() => new CorroPackageLoader().LoadAsync(malformed));
@@ -107,11 +132,11 @@ public class CorroPackageLoaderTests
 	[Fact]
 	public async Task LoadAsync_requires_the_fixed_64_by_64_card_art_canvas()
 	{
-		var dir = CopyPackage("la-mina");
+		var dir = CopyPackage("the-mine");
 		try
 		{
-			Directory.CreateDirectory(Path.Combine(dir, "cards"));
-			File.WriteAllText(Path.Combine(dir, "cards", "grisu.svg"),
+			Directory.CreateDirectory(Path.Combine(dir, "assets", "cards"));
+			File.WriteAllText(Path.Combine(dir, "assets", "cards", "firedamp.svg"),
 				"<svg viewBox=\"0 0 24 24\"><path d=\"M1 1h22v22z\"/></svg>");
 			var ex = await Assert.ThrowsAsync<InvalidOperationException>(
 				() => new CorroPackageLoader().LoadAsync(dir));
@@ -126,20 +151,20 @@ public class CorroPackageLoaderTests
 	[Fact]
 	public async Task LoadAsync_rejects_inline_svg_and_points_to_the_file_convention()
 	{
-		var dir = CopyPackage("la-mina");
+		var dir = CopyPackage("the-mine");
 		try
 		{
 			var cardsPath = Path.Combine(dir, "cards.json");
 			var cards = File.ReadAllText(cardsPath).Replace(
-				"\"nameKey\": \"cards.grisu\"",
-				"\"svg\": \"M1 1h62v62z\", \"nameKey\": \"cards.grisu\"",
+				"\"nameKey\": \"cards.firedamp\"",
+				"\"svg\": \"M1 1h62v62z\", \"nameKey\": \"cards.firedamp\"",
 				StringComparison.Ordinal);
 			File.WriteAllText(cardsPath, cards);
 
 			var ex = await Assert.ThrowsAsync<InvalidOperationException>(
 				() => new CorroPackageLoader().LoadAsync(dir));
 			Assert.Contains("remove the svg field", ex.Message);
-			Assert.Contains("cards/grisu.svg", ex.Message);
+			Assert.Contains("assets/cards/firedamp.svg", ex.Message);
 		}
 		finally
 		{
@@ -150,7 +175,7 @@ public class CorroPackageLoaderTests
 	[Fact]
 	public async Task LoadAsync_rejects_an_unsafe_card_art_color()
 	{
-		var dir = CopyPackage("la-mina");
+		var dir = CopyPackage("the-mine");
 		try
 		{
 			var cardsPath = Path.Combine(dir, "cards.json");
@@ -171,12 +196,12 @@ public class CorroPackageLoaderTests
 	}
 
 	[Theory]
-	[InlineData("cuatro-colores", 54)]
-	[InlineData("gran-tapeo", 12)]
-	[InlineData("imperio-galactico", 32)]
-	[InlineData("la-gran-ruta", 19)]
-	[InlineData("la-mina", 13)]
-	[InlineData("taller-galactico", 20)]
+	[InlineData("four-colours", 54)]
+	[InlineData("grand-tapas-feast", 12)]
+	[InlineData("galactic-empire", 32)]
+	[InlineData("great-route", 19)]
+	[InlineData("the-mine", 13)]
+	[InlineData("galactic-workshop", 20)]
 	public async Task Shipped_card_packages_have_complete_credited_art(string packageId, int expectedCards)
 	{
 		var packagePath = CorroTestPaths.PackageDir(packageId);
@@ -189,18 +214,18 @@ public class CorroPackageLoaderTests
 			Assert.False(string.IsNullOrWhiteSpace(card.Svg));
 			Assert.Matches("^#[0-9A-Fa-f]{6}$", card.ArtColor);
 		});
-		Assert.Contains("cards/*.svg", await File.ReadAllTextAsync(Path.Combine(packagePath, "CREDITS.md")));
+		Assert.Contains("assets/cards/*.svg", await File.ReadAllTextAsync(Path.Combine(packagePath, "CREDITS.md")));
 	}
 
 	[Fact]
 	public async Task LoadAsync_bounds_card_art_that_will_ride_in_game_documents()
 	{
-		var dir = CopyPackage("la-mina");
+		var dir = CopyPackage("the-mine");
 		try
 		{
-			Directory.CreateDirectory(Path.Combine(dir, "cards"));
+			Directory.CreateDirectory(Path.Combine(dir, "assets", "cards"));
 			var oversized = "M0 0 " + new string('L', CorroPackageLoader.MaxCardSvgPathChars);
-			File.WriteAllText(Path.Combine(dir, "cards", "grisu.svg"),
+			File.WriteAllText(Path.Combine(dir, "assets", "cards", "firedamp.svg"),
 				$"<svg viewBox=\"0 0 64 64\"><path d=\"{oversized}\"/></svg>");
 			var ex = await Assert.ThrowsAsync<InvalidOperationException>(
 				() => new CorroPackageLoader().LoadAsync(dir));

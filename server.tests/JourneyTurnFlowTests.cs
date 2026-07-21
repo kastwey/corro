@@ -16,7 +16,7 @@ public class JourneyTurnFlowTests
 {
 	private static List<JourneyCardDef> Deck() => new()
 	{
-		new() { Id = "d25", Type = "distance", Value = 25, Count = 10, NameKey = "cards.d25" },
+		new() { Id = "distance-25", Type = "distance", Value = 25, Count = 10, NameKey = "cards.distance_25" },
 		new() { Id = "stop", Type = "attack", Kind = "stop", HazardClass = "stopper", Count = 3, NameKey = "cards.stop" },
 		new() { Id = "go", Type = "remedy", Kind = "stop", Count = 6, NameKey = "cards.go" },
 		new() { Id = "gas", Type = "remedy", Kind = "stop", Count = 2, NameKey = "cards.gas", PlayedKey = "cards.gas_played" },
@@ -99,7 +99,7 @@ public class JourneyTurnFlowTests
 			Members = new() { new() { PlayerId = "B" }, new() { PlayerId = "D" } },
 		});
 		journey.Seats[1].Members[0].Hand.Add(Inst("limit"));
-		journey.Seats[1].Members[1].Hand.Add(Inst("d25")); // keeps the hand from ending
+		journey.Seats[1].Members[1].Hand.Add(Inst("distance-25")); // keeps the hand from ending
 		journey.HasDrawn = true;
 		JourneyRulebook.SyncCounts(journey);
 
@@ -140,7 +140,7 @@ public class JourneyTurnFlowTests
 	public async Task Draw_tells_everyone_THAT_and_only_you_WHAT()
 	{
 		var (state, ctx) = Game(hands: new[] { ("A", new[] { "go" }), ("B", new[] { "go" }) });
-		state.Journey!.DrawPile.Add(Inst("d25", 9));
+		state.Journey!.DrawPile.Add(Inst("distance-25", 9));
 		JourneyRulebook.SyncCounts(state.Journey);
 
 		var response = await new JourneyDrawHandler().HandleAsync(
@@ -155,7 +155,7 @@ public class JourneyTurnFlowTests
 		Assert.False(publicLine.Vars.ContainsKey("card"));
 		var mine = dispatches.Single(d => d.Key == "game.journey_drew_self");
 		Assert.Equal("A", mine.Vars["actorId"]); // own draw is voiced before the hand repaint
-		var identity = dispatches.Single(d => d.Key == "cards.d25");
+		var identity = dispatches.Single(d => d.Key == "cards.distance_25");
 		Assert.Equal(AnnouncementAudience.Player, identity.Audience);
 		Assert.Equal("A", identity.PlayerId);
 
@@ -168,7 +168,7 @@ public class JourneyTurnFlowTests
 	public async Task Playing_before_drawing_is_refused_while_the_pile_has_cards()
 	{
 		var (state, ctx) = Game(hands: new[] { ("A", new[] { "go" }), ("B", System.Array.Empty<string>()) });
-		state.Journey!.DrawPile.Add(Inst("d25", 9));
+		state.Journey!.DrawPile.Add(Inst("distance-25", 9));
 		JourneyRulebook.SyncCounts(state.Journey);
 
 		var response = await new JourneyPlayHandler(new CorroRulebook()).HandleAsync(
@@ -255,11 +255,11 @@ public class JourneyTurnFlowTests
 	[Fact]
 	public async Task An_illegal_play_returns_the_reason_key()
 	{
-		var (state, ctx) = Game(hands: new[] { ("A", new[] { "d25" }), ("B", new[] { "go" }) });
+		var (state, ctx) = Game(hands: new[] { ("A", new[] { "distance-25" }), ("B", new[] { "go" }) });
 		state.Journey!.HasDrawn = true; // still stopped: distance is illegal
 
 		var response = await new JourneyPlayHandler(new CorroRulebook()).HandleAsync(
-			new JourneyPlayCommand { PlayerId = "A", InstanceId = "d25#0" }, ctx);
+			new JourneyPlayCommand { PlayerId = "A", InstanceId = "distance-25#0" }, ctx);
 
 		var error = Assert.IsType<ErrorResponse>(response);
 		Assert.Equal("JOURNEY_ILLEGAL_PLAY", error.Code);
@@ -349,13 +349,13 @@ public class JourneyTurnFlowTests
 	{
 		var (state, ctx) = Game(
 			rules: new JourneyRulesConfig { GoalKm = 25, TargetScore = 5000 },
-			hands: new[] { ("A", new[] { "d25" }), ("B", new[] { "go" }) });
+			hands: new[] { ("A", new[] { "distance-25" }), ("B", new[] { "go" }) });
 		var journey = state.Journey!;
 		journey.HasDrawn = true;
 		journey.Seats[0].Hazards.Clear(); // rolling: the 25 completes the 25 km goal
 
 		var response = await new JourneyPlayHandler(new CorroRulebook()).HandleAsync(
-			new JourneyPlayCommand { PlayerId = "A", InstanceId = "d25#0" }, ctx);
+			new JourneyPlayCommand { PlayerId = "A", InstanceId = "distance-25#0" }, ctx);
 
 		var action = Assert.IsType<JourneyActionResponse>(response);
 		Assert.True(action.HandEnded);
@@ -376,13 +376,13 @@ public class JourneyTurnFlowTests
 	{
 		var (state, ctx) = Game(
 			rules: new JourneyRulesConfig { GoalKm = 25, TargetScore = 100 },
-			hands: new[] { ("A", new[] { "d25" }), ("B", new[] { "go" }) });
+			hands: new[] { ("A", new[] { "distance-25" }), ("B", new[] { "go" }) });
 		var journey = state.Journey!;
 		journey.HasDrawn = true;
 		journey.Seats[0].Hazards.Clear();
 
 		await new JourneyPlayHandler(new CorroRulebook()).HandleAsync(
-			new JourneyPlayCommand { PlayerId = "A", InstanceId = "d25#0" }, ctx);
+			new JourneyPlayCommand { PlayerId = "A", InstanceId = "distance-25#0" }, ctx);
 
 		Assert.True(state.IsGameOver);
 		Assert.Equal("A", state.WinnerId);
@@ -396,12 +396,12 @@ public class JourneyTurnFlowTests
 	{
 		var (state, ctx) = Game(
 			rules: new JourneyRulesConfig { GoalKm = 25, TargetScore = 0 },
-			hands: new[] { ("A", new[] { "d25" }), ("B", new[] { "go" }) });
+			hands: new[] { ("A", new[] { "distance-25" }), ("B", new[] { "go" }) });
 		state.Journey!.HasDrawn = true;
 		state.Journey.Seats[0].Hazards.Clear();
 
 		await new JourneyPlayHandler(new CorroRulebook()).HandleAsync(
-			new JourneyPlayCommand { PlayerId = "A", InstanceId = "d25#0" }, ctx);
+			new JourneyPlayCommand { PlayerId = "A", InstanceId = "distance-25#0" }, ctx);
 
 		Assert.True(state.IsGameOver);
 		Assert.Equal("A", state.WinnerId);

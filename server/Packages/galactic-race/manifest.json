@@ -1,0 +1,47 @@
+{
+  "format": "corro/v1",
+  "gameType": "race",
+  "engineVersion": "^1.0",
+  "id": "galactic-race",
+  "name": {
+    "es": "Carrera Galáctica",
+    "en": "Galactic Race"
+  },
+  "author": "kastwey",
+  "version": "0.1.0",
+  "locales": [
+    "en",
+    "es"
+  ],
+  "players": {
+    "min": 2,
+    "max": 4
+  },
+  "raceRules": {
+    "exitOn": 5,
+    "extraRollOn": 6,
+    "threeSixesPenalty": true,
+    "captureBonus": 20,
+    "goalBonus": 10,
+    "sixWorthSevenWhenNoneHome": true,
+    "barriers": true
+  },
+  "tokens": [
+    {
+      "id": "spaceship",
+      "nameKey": "tokens.spaceship"
+    },
+    {
+      "id": "probe",
+      "nameKey": "tokens.probe"
+    },
+    {
+      "id": "comet",
+      "nameKey": "tokens.comet"
+    },
+    {
+      "id": "satellite",
+      "nameKey": "tokens.satellite"
+    }
+  ]
+}

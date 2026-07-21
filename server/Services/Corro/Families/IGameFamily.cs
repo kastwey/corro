@@ -65,7 +65,7 @@ public interface IGameFamily
 	GameState ProjectFor(GameState state, string? playerId) => state;
 
 	/// <summary>
-	/// The spoken line when a player leaves the game for good (the "abandonar partida"
+	/// The spoken line when a player leaves the game for good (the "leave game"
 	/// flow). Only the property family has an estate to forfeit — its override keeps the
 	/// bankruptcy wording; everywhere else leaving is a plain retirement.
 	/// </summary>
@@ -92,7 +92,7 @@ public sealed record FamilyStartContext
 	public required GameDefinition Definition { get; init; }
 
 	/// <summary>Language used to resolve server-side square names (property family).</summary>
-	public string Lang { get; init; } = "es";
+	public string Lang { get; init; } = "en";
 
 	/// <summary>The lobby's customized settings; null means the package's own defaults.</summary>
 	public GameSettings? Settings { get; init; }

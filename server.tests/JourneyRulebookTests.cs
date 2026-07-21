@@ -16,8 +16,8 @@ public class JourneyRulebookTests
 	// stopper + limiter attacks, their remedies, and two immunities (one multi-shield).
 	private static List<JourneyCardDef> Deck() => new()
 	{
-		new() { Id = "d25", Type = "distance", Value = 25, Count = 6, NameKey = "cards.d25" },
-		new() { Id = "d200", Type = "distance", Value = 200, Count = 4, Premium = true, MaxPlaysPerHand = 2, NameKey = "cards.d200" },
+		new() { Id = "distance-25", Type = "distance", Value = 25, Count = 6, NameKey = "cards.distance_25" },
+		new() { Id = "distance-200", Type = "distance", Value = 200, Count = 4, Premium = true, MaxPlaysPerHand = 2, NameKey = "cards.distance_200" },
 		new() { Id = "stop", Type = "attack", Kind = "stop", HazardClass = "stopper", Count = 3, NameKey = "cards.stop" },
 		new() { Id = "flat", Type = "attack", Kind = "flat", HazardClass = "stopper", Count = 2, NameKey = "cards.flat" },
 		new() { Id = "limit", Type = "attack", Kind = "speedLimit", HazardClass = "limiter", Count = 2, NameKey = "cards.limit" },
@@ -25,7 +25,7 @@ public class JourneyRulebookTests
 		new() { Id = "spare", Type = "remedy", Kind = "flat", Count = 2, NameKey = "cards.spare" },
 		new() { Id = "endlimit", Type = "remedy", Kind = "speedLimit", Count = 2, NameKey = "cards.endlimit" },
 		new() { Id = "priority", Type = "immunity", ShieldsKinds = new() { "stop", "speedLimit" }, NameKey = "cards.priority" },
-		new() { Id = "solid", Type = "immunity", Kind = "flat", NameKey = "cards.solid" },
+		new() { Id = "solid", Type = "immunity", Kind = "flat", NameKey = "cards.sunid" },
 	};
 
 	private static readonly IReadOnlyDictionary<string, JourneyCardDef> Cat = JourneyRulebook.Catalog(Deck());
@@ -106,17 +106,17 @@ public class JourneyRulebookTests
 	public void A_member_plays_their_OWN_cards_onto_the_shared_seat_and_cannot_attack_their_partner()
 	{
 		var us = TeamSeat("A", "C");
-		us.Members[1].Hand.Add(Inst("d25"));  // C holds the 25…
+		us.Members[1].Hand.Add(Inst("distance-25"));  // C holds the 25…
 		us.Members[1].Hand.Add(Inst("stop")); // …and the attack
 		var them = TeamSeat("B", "D");
 		var state = Game(us, them);
 
 		// C's card is not in A's hand: partners never play each other's cards.
 		Assert.Equal("game.journey_card_not_in_hand",
-			JourneyRulebook.Play(state, "A", "d25#0", null, Rules(), Cat).ReasonKey);
+			JourneyRulebook.Play(state, "A", "distance-25#0", null, Rules(), Cat).ReasonKey);
 
 		// C plays it: the kilometres land on the SHARED seat.
-		Assert.True(JourneyRulebook.Play(state, "C", "d25#0", null, Rules(), Cat).Ok);
+		Assert.True(JourneyRulebook.Play(state, "C", "distance-25#0", null, Rules(), Cat).Ok);
 		Assert.Equal(25, us.Km);
 
 		// Attacking your partner is attacking your own seat: refused.
@@ -132,7 +132,7 @@ public class JourneyRulebookTests
 		var them = TeamSeat("B", "D");
 		them.Members[1].Hand.Add(Inst("priority")); // D — not the named target B — holds it
 		var state = Game(me, them);
-		state.DrawPile.Add(Inst("d25", 9));
+		state.DrawPile.Add(Inst("distance-25", 9));
 
 		var played = JourneyRulebook.Play(state, "A", "stop#0", "B", Rules(), Cat);
 		Assert.True(played.CoupOffered);
@@ -143,7 +143,7 @@ public class JourneyRulebookTests
 		Assert.True(coup.Accepted);
 		Assert.DoesNotContain("stop", them.Hazards);
 		Assert.Equal(1, them.CoupFourres); // the SEAT banks the bonus
-		Assert.Equal("d25#9", them.Members[1].Hand.Single().InstanceId); // D drew the replacement
+		Assert.Equal("distance-25#9", them.Members[1].Hand.Single().InstanceId); // D drew the replacement
 	}
 
 	// ── Legality ──────────────────────────────────────────────────────────────
@@ -152,18 +152,18 @@ public class JourneyRulebookTests
 	public void Distance_is_blocked_while_stopped_and_flows_after_the_green_light()
 	{
 		var me = Seat("A", "stop");
-		Assert.Equal("game.journey_stopped", JourneyRulebook.CanPlay(Def("d25"), me, null, Rules(), Cat).ReasonKey);
+		Assert.Equal("game.journey_stopped", JourneyRulebook.CanPlay(Def("distance-25"), me, null, Rules(), Cat).ReasonKey);
 
 		me.Hazards.Remove("stop");
-		Assert.True(JourneyRulebook.CanPlay(Def("d25"), me, null, Rules(), Cat).Ok);
+		Assert.True(JourneyRulebook.CanPlay(Def("distance-25"), me, null, Rules(), Cat).Ok);
 	}
 
 	[Fact]
 	public void A_speed_limit_caps_the_distance_value_until_cured()
 	{
 		var me = Seat("A", "speedLimit");
-		Assert.Equal("game.journey_over_limit", JourneyRulebook.CanPlay(Def("d200"), me, null, Rules(), Cat).ReasonKey);
-		Assert.True(JourneyRulebook.CanPlay(Def("d25"), me, null, Rules(), Cat).Ok); // 25 <= 50
+		Assert.Equal("game.journey_over_limit", JourneyRulebook.CanPlay(Def("distance-200"), me, null, Rules(), Cat).ReasonKey);
+		Assert.True(JourneyRulebook.CanPlay(Def("distance-25"), me, null, Rules(), Cat).Ok); // 25 <= 50
 	}
 
 	[Fact]
@@ -171,16 +171,16 @@ public class JourneyRulebookTests
 	{
 		var me = Seat("A");
 		me.Km = 900;
-		Assert.Equal("game.journey_overshoot", JourneyRulebook.CanPlay(Def("d200"), me, null, Rules(), Cat).ReasonKey);
-		Assert.True(JourneyRulebook.CanPlay(Def("d25"), me, null, Rules(), Cat).Ok);
+		Assert.Equal("game.journey_overshoot", JourneyRulebook.CanPlay(Def("distance-200"), me, null, Rules(), Cat).ReasonKey);
+		Assert.True(JourneyRulebook.CanPlay(Def("distance-25"), me, null, Rules(), Cat).Ok);
 	}
 
 	[Fact]
 	public void The_premium_card_respects_its_per_hand_play_limit()
 	{
 		var me = Seat("A");
-		me.PlaysByCard["d200"] = 2;
-		Assert.Equal("game.journey_card_limit", JourneyRulebook.CanPlay(Def("d200"), me, null, Rules(), Cat).ReasonKey);
+		me.PlaysByCard["distance-200"] = 2;
+		Assert.Equal("game.journey_card_limit", JourneyRulebook.CanPlay(Def("distance-200"), me, null, Rules(), Cat).ReasonKey);
 	}
 
 	[Fact]
@@ -282,10 +282,10 @@ public class JourneyRulebookTests
 	{
 		var me = Seat("A");
 		me.Km = 975;
-		me.Members[0].Hand.Add(Inst("d25"));
+		me.Members[0].Hand.Add(Inst("distance-25"));
 		var state = Game(me, Seat("B"));
 
-		var result = JourneyRulebook.Play(state, "A", "d25#0", null, Rules(), Cat);
+		var result = JourneyRulebook.Play(state, "A", "distance-25#0", null, Rules(), Cat);
 
 		Assert.True(result.HandComplete);
 		Assert.Equal(1000, me.Km);
@@ -300,7 +300,7 @@ public class JourneyRulebookTests
 		var victim = Seat("B");
 		victim.Members[0].Hand.Add(Inst("priority"));
 		var state = Game(me, victim);
-		state.DrawPile.Add(Inst("d25", 9)); // the replacement the coup draws
+		state.DrawPile.Add(Inst("distance-25", 9)); // the replacement the coup draws
 
 		var played = JourneyRulebook.Play(state, "A", "stop#0", "B", Rules(), Cat);
 		Assert.True(played.CoupOffered);
@@ -314,7 +314,7 @@ public class JourneyRulebookTests
 		Assert.Equal(1, victim.CoupFourres);
 		Assert.Equal(new[] { "priority" }, victim.Immunities);
 		Assert.Single(victim.Members[0].Hand); // the replacement card
-		Assert.Equal("d25#9", victim.Members[0].Hand[0].InstanceId);
+		Assert.Equal("distance-25#9", victim.Members[0].Hand[0].InstanceId);
 	}
 
 	[Fact]
@@ -342,12 +342,12 @@ public class JourneyRulebookTests
 	{
 		var me = Seat("A");
 		var state = Game(me, Seat("B"));
-		state.DrawPile.Add(Inst("d25", 1));
+		state.DrawPile.Add(Inst("distance-25", 1));
 		JourneyRulebook.SyncCounts(state);
 
 		var drawn = JourneyRulebook.Draw(state, "A");
 		Assert.True(drawn.Ok);
-		Assert.Equal("d25#1", drawn.Card!.InstanceId);
+		Assert.Equal("distance-25#1", drawn.Card!.InstanceId);
 		Assert.True(state.HasDrawn);
 		Assert.Equal(0, state.DrawCount);
 		Assert.Equal(1, me.Members[0].HandCount);
@@ -376,7 +376,7 @@ public class JourneyRulebookTests
 		var state = Game(Seat("A"), Seat("B"));
 		Assert.True(JourneyRulebook.HandOver(state, Rules())); // nothing left anywhere
 
-		state.Seats[0].Members[0].Hand.Add(Inst("d25"));
+		state.Seats[0].Members[0].Hand.Add(Inst("distance-25"));
 		Assert.False(JourneyRulebook.HandOver(state, Rules()));
 	}
 

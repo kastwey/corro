@@ -2,7 +2,7 @@
 
 Canonical source for the cross-family earcons that many packages reuse (dice, card draw/shuffle,
 your-turn, game-over, bankruptcy, piece-captured). These files are **not** served by the engine:
-each package that needs one ships its OWN copy under its `sounds/` folder. This folder is the
+each package that needs one ships its OWN copy under its `assets/sounds/` folder. This folder is the
 single place to update a shared sound and the origin the `new-game-family` skill copies from.
 
 The engine itself ships only PLATFORM sounds (chat, error) — see
