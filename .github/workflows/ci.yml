@@ -34,9 +34,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Test emulator startup planner
+      - name: Test development tooling
         shell: pwsh
-        run: ./tools/tests/emulator-startup.tests.ps1
+        run: |
+          ./tools/tests/emulator-startup.tests.ps1
+          ./tools/tests/hook-installation.tests.ps1
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x

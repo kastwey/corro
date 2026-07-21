@@ -25,8 +25,9 @@ dotnet run --project tools/Corro.PackageCli -p:SkipFrontendBuild=true -- new jou
 
 This is the recommended first-run path. It starts or reuses the **Cosmos DB emulator** and
 **Azurite**, installs missing frontend dependencies, builds the client, watches every frontend
-input, configures the local connection-string secrets, and runs the .NET server. You do not need
-to run `npm install` or `docker compose up` separately.
+input, configures the local connection-string secrets, enables the shared pre-push test hook for
+this clone, and runs the .NET server. You do not need to run `npm install`, install the hook or run
+`docker compose up` separately.
 
 Install these prerequisites first:
 
@@ -198,8 +199,32 @@ public class MyHandler : ICommandHandler<MyCommand>
   default frontend, backend and E2E runs need none of it — the integration tests **skip** (never fail)
   when the emulators are down.
 - **[PowerShell 7+](https://learn.microsoft.com/powershell/scripting/install/installing-powershell)**
-  — required only for the cross-platform `tools/dev.ps1`, `tools/start-emulators.ps1` and
-  `tools/stop.ps1` convenience scripts.
+  — required only for the cross-platform development, emulator and hook-installation scripts.
+
+### Before pushing: enable the local test gate
+
+The recommended `pwsh ./tools/dev.ps1` startup installs the versioned `pre-push` hook
+automatically and idempotently for the current clone. If you use another startup path, enable it
+once after cloning:
+
+```bash
+pwsh -File ./tools/install-hooks.ps1
+```
+
+The hook runs before **every push to any branch**. It builds and tests the frontend, then builds and
+tests the backend; a failure aborts the push. Playwright remains opt-in because it needs installed
+browsers and takes several minutes:
+
+```powershell
+$env:RUN_E2E = '1'; git push       # PowerShell
+```
+
+```bash
+RUN_E2E=1 git push                 # bash/zsh
+```
+
+This is a local safety net, not a replacement for CI or branch protection. Use `--no-verify` only
+for a genuine emergency with a known reason.
 
 ### Frontend
 ```bash

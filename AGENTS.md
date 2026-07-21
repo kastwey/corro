@@ -47,7 +47,8 @@ Always finish a change by running the frontend tests (incl. translation parity)
 A shared `pre-push` hook (`.githooks/pre-push`) refuses to push to ANY branch when the suites
 are red: it always runs the frontend (build + `npm test`) and backend (build + `dotnet test`)
 suites, and runs the E2E suite only when `RUN_E2E=1` (it needs a built server + installed
-Playwright browsers, so it stays opt-in). Enable it once per clone:
+Playwright browsers, so it stays opt-in). `tools/dev.ps1` installs it idempotently on startup;
+when using another development path, enable it once per clone:
 ```bash
 pwsh -File tools/install-hooks.ps1        # sets core.hooksPath=.githooks
 RUN_E2E=1 git push                         # include E2E in this push

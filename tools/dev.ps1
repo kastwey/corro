@@ -17,18 +17,22 @@ $root = Split-Path -Parent $PSScriptRoot
 $proj = Join-Path $root "server/CorroServer.csproj"
 $cosmosConn = "AccountEndpoint=http://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
 
-# 1. Reuse healthy emulators already published on the standard ports (even if another Compose
+# 1. Activate the versioned pre-push safety net for this clone. The installer is idempotent,
+#    so every normal development start also repairs missing or overridden local hook config.
+& (Join-Path $PSScriptRoot "install-hooks.ps1") -RepositoryRoot $root
+
+# 2. Reuse healthy emulators already published on the standard ports (even if another Compose
 #    project owns them); start only what is missing. The helper still waits for Cosmos health, so
 #    the server's one-time initialization never races the emulator's slow first start.
 & (Join-Path $PSScriptRoot "start-emulators.ps1")
 
-# 2. Connection-string secrets for the HOST server (idempotent). It reaches the emulators on localhost
+# 3. Connection-string secrets for the HOST server (idempotent). It reaches the emulators on localhost
 #    because the compose ports are published to the host.
 dotnet user-secrets --project $proj set "ConnectionStrings:PackageBlobs" "UseDevelopmentStorage=true" | Out-Null
 dotnet user-secrets --project $proj set "ConnectionStrings:CosmosDB" $cosmosConn | Out-Null
 Write-Host "Secrets set (PackageBlobs + CosmosDB)."
 
-# 3. Build frontend/dist before the server chooses its Development file provider. This also makes a
+# 4. Build frontend/dist before the server chooses its Development file provider. This also makes a
 #    fresh clone safe: the server can never start before index.html exists. The optional -Build mirror
 #    remains useful when inspecting the packaged wwwroot, although Development itself serves dist.
 $frontend = Join-Path $root "frontend"
@@ -62,7 +66,7 @@ if (-not $NoWatch) {
     Write-Host "Frontend watch started (PID $($frontendWatcher.Id)); refresh the browser after edits."
 }
 
-# 4. Server (foreground; Ctrl+C stops it, emulators keep running).
+# 5. Server (foreground; Ctrl+C stops it, emulators keep running).
 Get-Process -Name CorroServer -ErrorAction SilentlyContinue | Stop-Process -Force
 $env:ASPNETCORE_ENVIRONMENT = "Development"
 # Bind the whole LAN (phones/tablets join via http://<pc-ip>:5000). An env var instead of --urls: the
