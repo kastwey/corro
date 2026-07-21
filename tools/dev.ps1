@@ -8,7 +8,9 @@
 # Development serves frontend/dist directly. The watcher updates JS, HTML, CSS, i18n, config and
 # assets there; refresh the browser to see changes. It stops with the server. The emulators keep
 # running after Ctrl+C; stop Corro-owned ones with: pwsh tools/stop.ps1
-# Prereq: Docker running. pwsh is cross-platform, so this works on Windows, macOS and Linux.
+# Docker is started automatically when installed but stopped (Desktop on Windows/macOS,
+# docker.service or a user service on Linux). Missing/unsupported installations fail early.
+# pwsh is cross-platform, so this works on Windows, macOS and Linux.
 param([switch]$Build, [switch]$NoWatch)
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot

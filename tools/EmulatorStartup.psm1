@@ -1,4 +1,5 @@
 Set-StrictMode -Version Latest
+Import-Module (Join-Path $PSScriptRoot 'DockerStartup.psm1') -Force
 
 function Test-LocalTcpPort {
     [CmdletBinding()]
@@ -102,19 +103,20 @@ function Start-CorroEmulators {
     if ($azuriteReady) { Write-Host 'Azurite already responds on http://localhost:10000; reusing it.' }
     if ($services.Count -eq 0) { return }
 
-    if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-        throw "The missing emulator service(s) [$($services -join ', ')] require Docker, but 'docker' was not found on PATH."
-    }
+    # Do this only when an emulator is missing: healthy endpoints remain reusable without a
+    # local Docker installation. The preflight starts Desktop/the Linux service when possible
+    # and prevents daemon diagnostics from being misreported as Cosmos DB startup failures.
+    $dockerCommand = Initialize-DockerEngine
 
     Write-Host "Starting missing emulator service(s): $($services -join ', ') ..."
     Push-Location $Root
     try {
-        & docker compose up -d --wait @services
+        & $dockerCommand compose up -d --wait @services
         if ($LASTEXITCODE -ne 0) {
             # A service may have appeared between the probe and Compose (another dev stack won
             # the race). Accept it only when both real endpoint fingerprints now pass.
             if ((Test-CosmosEmulatorEndpoint) -and (Test-AzuriteBlobEndpoint)) { return }
-            throw "docker compose could not start: $($services -join ', '). Is Docker running?"
+            throw "Docker Compose could not start the emulator service(s): $($services -join ', ')."
         }
 
         # Docker can leave a container running but UNPUBLISHED after a previous bind failure
@@ -126,7 +128,7 @@ function Start-CorroEmulators {
         if ($services -contains 'azurite' -and -not (Test-AzuriteBlobEndpoint)) { $stillMissing.Add('azurite') }
         if ($stillMissing.Count -gt 0) {
             Write-Host "Repairing stale emulator container(s) without host bindings: $($stillMissing -join ', ') ..."
-            & docker compose up -d --wait --force-recreate @stillMissing
+            & $dockerCommand compose up -d --wait --force-recreate @stillMissing
             if ($LASTEXITCODE -ne 0) {
                 throw "docker compose could not recreate stale emulator service(s): $($stillMissing -join ', ')."
             }
