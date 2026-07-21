@@ -172,7 +172,7 @@
 .exploding-reveal__bomb { z-index: 1; }
 .exploding-reveal__defuse {
   z-index: 2;
-  opacity: 0;
+  visibility: visible;
   pointer-events: none;
 }
 .exploding-reveal__safe {
@@ -190,7 +190,7 @@
   color: var(--on-good);
   font-size: 1.25rem;
   font-weight: 900;
-  opacity: 0;
+  visibility: hidden;
   box-shadow: 0 3px 9px rgba(0, 0, 0, 0.28);
 }
 .exploding-piles .xcard {
@@ -233,16 +233,17 @@
 }
 
 @keyframes exploding-defuse-drop {
-  0%, 18%  { opacity: 0; transform: translateY(-72%) rotate(-16deg) scale(0.62); }
-  28%      { opacity: 1; transform: translateY(-42%) rotate(-10deg) scale(0.7); }
-  50%, 62% { opacity: 1; transform: translateY(0) rotate(5deg) scale(0.82); }
-  76%, 100% { opacity: 0; transform: translateY(42%) rotate(13deg) scale(0.7); }
+  0%, 18%  { visibility: visible; transform: translateY(-72%) rotate(-16deg) scale(0.62); }
+  28%      { visibility: visible; transform: translateY(-42%) rotate(-10deg) scale(0.7); }
+  50%, 62% { visibility: visible; transform: translateY(0) rotate(5deg) scale(0.82); }
+  75.99%   { visibility: visible; transform: translateY(42%) rotate(13deg) scale(0.7); }
+  76%, 100% { visibility: hidden; transform: translateY(42%) rotate(13deg) scale(0.7); }
 }
 
 @keyframes exploding-safe-pop {
-  0%, 58%  { opacity: 0; transform: scale(0.2) rotate(-35deg); }
-  68%      { opacity: 1; transform: scale(1.2) rotate(7deg); }
-  78%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
+  0%, 67.99% { visibility: hidden; transform: scale(0.2) rotate(-35deg); }
+  68%        { visibility: visible; transform: scale(1.2) rotate(7deg); }
+  78%, 100%  { visibility: visible; transform: scale(1) rotate(0deg); }
 }
 
 /* Motion preferences suppress the wobble/drop, not the two-second focus grace: the pause is
@@ -253,10 +254,10 @@
   filter: drop-shadow(0 0 8px var(--good));
 }
 .exploding-reveal--static .exploding-reveal__defuse {
-  opacity: 0.9;
+  visibility: visible;
   transform: translate(18px, -16px) rotate(8deg) scale(0.62);
 }
-.exploding-reveal--static .exploding-reveal__safe { opacity: 1; }
+.exploding-reveal--static .exploding-reveal__safe { visibility: visible; }
 
 .exploding-discard--pending .xcard {
   outline: 3px solid #1e88e5;
@@ -277,12 +278,12 @@
   }
   .exploding-reveal--defusing .exploding-reveal__defuse {
     animation: none;
-    opacity: 0.9;
+    visibility: visible;
     transform: translate(18px, -16px) rotate(8deg) scale(0.62);
   }
   .exploding-reveal--defusing .exploding-reveal__safe {
     animation: none;
-    opacity: 1;
+    visibility: visible;
   }
 }
 

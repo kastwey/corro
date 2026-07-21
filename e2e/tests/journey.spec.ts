@@ -89,8 +89,9 @@ test('journey: F1 guide discovers rules, shortcuts, card help and screen-reader 
 
 	// The documented contextual route works from the focused card itself.
 	const firstCard = ana.locator('.hand-card:not(.hand-card--info)').first();
-	await firstCard.focus();
-	await ana.keyboard.press('Shift+F1');
+	// Send the shortcut through the row locator so a concurrent state repaint cannot move
+	// focus between a separate focus call and the key event on slower CI runners.
+	await firstCard.press('Shift+F1');
 	const cardHelp = ana.locator('.game-dialog.dialog-card-help');
 	await expect(cardHelp).toBeVisible();
 	await expect(cardHelp.locator('.dialog-content')).not.toBeEmpty();

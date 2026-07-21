@@ -61,7 +61,9 @@
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  /* Theme tokens change atomically. Interpolating only the background temporarily pairs
+   * dark-theme text with the light surface (and vice versa), producing unreadable frames. */
+  transition: border-color 0.15s ease;
 }
 .connection-panel__btn:hover { background: var(--surface); }
 .connection-panel__btn:focus-visible {
