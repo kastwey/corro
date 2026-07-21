@@ -44,7 +44,7 @@ juego. Pulsa **Ctrl+F1** para ver todos los atajos.
 
 ### Encontrar cartas y consultar la mesa
 
-- **C** anuncia la carta superior y el color en vigor. **S** anuncia tu mano, el sentido y tus puntos; **Shift+S** repasa a los rivales.
+- **D** anuncia el recuento del mazo, la carta superior y el color en vigor. **S** anuncia tu mano, el sentido y tus puntos; **Shift+S** repasa a los rivales.
 - **R**, **G**, **B** e **Y** saltan por cartas de ese color; los números saltan por cartas del mismo valor e **I** por cartas especiales. Añade **Shift** para recorrer hacia atrás.
 - Algunas reglas añaden teclas para jugar dobles o declarar la última carta. **Ctrl+F1** siempre muestra la lista exacta para la partida actual.
 

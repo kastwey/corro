@@ -48,7 +48,7 @@ shortcut list.
 
 ### Checking and reacting
 
-- **C** announces the deck count and discard top. **S** announces your status and **Shift+S** your rivals' status.
+- **D** announces the deck count and discard top. **S** announces your status and **Shift+S** your rivals' status.
 - **N** focuses your "No way!" card during the reaction window; press **Enter** to play it. If you hold none, the reason is announced.
 - Draws, actions, reactions, explosions and eliminations are announced automatically.
 

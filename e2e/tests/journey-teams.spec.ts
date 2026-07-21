@@ -57,13 +57,17 @@ test('pairs: host-arranged teams, one shared seat and car, interleaved turns, pr
 
 	await startGame(ana, [ana, berto, carla, david]);
 
-	// ONE car per TEAM on the strip; each member holds their OWN six cards; the deck
-	// counter row reads 106 − 4×6 = 82.
+	// ONE car per TEAM on the strip; each member holds their OWN six cards. The separate
+	// visual deck reads 106 − 4×6 = 82; no shared pile is appended to a private hand.
 	await expect(ana.locator('#board .journey-car')).toHaveCount(2);
 	for (const page of [ana, berto, carla, david]) {
 		await expect(page.locator('.hand-card:not(.hand-card--info)')).toHaveCount(6);
+		await expect(page.locator('.hand-card--info')).toHaveCount(0);
 	}
-	await expect(ana.locator('.hand-card--info')).toHaveAttribute('aria-label', 'Cartas en el mazo: 82');
+	await expect(ana.locator('.journey-centre__stack .jcard__back-label')).toHaveText('82');
+	await ana.locator('.hand-card').first().focus();
+	await ana.keyboard.press('d');
+	await expectAnnouncement(ana, /Mazo: 82 cartas/);
 
 	// The players panel tells ONE story per team: both blue members read as «Equipo azul».
 	await expect(ana.locator('.player-card', { hasText: 'Carla' })).toHaveAttribute('aria-label', /Equipo azul/);

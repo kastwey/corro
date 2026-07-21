@@ -1,9 +1,9 @@
 // cardBoardShell.ts — the scaffolding EVERY card family's board shares (journey, assembly,
-// draft, shedding): resetting #board from the property grid to a card surface, and wiring
-// the S / Shift+S status keys (the shared convention — S speaks my own status, Shift+S
-// surveys the rivals only). Pure DOM/wiring — no family rules, no i18n of its own. Lives
-// once so the convention is fix-once across the families; each board keeps its own visual
-// region and its own status text.
+// draft, shedding, exploding): resetting #board from the property grid to a card surface,
+// and wiring the shared reading keys. S speaks my own status, Shift+S surveys the rivals,
+// and D reads the table piles on demand so deck information never becomes a card in the
+// hand. Pure DOM/wiring — no family rules or i18n of its own. Lives once so the convention
+// is fix-once; each board keeps its own visual region and words its own status text.
 
 import type { GameState } from './models.js';
 import type { HelpShortcut } from './shortcuts.js';
@@ -18,9 +18,14 @@ export const CARD_STATUS_SHORTCUTS: readonly HelpShortcut[] = [
 ];
 
 /** A card board's full shortcut list for the help dialog: its hand keys (in the family's
- *  words) followed by the shared status keys. One place so every family reads the same. */
-export function cardBoardHelpShortcuts(hand: HandPanel): HelpShortcut[] {
-	return [...hand.activeShortcuts(), ...CARD_STATUS_SHORTCUTS];
+ *  words), the shared player-status keys and its localized D pile readout. Requiring the
+ *  description here makes a new card family document D when it adopts the shared shell. */
+export function cardBoardHelpShortcuts(hand: HandPanel, pileDescriptionKey: string): HelpShortcut[] {
+	return [
+		...hand.activeShortcuts(),
+		...CARD_STATUS_SHORTCUTS,
+		{ keys: 'd', descKey: pileDescriptionKey },
+	];
 }
 
 /**
@@ -67,6 +72,29 @@ export function registerStatusKeys(element: HTMLElement, deps: StatusKeysDeps): 
 		e.preventDefault();
 		e.stopPropagation();
 		deps.announce(status);
+	});
+}
+
+export interface PileStatusKeyDeps {
+	announce(text: string): void;
+	/** The localized pile sentence for the current authoritative state. */
+	read(): string | null;
+}
+
+/**
+ * Wire D as the card-family pile query. It is deliberately surface-local: trivia already
+ * uses D for destinations, while card games have no spatial destination cursor. Modified
+ * chords are ignored so Ctrl+D remains the global "focus open dialog" command.
+ */
+export function registerPileStatusKey(element: HTMLElement, deps: PileStatusKeyDeps): void {
+	element.addEventListener('keydown', (e) => {
+		if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+		if (e.key.toLowerCase() !== 'd') return;
+		const text = deps.read();
+		if (!text) return;
+		e.preventDefault();
+		e.stopPropagation();
+		deps.announce(text);
 	});
 }
 

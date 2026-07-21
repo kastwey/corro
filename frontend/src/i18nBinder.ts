@@ -270,6 +270,15 @@ export class I18nBinder {
 	  }
 	});
 
+	// Some first-paint copy has an English HTML fallback but must not enter the visual or
+	// accessibility tree before the player's locale is known. Reveal these elements only after
+	// this complete translation pass; if a resource is unavailable, their readable fallback is
+	// still revealed instead of leaving the interface permanently blank.
+	container.querySelectorAll<HTMLElement>('[data-i18n-defer]').forEach(element => {
+	  element.hidden = false;
+	  element.removeAttribute('data-i18n-defer');
+	});
+
 	console.debug(`Applied translations for language: ${this.currentLanguage} (${textElements.length} text elements, ${attrCount} attributes)`);
   }
 

@@ -46,11 +46,16 @@ test('draft: secret pick, re-pick, reveal, tray rotation, boosted serve, status 
 	const anaCards = ana.locator('.hand-card:not(.hand-card--info)');
 	await expect(anaCards).toHaveCount(10);
 	await expect(anaCards.locator('[data-card-art="package"]')).toHaveCount(10);
-	await expect(ana.locator('.hand-card--info')).toHaveAttribute('aria-label', /Mazo: 89/);
+	await expect(ana.locator('.hand-card--info')).toHaveCount(0);
+	await expect(ana.locator('.draft-piles [data-pile="deck"] .gcard__back-label')).toHaveText('89');
 	await expect(ana.locator('#board .draft-table')).toHaveCount(2);
 	await expect(ana.locator('.hand-panel__draw')).toHaveCount(0);
 	await expect(ana.locator('.dice-control')).toBeHidden();
 	await expect(anaCards.first().locator('[data-focus-id="discard"]')).toHaveCount(0);
+	await anaCards.first().focus();
+	await ana.keyboard.press('d');
+	await expectAnnouncement(ana, /Mazo: 89 cartas/);
+	await expect(anaCards.first()).toBeFocused();
 
 	// ── Per-card HELP: the sauce explains its multiplier and lands back on the hand. ──
 	const anaSauce = ana.locator('.hand-card:not(.hand-card--info)', { hasText: /Salsa brava/ }).first();
@@ -135,7 +140,10 @@ test('draft: secret pick, re-pick, reveal, tray rotation, boosted serve, status 
 	await expectAnnouncement(ana, /Ronda 1: Berto suma \d+ puntos/);
 	await expectAnnouncement(ana, /Ronda 2: se reparten 10 cartas/);
 	await expect(anaCards).toHaveCount(10);
-	await expect(ana.locator('.hand-card--info')).toHaveAttribute('aria-label', /Mazo: 69/);
+	await expect(ana.locator('.draft-piles [data-pile="deck"] .gcard__back-label')).toHaveText('69');
+	await ana.locator('.hand-card').first().focus();
+	await ana.keyboard.press('d');
+	await expectAnnouncement(ana, /Mazo: 69 cartas/);
 
 	// ── Round two dealt the tongs. Trick 1: Ana serves them (a plain pick). ──
 	await ana.locator('#board').focus();

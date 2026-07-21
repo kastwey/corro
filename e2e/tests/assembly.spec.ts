@@ -40,11 +40,17 @@ test('assembly: install, auto-targeted breakdown, refusal, face-down discard, re
 	await expect(anaCards).toHaveCount(3);
 	await expect(anaCards.locator('[data-card-art="package"]')).toHaveCount(3);
 	await expect(anaCards.first()).toHaveAttribute('aria-label', /Reactor/);
-	await expect(ana.locator('.hand-card--info')).toHaveAttribute('aria-label', /Mazo: 62/);
+	await expect(ana.locator('.hand-card--info')).toHaveCount(0);
+	await expect(ana.locator('.assembly-piles [data-pile="deck"] .gcard__back-label')).toHaveText('62');
+	await expect(ana.locator('.assembly-piles [data-pile="discard"] .gcard__back-label')).toHaveText('0');
 	await expect(ana.locator('#board .assembly-rack')).toHaveCount(2);
 	// No draw button: the refill is automatic in this family.
 	await expect(ana.locator('.hand-panel__draw')).toHaveCount(0);
 	await expect(ana.locator('.dice-control')).toBeHidden();
+	await anaCards.first().focus();
+	await ana.keyboard.press('d');
+	await expectAnnouncement(ana, /Mazo: 62\. Descartes: 0\./);
+	await expect(anaCards.first()).toBeFocused();
 
 	// ── Per-card HELP (live-play request): the row's Ayuda opens a reading dialog with
 	// what the card does, and lands back on the hand when closed. ──
@@ -91,7 +97,10 @@ test('assembly: install, auto-targeted breakdown, refusal, face-down discard, re
 	await expect(discardOffer).toBeVisible();
 	await discardOffer.locator('.btn-primary').click();
 	await expectAnnouncement(berto, /Ana descarta 1 carta/);
-	await expect(ana.locator('.hand-card--info')).toHaveAttribute('aria-label', /Descartes: 1/);
+	await expect(ana.locator('.assembly-piles [data-pile="discard"] .gcard__back-label')).toHaveText('1');
+	await ana.locator('.hand-card').first().focus();
+	await ana.keyboard.press('d');
+	await expectAnnouncement(ana, /Descartes: 1\./);
 
 	// ── Berto installs his own Reactor; Ana breaks it right back. ──
 	await berto.locator('#board').focus();

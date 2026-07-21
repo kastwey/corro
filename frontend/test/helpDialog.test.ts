@@ -25,6 +25,7 @@ const SHEDDING_SHORTCUTS = [
 	{ keys: 'space', descKey: 'game.help_cmd_shedding_draw' },
 	{ keys: 's', descKey: 'game.help_cmd_status_mine' },
 	{ keys: 'shift+s', descKey: 'game.help_cmd_status_rivals' },
+	{ keys: 'd', descKey: 'game.help_cmd_shedding_piles' },
 ];
 
 // Every description key a card family can hand to the help dialog. The keys are declared in
@@ -35,6 +36,9 @@ const CARD_DESC_KEYS = [
 	'game.help_cmd_draw_card', 'game.help_cmd_shedding_draw',
 	'game.help_cmd_discard_card', 'game.help_cmd_multi_select',
 	'game.help_cmd_card_help',
+	'game.help_cmd_journey_deck', 'game.help_cmd_assembly_piles',
+	'game.help_cmd_draft_deck', 'game.help_cmd_shedding_piles',
+	'game.help_cmd_exploding_top',
 	'game.help_cmd_last_card_declare', 'game.help_cmd_last_card_catch', 'game.help_cmd_last_card_watch',
 	'game.help_cmd_status_mine', 'game.help_cmd_status_rivals',
 ];
@@ -148,6 +152,7 @@ test('a card family hides board keys + the number row and shows its own hand/sta
 	assert.ok(text.includes('Draw a card'), 'Space draws');
 	assert.ok(text.includes('Announce your status'), 'S — your status');
 	assert.ok(text.includes("other players' status"), 'Shift+S — rivals');
+	assert.ok(text.includes('Read the deck, top card and colour in force'), 'D — shared piles');
 	dialogManager.close();
 });
 

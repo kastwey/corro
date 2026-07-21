@@ -14,7 +14,9 @@ import {
 	draftCardHelp, draftCatalog, draftHandSize, draftSeat, draftStatusText, hasUnspentExtra,
 } from './draftRules.js';
 import { soundEvents } from './soundEvents.js';
-import { cardBoardHelpShortcuts, playerName, registerStatusKeys, resetCardBoard } from './cardBoardShell.js';
+import {
+	cardBoardHelpShortcuts, playerName, registerPileStatusKey, registerStatusKeys, resetCardBoard,
+} from './cardBoardShell.js';
 import { buildDraftRulesLines } from './rulesSummaries.js';
 import type { DraftCardDef, DraftSeatState, GameState } from './models.js';
 import type { HelpShortcut } from './shortcuts.js';
@@ -42,6 +44,7 @@ const DRAFT_TYPE_COLOR: Record<string, string> = {
 export class DraftBoard {
 	private built = false;
 	private readonly hand = new HandPanel();
+	private piles!: HTMLElement;
 	private tables!: HTMLElement;
 	/** Table sizes per seat at the previous render, to flash a table that just grew. */
 	private readonly lastTableSizes = new Map<string, number>();
@@ -55,6 +58,7 @@ export class DraftBoard {
 	update(gs: GameState): void {
 		const firstBuild = !this.built;
 		if (firstBuild) this.build();
+		this.renderPiles(gs);
 		this.renderTables(gs);
 		this.hand.update();
 		if (firstBuild && document.activeElement === this.element) this.hand.focus();
@@ -65,9 +69,9 @@ export class DraftBoard {
 		this.hand.focus();
 	}
 
-	/** The hand keys (Enter/Ctrl+Space) + the shared S / Shift+S status keys, for the help. */
+	/** The hand keys + shared player status and D pile query, for the help. */
 	helpShortcuts(): HelpShortcut[] {
-		return cardBoardHelpShortcuts(this.hand);
+		return cardBoardHelpShortcuts(this.hand, 'game.help_cmd_draft_deck');
 	}
 
 	/** The active rules for the rules dialog (Ctrl+Shift+F1). */
@@ -95,11 +99,14 @@ export class DraftBoard {
 	private build(): void {
 		resetCardBoard(this.element, 'draft-mode');
 
-		// Visual-only region: the tables. Everything here is spoken elsewhere (the
-		// panel's per-player status lines, the S key, the server's reveal voice).
+		// Visual-only region: the shared deck and player tables. Everything here is spoken
+		// elsewhere (D, per-player status lines, S and the server's reveal voice).
 		const visual = document.createElement('div');
 		visual.className = 'draft-visual';
 		visual.setAttribute('aria-hidden', 'true');
+		this.piles = document.createElement('div');
+		this.piles.className = 'card-table-piles draft-piles';
+		visual.appendChild(this.piles);
 		this.tables = document.createElement('div');
 		this.tables.className = 'draft-tables';
 		visual.appendChild(this.tables);
@@ -111,18 +118,6 @@ export class DraftBoard {
 
 		this.hand.init(handMount, {
 			getCards: () => this.myHandCards(),
-			// No draw and no discard in this genre: the whole turn is the pick. The
-			// draw pile rides the hand as a read-only row so the table can plan the
-			// rounds left.
-			infoRows: () => {
-				const gs = this.deps.getGameState();
-				if (!gs?.draft) return [];
-				return [{
-					id: '__piles',
-					label: this.deps.tSync('game.draft_piles_row', { draw: gs.draft.drawCount ?? 0 }),
-					art: genericCardBackHtml(String(gs.draft.drawCount ?? 0)),
-				}];
-			},
 			// No onDiscard either: the pick IS the whole turn, so the discard
 			// affordance disappears (button, Delete and the unplayable offer).
 			onPlay: card => this.pickCard(card),
@@ -148,6 +143,15 @@ export class DraftBoard {
 			announce: this.deps.announce,
 			mine: (gs, myId) => draftStatusText(gs, myId, this.deps.tSync),
 			rivals: (gs, myId) => this.allSeatsStatus(gs, myId),
+		});
+		registerPileStatusKey(this.element, {
+			announce: this.deps.announce,
+			read: () => {
+				const draft = this.deps.getGameState()?.draft;
+				return draft
+					? this.deps.tSync('game.draft_status_deck', { draw: draft.drawCount ?? 0 })
+					: null;
+			},
 		});
 
 		this.built = true;
@@ -221,6 +225,14 @@ export class DraftBoard {
 	}
 
 	// ── Visual echoes (aria-hidden) ───────────────────────────────────────────
+	private renderPiles(gs: GameState): void {
+		const draft = gs.draft;
+		if (!draft) return;
+		this.piles.innerHTML = `<span class="card-table-pile" data-pile="deck">`
+			+ genericCardBackHtml(String(draft.drawCount ?? 0))
+			+ `<span class="card-table-pile__label">${escapeHtml(this.deps.tSync('game.draft_pile_deck'))}</span>`
+			+ `</span>`;
+	}
 
 	private renderTables(gs: GameState): void {
 		const catalog = draftCatalog(gs);

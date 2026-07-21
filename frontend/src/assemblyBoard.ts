@@ -13,7 +13,9 @@ import {
 	assemblyCardHelp, assemblyCatalog, assemblySeat, assemblyStatusText, attackTargets,
 	canPlayCard, canSwapPair, deckColors, isFunctional, isLocked, remedySlots, stealTargets, swapTargets,
 } from './assemblyRules.js';
-import { cardBoardHelpShortcuts, playerName, registerStatusKeys, resetCardBoard } from './cardBoardShell.js';
+import {
+	cardBoardHelpShortcuts, playerName, registerPileStatusKey, registerStatusKeys, resetCardBoard,
+} from './cardBoardShell.js';
 import { buildAssemblyRulesLines } from './rulesSummaries.js';
 import type { AssemblyCardDef, AssemblySeatState, AssemblySlot, GameState } from './models.js';
 import type { HelpShortcut } from './shortcuts.js';
@@ -41,6 +43,7 @@ const SLOT_COLORS: Record<string, string> = {
 export class AssemblyBoard {
 	private built = false;
 	private readonly hand = new HandPanel();
+	private piles!: HTMLElement;
 	private racks!: HTMLElement;
 	/** Afflictions per seat at the previous render, to flash the victim's rack on a hit. */
 	private readonly lastAfflictions = new Map<string, number>();
@@ -54,6 +57,7 @@ export class AssemblyBoard {
 	update(gs: GameState): void {
 		const firstBuild = !this.built;
 		if (firstBuild) this.build();
+		this.renderPiles(gs);
 		this.renderRacks(gs);
 		this.hand.update();
 		if (firstBuild && document.activeElement === this.element) this.hand.focus();
@@ -64,9 +68,9 @@ export class AssemblyBoard {
 		this.hand.focus();
 	}
 
-	/** The hand keys (Enter/Delete) + the shared S / Shift+S status keys, for the help. */
+	/** The hand keys + shared player status and D pile query, for the help. */
 	helpShortcuts(): HelpShortcut[] {
-		return cardBoardHelpShortcuts(this.hand);
+		return cardBoardHelpShortcuts(this.hand, 'game.help_cmd_assembly_piles');
 	}
 
 	/** The active rules for the rules dialog (Ctrl+Shift+F1). */
@@ -95,11 +99,14 @@ export class AssemblyBoard {
 	private build(): void {
 		resetCardBoard(this.element, 'assembly-mode');
 
-		// Visual-only region: the racks. Everything here is spoken elsewhere (the panel's
-		// per-player status lines, the S key, the announcer).
+		// Visual-only region: the face-down table piles and racks. Everything here is spoken
+		// elsewhere (D, per-player status lines, S and the announcer).
 		const visual = document.createElement('div');
 		visual.className = 'assembly-visual';
 		visual.setAttribute('aria-hidden', 'true');
+		this.piles = document.createElement('div');
+		this.piles.className = 'card-table-piles assembly-piles';
+		visual.appendChild(this.piles);
 		this.racks = document.createElement('div');
 		this.racks.className = 'assembly-racks';
 		visual.appendChild(this.racks);
@@ -111,20 +118,6 @@ export class AssemblyBoard {
 
 		this.hand.init(handMount, {
 			getCards: () => this.myHandCards(),
-			// The two face-down piles ride the hand as read-only rows: the table plans
-			// around how many cards remain (and how fat the reshuffle pool is).
-			infoRows: () => {
-				const gs = this.deps.getGameState();
-				if (!gs?.assembly) return [];
-				return [{
-					id: '__piles',
-					label: this.deps.tSync('game.assembly_piles_row', {
-						draw: gs.assembly.drawCount ?? 0,
-						discard: gs.assembly.discardCount ?? 0,
-					}),
-					art: genericCardBackHtml(`${gs.assembly.drawCount ?? 0}/${gs.assembly.discardCount ?? 0}`),
-				}];
-			},
 			onPlay: card => this.playCard(card),
 			onDiscard: card => {
 				const gs = this.deps.getGameState();
@@ -147,8 +140,20 @@ export class AssemblyBoard {
 			mine: (gs, myId) => assemblyStatusText(gs, myId, this.deps.tSync),
 			rivals: (gs, myId) => this.allSeatsStatus(gs, myId),
 		});
+		registerPileStatusKey(this.element, {
+			announce: this.deps.announce,
+			read: () => this.pileStatusText(),
+		});
 
 		this.built = true;
+	}
+
+	private pileStatusText(): string | null {
+		const assembly = this.deps.getGameState()?.assembly;
+		return assembly ? this.deps.tSync('game.assembly_status_piles', {
+			draw: assembly.drawCount ?? 0,
+			discard: assembly.discardCount ?? 0,
+		}) : null;
 	}
 
 	// ── The hand ──────────────────────────────────────────────────────────────
@@ -331,6 +336,17 @@ export class AssemblyBoard {
 	}
 
 	// ── Visual echoes (aria-hidden) ───────────────────────────────────────────
+	private renderPiles(gs: GameState): void {
+		const assembly = gs.assembly;
+		if (!assembly) return;
+		const pile = (kind: 'deck' | 'discard', count: number, labelKey: string) =>
+			`<span class="card-table-pile" data-pile="${kind}">`
+			+ genericCardBackHtml(String(count))
+			+ `<span class="card-table-pile__label">${escapeHtml(this.deps.tSync(labelKey))}</span>`
+			+ `</span>`;
+		this.piles.innerHTML = pile('deck', assembly.drawCount ?? 0, 'game.assembly_pile_deck')
+			+ pile('discard', assembly.discardCount ?? 0, 'game.assembly_pile_discard');
+	}
 
 	private renderRacks(gs: GameState): void {
 		const catalog = assemblyCatalog(gs);

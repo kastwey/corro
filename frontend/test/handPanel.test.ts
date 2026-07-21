@@ -290,7 +290,7 @@ test('modified arrows are left to other layers (Ctrl+Down walks the history, not
 	assert.equal(document.activeElement, items[0]); // the roving cursor did not move
 });
 
-test('a filter that leaves nothing keeps the EMPTY list, described — no paragraph swap', () => {
+test('a filter with no matches is a plain zero-item list — no extra message or paragraph', () => {
 	cards = [card({ id: 'c9', label: 'Stop', playable: false })];
 	panel.update();
 	(listAction('filter-playable') as HTMLButtonElement).click();
@@ -298,11 +298,13 @@ test('a filter that leaves nothing keeps the EMPTY list, described — no paragr
 	assert.equal(rows().length, 0);
 	const list = document.querySelector<HTMLElement>('.hand-panel__list')!;
 	assert.equal(list.hidden, false); // the list stays, visibly empty
-	const descId = list.getAttribute('aria-describedby');
-	assert.ok(descId, 'the list describes why it is empty');
-	assert.equal(document.getElementById(descId!)?.textContent, 'game.hand_filtered_all');
+	assert.equal(list.getAttribute('role'), 'list');
+	assert.equal(list.getAttribute('aria-describedby'), null,
+		'the zero-item list semantics are sufficient and do not trigger a redundant phrase');
+	assert.equal(document.querySelector('.hand-panel .sr-only'), null,
+		'the empty result has no hidden explanatory message');
 	assert.equal(document.querySelector<HTMLElement>('.hand-panel__empty')!.hidden, true);
-	// Focus has somewhere to land: the described list itself.
+	// Focus still has somewhere to land so its list name and zero-item count can be read.
 	panel.focus();
 	assert.equal(document.activeElement, list);
 
@@ -347,6 +349,52 @@ test('the sort radios: value-desc is the default; ascending, original and type a
 	(listAction('sort-type') as HTMLButtonElement).click();
 	// attack < distance alphabetically; c1 before c3 (hand order preserved within a group).
 	assert.deepEqual(rowLabels().map(l => l.split('.')[0]), ['Stop', '25 km', '100 km']);
+});
+
+test('a family can replace meaningless generic sort axes with scoped semantic orderings', () => {
+	const preferenceKey = 'corro.handPreferences.test-family';
+	(globalThis as any).window.localStorage.removeItem(preferenceKey);
+	document.body.innerHTML = '<div id="mount"></div>';
+	cards = [
+		card({ id: 'pair-b', label: 'Zebra', typeKey: 'pair' }),
+		card({ id: 'guard', label: 'Guard', typeKey: 'guard' }),
+		card({ id: 'pair-a', label: 'Ant', typeKey: 'pair' }),
+		card({ id: 'attack', label: 'Blast', typeKey: 'attack' }),
+	];
+	const byName = (a: HandCard, b: HandCard) => a.label.localeCompare(b.label);
+	const typeFirst = (typeKey: string) => (a: HandCard, b: HandCard) =>
+		Number(b.typeKey === typeKey) - Number(a.typeKey === typeKey) || byName(a, b);
+	panel = new HandPanel();
+	panel.init(document.getElementById('mount')!, {
+		getCards: () => cards,
+		onPlay: () => {}, announce: text => announced.push(text), t: key => key,
+		shortcutText: { play: 'game.help_cmd_play_card' },
+		sorting: {
+			preferenceScope: 'test-family', defaultId: 'pairs',
+			options: [
+				{ id: 'pairs', labelKey: 'sort.pairs', announcementKey: 'sorted.pairs', compare: typeFirst('pair') },
+				{ id: 'attacks', labelKey: 'sort.attacks', announcementKey: 'sorted.attacks', compare: typeFirst('attack') },
+				{ id: 'name', labelKey: 'sort.name', announcementKey: 'sorted.name', compare: byName },
+				{ id: 'hand', labelKey: 'sort.hand', announcementKey: 'sorted.hand', compare: () => 0 },
+			],
+		},
+	});
+
+	assert.deepEqual(rowLabels(), ['Ant', 'Zebra', 'Blast', 'Guard'],
+		'the default priority group and every tie are alphabetical');
+	const tools = Array.from(document.querySelectorAll<HTMLElement>(
+		'.hand-panel__list-actions button')).map(button => button.dataset.focusId);
+	assert.deepEqual(tools, ['sort-pairs', 'sort-attacks', 'sort-name', 'sort-hand', 'filter-playable']);
+	assert.ok(!tools.includes('sort-value'), 'the family does not expose a meaningless value axis');
+
+	(listAction('sort-attacks') as HTMLButtonElement).click();
+	assert.deepEqual(rowLabels(), ['Blast', 'Ant', 'Guard', 'Zebra']);
+	assert.deepEqual(announced, ['sorted.attacks']);
+	assert.equal((globalThis as any).window.localStorage.getItem('corro.handPreferences'), null,
+		'the family preference does not overwrite the generic hand preference');
+	assert.deepEqual(JSON.parse((globalThis as any).window.localStorage.getItem(preferenceKey)), {
+		sort: 'attacks', onlyPlayable: false,
+	});
 });
 
 test('sort by colour: only shows with coloured cards; groups by colour, value within, wilds last', () => {
@@ -456,46 +504,6 @@ test('a card FACE renders aria-hidden and repaints when the label changes (late 
 	panel.update();
 	assert.match(art.innerHTML, /NICE/);
 	assert.equal(rows()[0].getAttribute('aria-label'), 'Reparación'); // the ACCESSIBLE card
-});
-
-test('info rows pin AFTER the cards: exempt from sort/filter, inert to play and discard', () => {
-	document.body.innerHTML = '<div id="mount"></div>';
-	panel = new HandPanel();
-	panel.init(document.getElementById('mount')!, {
-		getCards: () => cards,
-		canDraw: () => canDraw,
-		onDraw: () => { drawn++; },
-		onPlay: c => { played.push(c.id); },
-		onDiscard: c => { discarded.push(c.id); },
-		announce: text => { announced.push(text); },
-		t: (k, vars) => vars ? `${k}:${JSON.stringify(vars)}` : k,
-		infoRows: () => [{ id: '__deck', label: 'Cartas en el mazo: 12' }],
-	});
-
-	// Last under the default value sort — and it plays no part in the ordering.
-	assert.deepEqual(rowLabels().map(l => l.split('.')[0]),
-		['100 km', '25 km', 'Stop', 'Cartas en el mazo: 12']);
-	const deck = rows()[3];
-	assert.ok(deck.classList.contains('hand-card--info'));
-
-	// Enter/Delete do nothing on it: it is not a card.
-	deck.focus();
-	key(deck, 'Enter');
-	key(deck, 'Delete');
-	assert.deepEqual(played, []);
-	assert.deepEqual(discarded, []);
-	assert.equal(confirmDialog(), null);
-
-	// The only-playable filter narrows the CARDS; the info row stays.
-	(listAction('filter-playable') as HTMLButtonElement).click();
-	assert.deepEqual(rowLabels(), ['100 km', '25 km', 'Cartas en el mazo: 12']);
-
-	// An empty hand keeps the list alive FOR the info row, empty message alongside.
-	cards = [];
-	panel.update();
-	assert.deepEqual(rowLabels(), ['Cartas en el mazo: 12']);
-	assert.equal(document.querySelector<HTMLElement>('.hand-panel__list')!.hidden, false);
-	assert.equal(document.querySelector<HTMLElement>('.hand-panel__empty')!.hidden, false);
 });
 
 test('discarding via the menu goes through the SAME modal confirmation', () => {

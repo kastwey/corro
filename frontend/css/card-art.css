@@ -113,6 +113,37 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Compact public piles live on the visual table, never as fake cards appended to a player's
+ * hand. The card back carries the count; the explicit caption distinguishes draw/discard. */
+.card-table-piles {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.25rem 0 0.5rem;
+}
+
+.card-table-pile {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.card-table-piles .gcard {
+  width: 64px;
+  height: 88px;
+  border-radius: 8px;
+}
+
+.card-table-pile__label {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.2;
+  text-align: center;
+}
+
 .gcard--empty {
   align-items: center;
   justify-content: center;

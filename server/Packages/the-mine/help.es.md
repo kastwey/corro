@@ -49,7 +49,7 @@ los atajos.
 
 ### Consultar y reaccionar
 
-- **C** anuncia cuántas cartas quedan en el mazo y cuál es el descarte superior. **S** anuncia tu estado y **Shift+S** el de los rivales.
+- **D** anuncia cuántas cartas quedan en el mazo y cuál es el descarte superior. **S** anuncia tu estado y **Shift+S** el de los rivales.
 - **N** lleva el foco a tu carta «¡Ni hablar!» durante la ventana de reacción; pulsa **Enter** para jugarla. Si no tienes ninguna, se anuncia el motivo.
 - Robos, acciones, reacciones, explosiones y eliminaciones se anuncian automáticamente.
 

@@ -6,6 +6,8 @@ import type { ExplodingSeatState, GameState } from '../src/models.js';
 const DECK = [
 	{ id: 'rat', type: 'cat', count: 4, nameKey: 'cards.rat' },
 	{ id: 'bat', type: 'cat', count: 4, nameKey: 'cards.bat' },
+	{ id: 'skip', type: 'skip', count: 4, nameKey: 'cards.skip' },
+	{ id: 'nope', type: 'nope', count: 4, nameKey: 'cards.nope' },
 ];
 
 const inst = (cardId: string, copy: number) => ({
@@ -48,4 +50,19 @@ test('activating one cat deterministically finds the other matching copy', () =>
 	assert.equal(catPairPartner(gs, 'me', 'rat#0'), 'rat#1');
 	assert.equal(catPairPartner(gs, 'me', 'rat#1'), 'rat#0');
 	assert.deepEqual(canPlayCard(gs, 'me', 'rat#0'), { playable: true });
+});
+
+test('ordinary card playability stays stable off turn and through a reaction window', () => {
+	const gs = game([inst('skip', 0), inst('nope', 0)]);
+
+	assert.deepEqual(canPlayCard(gs, 'me', 'skip#0'), { playable: true });
+	gs.currentTurn = 'rival';
+	assert.deepEqual(canPlayCard(gs, 'me', 'skip#0'), { playable: true },
+		'the turn gate must not empty a filtered hand');
+
+	gs.exploding!.pendingAction = { actorId: 'rival', cardId: 'skip', nopeCount: 0 };
+	assert.deepEqual(canPlayCard(gs, 'me', 'skip#0'), { playable: true },
+		'the temporary window is checked when the card is activated, not by the filter');
+	assert.deepEqual(canPlayCard(gs, 'me', 'nope#0'), { playable: true },
+		'the real off-turn reaction still enters the playable filter while its window is open');
 });

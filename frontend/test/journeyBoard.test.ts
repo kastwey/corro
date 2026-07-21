@@ -118,7 +118,7 @@ beforeEach(() => {
 	view.update(gs);
 });
 
-test('helpShortcuts reports the REAL wiring: Enter/Space/Delete + S/Shift+S', () => {
+test('helpShortcuts reports the REAL wiring: hand actions, player status and D deck query', () => {
 	assert.deepEqual(view.helpShortcuts(), [
 		{ keys: 'enter', descKey: 'game.help_cmd_play_card' },
 		{ keys: 'space', descKey: 'game.help_cmd_draw_card' },
@@ -126,23 +126,21 @@ test('helpShortcuts reports the REAL wiring: Enter/Space/Delete + S/Shift+S', ()
 		{ keys: 'shift+f1', descKey: 'game.help_cmd_card_help' },
 		{ keys: 's', descKey: 'game.help_cmd_status_mine' },
 		{ keys: 'shift+s', descKey: 'game.help_cmd_status_rivals' },
+		{ keys: 'd', descKey: 'game.help_cmd_journey_deck' },
 	]);
 });
 
 test('the hand renders my projected cards with server-mirrored playability', () => {
 	const labels = rows().map(r => r.getAttribute("aria-label"));
-	assert.equal(rows().length, 3);
+	assert.equal(rows().length, 2);
 	assert.equal(labels[0], 'cards.go'); // remedy for my "stop": playable
 	// Both rivals are rolling and unshielded, so the attack is playable too.
 	assert.equal(labels[1], 'cards.stop');
-	// The draw pile rides the hand as a read-only last row carrying its count.
-	assert.equal(labels[2], 'game.journey_deck_row(20)');
-	assert.ok(rows()[2].classList.contains('hand-card--info'));
-	// The VISUAL layer (all aria-hidden): faces on the rows, the deck row as a card back,
-	// the centre piles, the odometer dashboards and the road furniture.
+	assert.equal(document.querySelector('.hand-card--info'), null, 'the deck is not a hand row');
+	// The VISUAL layer (all aria-hidden): faces on the rows, the centre piles, the odometer
+	// dashboards and the road furniture.
 	assert.ok(rows()[0].querySelector('.jcard--remedy'));
 	assert.ok(rows()[1].querySelector('.jcard--attack'));
-	assert.ok(rows()[2].querySelector('.jcard--back'));
 	assert.ok(boardEl.querySelector('.journey-centre__stack .jcard--back'));
 	assert.ok(boardEl.querySelector('.journey-centre__discard .jcard--empty')); // nothing discarded yet
 	assert.equal(boardEl.querySelectorAll('.journey-dash__digit').length, 12); // 3 seats × 4 digits
@@ -155,6 +153,14 @@ test('the hand renders my projected cards with server-mirrored playability', () 
 	assert.equal(boardEl.getAttribute('data-i18n-attr:aria-label'), null);
 	// And the visible draw affordance replaces the die.
 	assert.ok(boardEl.querySelector('.hand-panel__draw'));
+});
+
+test('D reads the remaining deck on demand without moving hand focus', () => {
+	const card = rows()[0];
+	card.focus();
+	key(card, 'd');
+	assert.deepEqual(announced, ['game.journey_deck_count(20)']);
+	assert.equal(document.activeElement, card);
 });
 
 test('the turn never rewrites the rows: acting off-turn is refused ALOUD instead', () => {
@@ -326,7 +332,7 @@ test('team mode: my hand is MINE alone, any member id targets the seat, one shar
 	view.update(gs);
 
 	// Only MY cards render — the partner's hand is private, even from me.
-	const cardRows = rows().filter(r => !r.classList.contains('hand-card--info'));
+	const cardRows = rows();
 	assert.deepEqual(cardRows.map(r => r.getAttribute("aria-label")), ['cards.stop']);
 
 	// With a single rival SEAT the attack auto-targets it (partners are never targets):

@@ -61,6 +61,7 @@ tuyo ya te lo da la S). Pulsa **Ctrl+F1** para ver la lista completa de atajos d
 
 ### Consultar el taller
 
+- **D** anuncia los recuentos del mazo y los descartes boca abajo sin abandonar la mano.
 - **S** anuncia tus cuatro sistemas y su estado; **Shift+S** repasa los talleres rivales. **Ctrl+P** lleva a la lista de jugadores.
 - Instalaciones, averías, reparaciones, blindajes, certificaciones, descartes y robos privados se anuncian automáticamente.
 

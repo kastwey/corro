@@ -1,7 +1,7 @@
 // journeyBoard.ts — The journey family's surface inside the shared #board container. There
 // is no spatial board in this family: the interactive centre is the HAND (an accessible
 // list — see handPanel.ts); everything else is a visual echo of information that is already
-// spoken elsewhere (players panel, S/C status, server announcements), so it stays
+// spoken elsewhere (players panel, S/D status, server announcements), so it stays
 // aria-hidden by design:
 //
 //   - the 0→goal progress STRIP, one car per seat in the player's colour — and the family's
@@ -29,7 +29,9 @@ import {
 	attackableRivals, canDraw, canDiscard, canPlayCard, isLimited, isStopped, journeyCardHelp,
 	journeyCatalog, journeyMember, journeySeat,
 } from './journeyRules.js';
-import { cardBoardHelpShortcuts, playerName, registerStatusKeys, resetCardBoard } from './cardBoardShell.js';
+import {
+	cardBoardHelpShortcuts, playerName, registerPileStatusKey, registerStatusKeys, resetCardBoard,
+} from './cardBoardShell.js';
 import { buildJourneyRulesLines } from './rulesSummaries.js';
 import type { GameState, JourneyCardDef, JourneySeatState } from './models.js';
 import type { HelpShortcut } from './shortcuts.js';
@@ -98,7 +100,7 @@ export function journeyTeamName(
 
 /**
  * One seat's spoken status: kilometres, battle state (rolling / stopped by X, limit), the
- * immunities played and the match score. The players-panel identity line and the S/C keys
+	 * immunities played and the match score. The players-panel identity line and the S keys
  * all speak through this, so every surface tells the same story.
  */
 export function journeyStatusText(
@@ -255,9 +257,9 @@ export class JourneyBoard {
 		this.hand.focus();
 	}
 
-	/** The hand keys (Enter/Space/Delete) + the shared S / Shift+S status keys, for the help. */
+	/** The hand keys + shared player status and D pile query, for the help. */
 	helpShortcuts(): HelpShortcut[] {
-		return cardBoardHelpShortcuts(this.hand);
+		return cardBoardHelpShortcuts(this.hand, 'game.help_cmd_journey_deck');
 	}
 
 	/** The active rules for the rules dialog (Ctrl+Shift+F1). */
@@ -289,7 +291,7 @@ export class JourneyBoard {
 	private build(): void {
 		resetCardBoard(this.element, 'journey-mode');
 
-		// Visual-only region: everything here is spoken elsewhere (panel, S/C, announcer).
+		// Visual-only region: everything here is spoken elsewhere (panel, S/D, announcer).
 		const visual = document.createElement('div');
 		visual.className = 'journey-visual';
 		visual.setAttribute('aria-hidden', 'true');
@@ -314,19 +316,6 @@ export class JourneyBoard {
 
 		this.hand.init(handMount, {
 			getCards: () => this.myHandCards(),
-			// The draw pile rides the hand as a read-only row: how many cards are left is
-			// table state every player plans around (the exhausted-deck endgame).
-			infoRows: () => {
-				const gs = this.deps.getGameState();
-				if (!gs?.journey) return [];
-				const count = gs.journey.drawCount ?? 0;
-				return [{
-					id: '__deck',
-					label: this.deps.tSync('game.journey_deck_row', { count }),
-					// Visually: a face-down card at the end of the hand wearing the count.
-					art: journeyCardBackHtml(String(count)),
-				}];
-			},
 			canDraw: () => {
 				const gs = this.deps.getGameState();
 				const myId = this.deps.getMyPlayerId();
@@ -374,6 +363,15 @@ export class JourneyBoard {
 			announce: this.deps.announce,
 			mine: (gs, myId) => journeyStatusText(gs, myId, this.deps.tSync),
 			rivals: (gs, myId) => this.allSeatsStatus(gs, myId),
+		});
+		registerPileStatusKey(this.element, {
+			announce: this.deps.announce,
+			read: () => {
+				const gs = this.deps.getGameState();
+				return gs?.journey
+					? this.deps.tSync('game.journey_deck_count', { count: gs.journey.drawCount ?? 0 })
+					: null;
+			},
 		});
 
 		this.built = true;

@@ -102,11 +102,11 @@ per-family code small and behind a registry:
   lazy view factory. Card families are built by a shared helper, `makeCardFamily(...)`, so
   they don't each re-wire the same scaffolding.
 - **`handPanel.ts`** — the accessible hand, shared by every card family (a roving list,
-  sort/filter, "what can I play", an optional multi-select mode). This is the single most
-  reused client component.
+  containing held cards only, with sort/filter, "what can I play" and an optional
+  multi-select mode). This is the single most reused client component.
 - **`cardBoardShell.ts`** — the bits every card board repeats: resetting the `#board`
-  element from the property grid to a card surface, and wiring the S / Shift+S status
-  keys. Extracted once so the convention is fix-once.
+  element from the property grid to a card surface, wiring S / Shift+S for player status,
+  and wiring D for the shared pile readout. Extracted once so the convention is fix-once.
 - **`*Board.ts`** (`journeyBoard`, `assemblyBoard`, `draftBoard`, `sheddingBoard`,
   `raceBoard`, `trackBoard`) — each family's own surface.
 

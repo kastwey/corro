@@ -11,6 +11,7 @@
 // counts (S / Shift+S) that replace the classic shout by design.
 
 import { test, expect } from '../helpers/test';
+import { flushAxeAudit } from '../helpers/axeAudit';
 import {
 	createGame,
 	expectAnnouncement,
@@ -34,16 +35,20 @@ test('shedding: matches, the drawn-card pause, a penalty and the on-demand count
 	await joinGame(berto, code, 'Berto');
 	await startGame(ana, [ana, berto]);
 
-	// ── The table at start: 7-card hands, the flip counted on the info row, the draw
-	// affordance present (Space draws in this family), no dice. ──
+	// ── The table at start: 7-card hands containing held cards only, plus a separate visual
+	// deck/discard table. Space draws in this family; D reads the shared piles. ──
 	const anaCards = ana.locator('.hand-card:not(.hand-card--info)');
 	await expect(anaCards).toHaveCount(7);
 	await expect(anaCards.locator('[data-card-art="package"]')).toHaveCount(7);
 	await expect(ana.locator('.shedding-discard [data-card-art="package"]')).toBeVisible();
-	await expect(ana.locator('.hand-card--info')).toHaveAttribute(
-		'aria-label', /Mazo: 93\. Arriba: Amarillo 0, color en vigor amarillo\./);
+	await expect(ana.locator('.hand-card--info')).toHaveCount(0);
+	await expect(ana.locator('.shedding-draw .gcard__back-label')).toHaveText('93');
 	await expect(ana.locator('.hand-panel__draw')).toBeVisible();
 	await expect(ana.locator('.dice-control')).toBeHidden();
+	await anaCards.first().focus();
+	await ana.keyboard.press('d');
+	await expectAnnouncement(ana, /Mazo: 93\. Arriba: Amarillo 0, color en vigor amarillo\./);
+	await expect(anaCards.first()).toBeFocused();
 
 	const cardOf = (page: typeof ana, name: RegExp) =>
 		page.locator('.hand-card:not(.hand-card--info)', { hasText: name }).first();
@@ -74,7 +79,18 @@ test('shedding: matches, the drawn-card pause, a penalty and the on-demand count
 	await ana.keyboard.press('Enter');
 	await expectAnnouncement(berto, /Ana juega Verde 2/);
 
-	// ── Berto has nothing green and no 2: he DRAWS (Space) — and the drawn Azul 2
+	// ── Berto has nothing green and no 2. Filtering therefore leaves a real zero-item
+	// list: its name and item count are sufficient, with no extra "all filtered" phrase.
+	const bertoFilter = berto.locator('.hand-panel__list-actions [data-focus-id="filter-playable"]');
+	await bertoFilter.click();
+	const bertoList = berto.locator('.hand-panel__list');
+	await expect(bertoList.locator('.hand-card')).toHaveCount(0);
+	await expect(bertoList).not.toHaveAttribute('aria-describedby', /./);
+	await expect(berto.locator('.hand-panel__empty')).toBeHidden();
+	await flushAxeAudit(berto);
+	await bertoFilter.click();
+
+	// Berto DRAWS (Space) — and the drawn Azul 2
 	// matches by value, so the game pauses on his play-it-or-keep-it choice. ──
 	await berto.locator('#board').focus();
 	await berto.keyboard.press(' ');

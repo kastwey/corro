@@ -787,3 +787,15 @@
 	text-decoration: underline;
 	text-underline-offset: 0.15em;
 }
+
+.app-footer__external-link {
+	display: inline-flex;
+	align-items: center;
+}
+
+.app-footer__external-icon {
+	flex: 0 0 auto;
+	width: 1em;
+	height: 1em;
+	margin-inline-start: 0.3em;
+}

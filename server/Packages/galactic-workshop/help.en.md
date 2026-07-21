@@ -61,6 +61,7 @@ keyboard shortcuts.
 
 ### Checking the workshop
 
+- **D** announces the draw-deck and face-down discard counts without leaving your hand.
 - **S** announces your four systems and their state; **Shift+S** reviews the rival workshops. **Ctrl+P** moves to the players list.
 - Installations, breakdowns, repairs, shields, certifications, discards and private draws are announced automatically.
 

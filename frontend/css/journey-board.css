@@ -215,12 +215,6 @@
   border-style: dashed;
 }
 
-/* Read-only info rows: as a CARD (the deck counter is a face-down card in your hand). */
-.hand-card--info:not(.hand-card--visual) {
-  background: transparent;
-  border-style: dashed;
-}
-
 .hand-card__name { flex: 1; }
 
 .hand-card__art { display: contents; }

@@ -1,12 +1,12 @@
 // explodingBoard.ts — The exploding family's surface. Like the other
 // card families: NO spatial board — the HAND PANEL is the home surface. Enter plays an action
 // card (or a Nope, off-turn), Space draws (which ends the turn and may detonate). When you draw
-// a bomb you hold a defuse for, a depth picker opens to tuck it back secretly. The "n" reaction
-// key jumps focus to a Nope so you can Enter it fast during the suspense window. Everything
-// visual (the discard top, the draw-pile count, the alive rivals) is an aria-hidden echo; the
-// same story speaks through explodingStatusText (S / Shift+S / the players panel).
+// a bomb you hold a defuse for, a depth picker opens to tuck it back secretly. N jumps focus
+// to a Nope during the suspense window; P cycles the package-themed cards that form matching
+// pairs. Everything visual is an aria-hidden echo. S / Shift+S speak player status; D reads
+// the draw pile and discard top on demand.
 
-import { HandPanel, type HandCard } from './handPanel.js';
+import { HandPanel, type HandCard, type HandSorting } from './handPanel.js';
 import {
 	explodingCardArtHtml, explodingCardBackHtml, explodingEmptyCardHtml,
 } from './explodingCardArt.js';
@@ -18,7 +18,9 @@ import {
 	explodingStatusText, topDef,
 } from './explodingRules.js';
 import { soundEvents } from './soundEvents.js';
-import { cardBoardHelpShortcuts, playerName, registerStatusKeys, resetCardBoard } from './cardBoardShell.js';
+import {
+	cardBoardHelpShortcuts, playerName, registerPileStatusKey, registerStatusKeys, resetCardBoard,
+} from './cardBoardShell.js';
 import { showGameRulesDialog } from './gameRulesDialog.js';
 import type { GameState } from './models.js';
 import type { HelpShortcut } from './shortcuts.js';
@@ -26,6 +28,45 @@ import type { HelpShortcut } from './shortcuts.js';
 /** Focus entering the picker interrupts screen-reader speech. Leave enough time for the
  *  just-drawn-bomb announcement to be heard while the visual defuse plays. */
 const DEFUSE_PICKER_DELAY_MS = 2000;
+
+/** Exploding cards have no numeric value or rules colour. Its useful orders are semantic,
+ *  while labels remain package-owned: prioritise the engine role, then alphabetise whatever
+ *  that package calls each card. "Pair" deliberately avoids assuming that type `cat` is
+ *  literally a cat (The Mine themes the same mechanic as mine creatures). */
+const byLocalizedName = (a: HandCard, b: HandCard): number => a.label.localeCompare(b.label);
+const withTypeFirst = (typeKey: string) => (a: HandCard, b: HandCard): number =>
+	Number(b.typeKey === typeKey) - Number(a.typeKey === typeKey) || byLocalizedName(a, b);
+
+const EXPLODING_HAND_SORTING: HandSorting = {
+	preferenceScope: 'exploding',
+	defaultId: 'pairs',
+	options: [
+		{
+			id: 'pairs',
+			labelKey: 'game.exploding_sort_pairs_first',
+			announcementKey: 'game.exploding_sorted_pairs_first',
+			compare: withTypeFirst('cat'),
+		},
+		{
+			id: 'attacks',
+			labelKey: 'game.exploding_sort_attacks_first',
+			announcementKey: 'game.exploding_sorted_attacks_first',
+			compare: withTypeFirst('attack'),
+		},
+		{
+			id: 'name',
+			labelKey: 'game.exploding_sort_name',
+			announcementKey: 'game.exploding_sorted_name',
+			compare: byLocalizedName,
+		},
+		{
+			id: 'hand',
+			labelKey: 'game.hand_sort_hand',
+			announcementKey: 'game.hand_sorted_hand',
+			compare: () => 0,
+		},
+	],
+};
 
 export interface ExplodingBoardDeps {
 	getGameState(): GameState | null;
@@ -86,9 +127,9 @@ export class ExplodingBoard {
 	}
 
 	helpShortcuts(): HelpShortcut[] {
-		const shortcuts = cardBoardHelpShortcuts(this.hand);
-		shortcuts.push({ keys: 'c', descKey: 'game.help_cmd_exploding_top' });
+		const shortcuts = cardBoardHelpShortcuts(this.hand, 'game.help_cmd_exploding_top');
 		shortcuts.push({ keys: 'n', descKey: 'game.help_cmd_exploding_nope' });
+		shortcuts.push({ keys: 'p', descKey: 'game.help_cmd_exploding_pair' });
 		return shortcuts;
 	}
 
@@ -138,10 +179,10 @@ export class ExplodingBoard {
 
 		this.hand.init(handMount, {
 			getCards: () => this.myHandCards(),
+			sorting: EXPLODING_HAND_SORTING,
 			canDraw: () => this.canDrawNow(),
 			onDraw: () => this.deps.commands.draw(),
 			onPlay: card => this.playCard(card),
-			infoRows: () => this.infoRows(),
 			playSound: event => soundEvents.playEvent(event),
 			announce: text => this.deps.announce(text),
 			t: (key, vars) => this.deps.tSync(key, vars),
@@ -158,15 +199,9 @@ export class ExplodingBoard {
 			mine: (gs, myId) => explodingStatusText(gs, myId, this.deps.tSync),
 			rivals: (gs, myId) => this.allSeatsStatus(gs, myId),
 		});
-
-		// C — the deck count and the discard top, on demand (shadows the engine's spatial key,
-		// dead weight in a card game). Consumed so it never reaches the global keymap.
-		this.element.addEventListener('keydown', (e) => {
-			if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
-			if (e.key.toLowerCase() !== 'c') return;
-			e.preventDefault();
-			e.stopPropagation();
-			this.announceTop();
+		registerPileStatusKey(this.element, {
+			announce: this.deps.announce,
+			read: () => this.pileStatusText(),
 		});
 
 		// N — the REACTION key: jump hand focus to a Nope card so I can Enter it during the
@@ -179,24 +214,40 @@ export class ExplodingBoard {
 			this.jumpToNope();
 		});
 
+		// P — PAIR cards: cycle the package-themed cards whose matching copies steal. P means
+		// both pair and pareja, and avoids naming them "cats" in packages that theme them.
+		this.element.addEventListener('keydown', (e) => {
+			if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+			if (e.key.toLowerCase() !== 'p') return;
+			e.preventDefault();
+			e.stopPropagation();
+			this.jumpToPair();
+		});
+
 		this.built = true;
 	}
 
-	private announceTop(): void {
+	private pileStatusText(): string | null {
 		const gs = this.deps.getGameState();
 		const ex = gs?.exploding;
-		if (!ex) return;
+		if (!ex) return null;
 		const top = topDef(gs!);
-		this.deps.announce(this.deps.tSync('game.exploding_status_deck', {
+		return this.deps.tSync('game.exploding_status_deck', {
 			count: ex.drawCount,
 			card: top ? this.deps.tSync(top.nameKey) : this.deps.tSync('game.exploding_no_top'),
-		}));
+		});
 	}
 
 	/** Reaction key (N): move hand focus to a Nope card so the player can Enter it. */
 	private jumpToNope(): void {
 		const found = this.hand.focusNextMatching(c => c.typeKey === 'nope');
 		if (!found) this.deps.announce(this.deps.tSync('game.exploding_no_nope'));
+	}
+
+	/** Pair key (P): cycle cards that can form an identical pair, whatever the package calls them. */
+	private jumpToPair(): void {
+		const found = this.hand.focusNextMatching(c => c.typeKey === 'cat');
+		if (!found) this.deps.announce(this.deps.tSync('game.exploding_no_pair'));
 	}
 
 	rulesSummary(): string[] {
@@ -236,29 +287,23 @@ export class ExplodingBoard {
 		});
 	}
 
-	private infoRows() {
-		const gs = this.deps.getGameState();
-		if (!gs?.exploding) return [];
-		const top = topDef(gs);
-		return [{
-			id: '__table',
-			label: this.deps.tSync('game.exploding_table_row', {
-				draw: gs.exploding.drawCount ?? 0,
-				card: top?.nameKey ?? 'game.exploding_no_top',
-			}),
-			art: explodingCardBackHtml(String(gs.exploding.drawCount ?? 0)),
-		}];
-	}
-
 	private canDrawNow(): { ok: true } | { ok: false; reason: string } {
 		const gs = this.deps.getGameState();
 		const myId = this.deps.getMyPlayerId();
 		if (!gs || !myId) return { ok: false, reason: '' };
+		return this.turnActionGate(gs, myId);
+	}
+
+	/** Global action gate shared by drawing and ordinary card plays. Card rows deliberately
+	 *  keep their rule-level playability across these temporary states; the refusal belongs
+	 *  here, at activation time, so a filtered hand remains stable between turns. */
+	private turnActionGate(gs: GameState, myId: string): { ok: true } | { ok: false; reason: string } {
 		const ex = gs.exploding;
 		if (gs.isGameOver) return { ok: false, reason: this.deps.tSync('game.exploding_game_over') };
 		if (gs.currentTurn !== myId) return { ok: false, reason: this.deps.tSync('game.exploding_not_your_turn') };
 		if (ex?.pendingAction) return { ok: false, reason: this.deps.tSync('game.exploding_window_open') };
 		if (ex?.pendingBomb) return { ok: false, reason: this.deps.tSync('game.exploding_resolve_bomb_first') };
+		if (ex?.pendingFavor) return { ok: false, reason: this.deps.tSync('game.exploding_resolve_favor_first') };
 		return { ok: true };
 	}
 
@@ -279,25 +324,34 @@ export class ExplodingBoard {
 			this.deps.commands.nope(card.id);
 			return;
 		}
+		const gate = this.turnActionGate(gs, myId);
+		if (!gate.ok) {
+			this.deps.announce(gate.reason);
+			return;
+		}
 		if (card.typeKey === 'favor') {
-			this.openTargetPicker(card, null);
+			this.playTargetedCard(card, null);
 			return;
 		}
 		if (card.typeKey === 'cat') {
 			const partner = catPairPartner(gs, myId, card.id);
-			if (partner) this.openTargetPicker(card, partner);
+			if (partner) this.playTargetedCard(card, partner);
 			return;
 		}
 		this.deps.commands.play(card.id);
 	}
 
-	/** Pick the victim of a Favor or a cat steal: a popupMenu of the seats still in play. */
-	private openTargetPicker(card: HandCard, second: string | null): void {
+	/** Play against the sole remaining rival directly; ask only when there is a real choice. */
+	private playTargetedCard(card: HandCard, second: string | null): void {
 		const gs = this.deps.getGameState();
 		const myId = this.deps.getMyPlayerId();
 		if (!gs || !myId) return;
 		const rivals = (gs.exploding?.seats ?? []).filter(s => s.playerId !== myId && !s.retired);
 		if (rivals.length === 0) return;
+		if (rivals.length === 1) {
+			this.deps.commands.play(card.id, rivals[0].playerId, second ?? undefined);
+			return;
+		}
 		const prompt = this.deps.tSync(
 			second ? 'game.exploding_pick_target_pair' : 'game.exploding_pick_target',
 			{ card: card.label },
@@ -424,7 +478,7 @@ export class ExplodingBoard {
 
 		// The table centre: the discard's top card as a card face, beside the draw pile — the
 		// tense heart of the game (a bomb lurks in it) — as a danger-tinged card-back stack. All
-		// aria-hidden; the C key, the panel and the announcer speak the same.
+		// aria-hidden; D reads the same state on demand without putting it in the hand list.
 		this.table.innerHTML =
 			`<div class="exploding-piles">`
 			+ `<div class="exploding-discard${pending}">${topFace}</div>`

@@ -311,8 +311,8 @@ interface CardFamilyBoard {
 
 /**
  * The shared CHASSIS for card families (journey, assembly, draft, shedding). They all
- * wire the SAME scaffolding: the status line IS the identity (players panel + the C/S
- * keys), and the view is a hand-only surface behind an inert spatial navigator (every
+ * wire the SAME scaffolding: the status line IS the identity (players panel + S/Shift+S),
+ * D reads shared piles, and the view is a hand-only surface behind an inert spatial navigator (every
  * "go home" lands on the hand). Only three things differ — the gameType, the status text
  * and how the board is built (its class + command wiring) — so those are the parameters
  * and the rest lives here once. Factors out the copy-pasted wiring WITHOUT touching any
@@ -427,7 +427,7 @@ const sheddingFamily = makeCardFamily('shedding', sheddingStatusText, deps =>
   }));
 
 // The status IS the identity: how many cards each player is holding (or "eliminated"). The
-// deck count and the discard top are the on-demand C readout instead.
+// deck count and the discard top are the on-demand D readout instead.
 const explodingFamily = makeCardFamily('exploding', explodingStatusText, deps =>
   new ExplodingBoard(deps.boardElement, {
 	getGameState: deps.getGameState,

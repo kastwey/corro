@@ -25,6 +25,8 @@ test('exploding: board and the defuse picker (screenshots)', async ({ browser },
 
 	// The table at start: 8-card hands (1 defuse + 7), the draw affordance (Space), no dice.
 	await expect(ana.locator('.hand-card:not(.hand-card--info)')).toHaveCount(8);
+	await expect(ana.locator('.hand-card--info')).toHaveCount(0);
+	await expect(ana.locator('.exploding-draw .xcard__back-label')).toHaveText(/^\d+$/);
 	await expect(ana.locator('.exploding-hand [data-card-art="package"]')).toHaveCount(8);
 	await expect(ana.locator('.exploding-hand [data-card-art="neutral"]')).toHaveCount(0);
 	await expect(ana.locator('.hand-panel__draw')).toBeVisible();

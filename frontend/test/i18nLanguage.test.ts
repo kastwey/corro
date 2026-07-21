@@ -9,12 +9,12 @@ import { I18nBinder } from '../src/i18nBinder.js';
 
 // A minimal i18next stand-in: init/changeLanguage just record the active language so the
 // binder can run without the real engine or network resources.
-function fakeI18next() {
+function fakeI18next(translations: Record<string, string> = {}) {
 	const obj: any = {
 		language: 'en',
 		init: async (opts: any) => { obj.language = opts?.lng ?? obj.language; },
 		changeLanguage: async (lng: string) => { obj.language = lng; },
-		t: (k: string) => k,
+		t: (k: string) => translations[k] ?? k,
 	};
 	return obj;
 }
@@ -55,6 +55,31 @@ test('init() honours an English language cookie (the lobby choice)', async () =>
 	await binder.init();
 
 	assert.equal(binder.getCurrentLanguage(), 'en');
+});
+
+test('applyI18n reveals deferred copy only after localization and keeps readable fallbacks', async () => {
+	document.cookie = 'corro_language=es';
+	document.body.innerHTML = `
+		<p id="translated" data-i18n="game.surface_intro.loading" data-i18n-defer hidden>English fallback</p>
+		<p id="fallback" data-i18n="missing.key" data-i18n-defer hidden>Readable fallback</p>`;
+	window.i18next = fakeI18next({
+		'game.surface_intro.loading': 'Localized loading instructions',
+	});
+	const binder = newBinder();
+	const translated = document.getElementById('translated') as HTMLElement;
+	const fallback = document.getElementById('fallback') as HTMLElement;
+
+	assert.equal(translated.hidden, true);
+	assert.equal(translated.textContent, 'English fallback');
+	await binder.init();
+	await binder.applyI18n();
+
+	assert.equal(translated.hidden, false);
+	assert.equal(translated.hasAttribute('data-i18n-defer'), false);
+	assert.equal(translated.textContent, 'Localized loading instructions');
+	assert.equal(fallback.hidden, false);
+	assert.equal(fallback.hasAttribute('data-i18n-defer'), false);
+	assert.equal(fallback.textContent, 'Readable fallback');
 });
 
 // Regression: the languageChanged event MUST bubble. The lobby subscribes on `window`; a

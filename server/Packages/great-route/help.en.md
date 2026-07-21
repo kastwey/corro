@@ -48,6 +48,7 @@ Your hand is the main play surface, and each card is a single focus stop contain
 
 ### Checking the game state
 
+- **D** announces how many cards remain in the deck without leaving your hand.
 - **S** announces your kilometres, state, immunities and score. **Shift+S** reviews your rivals' status.
 - **Ctrl+P** moves to the players panel, where each row summarizes that person or team's status.
 - Draws, played cards, attacks, remedies and turn changes are announced automatically; you do not need to leave the hand to follow them.

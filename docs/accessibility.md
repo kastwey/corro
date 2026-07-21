@@ -70,11 +70,14 @@ Card games have no spatial board; the **hand is the surface**, and it is a caref
 accessible list:
 
 - A **roving list**: arrow keys move between cards, each card is one focus stop that reads
-  its name; the currently-focused card is the only tab stop.
+  its name; the currently-focused card is the only tab stop. The list contains only cards
+  the player holds — shared deck/discard counts never appear as a trailing fake card.
 - Per-card actions (play, discard, help) reachable via a toolbar / `Shift+F10` menu; and
   list-level tools (sort by value/type, "only what I can play") painted once.
 - Enter plays, Space draws (when the family draws), Delete discards behind a **modal
   yes/no** because it is irreversible. Refusals are spoken with the reason.
+- **D reads the shared piles on demand** in every card family. The exact sentence follows
+  the genre (deck only, deck + discards, or deck + discard top) and focus stays in the hand.
 - An optional **multi-select mode** (Ctrl+Space) for families that need to send several
   cards at once (draft's "chopsticks", assembly's multi-discard): Space marks, Enter sends,
   and a rules-forced multi-pick switches it on automatically with its own earcon.

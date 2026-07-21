@@ -66,7 +66,7 @@ function key(target: EventTarget, keyName: string, opts: Record<string, unknown>
 }
 
 function rows(): HTMLElement[] {
-	return Array.from(document.querySelectorAll<HTMLElement>('.hand-card:not(.hand-card--info)'));
+	return Array.from(document.querySelectorAll<HTMLElement>('.hand-card'));
 }
 
 beforeEach(() => {
@@ -173,7 +173,7 @@ test('helpShortcuts reports the REAL wiring: Enter/Space + S/Shift+S, no discard
 		{ keys: 'shift+f1', descKey: 'game.help_cmd_card_help' },
 		{ keys: 's', descKey: 'game.help_cmd_status_mine' },
 		{ keys: 'shift+s', descKey: 'game.help_cmd_status_rivals' },
-		{ keys: 'c', descKey: 'game.help_cmd_shedding_top' },
+		{ keys: 'd', descKey: 'game.help_cmd_shedding_piles' },
 		{ keys: 'r / g / b / y', descKey: 'game.help_cmd_shedding_colour_jump' },
 		{ keys: 'shift + r / g / b / y', descKey: 'game.help_cmd_shedding_colour_jump_back' },
 		{ keys: '0 – 9', descKey: 'game.help_cmd_shedding_number_jump' },
@@ -183,11 +183,11 @@ test('helpShortcuts reports the REAL wiring: Enter/Space + S/Shift+S, no discard
 	]);
 });
 
-test('C reads just the top card and the colour in force (not the whole status)', () => {
-	// The beforeEach board has red-5 on top, red in force. C announces only that.
-	key(boardEl, 'c');
+test('D reads the deck, top card and colour in force (not the whole player status)', () => {
+	// The beforeEach board has 60 in the deck, red-5 on top and red in force.
+	key(boardEl, 'd');
 	const line = announced.at(-1) ?? '';
-	assert.ok(line.startsWith('game.shedding_status_top'), 'the top-card line, on its own');
+	assert.equal(line, 'game.shedding_status_piles(60|c.red5|colors.red)');
 	assert.ok(!line.includes('shedding_status_score'), 'not the hand/score bundle S reads');
 });
 
@@ -282,7 +282,7 @@ test('the table is an aria-hidden echo: top card, colour, direction and counters
 	assert.ok(boardEl.querySelector('.shedding-discard .gcard__name')!.textContent!.includes('c.red5'));
 	assert.ok(boardEl.querySelector('.shedding-discard [data-card-art="package"]'));
 	assert.ok(boardEl.querySelector('.shedding-draw .gcard--back'));
-	assert.ok(boardEl.querySelector('.hand-card--info .gcard--back'));
+	assert.equal(boardEl.querySelector('.hand-card--info'), null, 'the deck is not a hand row');
 	assert.equal(boardEl.querySelector('.shedding-direction')!.textContent, '↻');
 	const seats = boardEl.querySelectorAll('.shedding-seat');
 	assert.equal(seats.length, 2);

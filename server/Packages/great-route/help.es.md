@@ -48,6 +48,7 @@ La mano es la superficie principal de juego y cada carta es una sola parada de f
 
 ### Saber cómo va la partida
 
+- **D** anuncia cuántas cartas quedan en el mazo sin abandonar la mano.
 - **S** anuncia tus kilómetros, estado, inmunidades y puntos. **Shift+S** repasa el estado de los rivales.
 - **Ctrl+P** lleva al panel de jugadores, donde cada fila resume el estado de esa persona o equipo.
 - Los robos, cartas jugadas, ataques, remedios y cambios de turno se anuncian automáticamente; no necesitas abandonar la mano para seguirlos.

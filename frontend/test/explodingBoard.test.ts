@@ -25,6 +25,7 @@ let boardElement: HTMLElement;
 let state: GameState;
 let view: ExplodingBoard;
 let announcements: string[];
+let played: Array<[string, string | undefined, string | undefined]>;
 let defuseDepths: number[];
 let motionDisabled: boolean;
 let timers: Array<{ callback: () => void; delayMs: number; cancelled: boolean }>;
@@ -55,13 +56,29 @@ function game(): GameState {
 	} as unknown as GameState;
 }
 
+function key(target: EventTarget, keyName: string): void {
+	target.dispatchEvent(new KeyboardEvent('keydown', { key: keyName, bubbles: true, cancelable: true }));
+}
+
+function addFavor(): HTMLElement {
+	state.explodingDeck!.push({ id: 'favor', type: 'favor', count: 1, nameKey: 'cards.favor' });
+	const mine = state.exploding!.seats[0];
+	mine.hand.push(instance('favor'));
+	mine.handCount = mine.hand.length;
+	view.update(state);
+	return Array.from(boardElement.querySelectorAll<HTMLElement>('.hand-card'))
+		.find(row => row.getAttribute('aria-label') === 'cards.favor')!;
+}
+
 beforeEach(() => {
 	popupMenu.close();
 	try { localStorage.removeItem('corro.handPreferences'); } catch {}
+	try { localStorage.removeItem('corro.handPreferences.exploding'); } catch {}
 	document.body.innerHTML = '<div id="board"></div>';
 	boardElement = document.getElementById('board')!;
 	state = game();
 	announcements = [];
+	played = [];
 	defuseDepths = [];
 	motionDisabled = true;
 	timers = [];
@@ -79,7 +96,10 @@ beforeEach(() => {
 		},
 		clearTimer: handle => { (handle as typeof timers[number]).cancelled = true; },
 		commands: {
-			play: () => {}, draw: () => {}, nope: () => {},
+			play: (instanceId, targetId, secondInstanceId) => {
+				played.push([instanceId, targetId, secondInstanceId]);
+			},
+			draw: () => {}, nope: () => {},
 			defuse: depth => defuseDepths.push(depth), give: () => {},
 		},
 	};
@@ -104,15 +124,133 @@ test('the real hand rows retain accessible names while mounting illustrated face
 	assert.equal(new Set(packagePaths).size, 5, 'the five package-owned faces remain distinct');
 });
 
-test('the hand deck row and the table use the same illustrated back and count', () => {
-	const info = boardElement.querySelector<HTMLElement>('.hand-card--info')!;
-	assert.ok(info.classList.contains('hand-card--visual'));
-	assert.equal(info.querySelector('.xcard__back-label')?.textContent, '37');
+test('the hand replaces value sorting with pair, attack, name and original orderings', () => {
+	state.explodingDeck = state.explodingDeck!.map(def =>
+		def.id === 'attack' ? { ...def, nameKey: 'cards.zz_attack' } : def);
+	const mine = state.exploding!.seats[0];
+	mine.hand = [instance('cat-b'), instance('defuse'), instance('cat-a'), instance('attack'), instance('cat-c')];
+	mine.handCount = mine.hand.length;
+	view.update(state);
 
+	const labels = () => Array.from(boardElement.querySelectorAll<HTMLElement>(
+		'.hand-card:not(.hand-card--info) .hand-card__name')).map(name => name.textContent);
+	const tools = () => Array.from(boardElement.querySelectorAll<HTMLElement>(
+		'.hand-panel__list-actions button')).map(button => button.dataset.focusId);
+	const sort = (id: string) => boardElement.querySelector<HTMLButtonElement>(
+		`.hand-panel__list-actions [data-focus-id="sort-${id}"]`)!;
+
+	assert.deepEqual(tools(), ['sort-pairs', 'sort-attacks', 'sort-name', 'sort-hand', 'filter-playable']);
+	assert.equal(boardElement.querySelector('[data-focus-id="sort-value"]'), null);
+	assert.equal(sort('pairs').getAttribute('aria-pressed'), 'true');
+	assert.deepEqual(labels(), ['cards.cat_a', 'cards.cat_b', 'cards.cat_c', 'cards.defuse', 'cards.zz_attack'],
+		'pair cards lead and are alphabetized by their package-owned labels');
+
+	sort('attacks').click();
+	assert.deepEqual(labels(), ['cards.zz_attack', 'cards.cat_a', 'cards.cat_b', 'cards.cat_c', 'cards.defuse']);
+	assert.deepEqual(announcements, ['game.exploding_sorted_attacks_first']);
+	assert.deepEqual(JSON.parse(localStorage.getItem('corro.handPreferences.exploding')!), {
+		sort: 'attacks', onlyPlayable: false,
+	});
+	assert.equal(localStorage.getItem('corro.handPreferences'), null);
+
+	sort('name').click();
+	assert.deepEqual(labels(), ['cards.cat_a', 'cards.cat_b', 'cards.cat_c', 'cards.defuse', 'cards.zz_attack']);
+	sort('hand').click();
+	assert.deepEqual(labels(), ['cards.cat_b', 'cards.defuse', 'cards.cat_a', 'cards.zz_attack', 'cards.cat_c']);
+});
+
+test('the playable filter retains rule-legal cards off turn and activation speaks the turn gate', () => {
+	const mine = state.exploding!.seats[0];
+	mine.hand = [instance('attack'), instance('defuse')];
+	mine.handCount = mine.hand.length;
+	view.update(state);
+	boardElement.querySelector<HTMLButtonElement>('[data-focus-id="filter-playable"]')!.click();
+	announcements = [];
+
+	let rows = Array.from(boardElement.querySelectorAll<HTMLElement>('.hand-card'));
+	assert.deepEqual(rows.map(row => row.getAttribute('aria-label')), ['cards.attack']);
+
+	state.currentTurn = 'rival';
+	view.update(state);
+	rows = Array.from(boardElement.querySelectorAll<HTMLElement>('.hand-card'));
+	assert.deepEqual(rows.map(row => row.getAttribute('aria-label')), ['cards.attack'],
+		'the card remains in the filtered list without being relabelled as unplayable');
+
+	rows[0].focus();
+	key(rows[0], 'Enter');
+	assert.deepEqual(played, []);
+	assert.deepEqual(announcements, ['game.exploding_not_your_turn']);
+});
+
+test('a pending reaction window does not clear ordinary cards from the playable filter', () => {
+	const mine = state.exploding!.seats[0];
+	mine.hand = [instance('attack'), instance('defuse')];
+	mine.handCount = mine.hand.length;
+	view.update(state);
+	boardElement.querySelector<HTMLButtonElement>('[data-focus-id="filter-playable"]')!.click();
+	announcements = [];
+
+	state.exploding!.pendingAction = { actorId: 'me', cardId: 'attack', nopeCount: 0 };
+	view.update(state);
+	const row = boardElement.querySelector<HTMLElement>('.hand-card')!;
+	assert.equal(row.getAttribute('aria-label'), 'cards.attack');
+
+	row.focus();
+	key(row, 'Enter');
+	assert.deepEqual(played, []);
+	assert.deepEqual(announcements, ['game.exploding_window_open']);
+});
+
+test('P cycles pair cards, documents the key and announces when none are held', () => {
+	const pairRows = () => Array.from(boardElement.querySelectorAll<HTMLElement>('.hand-card'))
+		.filter(row => row.getAttribute('aria-label')?.startsWith('cards.cat_'));
+	const first = pairRows()[0];
+	first.focus();
+	key(first, 'p');
+	assert.equal(document.activeElement, pairRows()[1]);
+	assert.deepEqual(
+		view.helpShortcuts().find(shortcut => shortcut.descKey === 'game.help_cmd_exploding_pair'),
+		{ keys: 'p', descKey: 'game.help_cmd_exploding_pair' },
+	);
+
+	const mine = state.exploding!.seats[0];
+	mine.hand = mine.hand.filter(card => !card.cardId.startsWith('cat-'));
+	mine.handCount = mine.hand.length;
+	view.update(state);
+	const remaining = boardElement.querySelector<HTMLElement>('.hand-card')!;
+	remaining.focus();
+	key(remaining, 'p');
+	assert.deepEqual(announcements, ['game.exploding_no_pair']);
+});
+
+test('the deck count stays visual on the hidden table and never becomes a hand row', () => {
+	assert.equal(boardElement.querySelector('.hand-card--info'), null);
+	assert.equal(boardElement.querySelectorAll('.hand-card').length, 6, 'the list contains only held cards');
 	const table = boardElement.querySelector('.exploding-visual')!;
 	assert.equal(table.getAttribute('aria-hidden'), 'true');
 	assert.ok(table.querySelector('.exploding-discard .xcard--attack'));
 	assert.equal(table.querySelector('.exploding-draw .xcard__back-label')?.textContent, '37');
+});
+
+test('D reads the deck on demand from a hand card while C and Ctrl+D remain unclaimed', () => {
+	const card = boardElement.querySelector<HTMLElement>('.hand-card')!;
+	card.focus();
+	const readDeck = new KeyboardEvent('keydown', { key: 'd', bubbles: true, cancelable: true });
+	assert.equal(card.dispatchEvent(readDeck), false, 'the family consumes its deck query');
+	assert.deepEqual(announcements, ['game.exploding_status_deck(37|cards.attack)']);
+	assert.deepEqual(
+		view.helpShortcuts().find(shortcut => shortcut.descKey === 'game.help_cmd_exploding_top'),
+		{ keys: 'd', descKey: 'game.help_cmd_exploding_top' },
+	);
+
+	announcements = [];
+	const oldKey = new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true });
+	assert.equal(card.dispatchEvent(oldKey), true, 'C remains available to the shared identity query');
+	const globalChord = new KeyboardEvent('keydown', {
+		key: 'd', ctrlKey: true, bubbles: true, cancelable: true,
+	});
+	assert.equal(card.dispatchEvent(globalChord), true, 'Ctrl+D remains available to focus dialogs');
+	assert.deepEqual(announcements, []);
 });
 
 test('the discard illustration follows the public top card on repaint', () => {
@@ -185,4 +323,49 @@ test('the defuse picker waits two seconds before announcing and taking focus', a
 	first.click();
 	assert.deepEqual(defuseDepths, [0]);
 	assert.equal(document.querySelector('.popup-menu'), null);
+});
+
+test('a Favor auto-targets the only active rival without opening or announcing a picker', () => {
+	state.exploding!.seats.push({ playerId: 'retired', hand: [], handCount: 0, retired: true });
+	state.players.push({ id: 'retired', name: 'Carla', color: '#5b9b42' });
+	const favor = addFavor();
+
+	favor.focus();
+	key(favor, 'Enter');
+
+	assert.deepEqual(played, [['favor#0', 'rival', undefined]]);
+	assert.equal(document.querySelector('[role="menu"]'), null);
+	assert.deepEqual(announcements, [], 'the authoritative server will announce the play');
+});
+
+test('a cat pair auto-targets the only active rival and sends both cards', () => {
+	const mine = state.exploding!.seats[0];
+	mine.hand.push(instance('cat-a', 1));
+	mine.handCount = mine.hand.length;
+	view.update(state);
+	const cat = Array.from(boardElement.querySelectorAll<HTMLElement>('.hand-card'))
+		.find(row => row.getAttribute('aria-label') === 'cards.cat_a')!;
+
+	cat.focus();
+	key(cat, 'Enter');
+
+	assert.deepEqual(played, [['cat-a#0', 'rival', 'cat-a#1']]);
+	assert.equal(document.querySelector('[role="menu"]'), null);
+});
+
+test('a targeted card still opens the rival picker when several active targets exist', () => {
+	state.exploding!.seats.push({ playerId: 'rival-2', hand: [], handCount: 6 });
+	state.players.push({ id: 'rival-2', name: 'Carla', color: '#5b9b42' });
+	const favor = addFavor();
+
+	favor.focus();
+	key(favor, 'Enter');
+
+	assert.deepEqual(played, []);
+	const options = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+	assert.deepEqual(options.map(option => option.textContent), ['Berto', 'Carla']);
+	assert.deepEqual(announcements, ['game.exploding_pick_target(cards.favor)']);
+
+	options[1].click();
+	assert.deepEqual(played, [['favor#0', 'rival-2', undefined]]);
 });

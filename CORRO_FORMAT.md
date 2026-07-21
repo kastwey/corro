@@ -854,7 +854,7 @@ Outcomes: `assembly_hit_afflicted|destroyed|shieldBurned` (+`_victim`),
 `assembly_already_locked`, `assembly_nothing_to_spread|fix|swap|steal`,
 `assembly_no_hands_to_scrap`, `assembly_must_act`, `assembly_discard_too_many`,
 `assembly_card_not_in_hand`, `assembly_unknown_card`, `assembly_no_attackable`,
-`assembly_not_your_turn`. Pickers/status: `assembly_pick_*`, `assembly_piles_row`,
+`assembly_not_your_turn`. Pickers/status: `assembly_pick_*`, `assembly_pile_*`,
 `assembly_status_*`, `assembly_state_ok|afflicted|shielded|locked` (the vocabulary that
 most defines the theme — Galactic Workshop says averiado/blindado/certificado, a medical
 theme says infectado/vacunado/inmunizado). Per-card help: `assembly_help_*` or
@@ -927,7 +927,7 @@ The pick (identity private, "who picked" public): `draft_picked` (+`_self`,
 `draft_round_started`, `draft_round_scored` (+`_self`), `draft_dessert_bonus|penalty`
 (+`_self`), `draft_final_score` (+`_self`). Refusals: `draft_not_in_hand`,
 `draft_not_seated`, `draft_unknown_card`, `draft_same_card`, `draft_needs_extra`,
-`draft_too_many_picks`, `draft_game_over`. Surfaces/status: `draft_piles_row`,
+`draft_too_many_picks`, `draft_game_over`. Surfaces/status: `draft_pile_*`,
 `draft_card_picked`, `draft_table_boosted`, `draft_table_copies`, `draft_status_*`.
 Per-card help: `draft_help_*` or `<nameKey>_help`. (The hand panel's multi-select voice
 lives in the shared `game.hand_multi_*` keys, overridable the same way.)
@@ -1003,7 +1003,7 @@ flow: `shedding_drew`, `shedding_drew_playable`, `shedding_drew_unplayable`,
 `shedding_not_playable`, `shedding_wild_needs_no_match`, `shedding_only_drawn`,
 `shedding_bad_color`, `shedding_pending_decision`, `shedding_nothing_pending`,
 `shedding_card_not_in_hand`, `shedding_unknown_card`, `shedding_not_seated`,
-`shedding_not_your_turn`, `shedding_game_over`. Surfaces/status: `shedding_table_row`,
+`shedding_not_your_turn`, `shedding_game_over`. Surfaces/status:
 `shedding_card_drawn`, `shedding_pick_color`, `shedding_status_*`. Per-card help:
 `shedding_help_*` or `<nameKey>_help`.
 
@@ -1082,8 +1082,8 @@ Plays and effects: `exploding_played`, `exploding_played_cat_pair`, `exploding_n
 `exploding_resolve_bomb_first`, `exploding_not_seated`, `exploding_card_not_in_hand`,
 `exploding_unknown_card`, `exploding_not_playable`, `exploding_nothing_to_nope`,
 `exploding_not_a_nope`, `exploding_no_bomb_pending`. Surfaces/status: `exploding_status_*`,
-`exploding_table_row`, `exploding_pick_target`, `exploding_pick_target_pair`,
-`exploding_pick_depth`, `exploding_depth_*`. Per-card help:
+`exploding_pick_target`, `exploding_pick_target_pair`, `exploding_pick_depth`,
+`exploding_depth_*`. Per-card help:
 `exploding_help_*` or `<nameKey>_help`.
 
 ---

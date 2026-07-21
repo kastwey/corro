@@ -71,6 +71,7 @@ test('journey: F1 guide discovers rules, shortcuts, card help and screen-reader 
 	await expect(guide.locator('.board-help')).toContainText('Ctrl+F1');
 	await expect(guide.locator('.board-help')).toContainText('Ctrl+Shift+F1');
 	await expect(guide.locator('.board-help')).toContainText('Shift+F1');
+	await expect(guide.locator('.board-help')).toContainText('D anuncia cuántas cartas quedan en el mazo');
 	await expect(guide.locator('.board-help')).toContainText('Ctrl+Shift+R');
 	const screenReaderSection = guide.locator('#como-jugar-con-lector-de-pantalla');
 	await guide.getByRole('link', { name: 'Cómo jugar con lector de pantalla' }).click();
@@ -104,6 +105,7 @@ test('journey: F1 guide discovers rules, shortcuts, card help and screen-reader 
 	await expect(shortcuts).toBeVisible();
 	await expect(shortcuts.locator('.help-shortcuts')).toContainText('Mayús + F1');
 	await expect(shortcuts.locator('.help-shortcuts')).toContainText('Leer la ayuda de la carta seleccionada');
+	await expect(shortcuts.locator('.help-shortcuts')).toContainText('Leer las cartas que quedan en el mazo');
 	await flushAxeAudit(ana);
 	await shortcuts.locator('.btn-primary').click();
 
@@ -130,8 +132,10 @@ test('journey: the hand is home — private draw, playing an immunity, statuses 
 	await expect(anaCards).toHaveCount(6);
 	await expect(anaCards.locator('[data-card-art="package"]')).toHaveCount(6);
 	await expect(anaCards.first()).toHaveAttribute('aria-label', /As del volante/);
-	// The draw pile rides the hand as a read-only last row: 106 cards minus two hands.
-	await expect(ana.locator('.hand-card--info')).toHaveAttribute('aria-label', 'Cartas en el mazo: 94');
+	// The hand contains held cards only. The visual table still shows the shared deck, and D
+	// reads its count without moving focus away from the current card.
+	await expect(ana.locator('.hand-card--info')).toHaveCount(0);
+	await expect(ana.locator('.journey-centre__stack .jcard__back-label')).toHaveText('94');
 	await expect(ana.locator('#board .journey-visual')).toHaveAttribute('aria-hidden', 'true');
 	// One marker per seat sits on the strip, using the actual SVG token supplied by the
 	// package. The engine neither knows token ids nor redraws their content.
@@ -156,6 +160,9 @@ test('journey: the hand is home — private draw, playing an immunity, statuses 
 	// ── Board focus dives into the hand (the family's home surface). ─────────────
 	await ana.locator('#board').focus();
 	await expect(anaCards.first()).toBeFocused();
+	await ana.keyboard.press('d');
+	await expectAnnouncement(ana, /Mazo: 94 cartas/);
+	await expect(anaCards.first()).toBeFocused();
 
 	// ── Ana draws with Space: everyone hears THAT, only Ana hears WHAT. ─────────
 	await ana.keyboard.press(' ');
@@ -163,8 +170,10 @@ test('journey: the hand is home — private draw, playing an immunity, statuses 
 	await expectAnnouncement(ana, /Robas:/);
 	await expectAnnouncement(ana, /Rueda de recambio/);
 	await expect(anaCards).toHaveCount(7);
-	// …and the deck counter row followed the draw.
-	await expect(ana.locator('.hand-card--info')).toHaveAttribute('aria-label', 'Cartas en el mazo: 93');
+	// …and the separate visual deck plus its D readout followed the draw.
+	await expect(ana.locator('.journey-centre__stack .jcard__back-label')).toHaveText('93');
+	await ana.keyboard.press('d');
+	await expectAnnouncement(ana, /Mazo: 93 cartas/);
 
 	// ── Enter plays the focused immunity: its own THEMED line names it to the table. ──
 	await ana.keyboard.press('Enter');

@@ -61,7 +61,7 @@ function key(target: EventTarget, keyName: string, opts: Record<string, unknown>
 }
 
 function rows(): HTMLElement[] {
-	return Array.from(document.querySelectorAll<HTMLElement>('.hand-card:not(.hand-card--info)'));
+	return Array.from(document.querySelectorAll<HTMLElement>('.hand-card'));
 }
 
 beforeEach(() => {
@@ -93,6 +93,7 @@ test('helpShortcuts reports the REAL wiring: Enter picks, Ctrl+Space arms multi,
 		{ keys: 'shift+f1', descKey: 'game.help_cmd_card_help' },
 		{ keys: 's', descKey: 'game.help_cmd_status_mine' },
 		{ keys: 'shift+s', descKey: 'game.help_cmd_status_rivals' },
+		{ keys: 'd', descKey: 'game.help_cmd_draft_deck' },
 	]);
 });
 
@@ -104,10 +105,18 @@ test('the hand renders my seat with every card pickable and no draw/discard affo
 	assert.equal(document.querySelector('[data-focus-id="discard"]'), null); // nor discard
 	assert.ok(rows()[0].querySelector('[data-card-art="package"]'), 'package art wins on its card');
 	assert.ok(rows()[1].querySelector('[data-card-art="neutral"]'), 'missing art gets the neutral face');
-	// The deck rides the hand as a read-only row.
-	const info = document.querySelector('.hand-card--info')!;
-	assert.equal(info.getAttribute('aria-label'), 'game.draft_piles_row(85)');
-	assert.ok(info.querySelector('.gcard--back'));
+	assert.equal(document.querySelector('.hand-card--info'), null, 'the deck is not a hand row');
+	assert.equal(document.querySelector('[data-pile="deck"] .gcard__back-label')?.textContent, '85');
+	assert.equal(document.querySelector('[data-pile="deck"] .card-table-pile__label')?.textContent,
+		'game.draft_pile_deck');
+});
+
+test('D reads the deck count on demand without moving hand focus', () => {
+	const card = rows()[0];
+	card.focus();
+	key(card, 'd');
+	assert.deepEqual(announced, ['game.draft_status_deck(85)']);
+	assert.equal(document.activeElement, card);
 });
 
 test('Enter commits the pick, and Enter on another card re-commits', () => {

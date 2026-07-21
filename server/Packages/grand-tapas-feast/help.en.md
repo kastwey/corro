@@ -56,6 +56,7 @@ the rival tables in one go. Press **Ctrl+F1** for the full keyboard shortcut lis
 
 ### Checking the table
 
+- **D** announces how many cards remain in the deck without leaving your tray.
 - **S** announces your round, score, served tapas and flans; **Shift+S** reviews rival tables. **Ctrl+P** moves to the players list.
 - Picks, reveals, tray rotation, scoring and round changes are announced automatically without exposing private hands.
 

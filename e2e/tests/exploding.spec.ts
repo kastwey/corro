@@ -10,11 +10,86 @@ import { test, expect } from '../helpers/test';
 import {
 	createGame, expectAnnouncement, joinGame, newPlayerPage, resetDice, scriptDice, startGame,
 } from '../helpers/game';
+import { flushAxeAudit } from '../helpers/axeAudit';
 
 const BOARD = 'the-mine';
 
 test.beforeEach(async () => {
 	await resetDice();
+});
+
+test('exploding: the playable filter keeps the hand stable when an action ends the turn', async ({ browser }) => {
+	const ana = await newPlayerPage(browser);
+	const berto = await newPlayerPage(browser);
+
+	const code = await createGame(ana, 'Ana', BOARD);
+	await joinGame(berto, code, 'Berto');
+	await startGame(ana, [ana, berto]);
+
+	const cards = ana.locator('.hand-card:not(.hand-card--info)');
+	const filter = ana.locator('.hand-panel__list-actions [data-focus-id="filter-playable"]');
+	await expect(cards).toHaveCount(8);
+	await filter.click();
+	await expect(filter).toHaveAttribute('aria-pressed', 'true');
+	await expect(cards).toHaveCount(7); // the Defuse is not hand-playable
+
+	// Playing Skip removes only that card. The one-second Nope window must not transiently
+	// empty the rest of the filtered hand while the action waits to resolve.
+	const skip = cards.filter({ hasText: 'Salir del pozo' }).first();
+	await skip.focus();
+	await ana.keyboard.press('Enter');
+	await expect(ana.locator('.exploding-discard--pending')).toBeVisible();
+	await expect(cards).toHaveCount(6);
+	await flushAxeAudit(ana);
+
+	// Skip resolves by ending Ana's turn. The same six rule-playable cards remain in the
+	// filtered list instead of disappearing merely because Berto now owns the turn.
+	await expectAnnouncement(ana, /Sales del pozo sin picar/i);
+	await expectAnnouncement(berto, /Es tu turno/i);
+	await expect(cards).toHaveCount(6);
+	await expect(cards.locator('.hand-card--unplayable')).toHaveCount(0);
+	await expect(filter).toHaveAttribute('aria-pressed', 'true');
+
+	// Turn ownership is still enforced at activation time and spoken without mutating the hand.
+	await cards.first().focus();
+	await ana.keyboard.press('Enter');
+	await expectAnnouncement(ana, /No es tu turno/i);
+	await expect(cards).toHaveCount(6);
+	await flushAxeAudit(ana);
+});
+
+test('exploding: asks for a target only when several active rivals remain', async ({ browser }) => {
+	const ana = await newPlayerPage(browser);
+	const berto = await newPlayerPage(browser);
+	const carla = await newPlayerPage(browser);
+
+	const code = await createGame(ana, 'Ana', BOARD);
+	await joinGame(berto, code, 'Berto');
+	await joinGame(carla, code, 'Carla');
+	await startGame(ana, [ana, berto, carla]);
+
+	// In the deterministic three-player deal Ana starts with a Favor. Two legal victims are
+	// a real decision, so the accessible picker remains and lists both in seat order.
+	const favor = ana.locator('.hand-card:not(.hand-card--info)', { hasText: 'Pico prestado' });
+	await expect(favor).toBeVisible();
+	await favor.focus();
+	await ana.keyboard.press('Enter');
+
+	const menu = ana.locator('.popup-menu[role="menu"]');
+	await expect(menu).toBeVisible();
+	await expect(menu.locator('.popup-menu__item')).toHaveText(['Berto', 'Carla']);
+	await expectAnnouncement(ana, /Elige a quién aplicar Pico prestado/i);
+	await flushAxeAudit(ana);
+
+	await menu.locator('.popup-menu__item', { hasText: 'Berto' }).click();
+	await expectAnnouncement(ana, /Ana pide un favor a Berto/i);
+	await expectAnnouncement(berto, /Ana te pide un favor/i);
+
+	// Finish the pending Favor so the scenario leaves the real-time flow settled.
+	const payment = berto.locator('.hand-card:not(.hand-card--info)').first();
+	await payment.focus();
+	await berto.keyboard.press('Enter');
+	await expectAnnouncement(ana, /Berto te da/i);
 });
 
 test('exploding: draw the bomb, defuse and tuck it, then explode into a win', async ({ browser }) => {
@@ -25,10 +100,44 @@ test('exploding: draw the bomb, defuse and tuck it, then explode into a win', as
 	await joinGame(berto, code, 'Berto');
 	await startGame(ana, [ana, berto]);
 
-	// 8-card opening hands (1 defuse + 7), the draw affordance (Space), no dice.
+	// 8-card opening hands (1 defuse + 7), the draw affordance (Space), no dice. The visual
+	// table keeps its pile count, but the accessible hand contains held cards only; D reads
+	// that table state without moving focus away from the current card.
 	await expect(ana.locator('.hand-card:not(.hand-card--info)')).toHaveCount(8);
+	await expect(ana.locator('.hand-card--info')).toHaveCount(0);
+	await expect(ana.locator('.exploding-draw .xcard__back-label')).toHaveText(/^\d+$/);
 	await expect(ana.locator('.hand-panel__draw')).toBeVisible();
 	await expect(ana.locator('.dice-control')).toBeHidden();
+	const sortTools = ana.locator('.hand-panel__list-actions [data-focus-id^="sort-"]');
+	await expect(sortTools).toHaveCount(4);
+	expect(await sortTools.evaluateAll(buttons => buttons.map(button =>
+		(button as HTMLElement).dataset.focusId))).toEqual([
+		'sort-pairs', 'sort-attacks', 'sort-name', 'sort-hand',
+	]);
+	await expect(ana.locator('[data-focus-id="sort-value"]')).toHaveCount(0);
+	await expect(ana.locator('[data-focus-id="sort-pairs"]')).toHaveAttribute('aria-pressed', 'true');
+
+	// No pair card is dealt yet: P says so without moving focus. The shortcut is discoverable
+	// in the live help table, and the attack order puts the two Derrumbes at the front.
+	const firstCard = ana.locator('.hand-card').first();
+	await firstCard.focus();
+	await ana.keyboard.press('p');
+	await expectAnnouncement(ana, /No tienes ninguna carta de pareja en la mano/i);
+	await expect(firstCard).toBeFocused();
+	await ana.keyboard.press('Control+F1');
+	const shortcuts = ana.locator('.game-dialog.dialog-help:has(.help-shortcuts)');
+	await expect(shortcuts).toBeVisible();
+	await expect(shortcuts.locator('.help-shortcuts')).toContainText('Ir a la siguiente carta de pareja');
+	await flushAxeAudit(ana);
+	await shortcuts.locator('.btn-primary').click();
+	await ana.locator('[data-focus-id="sort-attacks"]').click();
+	await expect(ana.locator('.hand-card:not(.hand-card--info)').first()).toContainText('Derrumbe');
+	await flushAxeAudit(ana);
+
+	await firstCard.focus();
+	await ana.keyboard.press('d');
+	await expectAnnouncement(ana, /Mazo: \d+\. Última carta:/i);
+	await expect(firstCard).toBeFocused();
 
 	const tuckOnTop = (page: typeof ana) =>
 		page.locator('.popup-menu__item', { hasText: /Arriba/ }).click();
@@ -177,18 +286,25 @@ test('exploding: announces an ordinary draw before adding the card to the hand',
 		hasText: 'Escarabajo pelotero',
 	});
 	await expect(beetles).toHaveCount(2);
-	await beetles.first().focus();
+	// Pair-first is Berto's default: both matching cards lead the hand and are adjacent. P
+	// reaches one directly from the board, without knowing the package's themed card name.
+	await expect(berto.locator('[data-focus-id="sort-pairs"]')).toHaveAttribute('aria-pressed', 'true');
+	await expect(cards.nth(0)).toContainText('Escarabajo pelotero');
+	await expect(cards.nth(1)).toContainText('Escarabajo pelotero');
+	await berto.locator('#board').focus();
+	await berto.keyboard.press('p');
+	await expect(berto.locator('.hand-card:focus')).toContainText('Escarabajo pelotero');
+	await flushAxeAudit(berto);
+	// The random steal resolves after the Nope window. Open it first, wait for the synchronous
+	// play announcement, then enqueue the victim-card index before the one-second timer expires.
 	await berto.keyboard.press('Enter');
-	await expectAnnouncement(berto,
-		/Elige a quién robar con dos cartas iguales de Escarabajo pelotero/i);
-	// The E2E random source fails loudly without a scripted index. Steal Ana's first card.
-	await scriptDice(0);
-	await berto.locator('.popup-menu__item', { hasText: 'Ana' }).click();
+	await expect(berto.locator('.popup-menu[role="menu"]')).toHaveCount(0);
 
 	await expectAnnouncement(berto,
 		/Juegas dos cartas iguales de Escarabajo pelotero para robar una carta a Ana/i);
 	await expectAnnouncement(ana,
 		/Berto juega dos cartas iguales de Escarabajo pelotero para robar una carta a Ana/i);
+	await scriptDice(0);
 	await expect(beetles).toHaveCount(0); // both copies were spent by that one activation
 	await expectAnnouncement(berto, /Robas .* a Ana/i);
 	await expect(anaCards).toHaveCount(10); // the resolved steal removed one of Ana's cards

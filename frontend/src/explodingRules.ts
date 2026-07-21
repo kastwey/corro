@@ -37,10 +37,14 @@ export function holdsDefuse(gs: GameState, playerId: string): boolean {
 }
 
 /**
- * May I play this card (by instance id) right now? Mirrors the server: a Nope is a reaction —
- * playable only while an action is pending (on or off turn); the four action cards
- * (skip/attack/shuffle/seeFuture) only on my turn with no window or bomb pending; a bomb, a
- * defuse (auto-consumed on a bomb draw) and the not-yet-wired favor/cat are never hand-played.
+ * Is this card legal by its own rules and the current table state? As in the other card
+ * families, global turn/interrupt gates do NOT rewrite card playability: otherwise every
+ * filtered hand vanishes when the turn passes and a screen reader reports a needless empty
+ * list. ExplodingBoard checks those gates when the player actually activates a card.
+ *
+ * A Nope is the exception whose CARD legality really is reactive — it appears while an action
+ * is pending, on or off turn. A bomb and a defuse (auto-consumed on a bomb draw) are never
+ * hand-played.
  */
 /** The instanceId of a DIFFERENT card in my hand that pairs with `instanceId` (the same cat),
  *  or null. A cat is playable only when it has a pair partner. */
@@ -70,11 +74,6 @@ export function canPlayCard(gs: GameState, myId: string, instanceId: string): Ex
 			: { playable: false, reasonKey: 'game.exploding_nothing_to_nope' };
 	}
 
-	if (gs.currentTurn !== myId) return { playable: false, reasonKey: 'game.exploding_not_your_turn' };
-	if (exploding.pendingAction) return { playable: false, reasonKey: 'game.exploding_window_open' };
-	if (exploding.pendingBomb) return { playable: false, reasonKey: 'game.exploding_resolve_bomb_first' };
-	if (exploding.pendingFavor) return { playable: false, reasonKey: 'game.exploding_resolve_favor_first' };
-
 	if (card.type === 'skip' || card.type === 'attack' || card.type === 'shuffle'
 		|| card.type === 'seeFuture' || card.type === 'favor') {
 		return { playable: true };
@@ -90,7 +89,7 @@ export function canPlayCard(gs: GameState, myId: string, instanceId: string): Ex
 /**
  * One seat's spoken status (the players-panel line, S and Shift+S all read this): the card
  * count, or "eliminated" for a fallen seat. Deliberately per-player and terse; the deck count
- * and the discard top are the on-demand C readout instead.
+ * and the discard top are the on-demand D readout instead.
  */
 export function explodingStatusText(
 	gs: GameState,

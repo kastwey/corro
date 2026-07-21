@@ -46,7 +46,7 @@
 	  <div class="app-header__controls" id="app-controls"></div>
 	</header>
 	<main>
-	<p id="game-surface-intro" class="app-intro" data-i18n="game.surface_intro.loading">Focus will move automatically to the game's main area when loading finishes. Press Control plus F1 to view the shortcuts.</p>
+	<p id="game-surface-intro" class="app-intro" data-i18n="game.surface_intro.loading" data-i18n-defer hidden>Focus will move automatically to the game's main area when loading finishes. Press Control plus F1 to view the shortcuts.</p>
 
 	<div class="game-layout">
 	  <div class="game-layout__board">
@@ -83,8 +83,33 @@
 			<strong>Corro</strong>.
 		</p>
 		<ul class="app-footer__links">
-			<li><a href="https://github.com/kastwey/corro" target="_blank" rel="noopener noreferrer" data-i18n="footer.repository">GitHub repository</a></li>
-			<li><a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="license noopener noreferrer">AGPL-3.0</a></li>
+			<li>
+				<a class="app-footer__external-link" href="https://github.com/kastwey/corro" target="_blank" rel="noopener noreferrer"
+					data-footer-link="repository" aria-label="GitHub repository, opens in a new window"
+					data-i18n-attr:aria-label="footer.repositoryNewWindowLabel">
+					<span data-i18n="footer.repository">GitHub repository</span>
+					<svg class="app-footer__external-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+						stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+						<path d="M14 5h5v5" />
+						<path d="M10 14 19 5" />
+						<path d="M19 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h4" />
+					</svg>
+				</a>
+			</li>
+			<li>
+				<a class="app-footer__external-link" href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank"
+					rel="license noopener noreferrer" data-footer-link="license"
+					aria-label="AGPL-3.0 license, opens in a new window"
+					data-i18n-attr:aria-label="footer.licenseNewWindowLabel">
+					<span>AGPL-3.0</span>
+					<svg class="app-footer__external-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+						stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+						<path d="M14 5h5v5" />
+						<path d="M10 14 19 5" />
+						<path d="M19 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h4" />
+					</svg>
+				</a>
+			</li>
 		</ul>
 	</footer>
 </body>

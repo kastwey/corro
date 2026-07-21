@@ -16,7 +16,9 @@ import {
 	sheddingStatusText, sheddingWatchText, topDef,
 } from './sheddingRules.js';
 import { soundEvents } from './soundEvents.js';
-import { cardBoardHelpShortcuts, playerName, registerStatusKeys, resetCardBoard } from './cardBoardShell.js';
+import {
+	cardBoardHelpShortcuts, playerName, registerPileStatusKey, registerStatusKeys, resetCardBoard,
+} from './cardBoardShell.js';
 import { showGameRulesDialog } from './gameRulesDialog.js';
 import { buildSheddingRulesLines } from './rulesSummaries.js';
 import type { GameState } from './models.js';
@@ -84,8 +86,7 @@ export class SheddingBoard {
 	 *  Shift+S status keys, plus the last-card keys (U/P/V) when that rule is on. (The
 	 *  active-rules dialog is the global Ctrl+Shift+F1 command.) */
 	helpShortcuts(): HelpShortcut[] {
-		const shortcuts = cardBoardHelpShortcuts(this.hand);
-		shortcuts.push({ keys: 'c', descKey: 'game.help_cmd_shedding_top' });
+		const shortcuts = cardBoardHelpShortcuts(this.hand, 'game.help_cmd_shedding_piles');
 		shortcuts.push({ keys: 'r / g / b / y', descKey: 'game.help_cmd_shedding_colour_jump' });
 		shortcuts.push({ keys: 'shift + r / g / b / y', descKey: 'game.help_cmd_shedding_colour_jump_back' });
 		shortcuts.push({ keys: '0 – 9', descKey: 'game.help_cmd_shedding_number_jump' });
@@ -182,7 +183,6 @@ export class SheddingBoard {
 			onDraw: () => this.drawOrKeep(),
 			onPlay: card => this.playCard(card),
 			// No discards in this genre (no onDiscard: the affordance disappears).
-			infoRows: () => this.infoRows(),
 			playSound: event => soundEvents.playEvent(event),
 			announce: text => this.deps.announce(text),
 			t: (key, vars) => this.deps.tSync(key, vars),
@@ -209,19 +209,9 @@ export class SheddingBoard {
 			mine: (gs, myId) => sheddingStatusText(gs, myId, this.deps.tSync),
 			rivals: (gs, myId) => this.allSeatsStatus(gs, myId),
 		});
-
-		// C — just the TOP card and the colour in force, on demand. S bundles hand size, top,
-		// direction and score together, which is a lot; this reads only what you match against.
-		// C is the engine's AnnounceMyStatus key, but in a card family that's a redundant alias
-		// of S (your identity/piece colour is dead weight mid-hand), so we shadow it here with
-		// the one readout that matters in shedding games — the discard top — consumed so it never reaches
-		// the global keymap.
-		this.element.addEventListener('keydown', (e) => {
-			if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
-			if (e.key.toLowerCase() !== 'c') return;
-			e.preventDefault();
-			e.stopPropagation();
-			this.announceTop();
+		registerPileStatusKey(this.element, {
+			announce: this.deps.announce,
+			read: () => this.pileStatusText(),
 		});
 
 		// R / G / B / Y — jump the hand focus to the NEXT card of that colour (wrapping);
@@ -283,16 +273,16 @@ export class SheddingBoard {
 		this.deps.announce(sheddingWatchText(gs, myId, this.deps.tSync));
 	}
 
-	/** Speak the top of the discards and the colour in force (C) — the one thing you match. */
-	private announceTop(): void {
+	/** D reads the table state that is visual but deliberately absent from the hand. */
+	private pileStatusText(): string | null {
 		const gs = this.deps.getGameState();
-		if (!gs?.shedding) return;
+		if (!gs?.shedding) return null;
 		const top = topDef(gs);
-		this.deps.announce(top
-			? this.deps.tSync('game.shedding_status_top', {
-				card: top.nameKey, color: `colors.${gs.shedding.currentColor}`,
-			})
-			: this.deps.tSync('game.shedding_no_top'));
+		return this.deps.tSync('game.shedding_status_piles', {
+			draw: gs.shedding.drawCount ?? 0,
+			card: top?.nameKey ?? 'game.shedding_no_top',
+			color: `colors.${gs.shedding.currentColor}`,
+		});
 	}
 
 	/** The deck's colours ranked by their NAME in the current language — so "sort by colour"
@@ -399,21 +389,6 @@ export class SheddingBoard {
 		});
 	}
 
-	private infoRows() {
-		const gs = this.deps.getGameState();
-		if (!gs?.shedding) return [];
-		const top = topDef(gs);
-		return [{
-			id: '__table',
-			label: this.deps.tSync('game.shedding_table_row', {
-				draw: gs.shedding.drawCount ?? 0,
-				card: top?.nameKey ?? 'game.shedding_no_top',
-				color: `colors.${gs.shedding.currentColor}`,
-			}),
-			art: genericCardBackHtml(String(gs.shedding.drawCount ?? 0)),
-		}];
-	}
-
 	/** Turn gate shared by play and draw: spoken, never silently swallowed. */
 	private canActNow(gs: GameState, myId: string): boolean {
 		if (gs.isGameOver) {
@@ -509,7 +484,7 @@ export class SheddingBoard {
 
 		// The table centre: the discards' top card as a real card tile in the colour in force (a
 		// couple of offset layers behind read it as a pile), the play direction, and the draw pile
-		// as a card-back stack. All aria-hidden — the C key and the panel speak the same.
+		// as a card-back stack. All aria-hidden — D speaks the same state on demand.
 		this.table.innerHTML =
 			`<div class="shedding-piles">`
 			+ `<div class="shedding-discard" style="--in-force:${band};--in-force-ink:${contrastingTextColor(band)}">`

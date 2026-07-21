@@ -90,9 +90,17 @@ test('home, dark theme, runtime language and create/join validation states are A
 	await expect(brand.locator('.brand-logo__image--light')).toBeVisible();
 	await expect(brand.locator('.brand-logo__image--dark')).toBeHidden();
 	const preferences = host.locator('.language-selector');
-	const repository = host.locator('.app-footer a[data-i18n="footer.repository"]');
+	const repository = host.locator('.app-footer a[data-footer-link="repository"]');
+	const license = host.locator('.app-footer a[data-footer-link="license"]');
 	await expect(repository).toHaveAttribute('href', 'https://github.com/kastwey/corro');
 	await expect(repository).toHaveText(appI18n('es').footer.repository as string);
+	await expect(repository).toHaveAttribute('target', '_blank');
+	await expect(repository).toHaveAttribute('aria-label', appI18n('es').footer.repositoryNewWindowLabel as string);
+	await expect(license).toHaveAttribute('target', '_blank');
+	await expect(license).toHaveAttribute('aria-label', appI18n('es').footer.licenseNewWindowLabel as string);
+	for (const link of [repository, license]) {
+		await expect(link.locator('.app-footer__external-icon')).toHaveAttribute('aria-hidden', 'true');
+	}
 	const brandBox = (await brand.boundingBox())!;
 	const logoBox = (await brand.locator('.brand-logo').boundingBox())!;
 	const preferencesBox = (await preferences.boundingBox())!;
@@ -109,6 +117,8 @@ test('home, dark theme, runtime language and create/join validation states are A
 	await host.locator('#language-apply-btn').click();
 	await expect(host.locator('#home-heading')).toHaveText('Your games');
 	await expect(repository).toHaveText(appI18n('en').footer.repository as string);
+	await expect(repository).toHaveAttribute('aria-label', appI18n('en').footer.repositoryNewWindowLabel as string);
+	await expect(license).toHaveAttribute('aria-label', appI18n('en').footer.licenseNewWindowLabel as string);
 
 	await host.locator('#go-create-btn').click();
 	await expect(host.locator('#view-create')).toBeVisible();
@@ -179,7 +189,7 @@ test('compact lobby keeps brand, preferences, content and footer in one vertical
 		scroll: document.documentElement.scrollWidth,
 	}));
 	expect(horizontalExtent.scroll).toBeLessThanOrEqual(horizontalExtent.client);
-	await expect(page.locator('.app-footer a[data-i18n="footer.repository"]')).toHaveText(
+	await expect(page.locator('.app-footer a[data-footer-link="repository"]')).toHaveText(
 		appI18n('es').footer.repository as string,
 	);
 });

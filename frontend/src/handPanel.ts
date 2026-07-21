@@ -11,7 +11,7 @@
 // Keyboard model (shared with the manage dialog / players panel via RovingToolbarList):
 //   - Up/Down/Home/End move between cards; each card is one focus stop reading its label.
 //   - Right enters the card's action toolbar; Shift+F10 / Applications mirrors it as a menu
-//     (play, discard, sort by type/value/original, only-playable filter toggle).
+//     (play, discard, family-appropriate sorting, only-playable filter toggle).
 //   - Enter plays the focused card (spoken refusal with the reason when it can't be played).
 //   - Space draws (turn-gated by the family; spoken refusal otherwise).
 //   - Delete discards — behind a modal yes/no (it is irreversible), same dialog on every
@@ -77,6 +77,24 @@ export interface HandCard {
 	help?: string;
 }
 
+/** One family-owned ordering for a hand whose useful axes are not the generic
+ *  value/type/colour set. The panel makes the comparator stable by preserving deal order
+ *  when it returns zero. IDs are persisted, so keep them stable within the preference scope. */
+export interface HandSortOption {
+	readonly id: string;
+	readonly labelKey: string;
+	readonly announcementKey: string;
+	compare(a: HandCard, b: HandCard): number;
+}
+
+/** Complete replacement for the generic hand orderings. A scope keeps one family's choice
+ *  from overwriting another family's incompatible sort preference. */
+export interface HandSorting {
+	readonly preferenceScope: string;
+	readonly defaultId: string;
+	readonly options: readonly HandSortOption[];
+}
+
 /** The multi-select contract a family opts into (families without it keep the plain
  *  one-card hand: no mode toggle, Ctrl+Space inert). The panel owns the interaction —
  *  marking, the mode switch, its voice and sounds; the FAMILY owns what a marked set
@@ -113,10 +131,6 @@ export interface HandPanelDeps {
 	announce(text: string): void;
 	/** Full-key translator (keys under game.hand_*). */
 	t(key: string, vars?: Record<string, unknown>): string;
-	/** Optional read-only rows pinned AFTER the cards (the draw-pile counter…): reachable
-	 *  with the arrows like any card, but exempt from sort/filter and inert to
-	 *  play/discard. */
-	infoRows?(): InfoRow[];
 	/** Opt-in multi-select (see <see cref="HandMultiSelect"/>): Ctrl+Space (or the tools
 	 *  toggle, or Ctrl+click) switches modes; in multi mode Space marks and Enter sends. */
 	multiSelect?: HandMultiSelect;
@@ -125,24 +139,14 @@ export interface HandPanelDeps {
 	playSound?(event: string): void;
 	/** How this family words its hand keys for the shortcuts help (see HandShortcutText). */
 	shortcutText: HandShortcutText;
+	/** Optional family-owned orderings. Supplying these replaces value/type/colour/original;
+	 *  include an original-order option explicitly when the family wants to expose one. */
+	sorting?: HandSorting;
 }
 
-/** One read-only row (not a card): its label is all it is. */
-export interface InfoRow {
-	id: string;
-	label: string;
-	/** Optional aria-hidden visual (e.g. the draw pile as a card back with its count). */
-	art?: string;
-}
+type BuiltInSortMode = 'hand' | 'type' | 'value' | 'valueAsc' | 'colour';
 
-/** Internal union the list reconciles over: the sorted/filtered cards, then the info rows. */
-type RowModel =
-	| { kind: 'card'; card: HandCard }
-	| { kind: 'info'; row: InfoRow };
-
-type SortMode = 'hand' | 'type' | 'value' | 'valueAsc' | 'colour';
-
-const SORT_MODES: readonly SortMode[] = ['hand', 'type', 'value', 'valueAsc', 'colour'];
+const SORT_MODES: readonly BuiltInSortMode[] = ['hand', 'type', 'value', 'valueAsc', 'colour'];
 
 /** Sort/filter are per-player PRESENTATION preferences (like theme or sound): they live in
  *  localStorage — not in the game document — and survive reloads on this browser. */
@@ -161,10 +165,8 @@ export class HandPanel {
 	private toolsNav: RovingCheckboxList | null = null;
 
 	// "What advances me most" is the natural top of a card hand: value order by default.
-	private sortMode: SortMode = 'value';
+	private sortMode = 'value';
 	private onlyPlayable = false;
-	/** id of the hidden "everything is filtered out" description (set at init). */
-	private filteredDescId = '';
 
 	// ── Multi-select state (per PANEL instance = per game, deliberately NOT persisted:
 	// the mode preference lives for the session, as agreed) ──
@@ -179,6 +181,7 @@ export class HandPanel {
 	init(mount: HTMLElement, deps: HandPanelDeps): void {
 		this.deps = deps;
 		this.destroyDom();
+		this.sortMode = this.customSorting()?.defaultId ?? 'value';
 		this.loadPreferences();
 
 		const root = document.createElement('section');
@@ -224,15 +227,6 @@ export class HandPanel {
 		empty.hidden = true;
 		root.appendChild(empty);
 
-		// Description for the filtered-to-nothing state: the list stays (visibly empty) and
-		// READS why, instead of being swapped for a paragraph.
-		const filteredDesc = document.createElement('span');
-		filteredDesc.className = 'sr-only';
-		filteredDesc.id = `hand-filtered-desc-${Math.random().toString(36).slice(2, 8)}`;
-		filteredDesc.textContent = deps.t('game.hand_filtered_all');
-		root.appendChild(filteredDesc);
-		this.filteredDescId = filteredDesc.id;
-
 		mount.appendChild(root);
 		this.root = root;
 		this.listEl = list;
@@ -265,21 +259,18 @@ export class HandPanel {
 		this.syncMultiSelect();
 		const all = this.deps.getCards();
 		const visible = this.visibleCards(all);
-		const info = this.deps.infoRows?.() ?? [];
 
-		// Two distinct empties: NO CARDS AT ALL swaps in the empty message; the filter
-		// leaving nothing keeps the (visibly empty) list, which then DESCRIBES why. Info
-		// rows keep the list alive either way (the deck counter outlives an empty hand).
+		// Two distinct empties: NO CARDS AT ALL swaps in the empty-hand message; a filter
+		// with no matches stays a plain zero-item list. Its list semantics already say all
+		// that is useful, without an extra description that makes turn changes chatty.
 		const allEmpty = all.length === 0;
 		const filteredEmpty = !allEmpty && visible.length === 0;
 		this.emptyEl.hidden = !allEmpty;
 		this.emptyEl.textContent = this.deps.t('game.hand_empty');
-		this.listEl.hidden = allEmpty && info.length === 0;
+		this.listEl.hidden = allEmpty;
 		if (filteredEmpty) {
-			this.listEl.setAttribute('aria-describedby', this.filteredDescId);
 			this.listEl.tabIndex = -1; // a focus landing spot while no row exists
 		} else {
-			this.listEl.removeAttribute('aria-describedby');
 			this.listEl.removeAttribute('tabindex');
 		}
 
@@ -288,18 +279,12 @@ export class HandPanel {
 		const activeCardId = (document.activeElement as HTMLElement | null)
 			?.closest?.<HTMLElement>('.hand-card')?.dataset.focusId ?? null;
 
-		const rows: RowModel[] = [
-			...visible.map(card => ({ kind: 'card', card } as const)),
-			...info.map(row => ({ kind: 'info', row } as const)),
-		];
 		reconcileChildren(this.listEl, {
-			items: rows,
-			key: r => r.kind === 'card' ? r.card.id : r.row.id,
+			items: visible,
+			key: card => card.id,
 			keyOf: el => (el as HTMLElement).dataset.focusId,
-			create: r => r.kind === 'card' ? this.createRow(r.card) : this.createInfoRow(r.row),
-			update: (li, r) => r.kind === 'card'
-				? this.updateRow(li as HTMLElement, r.card)
-				: this.updateInfoRow(li as HTMLElement, r.row),
+			create: card => this.createRow(card),
+			update: (li, card) => this.updateRow(li as HTMLElement, card),
 			// Focus never lands on <body>: the owning card if it survived, else the first
 			// remaining card, else the empty list (filtered) or the empty message.
 			rescueFocus: () => {
@@ -334,8 +319,7 @@ export class HandPanel {
 	 *  from the current focus (or BACKWARD when `backward`), wrapping around; returns false
 	 *  when no visible card matches (the caller words the "none" announcement). Landing on the
 	 *  card reads its own label, so success needs no extra speech. Powers the shedding
-	 *  colour-jump keys (R/G/B/Y forward, Shift+ the same backward). Info rows never match
-	 *  (cardById returns null for them), so the draw pile is skipped for free. */
+	 *  colour-jump keys (R/G/B/Y forward, Shift+ the same backward). */
 	focusNextMatching(pred: (card: HandCard) => boolean, backward = false): boolean {
 		const items = this.nav?.getItems() ?? [];
 		if (!items.length) return false;
@@ -461,7 +445,7 @@ export class HandPanel {
 		const target = e.target as HTMLElement | null;
 		if (target?.closest('button')) return; // row toolbars keep their own clicks
 		const item = target?.closest<HTMLElement>('.hand-card');
-		if (!item || item.classList.contains('hand-card--info')) return;
+		if (!item) return;
 		const card = this.cardById(item.dataset.focusId);
 		if (!card) return;
 
@@ -481,6 +465,13 @@ export class HandPanel {
 
 	private visibleCards(all: HandCard[]): HandCard[] {
 		const filtered = this.onlyPlayable ? all.filter(c => c.playable) : [...all];
+		const custom = this.customSorting()?.options.find(option => option.id === this.sortMode);
+		if (custom) {
+			return filtered
+				.map((c, i) => ({ c, i }))
+				.sort((a, b) => custom.compare(a.c, b.c) || a.i - b.i)
+				.map(x => x.c);
+		}
 		if (this.sortMode === 'type') {
 			// Group by type (alphabetical on the stable key), hand order within a group.
 			return filtered
@@ -594,43 +585,6 @@ export class HandPanel {
 		}
 	}
 
-	/** A read-only row: its label is all it is — no toolbar (the Shift+F10 menu still
-	 *  offers the list-level sort/filter from it, composed by the controller). */
-	private createInfoRow(row: InfoRow): HTMLElement {
-		const item = document.createElement('li');
-		item.className = 'hand-card hand-card--info';
-		item.setAttribute('role', 'listitem');
-		item.tabIndex = -1;
-		item.dataset.focusId = row.id;
-
-		const art = document.createElement('span');
-		art.className = 'hand-card__art';
-		art.setAttribute('aria-hidden', 'true');
-		item.appendChild(art);
-
-		const name = document.createElement('span');
-		name.className = 'hand-card__name';
-		name.setAttribute('aria-hidden', 'true');
-		item.appendChild(name);
-
-		this.updateInfoRow(item, row);
-		return item;
-	}
-
-	private updateInfoRow(item: HTMLElement, row: InfoRow): void {
-		if (item.getAttribute('aria-label') !== row.label) item.setAttribute('aria-label', row.label);
-		// Info art DOES change in place (the deck count drops with every draw): re-render
-		// whenever the markup differs.
-		const art = item.querySelector('.hand-card__art') as HTMLElement;
-		if ((row.art ?? '') !== art.dataset.renderedArt) {
-			art.innerHTML = row.art ?? '';
-			art.dataset.renderedArt = row.art ?? '';
-		}
-		item.classList.toggle('hand-card--visual', !!row.art);
-		const name = item.querySelector('.hand-card__name') as HTMLElement;
-		if (name.textContent !== row.label) name.textContent = row.label;
-	}
-
 	/** Per-card actions ONLY (play/discard): the list-level sort/filter live once in the
 	 *  tools toolbar, and the context menu composes both. */
 	private actionSpecs(card: HandCard): ToolbarAction[] {
@@ -666,13 +620,13 @@ export class HandPanel {
 	}
 
 	/** The row-independent actions (they also feed the list-level menu on a filtered-empty
-	 *  hand): the three orderings as a RADIO SET under one "Sort by" submenu (checked = the
-	 *  applied order; value is the default), and the only-playable filter as ONE toggle
+	 *  hand): the active ordering set as RADIOS under one "Sort by" submenu (checked = the
+	 *  applied order), and the only-playable filter as ONE toggle
 	 *  (checked = only the playable cards show), read as a menuitemcheckbox. */
 	private listLevelSpecs(): ToolbarAction[] {
 		const t = this.deps!.t;
 		const sortGroup = t('game.hand_sort_group');
-		const sortAction = (key: string, mode: SortMode, labelKey: string): ToolbarAction => ({
+		const sortAction = (key: string, mode: string, labelKey: string): ToolbarAction => ({
 			key, label: t(labelKey), group: sortGroup,
 			pressed: this.sortMode === mode,
 			onClick: () => this.setSort(mode),
@@ -695,13 +649,17 @@ export class HandPanel {
 		// "Sort by colour" is only meaningful where cards HAVE a colour: show it only
 		// when some card carries a colourOrder, so colourless families never see a dead option.
 		const hasColour = this.deps!.getCards().some(c => c.colourOrder !== undefined);
+		const customSortActions = this.customSorting()?.options.map(option =>
+			sortAction(`sort-${option.id}`, option.id, option.labelKey));
 		return [
 			...multiActions,
-			sortAction('sort-value', 'value', 'game.hand_sort_by_value'),
-			sortAction('sort-value-asc', 'valueAsc', 'game.hand_sort_by_value_asc'),
-			...(hasColour ? [sortAction('sort-colour', 'colour', 'game.hand_sort_by_colour')] : []),
-			sortAction('sort-type', 'type', 'game.hand_sort_by_type'),
-			sortAction('sort-hand', 'hand', 'game.hand_sort_hand'),
+			...(customSortActions ?? [
+				sortAction('sort-value', 'value', 'game.hand_sort_by_value'),
+				sortAction('sort-value-asc', 'valueAsc', 'game.hand_sort_by_value_asc'),
+				...(hasColour ? [sortAction('sort-colour', 'colour', 'game.hand_sort_by_colour')] : []),
+				sortAction('sort-type', 'type', 'game.hand_sort_by_type'),
+				sortAction('sort-hand', 'hand', 'game.hand_sort_hand'),
+			]),
 			{
 				key: 'filter-playable',
 				label: t('game.hand_filter_playable'),
@@ -771,11 +729,12 @@ export class HandPanel {
 		this.deps.onDraw();
 	}
 
-	private setSort(mode: SortMode): void {
+	private setSort(mode: string): void {
 		this.sortMode = mode;
 		this.savePreferences();
 		this.update();
-		this.deps!.announce(this.deps!.t(`game.hand_sorted_${mode}`));
+		const custom = this.customSorting()?.options.find(option => option.id === mode);
+		this.deps!.announce(this.deps!.t(custom?.announcementKey ?? `game.hand_sorted_${mode}`));
 	}
 
 	private setFilter(onlyPlayable: boolean): void {
@@ -876,12 +835,27 @@ export class HandPanel {
 
 	// ── Preferences (survive reloads on this browser) ─────────────────────────
 
+	/** An empty or malformed family declaration falls back to the proven generic orderings. */
+	private customSorting(): HandSorting | null {
+		const sorting = this.deps?.sorting;
+		if (!sorting || sorting.options.length === 0) return null;
+		return sorting.options.some(option => option.id === sorting.defaultId) ? sorting : null;
+	}
+
+	private preferencesKey(): string {
+		const scope = this.customSorting()?.preferenceScope.trim();
+		return scope ? `${PREFS_KEY}.${scope}` : PREFS_KEY;
+	}
+
 	private loadPreferences(): void {
 		try {
-			const raw = window.localStorage.getItem(PREFS_KEY);
+			const raw = window.localStorage.getItem(this.preferencesKey());
 			if (!raw) return;
 			const prefs = JSON.parse(raw);
-			if (SORT_MODES.includes(prefs.sort)) this.sortMode = prefs.sort;
+			const knownSort = typeof prefs.sort === 'string' && (this.customSorting()
+				? this.customSorting()!.options.some(option => option.id === prefs.sort)
+				: SORT_MODES.some(mode => mode === prefs.sort));
+			if (knownSort) this.sortMode = prefs.sort;
 			if (typeof prefs.onlyPlayable === 'boolean') this.onlyPlayable = prefs.onlyPlayable;
 		} catch {
 			// Unavailable/corrupted storage (private mode…): the defaults still work.
@@ -890,7 +864,7 @@ export class HandPanel {
 
 	private savePreferences(): void {
 		try {
-			window.localStorage.setItem(PREFS_KEY,
+			window.localStorage.setItem(this.preferencesKey(),
 				JSON.stringify({ sort: this.sortMode, onlyPlayable: this.onlyPlayable }));
 		} catch {
 			// Best effort: losing the preference never breaks the game.

@@ -56,6 +56,7 @@ rivales de un tirón. Pulsa **Ctrl+F1** para ver la lista completa de atajos de 
 
 ### Consultar la mesa
 
+- **D** anuncia cuántas cartas quedan en el mazo sin abandonar tu bandeja.
 - **S** anuncia tu ronda, puntos, tapas servidas y flanes; **Shift+S** repasa las mesas rivales. **Ctrl+P** lleva a la lista de jugadores.
 - Peticiones, revelaciones, giro de bandejas, puntuaciones y cambios de ronda se anuncian automáticamente sin revelar manos privadas.
 
