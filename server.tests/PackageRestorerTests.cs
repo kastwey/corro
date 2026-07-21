@@ -59,7 +59,7 @@ public class PackageRestorerTests
 		var store = NewStore();
 		var restorer = new PackageRestorer(store, Shipped(), NewBlob());
 
-				var def = await restorer.ReStageAsync(Doc("tok-s", shippedId: "imperio-galactico"));
+		var def = await restorer.ReStageAsync(Doc("tok-s", shippedId: "galactic-empire"));
 
 		Assert.NotNull(def);
 		Assert.NotNull(store.GetDefinition("tok-s")); // staged under the token so sounds re-register
@@ -70,7 +70,7 @@ public class PackageRestorerTests
 	{
 		var store = NewStore();
 		var blob = NewBlob();
-				await blob.PutAsync("tok-u", ZipOfDir(CorroTestPaths.PackageDir("imperio-galactico")));
+		await blob.PutAsync("tok-u", ZipOfDir(CorroTestPaths.PackageDir("galactic-empire")));
 		var restorer = new PackageRestorer(store, Shipped(), blob);
 
 		var def = await restorer.ReStageAsync(Doc("tok-u", blobKey: "tok-u"));
@@ -88,7 +88,7 @@ public class PackageRestorerTests
 	{
 		var store = NewStore();
 		var restorer = new PackageRestorer(store, Shipped(), NewBlob());
-				await restorer.ReStageAsync(Doc("tok", shippedId: "imperio-galactico"));
+		await restorer.ReStageAsync(Doc("tok", shippedId: "galactic-empire"));
 
 		// A second call with NO source still returns the already-staged definition.
 		Assert.NotNull(await restorer.ReStageAsync(Doc("tok")));
@@ -99,13 +99,64 @@ public class PackageRestorerTests
 	{
 		var store = NewStore();
 		var blob = NewBlob();
-			   await blob.PutAsync("tok", ZipOfDir(CorroTestPaths.PackageDir("imperio-galactico")));
+		await blob.PutAsync("tok", ZipOfDir(CorroTestPaths.PackageDir("galactic-empire")));
 		var restorer = new PackageRestorer(store, Shipped(), blob);
 		await restorer.ReStageAsync(Doc("tok", blobKey: "tok"));
 
-		await restorer.ReleaseAsync("tok");
+		await restorer.ReleaseAsync("tok", "tok");
 
 		Assert.Null(store.GetDefinition("tok"));
 		Assert.Null(await blob.GetAsync("tok"));
+	}
+
+	[Fact]
+	public async Task Release_uses_the_persisted_blob_key_when_it_differs_from_the_runtime_token()
+	{
+		var store = NewStore();
+		var blob = NewBlob();
+		await blob.PutAsync("durable-key", ZipOfDir(CorroTestPaths.PackageDir("galactic-empire")));
+		var restorer = new PackageRestorer(store, Shipped(), blob);
+		await restorer.ReStageAsync(Doc("runtime-token", blobKey: "durable-key"));
+
+		await restorer.ReleaseAsync("runtime-token", "durable-key");
+
+		Assert.Null(store.GetDefinition("runtime-token"));
+		Assert.Null(await blob.GetAsync("durable-key"));
+	}
+
+	[Fact]
+	public async Task ReleaseOrphanBlob_unstages_tokens_by_their_recorded_blob_origin()
+	{
+		var store = NewStore();
+		var blob = NewBlob();
+		await blob.PutAsync("durable-key", ZipOfDir(CorroTestPaths.PackageDir("galactic-empire")));
+		await using (var zip = await blob.GetAsync("durable-key"))
+		{
+			Assert.NotNull(zip);
+			await store.StageAsync("runtime-token", zip!);
+		}
+		store.SetOrigin("runtime-token", new PackageOrigin { BlobKey = "durable-key" });
+		var restorer = new PackageRestorer(store, Shipped(), blob);
+
+		await restorer.ReleaseOrphanBlobAsync("durable-key");
+
+		Assert.Null(store.GetDefinition("runtime-token"));
+		Assert.Null(await blob.GetAsync("durable-key"));
+	}
+
+	[Fact]
+	public async Task Release_without_a_blob_key_does_not_delete_a_same_named_unrelated_blob()
+	{
+		var store = NewStore();
+		var blob = NewBlob();
+		await blob.PutAsync("shipped-token", ZipOfDir(CorroTestPaths.PackageDir("galactic-empire")));
+		var restorer = new PackageRestorer(store, Shipped(), blob);
+		await restorer.ReStageAsync(Doc("shipped-token", shippedId: "galactic-empire"));
+
+		await restorer.ReleaseAsync("shipped-token", blobKey: null);
+
+		Assert.Null(store.GetDefinition("shipped-token"));
+		await using var remaining = await blob.GetAsync("shipped-token");
+		Assert.NotNull(remaining);
 	}
 }

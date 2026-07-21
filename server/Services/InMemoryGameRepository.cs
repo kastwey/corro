@@ -42,4 +42,48 @@ public sealed class InMemoryGameRepository : IGameRepository
 
 	public Task<bool> DeleteGameAsync(string gameId)
 		=> Task.FromResult(_games.TryRemove(Key(gameId), out _));
+
+	public async IAsyncEnumerable<GameDocument> GetGamesLastUpdatedBeforeAsync(
+		DateTime cutoffUtc,
+		int maxCount,
+		[System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+	{
+		var candidates = _games.Values
+			.Where(game => LastActivity(game) < cutoffUtc)
+			.OrderBy(LastActivity)
+			.Take(maxCount)
+			.ToList();
+
+		foreach (var game in candidates)
+		{
+			ct.ThrowIfCancellationRequested();
+			yield return game;
+			await Task.Yield();
+		}
+	}
+
+	public Task<bool> HasPackageReferenceAsync(
+		string? packageToken,
+		string? packageBlobKey,
+		CancellationToken ct = default)
+	{
+		ct.ThrowIfCancellationRequested();
+		return Task.FromResult(_games.Values.Any(game =>
+			(!string.IsNullOrEmpty(packageToken) && game.PackageToken == packageToken)
+			|| (!string.IsNullOrEmpty(packageBlobKey) && game.PackageBlobKey == packageBlobKey)));
+	}
+
+	public Task<IReadOnlySet<string>> GetReferencedPackageBlobKeysAsync(CancellationToken ct = default)
+	{
+		ct.ThrowIfCancellationRequested();
+		IReadOnlySet<string> keys = _games.Values
+			.Select(game => game.PackageBlobKey)
+			.Where(key => !string.IsNullOrEmpty(key))
+			.Cast<string>()
+			.ToHashSet(StringComparer.Ordinal);
+		return Task.FromResult(keys);
+	}
+
+	private static DateTime LastActivity(GameDocument game)
+		=> game.LastUpdated == default ? game.CreatedAt : game.LastUpdated;
 }

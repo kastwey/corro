@@ -22,6 +22,16 @@ public class AzureBlobPackageStoreIntegrationTests
 		await using (s) { using var r = new StreamReader(s); return await r.ReadToEndAsync(); }
 	}
 
+	private static async Task<List<PackageBlobInfo>> ListAll(IPackageBlobStore store)
+	{
+		var result = new List<PackageBlobInfo>();
+		await foreach (var blob in store.ListAsync())
+		{
+			result.Add(blob);
+		}
+		return result;
+	}
+
 	[Fact]
 	public async Task Constructing_the_store_does_no_network_IO_even_when_storage_is_unreachable()
 	{
@@ -50,6 +60,7 @@ public class AzureBlobPackageStoreIntegrationTests
 		var got = await store.GetAsync(key);
 		Assert.NotNull(got);
 		Assert.Equal("PK-zip-payload", await ReadAll(got!));
+		Assert.Contains(await ListAll(store), blob => blob.Key == key);
 
 		await store.DeleteAsync(key);
 		Assert.Null(await store.GetAsync(key)); // gone after delete (restore would re-stage from /packages or fail cleanly)

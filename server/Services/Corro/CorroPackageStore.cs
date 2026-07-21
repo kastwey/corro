@@ -39,7 +39,7 @@ public sealed class CorroPackageStore
 		_dirs[key] = dir;
 		_definitions[key] = definition;
 
-		var soundsDir = Path.Combine(dir, "sounds");
+		var soundsDir = PackageLayout.SoundsDirectory(dir);
 		if (Directory.Exists(soundsDir))
 		{
 			_sounds.RegisterPackage(key, soundsDir);
@@ -63,7 +63,7 @@ public sealed class CorroPackageStore
 		_dirs[key] = dir;
 		_definitions[key] = definition;
 
-		var soundsDir = Path.Combine(dir, "sounds");
+		var soundsDir = PackageLayout.SoundsDirectory(dir);
 		if (Directory.Exists(soundsDir))
 		{
 			_sounds.RegisterPackage(key, soundsDir);
@@ -99,6 +99,22 @@ public sealed class CorroPackageStore
 	/// <summary>The recorded origin for a staged package, or null if none was set.</summary>
 	public PackageOrigin? GetOrigin(string key)
 		=> _origins.TryGetValue(key, out var o) ? o : null;
+
+	/// <summary>
+	/// Release every staged upload derived from a durable blob. Retention knows an orphan's blob key,
+	/// but the runtime token may differ, so it must resolve the origin instead of guessing the token.
+	/// </summary>
+	public void ReleaseByBlobKey(string blobKey)
+	{
+		var tokens = _origins
+			.Where(entry => entry.Value.BlobKey == blobKey)
+			.Select(entry => entry.Key)
+			.ToList();
+		foreach (var token in tokens)
+		{
+			Release(token);
+		}
+	}
 
 	/// <summary>
 	/// Reads the package's own translation file <c>i18n/{lang}.json</c> (its keys are merged over

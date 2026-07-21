@@ -141,6 +141,18 @@ public interface IGameRepository
 {
 	Task<GameDocument?> LoadGameAsync(string gameId);
 	Task<bool> DeleteGameAsync(string gameId);
+	/// <summary>Oldest games whose last activity (or creation for legacy documents) precedes a cutoff.</summary>
+	IAsyncEnumerable<GameDocument> GetGamesLastUpdatedBeforeAsync(
+		DateTime cutoffUtc,
+		int maxCount,
+		CancellationToken ct = default);
+	/// <summary>Whether another persisted game still needs this staged token or durable blob.</summary>
+	Task<bool> HasPackageReferenceAsync(
+		string? packageToken,
+		string? packageBlobKey,
+		CancellationToken ct = default);
+	/// <summary>All durable uploaded-package blob keys currently referenced by games.</summary>
+	Task<IReadOnlySet<string>> GetReferencedPackageBlobKeysAsync(CancellationToken ct = default);
 	Task<GameDocument?> GetByInviteCodeAsync(string inviteCode);
 	/// <summary>The game holding a player whose re-entry code matches, or null.</summary>
 	Task<GameDocument?> GetByRejoinCodeAsync(string rejoinCode);

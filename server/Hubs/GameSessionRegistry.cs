@@ -28,6 +28,8 @@ public sealed class GameSessionRegistry
 	private readonly ConcurrentDictionary<string, GameDocument> _persistedDocuments = new();
 	// Per-game background persister: coalesces snapshots and writes them off the awaited command path.
 	private readonly ConcurrentDictionary<string, GameStatePersister> _persisters = new();
+	// Coalesce concurrent deletion requests (game-over, host action and retention) per game.
+	private readonly ConcurrentDictionary<string, Lazy<Task<bool>>> _deletions = new();
 
 	private readonly IHubContext<GameHub> _hub;
 	private readonly IGameRepository _repository;
@@ -59,6 +61,13 @@ public sealed class GameSessionRegistry
 	// ── Live services ─────────────────────────────────────────────────────────
 
 	public bool HasService(string gameId) => _gameServices.ContainsKey(gameId);
+
+	/// <summary>Whether this process is actively serving or persisting the game.</summary>
+	public bool HasActivity(string gameId)
+		=> _gameServices.ContainsKey(gameId)
+		|| _persisters.ContainsKey(gameId)
+		|| _connectionGameMap.Values.Contains(gameId)
+		|| _lobbyConnections.Values.Contains(gameId);
 
 	public bool TryGetService(string gameId, out IGameService service) => _gameServices.TryGetValue(gameId, out service!);
 
@@ -182,12 +191,89 @@ public sealed class GameSessionRegistry
 	public async Task<IGameService?> TearDownGameAsync(string gameId)
 	{
 		_timers.StopTimers(gameId);
+		_nopeWindow?.Cancel(gameId);
 		if (_gameServices.TryRemove(gameId, out var service))
 		{
-			await service.EndGameAsync();
+			try { await service.EndGameAsync(); }
+			catch (Exception ex) { _logger?.LogError(ex, "Error ending game {GameId}", gameId); }
 			return service;
 		}
 		return null;
+	}
+
+	/// <summary>
+	/// Canonical permanent deletion used by every lifecycle path. It first ends live work and flushes
+	/// persistence, then removes Cosmos. Only after Cosmos confirms deletion does it release an
+	/// uploaded package, and only when no other game references the same token/blob.
+	/// </summary>
+	public async Task<bool> DeleteGameAsync(string gameId, GameDocument? knownDocument = null)
+	{
+		var deletion = _deletions.GetOrAdd(gameId, _ => new Lazy<Task<bool>>(
+			() => DeleteGameCoreAsync(gameId, knownDocument),
+			LazyThreadSafetyMode.ExecutionAndPublication));
+
+		try
+		{
+			return await deletion.Value;
+		}
+		finally
+		{
+			if (_deletions.TryGetValue(gameId, out var current) && ReferenceEquals(current, deletion))
+			{
+				_deletions.TryRemove(gameId, out _);
+			}
+		}
+	}
+
+	private async Task<bool> DeleteGameCoreAsync(string gameId, GameDocument? knownDocument)
+	{
+		var removed = await TearDownGameAsync(gameId);
+		if (removed is IDisposable disposable)
+		{
+			disposable.Dispose();
+		}
+
+		// EndGameAsync may have queued one last snapshot. Wait before deleting so a late upsert cannot
+		// resurrect the document after cleanup.
+		if (_persisters.TryRemove(gameId, out var persister))
+		{
+			try { await persister.WaitForIdleAsync(); }
+			catch (Exception ex) { _logger?.LogError(ex, "Error flushing persister for game {GameId}", gameId); }
+		}
+
+		_persistedDocuments.TryRemove(gameId, out var cachedDocument);
+		var document = await _repository.LoadGameAsync(gameId) ?? knownDocument ?? cachedDocument;
+		var deleted = await _repository.DeleteGameAsync(gameId);
+		if (!deleted)
+		{
+			return false;
+		}
+
+		if (document is not null)
+		{
+			var packageToken = document.PackageToken ?? document.GameState?.PackageToken;
+			var blobKey = document.PackageBlobKey;
+			try
+			{
+				var tokenStillUsed = await _repository.HasPackageReferenceAsync(packageToken, packageBlobKey: null);
+				var blobStillUsed = await _repository.HasPackageReferenceAsync(packageToken: null, blobKey);
+				if (!tokenStillUsed || !blobStillUsed)
+				{
+					await _restorer.ReleaseAsync(
+						tokenStillUsed ? null : packageToken,
+						blobStillUsed ? null : blobKey);
+				}
+			}
+			catch (Exception ex)
+			{
+				// Cosmos deletion already succeeded. Leave a possible blob orphan for the daily sweep rather
+				// than turning a transient Storage failure into a broken, restorable game document.
+				_logger?.LogError(ex, "Game {GameId} was deleted but package cleanup failed", gameId);
+			}
+		}
+
+		_logger?.LogInformation("Game {GameId} permanently deleted", gameId);
+		return true;
 	}
 
 	/// <summary>
@@ -206,41 +292,7 @@ public sealed class GameSessionRegistry
 			return;
 		}
 
-		// Stop any running auction timers for this game.
-		_timers.StopTimers(gameId);
-
-		// Release any .corro package bound to this game: unregister its sound pack, delete its
-		// extracted temp folder, and delete its durable blob (uploads only; shipped boards have none).
-		if (state.PackageToken is { } packageToken)
-		{
-			await _restorer.ReleaseAsync(packageToken);
-		}
-
-		if (_gameServices.TryRemove(gameId, out var removed))
-		{
-			try { await removed.EndGameAsync(); }
-			catch (Exception ex) { _logger?.LogError(ex, "Error ending game {GameId}", gameId); }
-
-			if (removed is IDisposable disposable)
-			{
-				disposable.Dispose();
-			}
-
-			_logger?.LogInformation("Game {GameId} finished and removed from memory", gameId);
-		}
-
-		// Flush the last persisted snapshot (EndGameAsync raised a final state change) and drop the
-		// per-game persister + cached document so they don't leak.
-		if (_persisters.TryRemove(gameId, out var persister))
-		{
-			try { await persister.WaitForIdleAsync(); }
-			catch (Exception ex) { _logger?.LogError(ex, "Error flushing persister for game {GameId}", gameId); }
-		}
-		_persistedDocuments.TryRemove(gameId, out _);
-
-		// The game is over and won: delete it from the server immediately (no replay/resume). The
-		// persister is already idle and removed, so this won't be resurrected by a write.
-		try { await _repository.DeleteGameAsync(gameId); }
+		try { await DeleteGameAsync(gameId); }
 		catch (Exception ex) { _logger?.LogError(ex, "Error deleting finished game {GameId}", gameId); }
 	}
 

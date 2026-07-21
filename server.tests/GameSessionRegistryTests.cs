@@ -76,6 +76,41 @@ public class GameSessionRegistryTests
 	}
 
 	[Fact]
+	public async Task CleanupIfGameOver_deletes_the_uploaded_package_blob_recorded_by_the_game()
+	{
+		var blobKey = "blob-" + Guid.NewGuid().ToString("N");
+		var blob = new CorroServer.Services.Corro.LocalFilePackageBlobStore(
+			Path.Combine(Path.GetTempPath(), "corro_gameover_" + Guid.NewGuid().ToString("N")));
+		await blob.PutAsync(blobKey, new MemoryStream(new byte[] { 1, 2, 3 }));
+		var repo = new RecordingRepo();
+		repo.Documents["g1"] = new GameDocument
+		{
+			Id = "game-g1",
+			GameId = "g1",
+			Status = GameStatus.Active,
+			HostId = "host",
+			InviteCode = "INV",
+			PackageToken = "runtime-token",
+			PackageBlobKey = blobKey,
+		};
+		var packageStore = new CorroServer.Services.Corro.CorroPackageStore(
+			new CorroServer.Services.Sounds.CompositeSoundPackProvider(
+				new CorroServer.Services.Sounds.DefaultSoundPackProvider()));
+		var restorer = new CorroServer.Services.Corro.PackageRestorer(
+			packageStore,
+			new CorroServer.Services.Corro.ShippedPackageProvider(CorroTestPaths.PackagesRoot()),
+			blob);
+		var reg = new GameSessionRegistry(new NoopHubContext(), repo, new RecordingTimer(), restorer);
+		var service = new FakeService(gameOver: true, packageToken: "runtime-token");
+		reg.RegisterService("g1", service);
+
+		await reg.CleanupIfGameOverAsync("g1", service);
+
+		Assert.Null(await repo.LoadGameAsync("g1"));
+		Assert.Null(await blob.GetAsync(blobKey));
+	}
+
+	[Fact]
 	public async Task TearDownGameAsync_stops_timers_removes_and_ends_the_service()
 	{
 		var reg = NewRegistry(out var timer, out _);
@@ -105,8 +140,25 @@ public class GameSessionRegistryTests
 	private sealed class RecordingRepo : IGameRepository
 	{
 		public List<string> Deleted { get; } = new();
-		public Task<bool> DeleteGameAsync(string gameId) { Deleted.Add(gameId); return Task.FromResult(true); }
-		public Task<GameDocument?> LoadGameAsync(string gameId) => Task.FromResult<GameDocument?>(null);
+		public Dictionary<string, GameDocument> Documents { get; } = new();
+		public Task<bool> DeleteGameAsync(string gameId)
+		{
+			Deleted.Add(gameId);
+			return Task.FromResult(Documents.Count == 0 || Documents.Remove(gameId));
+		}
+		public async IAsyncEnumerable<GameDocument> GetGamesLastUpdatedBeforeAsync(DateTime cutoffUtc, int maxCount, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+		{
+			await Task.CompletedTask;
+			yield break;
+		}
+		public Task<bool> HasPackageReferenceAsync(string? packageToken, string? packageBlobKey, CancellationToken ct = default)
+			=> Task.FromResult(Documents.Values.Any(game =>
+				(!string.IsNullOrEmpty(packageToken) && game.PackageToken == packageToken)
+				|| (!string.IsNullOrEmpty(packageBlobKey) && game.PackageBlobKey == packageBlobKey)));
+		public Task<IReadOnlySet<string>> GetReferencedPackageBlobKeysAsync(CancellationToken ct = default)
+			=> Task.FromResult<IReadOnlySet<string>>(new HashSet<string>());
+		public Task<GameDocument?> LoadGameAsync(string gameId)
+			=> Task.FromResult(Documents.TryGetValue(gameId, out var game) ? game : null);
 		public Task<GameDocument?> GetByRejoinCodeAsync(string rejoinCode) => Task.FromResult<GameDocument?>(null);
 		public Task<GameDocument?> GetByInviteCodeAsync(string inviteCode) => Task.FromResult<GameDocument?>(null);
 		public Task<GameDocument> CreateGameAsync(GameDocument game) => Task.FromResult(game);
@@ -117,7 +169,8 @@ public class GameSessionRegistryTests
 	{
 		private readonly GameState _state;
 		public bool Ended { get; private set; }
-		public FakeService(bool gameOver) => _state = new GameState { IsGameOver = gameOver };
+		public FakeService(bool gameOver, string? packageToken = null)
+			=> _state = new GameState { IsGameOver = gameOver, PackageToken = packageToken };
 
 		public GameState? GameState => _state;
 		public Task<GameState> GetGameStateAsync() => Task.FromResult(_state);

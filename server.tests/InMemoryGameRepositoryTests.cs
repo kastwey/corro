@@ -12,13 +12,17 @@ namespace CorroServer.Tests;
 public class InMemoryGameRepositoryTests
 {
 	private static GameDocument Doc(string gameId, string invite = "INV",
-		GameStatus status = GameStatus.WaitingForPlayers) => new()
+		GameStatus status = GameStatus.WaitingForPlayers, DateTime? lastUpdated = null,
+		string? packageBlobKey = null) => new()
 		{
 			Id = $"game-{gameId}",
 			GameId = gameId,
 			Status = status,
 			HostId = "host",
 			InviteCode = invite,
+			LastUpdated = lastUpdated ?? DateTime.UtcNow,
+			PackageToken = packageBlobKey,
+			PackageBlobKey = packageBlobKey,
 			MaxPlayers = 4,
 			Players = new List<LobbyPlayer> { new() { Id = "host", Name = "Ana", Token = "disc", PlayerSecretId = "secret", IsHost = true } }
 		};
@@ -54,5 +58,27 @@ public class InMemoryGameRepositoryTests
 		Assert.True(await repo.DeleteGameAsync("g1"));
 		Assert.Null(await repo.LoadGameAsync("g1"));
 		Assert.False(await repo.DeleteGameAsync("g1")); // already gone
+	}
+
+	[Fact]
+	public async Task Retention_queries_find_only_old_games_and_report_package_references()
+	{
+		var repo = new InMemoryGameRepository();
+		var cutoff = new DateTime(2026, 6, 21, 0, 0, 0, DateTimeKind.Utc);
+		await repo.CreateGameAsync(Doc("old", lastUpdated: cutoff.AddTicks(-1), packageBlobKey: "old-blob"));
+		await repo.CreateGameAsync(Doc("cutoff", lastUpdated: cutoff, packageBlobKey: "new-blob"));
+
+		var candidates = new List<GameDocument>();
+		await foreach (var game in repo.GetGamesLastUpdatedBeforeAsync(cutoff, maxCount: 10))
+		{
+			candidates.Add(game);
+		}
+
+		Assert.Equal(new[] { "old" }, candidates.Select(game => game.GameId));
+		Assert.True(await repo.HasPackageReferenceAsync("old-blob", packageBlobKey: null));
+		Assert.False(await repo.HasPackageReferenceAsync("missing", packageBlobKey: null));
+		Assert.Equal(
+			new[] { "new-blob", "old-blob" },
+			(await repo.GetReferencedPackageBlobKeysAsync()).OrderBy(key => key));
 	}
 }

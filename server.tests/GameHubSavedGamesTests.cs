@@ -37,6 +37,28 @@ public class GameHubSavedGamesTests
 	}
 
 	[Fact]
+	public async Task DeleteGameLobby_AsHost_DeletesItsUploadedPackageBlob()
+	{
+		var gameId = NewId();
+		var packageToken = NewId();
+		var blob = new LocalFilePackageBlobStore(
+			Path.Combine(Path.GetTempPath(), "corro_hub_delete_" + NewId()));
+		await blob.PutAsync(packageToken, new MemoryStream(new byte[] { 1, 2, 3 }));
+		var game = DocFor(
+			gameId,
+			hostId: "host",
+			hostSecret: "secret",
+			packageToken: packageToken,
+			packageBlobKey: packageToken);
+		var repo = new StubRepository(game);
+		var (hub, _, _) = BuildHub(repo, blob);
+
+		await hub.DeleteGameLobby(gameId, "host", "secret");
+
+		Assert.Null(await blob.GetAsync(packageToken));
+	}
+
+	[Fact]
 	public async Task DeleteGameLobby_WrongHostId_RejectedWithHostOnly()
 	{
 		var gameId = NewId();
@@ -145,7 +167,7 @@ public class GameHubSavedGamesTests
 		// when it isn't already staged on this instance) so the lobby selector shows them.
 		var gameId = NewId();
 		var game = DocFor(gameId, hostId: "host", hostSecret: "secret",
-					 packageToken: NewId(), shippedBoardId: "imperio-galactico");
+					 packageToken: NewId(), shippedBoardId: "galactic-empire");
 		var (hub, _, _) = BuildHub(new StubRepository(game));
 
 		var result = await hub.GetGameByInviteCode("INV");
@@ -184,7 +206,7 @@ public class GameHubSavedGamesTests
 	private static string NewId() => Guid.NewGuid().ToString("N");
 
 	private static GameDocument DocFor(string gameId, string hostId, string hostSecret, string? extraPlayerId = null,
-		string? packageToken = null, string? shippedBoardId = null)
+		string? packageToken = null, string? shippedBoardId = null, string? packageBlobKey = null)
 	{
 		var players = new List<LobbyPlayer>
 		{
@@ -209,24 +231,31 @@ public class GameHubSavedGamesTests
 			Status = GameStatus.Active,
 			HostId = hostId,
 			InviteCode = "INV",
-					 Board = "imperio-galactico",
+					 Board = "galactic-empire",
 			PackageToken = packageToken,
 			ShippedBoardId = shippedBoardId,
+			PackageBlobKey = packageBlobKey,
 			MaxPlayers = 4,
 			CreatedAt = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc),
 			Players = players
 		};
 	}
 
-	private static (GameHub hub, FakeClients clients, GameSessionRegistry registry) BuildHub(StubRepository repo)
+	private static (GameHub hub, FakeClients clients, GameSessionRegistry registry) BuildHub(
+		StubRepository repo,
+		IPackageBlobStore? blob = null)
 	{
-		var registry = new GameSessionRegistry(new FakeHubContext(), repo, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
+		var packageStore = new CorroPackageStore(new CompositeSoundPackProvider(new DefaultSoundPackProvider()));
+		var restorer = blob is null
+			? TestFixtures.NewPackageRestorer()
+			: new PackageRestorer(packageStore, new ShippedPackageProvider(CorroTestPaths.PackagesRoot()), blob);
+		var registry = new GameSessionRegistry(new FakeHubContext(), repo, new FakeAuctionTimer(), restorer);
 		var hub = new GameHub(
 			repo,
 			new FakeGameServiceFactory(),
 			new FakeAuctionTimer(),
-			new CorroPackageStore(new CompositeSoundPackProvider(new DefaultSoundPackProvider())),
-			TestFixtures.NewPackageRestorer(),
+			packageStore,
+			restorer,
 			registry,
 			NullLogger<GameHub>.Instance);
 
@@ -259,6 +288,28 @@ public class GameHubSavedGamesTests
 			_games.Remove(gameId);
 			return Task.FromResult(true);
 		}
+
+		public async IAsyncEnumerable<GameDocument> GetGamesLastUpdatedBeforeAsync(DateTime cutoffUtc, int maxCount, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+		{
+			foreach (var game in _games.Values.Where(game => game.LastUpdated < cutoffUtc).Take(maxCount).ToList())
+			{
+				ct.ThrowIfCancellationRequested();
+				yield return game;
+				await Task.Yield();
+			}
+		}
+
+		public Task<bool> HasPackageReferenceAsync(string? packageToken, string? packageBlobKey, CancellationToken ct = default)
+			=> Task.FromResult(_games.Values.Any(game =>
+				(!string.IsNullOrEmpty(packageToken) && game.PackageToken == packageToken)
+				|| (!string.IsNullOrEmpty(packageBlobKey) && game.PackageBlobKey == packageBlobKey)));
+
+		public Task<IReadOnlySet<string>> GetReferencedPackageBlobKeysAsync(CancellationToken ct = default)
+			=> Task.FromResult<IReadOnlySet<string>>(_games.Values
+				.Select(game => game.PackageBlobKey)
+				.Where(key => !string.IsNullOrEmpty(key))
+				.Cast<string>()
+				.ToHashSet());
 
 		public Task<GameDocument?> GetByRejoinCodeAsync(string rejoinCode) => Task.FromResult<GameDocument?>(null);
 

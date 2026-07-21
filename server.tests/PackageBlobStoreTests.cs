@@ -20,6 +20,16 @@ public class PackageBlobStoreTests
 		await using (s) { using var r = new StreamReader(s); return await r.ReadToEndAsync(); }
 	}
 
+	private static async Task<List<PackageBlobInfo>> ListAll(IPackageBlobStore store)
+	{
+		var result = new List<PackageBlobInfo>();
+		await foreach (var blob in store.ListAsync())
+		{
+			result.Add(blob);
+		}
+		return result;
+	}
+
 	[Fact]
 	public async Task Put_then_Get_round_trips_the_archive_bytes()
 	{
@@ -55,6 +65,20 @@ public class PackageBlobStoreTests
 		Assert.Null(await store.GetAsync("tok"));
 
 		await store.DeleteAsync("tok"); // absent now: must not throw
+	}
+
+	[Fact]
+	public async Task List_reports_stored_keys_and_last_modification_times()
+	{
+		var store = NewStore();
+		var before = DateTimeOffset.UtcNow.AddSeconds(-1);
+		await store.PutAsync("tok-a", Bytes("a"));
+		await store.PutAsync("tok-b", Bytes("b"));
+
+		var listed = await ListAll(store);
+
+		Assert.Equal(new[] { "tok-a", "tok-b" }, listed.Select(blob => blob.Key).OrderBy(key => key));
+		Assert.All(listed, blob => Assert.True(blob.LastModified >= before));
 	}
 
 	[Fact]

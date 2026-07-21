@@ -52,6 +52,15 @@ public class GameControllerReadTests
 		public Task<GameDocument?> GetByInviteCodeAsync(string inviteCode) => Task.FromResult(game);
 		public Task<GameDocument?> GetByRejoinCodeAsync(string rejoinCode) => Task.FromResult<GameDocument?>(null);
 		public Task<bool> DeleteGameAsync(string gameId) => throw new NotImplementedException();
+		public async IAsyncEnumerable<GameDocument> GetGamesLastUpdatedBeforeAsync(DateTime cutoffUtc, int maxCount, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+		{
+			await Task.CompletedTask;
+			yield break;
+		}
+		public Task<bool> HasPackageReferenceAsync(string? packageToken, string? packageBlobKey, CancellationToken ct = default)
+			=> Task.FromResult(false);
+		public Task<IReadOnlySet<string>> GetReferencedPackageBlobKeysAsync(CancellationToken ct = default)
+			=> Task.FromResult<IReadOnlySet<string>>(new HashSet<string>());
 		public Task<GameDocument> CreateGameAsync(GameDocument value) => throw new NotImplementedException();
 		public Task<GameDocument> UpdateGameAsync(GameDocument value) => throw new NotImplementedException();
 	}

@@ -46,13 +46,22 @@ deployment instead of silently removing private games from production.
 
 ## Operational notes
 
-- The workflow changes application files only. It does not overwrite App Service settings,
-  custom domains, certificates or connection strings.
+- The workflow changes application files and idempotently enforces App Service `Always On` for
+  the daily retention worker. It does not overwrite application settings, custom domains,
+  certificates or connection strings.
 - Deployment is direct to the production slot. It restarts the worker and drops active
   SignalR connections. A staging-slot swap would not preserve process-local sessions.
 - Production already has the `CosmosDB` and `PackageBlobs` App Service connection strings
   configured for durable games and uploaded packages. The deployment changes application
   files only and leaves both connection strings untouched.
+- Durable-game retention runs inside the existing App Service rather than a separate Function
+  App, so it can coordinate with live SignalR sessions and reuse the canonical game-deletion
+  path. The S1 plan's `Always On` setting is enforced by deployment, so it catches up on every
+  restart and then runs daily. Defaults are 30 inactive days,
+  03:00 UTC and at most 500 game deletions per pass. They can be overridden with App Service
+  settings `GameRetention__Enabled`, `GameRetention__InactivityDays`,
+  `GameRetention__RunAtUtcHour`, `GameRetention__RunOnStartup` and
+  `GameRetention__MaxGamesPerRun`.
 - The production environment has no approval rule because every successful push to `main`
   is intended to deploy automatically.
 - To roll back, revert the offending commit on `main`. The revert passes the same full CI

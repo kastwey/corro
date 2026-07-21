@@ -15,9 +15,15 @@ public interface IPackageBlobStore
 	/// <summary>Open the stored archive for reading, or null if there is none under <paramref name="key"/>.</summary>
 	Task<Stream?> GetAsync(string key, CancellationToken ct = default);
 
-	/// <summary>Delete the archive under <paramref name="key"/> (no-op if absent). Called on game-over.</summary>
+	/// <summary>Delete the archive under <paramref name="key"/> (no-op if absent).</summary>
 	Task DeleteAsync(string key, CancellationToken ct = default);
+
+	/// <summary>Enumerate stored package archives with their last modification time.</summary>
+	IAsyncEnumerable<PackageBlobInfo> ListAsync(CancellationToken ct = default);
 }
+
+/// <summary>A durable uploaded package archive available for retention processing.</summary>
+public sealed record PackageBlobInfo(string Key, DateTimeOffset LastModified);
 
 /// <summary>
 /// Filesystem-backed <see cref="IPackageBlobStore"/> for local development and tests (Azure Blob is
@@ -54,6 +60,25 @@ public sealed class LocalFilePackageBlobStore : IPackageBlobStore
 		}
 
 		return Task.CompletedTask;
+	}
+
+	public async IAsyncEnumerable<PackageBlobInfo> ListAsync(
+		[System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+	{
+		if (!Directory.Exists(_dir))
+		{
+			yield break;
+		}
+
+		foreach (var path in Directory.EnumerateFiles(_dir, "*.corro", SearchOption.TopDirectoryOnly))
+		{
+			ct.ThrowIfCancellationRequested();
+			var file = new FileInfo(path);
+			yield return new PackageBlobInfo(
+				Path.GetFileNameWithoutExtension(file.Name),
+				file.LastWriteTimeUtc);
+			await Task.Yield();
+		}
 	}
 
 	private string PathFor(string key) => Path.Combine(_dir, SafeName(key) + ".corro");

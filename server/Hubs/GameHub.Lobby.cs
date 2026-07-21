@@ -52,6 +52,13 @@ public partial class GameHub
 			// A package game records how to re-derive its package on restore: a shipped board by id,
 			// or an uploaded board by its durable blob key (tracked by the store at stage time).
 			var origin = request.PackageToken is { } token ? _packageStore.GetOrigin(token) : null;
+			if (request.PackageToken is not null && origin is null)
+			{
+				// The upload may have expired before the host submitted the lobby. Never persist a
+				// package game that has no shipped source or durable blob from which it can restore.
+				await Clients.Caller.SendAsync("Error", "INVALID_LOBBY_REQUEST");
+				return;
+			}
 
 			// Journey team mode: the count must produce at least two EQUAL teams of at least
 			// two players out of the (now exact) player count.
@@ -502,7 +509,7 @@ public partial class GameHub
 	/// <summary>
 	/// Journey team mode: the HOST places a player in a team (or back in the pool with a null
 	/// team). The whole room watches: the updated document broadcasts as usual, plus a
-	/// TeamAssigned event so clients announce the move ("Berto entra en el Equipo Rojo").
+	/// TeamAssigned event so clients announce the move ("Berto joins the Red team").
 	/// </summary>
 	public async Task AssignTeam(AssignTeamRequest request)
 	{
@@ -803,9 +810,9 @@ public partial class GameHub
 			await Clients.Group(gameId).SendAsync("GameDeleted", new { GameId = gameId });
 			await Clients.Group($"lobby_{gameId}").SendAsync("GameDeleted", new { GameId = gameId });
 
-			// Tear down live state: auction timers + the in-memory game service (registry), then the
-			// connection/group mappings for every player still attached to this game.
-			await _registry.TearDownGameAsync(gameId);
+			// Use the same complete teardown as game-over and scheduled retention: live state and
+			// persisters stop first, Cosmos is deleted next, then an unshared uploaded blob is released.
+			await _registry.DeleteGameAsync(gameId, game);
 
 			foreach (var connId in _registry.GameConnectionIds(gameId))
 			{
@@ -818,8 +825,6 @@ public partial class GameHub
 				_registry.ForgetLobbyConnection(connId);
 				await Groups.RemoveFromGroupAsync(connId, $"lobby_{gameId}");
 			}
-
-			await _gameRepository.DeleteGameAsync(gameId);
 
 			// The host's own connection may not be in the game group (it is deleting from
 			// the lobby list), so confirm to the caller directly too.

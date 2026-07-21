@@ -354,6 +354,25 @@ public class GameHubRoutingTests
 		Assert.True(clients.Caller.Received("Error"));
 	}
 
+	[Fact]
+	public async Task CreateGameLobby_RejectsAnUnknownOrExpiredPackageToken()
+	{
+		var repository = new CapturingRepository();
+		var registry = new GameSessionRegistry(new FakeHubContext(), repository, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
+		var hub = CreateLobbyHub(repository, registry, out var clients);
+
+		await hub.CreateGameLobby(new CreateGameRequest
+		{
+			HostName = "Host",
+			HostToken = "disc",
+			Board = "Expired upload",
+			PackageToken = Guid.NewGuid().ToString("N"),
+		});
+
+		Assert.Null(repository.Created);
+		Assert.True(clients.Caller.Received("Error"));
+	}
+
 	private static GameHub CreateLobbyHub(
 		IGameRepository repository,
 		GameSessionRegistry registry,
@@ -562,6 +581,15 @@ public class GameHubRoutingTests
 	{
 		public Task<GameDocument?> LoadGameAsync(string gameId) => Task.FromResult<GameDocument?>(null);
 		public Task<bool> DeleteGameAsync(string gameId) => Task.FromResult(true);
+		public async IAsyncEnumerable<GameDocument> GetGamesLastUpdatedBeforeAsync(DateTime cutoffUtc, int maxCount, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+		{
+			await Task.CompletedTask;
+			yield break;
+		}
+		public Task<bool> HasPackageReferenceAsync(string? packageToken, string? packageBlobKey, CancellationToken ct = default)
+			=> Task.FromResult(false);
+		public Task<IReadOnlySet<string>> GetReferencedPackageBlobKeysAsync(CancellationToken ct = default)
+			=> Task.FromResult<IReadOnlySet<string>>(new HashSet<string>());
 		public Task<GameDocument?> GetByInviteCodeAsync(string inviteCode) => Task.FromResult<GameDocument?>(null);
 		public Task<GameDocument?> GetByRejoinCodeAsync(string rejoinCode) => Task.FromResult<GameDocument?>(null);
 		public Task<GameDocument> CreateGameAsync(GameDocument game) => Task.FromResult(game);
@@ -583,6 +611,15 @@ public class GameHubRoutingTests
 		public GameDocument? Created { get; private set; }
 		public Task<GameDocument?> LoadGameAsync(string gameId) => Task.FromResult<GameDocument?>(null);
 		public Task<bool> DeleteGameAsync(string gameId) => Task.FromResult(true);
+		public async IAsyncEnumerable<GameDocument> GetGamesLastUpdatedBeforeAsync(DateTime cutoffUtc, int maxCount, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+		{
+			await Task.CompletedTask;
+			yield break;
+		}
+		public Task<bool> HasPackageReferenceAsync(string? packageToken, string? packageBlobKey, CancellationToken ct = default)
+			=> Task.FromResult(false);
+		public Task<IReadOnlySet<string>> GetReferencedPackageBlobKeysAsync(CancellationToken ct = default)
+			=> Task.FromResult<IReadOnlySet<string>>(new HashSet<string>());
 		public Task<GameDocument?> GetByInviteCodeAsync(string inviteCode) => Task.FromResult<GameDocument?>(null);
 		public Task<GameDocument?> GetByRejoinCodeAsync(string rejoinCode) => Task.FromResult<GameDocument?>(null);
 		public Task<GameDocument> CreateGameAsync(GameDocument game)

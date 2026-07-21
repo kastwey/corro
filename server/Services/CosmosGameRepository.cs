@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using CorroServer.Models;
 using Microsoft.Azure.Cosmos;
@@ -189,6 +191,105 @@ public class CosmosGameRepository : IGameRepository
 			_logger.LogError(ex, "Error deleting game: {GameId}", gameId);
 			throw;
 		}
+	}
+
+	public async IAsyncEnumerable<GameDocument> GetGamesLastUpdatedBeforeAsync(
+		DateTime cutoffUtc,
+		int maxCount,
+		[EnumeratorCancellation] CancellationToken ct = default)
+	{
+		if (maxCount <= 0)
+		{
+			yield break;
+		}
+
+		// DateTime values are stored as sortable ISO-8601 JSON strings. Legacy documents without
+		// lastUpdated fall back to createdAt so they cannot evade retention forever.
+		var cutoff = cutoffUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
+		var query = new QueryDefinition(
+			"SELECT * FROM c WHERE "
+			+ "(IS_DEFINED(c.lastUpdated) AND NOT IS_NULL(c.lastUpdated) AND c.lastUpdated < @cutoff) "
+			+ "OR ((NOT IS_DEFINED(c.lastUpdated) OR IS_NULL(c.lastUpdated)) AND c.createdAt < @cutoff)")
+			.WithParameter("@cutoff", cutoff);
+		var iterator = _container.GetItemQueryIterator<GameDocument>(
+			query,
+			requestOptions: new QueryRequestOptions { MaxItemCount = Math.Min(maxCount, 100) });
+
+		var yielded = 0;
+		while (iterator.HasMoreResults && yielded < maxCount)
+		{
+			var response = await iterator.ReadNextAsync(ct);
+			foreach (var game in response)
+			{
+				yield return game;
+				yielded++;
+				if (yielded >= maxCount)
+				{
+					yield break;
+				}
+			}
+		}
+	}
+
+	public async Task<bool> HasPackageReferenceAsync(
+		string? packageToken,
+		string? packageBlobKey,
+		CancellationToken ct = default)
+	{
+		var conditions = new List<string>();
+		if (!string.IsNullOrEmpty(packageToken))
+		{
+			conditions.Add("c.packageToken = @packageToken");
+		}
+		if (!string.IsNullOrEmpty(packageBlobKey))
+		{
+			conditions.Add("c.packageBlobKey = @packageBlobKey");
+		}
+		if (conditions.Count == 0)
+		{
+			return false;
+		}
+
+		var query = new QueryDefinition(
+			$"SELECT TOP 1 VALUE c.id FROM c WHERE {string.Join(" OR ", conditions)}");
+		if (!string.IsNullOrEmpty(packageToken))
+		{
+			query.WithParameter("@packageToken", packageToken);
+		}
+		if (!string.IsNullOrEmpty(packageBlobKey))
+		{
+			query.WithParameter("@packageBlobKey", packageBlobKey);
+		}
+
+		var iterator = _container.GetItemQueryIterator<string>(query);
+		while (iterator.HasMoreResults)
+		{
+			if ((await iterator.ReadNextAsync(ct)).Count > 0)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public async Task<IReadOnlySet<string>> GetReferencedPackageBlobKeysAsync(CancellationToken ct = default)
+	{
+		var keys = new HashSet<string>(StringComparer.Ordinal);
+		var query = new QueryDefinition(
+			"SELECT VALUE c.packageBlobKey FROM c "
+			+ "WHERE IS_DEFINED(c.packageBlobKey) AND NOT IS_NULL(c.packageBlobKey)");
+		var iterator = _container.GetItemQueryIterator<string>(query);
+		while (iterator.HasMoreResults)
+		{
+			foreach (var key in await iterator.ReadNextAsync(ct))
+			{
+				if (!string.IsNullOrEmpty(key))
+				{
+					keys.Add(key);
+				}
+			}
+		}
+		return keys;
 	}
 
 }

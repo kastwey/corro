@@ -12,6 +12,10 @@ It creates:
 - a private Blob container for package sources intentionally excluded from Git;
 - `Storage Blob Data Reader` scoped only to that container.
 
+`Website Contributor` also lets the production workflow idempotently enforce `Always On` on the
+existing S1 Web App. This keeps the in-process daily game-retention worker scheduled without a
+second Function App, identity or set of Cosmos/Blob credentials.
+
 No client secret, publish profile, storage key or Cosmos credential is stored in GitHub.
 The federated subject uses the repository's immutable owner/repository IDs, as returned by
 GitHub's OIDC customization endpoint, rather than relying only on renameable display names.

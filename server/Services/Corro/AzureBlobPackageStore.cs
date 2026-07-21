@@ -70,6 +70,23 @@ public sealed class AzureBlobPackageStore : IPackageBlobStore
 		await Blob(key).DeleteIfExistsAsync(cancellationToken: ct);
 	}
 
+	public async IAsyncEnumerable<PackageBlobInfo> ListAsync(
+		[System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+	{
+		await EnsureContainerAsync(ct);
+		await foreach (var blob in _container.GetBlobsAsync(cancellationToken: ct))
+		{
+			if (!blob.Name.EndsWith(".corro", StringComparison.OrdinalIgnoreCase))
+			{
+				continue;
+			}
+
+			yield return new PackageBlobInfo(
+				blob.Name[..^".corro".Length],
+				blob.Properties.LastModified ?? DateTimeOffset.MinValue);
+		}
+	}
+
 	private BlobClient Blob(string key) => _container.GetBlobClient(SafeName(key) + ".corro");
 
 	/// <summary>Keep the key from forming an unexpected blob path; mirrors the local impl's naming.</summary>

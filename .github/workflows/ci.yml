@@ -146,6 +146,32 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
+      # The daily retention worker runs inside the existing S1 App Service so it can coordinate
+      # with live SignalR sessions. Keep the worker resident; this changes no app settings or secrets.
+      - name: Ensure scheduled retention stays active
+        if: steps.freshness.outputs.deploy == 'true'
+        run: |
+          set -euo pipefail
+          always_on="$(az webapp config show \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_WEBAPP_NAME" \
+            --query alwaysOn \
+            --output tsv \
+            --only-show-errors)"
+          if [[ "$always_on" != "true" ]]; then
+            always_on="$(az webapp config set \
+              --resource-group "$AZURE_RESOURCE_GROUP" \
+              --name "$AZURE_WEBAPP_NAME" \
+              --always-on true \
+              --query alwaysOn \
+              --output tsv \
+              --only-show-errors)"
+          fi
+          if [[ "$always_on" != "true" ]]; then
+            echo "::error::App Service Always On was not enabled."
+            exit 1
+          fi
+
       # Private, non-distributable packages are intentionally absent from Git. Fetch them
       # directly with data-plane RBAC and never upload the resulting app as a GitHub artifact.
       - name: Restore private packages

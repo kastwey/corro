@@ -13,6 +13,13 @@ public static class ServiceCollectionExtensions
 {
 	public static IServiceCollection AddCorroServices(this IServiceCollection services, IConfiguration configuration)
 	{
+		services.AddOptions<GameRetentionOptions>()
+			.Bind(configuration.GetSection(GameRetentionOptions.SectionName))
+			.Validate(options => options.InactivityDays > 0, "GameRetention:InactivityDays must be greater than zero.")
+			.Validate(options => options.RunAtUtcHour is >= 0 and <= 23, "GameRetention:RunAtUtcHour must be between 0 and 23.")
+			.Validate(options => options.MaxGamesPerRun > 0, "GameRetention:MaxGamesPerRun must be greater than zero.")
+			.ValidateOnStart();
+
 		// Persistence: CosmosDB when a connection string is configured (production / local emulator),
 		// otherwise an in-memory store so a clone-and-run or offline dev session can create/join/play
 		// with zero Azure setup (games just don't survive a restart). Mirrors the blob store's local
@@ -107,6 +114,10 @@ public static class ServiceCollectionExtensions
 			// Singleton (stateless: wraps the singleton CosmosClient). Injectable by the singleton
 			// registry, and avoids a per-request client lookup.
 			services.AddSingleton<IGameRepository, CosmosGameRepository>();
+			// Retention is relevant only to durable production-style persistence. It catches up once on
+			// startup and then runs daily, reusing the same session-aware deletion path as the Hub.
+			services.AddSingleton<GameRetentionCleanup>();
+			services.AddHostedService<GameRetentionWorker>();
 		}
 		else
 		{

@@ -48,7 +48,7 @@ public class PackageRestoreEndToEndIntegrationTests
 		try
 		{
 			// 1. Upload: the package's zip is stored durably in the blob (what an /api/packages upload does).
-					 await blob.PutAsync(token, ZipOfDir(CorroTestPaths.PackageDir("imperio-galactico")));
+					 await blob.PutAsync(token, ZipOfDir(CorroTestPaths.PackageDir("galactic-empire")));
 
 			// 2. Persist the game to Cosmos, referencing the package by its durable blob key + token.
 			await repo.CreateGameAsync(new GameDocument
@@ -58,7 +58,7 @@ public class PackageRestoreEndToEndIntegrationTests
 				Status = GameStatus.Active,
 				HostId = "h",
 				InviteCode = "ABC",
-					 Board = "imperio-galactico",
+					 Board = "galactic-empire",
 				PackageToken = token,
 				PackageBlobKey = token,
 			});
@@ -74,13 +74,13 @@ public class PackageRestoreEndToEndIntegrationTests
 				.ReStageAsync(reloaded!);
 
 			Assert.NotNull(def);
-					 Assert.Equal("imperio-galactico", def!.Manifest.Id);
+					 Assert.Equal("galactic-empire", def!.Manifest.Id);
 			Assert.NotEmpty(def.Board);
 			Assert.Equal("créditos", def.I18n["es"]["currency.name"]); // the package's own i18n came back through the blob
 			Assert.NotNull(store.GetDefinition(token));                // staged under the token, so its sounds re-register
 
 			// 5. Game over: releasing deletes the blob and unstages the package.
-			await new PackageRestorer(store, new ShippedPackageProvider(CorroTestPaths.PackagesRoot()), blob).ReleaseAsync(token);
+			await new PackageRestorer(store, new ShippedPackageProvider(CorroTestPaths.PackagesRoot()), blob).ReleaseAsync(token, token);
 			Assert.Null(await blob.GetAsync(token));
 		}
 		finally

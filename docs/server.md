@@ -56,7 +56,7 @@ registry is the one place they're enumerated:
   ## Package assets
 
   `CorroPackageLoader` resolves asset conventions before family validation. Required
-  `tokens/<id>.svg` and optional `cards/<card-id>.svg` are parsed as XML with external entities
+  `assets/tokens/<id>.svg` and optional `assets/cards/<card-id>.svg` are parsed as XML with external entities
   and DTDs disabled; only `<path d>` geometry survives. Card art additionally requires a 64×64
   viewBox, a matching card id and per-file/package size limits. Invalid or orphaned files reject
   the package; a genuinely absent card file remains `Svg = null` and selects the client fallback.
@@ -88,7 +88,7 @@ written and tested on its own — see [game-families.md](game-families.md) for w
 
 ## Leaving a game
 
-Leaving ("Abandonar partida") runs the shared bankruptcy/retirement flow, which speaks a
+Leaving the game runs the shared bankruptcy/retirement flow, which speaks a
 **per-family** line (only the property family forfeits an estate; everyone else "retires")
 and then calls the family's **`OnPlayerRetiredAsync`** *before* the turn passes, so the
 family can fold the seat: move the leaver's cards somewhere sensible (so the game doesn't
@@ -104,6 +104,15 @@ simultaneous or direction-aware families — hand the turn to the correct next p
 - **Restore** adopts the saved snapshot verbatim (positions, money, hands, piles, current
   turn) — it does not replay or reset. A package game re-attaches its rules on restore.
 - Uploaded packages persist to **Blob**; shipped packages re-stage from disk by id.
+- Game-over, host deletion and retention all use `GameSessionRegistry.DeleteGameAsync`:
+  it stops live work, drains the coalescing persister, deletes Cosmos, then deletes the
+  uploaded blob only if no other game still references it. Deleting Cosmos first avoids a
+  restorable document pointing at a package that has already disappeared.
+- `GameRetentionWorker` catches up at process startup and runs daily at 03:00 UTC. A game
+  is eligible after 30 complete days without a persisted update, not merely 30 days after
+  creation; any game still active in this process is skipped. The same pass removes uploaded
+  blobs that have themselves been unreferenced for 30 days, including abandoned uploads and
+  retries after transient Blob Storage failures.
 - `GameDocument.Sanitized()` projects the embedded snapshot to the public view before it
   rides in a lobby payload — the same "never leak secrets" discipline as the live wire.
 
