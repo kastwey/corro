@@ -59,7 +59,8 @@ export function appI18n(lang: string): Record<string, any> {
 /**
  * A fresh context+page for one player. Contexts are per-player browsers: cookies,
  * storage and the SignalR connection are isolated, exactly like two real devices.
- * Captures every aria-live write into window.__announcements for later assertions.
+ * Captures every spoken delivery into window.__announcements for later assertions: ARIA
+ * live writes plus the stable focused hand status used when card rows are about to change.
  */
 export async function newPlayerPage(
 	browser: Browser,
@@ -88,9 +89,9 @@ export async function newPlayerPage(
 		const observer = new MutationObserver(records => {
 			for (const r of records) {
 				const el = r.target instanceof Element ? r.target : r.target.parentElement;
-				// Match by the aria-live ATTRIBUTE: the board's static polite region carries
-				// no class (only announcer-created ones do), and the attribute is what matters.
-				if (!el?.closest?.('[aria-live]')) continue;
+				// Most speech uses aria-live. A changing focused hand uses a stable focused
+				// status instead, because JAWS prioritizes replacement-row focus over live text.
+				if (!el?.closest?.('[aria-live], .hand-panel__action-status')) continue;
 				if (r.type === 'characterData') push(r.target.textContent);
 				else r.addedNodes.forEach(n => push(n.textContent));
 			}
@@ -105,8 +106,8 @@ export async function newPlayerPage(
 }
 
 /**
- * Waits until an announcement matching the pattern has been voiced on this page
- * (i.e. written into an aria-live region — what a screen reader would read).
+ * Waits until an announcement matching the pattern has been voiced on this page through
+ * either supported screen-reader channel.
  */
 export async function expectAnnouncement(page: Page, pattern: RegExp): Promise<void> {
 	// A bounded wait (NOT the whole test timeout): a missed announcement must fail fast
@@ -122,6 +123,73 @@ export async function expectAnnouncement(page: Page, pattern: RegExp): Promise<v
 		const log = await page.evaluate(() => (window as any).__announcements ?? []);
 		throw new Error(`No announcement matched ${pattern}.\nHeard so far:\n- ${log.join('\n- ')}\n${e}`);
 	});
+}
+
+export interface AnnouncementHandUpdateOrder {
+	announcementAt: number;
+	handUpdateAt: number;
+	/** The action used the hand's stable focused narrator instead of a racing live region. */
+	usedStableHandFocus: boolean;
+}
+
+/**
+ * Observe one server action's matching accessible narration and the next hand
+ * mutation. The returned finisher proves that a changing focused hand used its stable
+ * narration target, so no removed/inserted row can steal focus and speak first.
+ */
+export async function watchAnnouncementBeforeHandUpdate(
+	page: Page,
+	pattern: RegExp,
+): Promise<() => Promise<AnnouncementHandUpdateOrder>> {
+	await page.evaluate(({ source, flags }) => {
+		(window as any).__announcementHandOrderObserver?.disconnect();
+		const timeline: AnnouncementHandUpdateOrder = {
+			announcementAt: 0,
+			handUpdateAt: 0,
+			usedStableHandFocus: false,
+		};
+		(window as any).__announcementHandOrder = timeline;
+
+		const matchingAddedText = (record: MutationRecord): boolean => {
+			const texts = record.type === 'characterData'
+				? [record.target.textContent ?? '']
+				: Array.from(record.addedNodes, node => node.textContent ?? '');
+			return texts.some(text => new RegExp(source, flags).test(text));
+		};
+		const observer = new MutationObserver(records => {
+			for (const record of records) {
+				const element = record.target instanceof Element
+					? record.target
+					: record.target.parentElement;
+				if (!timeline.announcementAt
+					&& element?.closest('[aria-live], .hand-panel__action-status')
+					&& matchingAddedText(record)) {
+					timeline.announcementAt = performance.now();
+					timeline.usedStableHandFocus = !!element.closest('.hand-panel__action-status');
+				}
+				if (!timeline.handUpdateAt && element?.closest('.hand-panel__list')) {
+					timeline.handUpdateAt = performance.now();
+				}
+			}
+		});
+		observer.observe(document.documentElement, {
+			subtree: true,
+			childList: true,
+			characterData: true,
+		});
+		(window as any).__announcementHandOrderObserver = observer;
+	}, { source: pattern.source, flags: pattern.flags });
+
+	return async () => {
+		await page.waitForFunction(() => {
+			const timeline = (window as any).__announcementHandOrder as AnnouncementHandUpdateOrder | undefined;
+			return !!timeline?.announcementAt && !!timeline?.handUpdateAt;
+		}, undefined, { timeout: 15_000 });
+		return await page.evaluate(() => {
+			(window as any).__announcementHandOrderObserver?.disconnect();
+			return (window as any).__announcementHandOrder as AnnouncementHandUpdateOrder;
+		});
+	};
 }
 
 // ── Lobby flow (through the real UI) ─────────────────────────────────────────

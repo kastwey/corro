@@ -226,6 +226,7 @@ public class SheddingTurnFlowTests
 		var announcer = TestFixtures.Announcer(context);
 		Assert.True(announcer.Has(AnnouncementAudience.AllExcept, "a", "game.shedding_drew"));
 		Assert.True(announcer.Has(AnnouncementAudience.Player, "a", "game.shedding_drew_unplayable"));
+		Assert.Equal("a", announcer.Sent.Single(d => d.Key == "game.shedding_drew_unplayable").Vars["actorId"]);
 		Assert.Equal("b", state.CurrentTurn);
 	}
 
@@ -247,6 +248,7 @@ public class SheddingTurnFlowTests
 		Assert.NotNull(state.Shedding!.PendingDrawnPlay);
 		var announcer = TestFixtures.Announcer(context);
 		Assert.True(announcer.Has(AnnouncementAudience.Player, "a", "game.shedding_drew_playable"));
+		Assert.Equal("a", announcer.Sent.Single(d => d.Key == "game.shedding_drew_playable").Vars["actorId"]);
 
 		// A second draw mid-pause is refused; the KEEP resolves it and passes the turn.
 		var again = await SheddingTurnFlow.DrawAsync(state.Players[0], context, new ScriptedRandomSource());

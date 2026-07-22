@@ -2,7 +2,7 @@
 import { gameClient } from './gameClient.js';
 import type { AnnouncementEvent } from './gameClient.js';
 import type { AnnounceFn } from './announcer.js';
-import { flushAnnouncerNow } from './announcer.js';
+import { commitAnnouncerBeforeState } from './announcer.js';
 import type { CardDrawnNotification } from './models.js';
 import type { GameState, Player, Square, CommandResponse, PropertyMortgagedResponse, BuildingsSoldResponse, BuildingBuiltResponse, TradeSideDto } from './models.js';
 import { translateServerErrorSync, i18nBinder } from './i18nBinder.js';
@@ -12,6 +12,7 @@ import { GameSessionStore } from './sessionUtils.js';
 import { createCommandRegistry, createAnnouncement } from './commands/registry.js';
 import type { CommandContext } from './commands/registry.js';
 import { TurnSequencer } from './turnSequencer.js';
+import { localHandChanged } from './cardHandState.js';
 
 export interface AuctionStartedData {
 	squareIndex: number;
@@ -171,15 +172,19 @@ export class GameManager {
 		deliverEvents: (events) => {
 			// My OWN action's story must WIN over the focus-change reading the screen
 			// reader does when the played card leaves the hand (live-play: hearing the
-			// next card's name before your own move was tedious). Batches whose first
-			// line I authored go out assertive; everyone else's stay polite.
-			const mine = events.length > 0 && events[0].vars?.actorId === this.getMyPlayerId();
+			// next card's name before your own move was tedious). A batch containing any
+			// line I authored goes out assertive; everyone else's stays polite.
+			const myId = this.getMyPlayerId();
+			const mine = myId !== null && events.some(event => event.vars?.actorId === myId);
 			for (const event of events) this.announce?.(event, mine ? { assertive: true } : undefined);
-			// Write the assertive line into the live region NOW — before applyState below
-			// repaints the hand and moves focus off the played card, or the reader voices the
-			// newly-focused card first (live-play complaint). Only own-action batches flush early.
-			if (mine) flushAnnouncerNow();
 		},
+		// SignalR already sends GameEvents before GameStateChanged, but the sequencer used to
+		// buffer both and write the live region in the SAME task that repainted the hand. NVDA
+		// could process the resulting focus/list mutation first. Commit the audible batch and
+		// give the accessibility tree its own timer turn before any state-driven DOM mutation.
+		beforeApplyState: (_events, state) => commitAnnouncerBeforeState({
+			focusChangingHand: localHandChanged(this.GameState, state, this.getMyPlayerId()),
+		}),
 		applyState: (state) => {
 			this.GameState = state;
 			this.emit('gameStateUpdated', state);

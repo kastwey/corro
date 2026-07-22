@@ -31,17 +31,21 @@ You are in a match-and-discard game, focused on a card in your hand, and you pre
    and announces `game.turn_of`.
 
 **Server — send state, hiding secrets**
-8. The service raises "state changed". `GameStateFanout` computes, **per connection**, that
-   player's `ProjectFor` view (your hand stays; rivals' hands and the pile become counts)
-   and sends each socket its own view plus the announcement batch.
+8. The service flushes the personalized announcement batch, then the Hub raises "state
+   changed". `GameStateFanout` computes, **per connection**, that player's `ProjectFor`
+   view (your hand stays; rivals' hands and the pile become counts) and sends each socket
+   its own view.
 
 **Client — render and speak**
-9. Each client stores the new state and repaints the active surface (the hand list + the
-   aria-hidden table echo), reconciling the DOM so focus survives.
-10. The announcement batch is rendered by i18next into the player's language, written to an
-    **ARIA live region** (assertively for your own action, so it isn't queued behind the
-    card your screen reader just read) and to a visual toast, and `soundEvents` fires the
-    matching earcon.
+9. The announcement batch is rendered by i18next into the player's language and sent to a
+   visual toast while `soundEvents` fires the matching earcon. Normally speech uses the
+   ARIA live region. If the paired state changes the locally focused hand, the complete
+   utterance instead receives focus on the hand's stable action status; this is stronger
+   than trying to beat a replacement row with a timer.
+10. The client stores the paired state and repaints the active surface (the hand list + the
+    aria-hidden table echo). During a hand change, focus remains on that stable sentence;
+    only the player's next navigation/action key re-enters the reconciled list, so "1 of N"
+    cannot speak before the game outcome.
 
 The whole loop is server-authoritative: your browser never decided anything, it asked and
 displayed. The E2E test `e2e/tests/shedding.spec.ts` drives exactly this with two real

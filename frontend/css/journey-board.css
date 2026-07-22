@@ -270,7 +270,7 @@
   cursor: not-allowed;
 }
 
-/* The list-level tools (sort + filter), painted once above the list. */
+/* The list-level tools (sort + card-display modes), painted once above the list. */
 .hand-panel__list-actions {
   display: flex;
   flex-wrap: wrap;
@@ -279,10 +279,17 @@
 }
 
 .hand-panel__list-actions .hand-card__btn[aria-pressed="true"] {
-  /* The applied sort/filter: a solid accent chip readable in BOTH themes. */
+  /* The applied sort/display choice: a solid accent chip readable in BOTH themes. */
   background: var(--accent);
   border-color: var(--accent);
   color: var(--on-accent);
+}
+
+/* The narration node is visually hidden, so mirror its focus around the complete hand. */
+.hand-panel:has(.hand-panel__action-status:focus) {
+  outline: 3px solid var(--focus-color, #1e88e5);
+  outline-offset: 4px;
+  border-radius: 0.75rem;
 }
 
 .hand-panel__empty { font-style: italic; opacity: 0.8; }

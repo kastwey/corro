@@ -7,10 +7,10 @@ namespace CorroServer.Services.Commands;
 
 /// <summary>
 /// Turn flow of the assembly family, on top of the pure <see cref="AssemblyRulebook"/>:
-/// play or discard, the end-of-turn refill, and the win. The SERVER owns the voice. Secrecy
-/// rules of this genre: a PLAYED card's identity is public (everyone sees it land) and gets
-/// the two-line pattern; DISCARDS are face-down (only the count is spoken); the refill's
-/// identities go ToPlayer only.
+/// play or discard, forced empty-hand passes, the end-of-turn refill, and the win. The
+/// SERVER owns the voice. Secrecy rules of this genre: a PLAYED card's identity is public
+/// (everyone sees it land) and gets the two-line pattern; DISCARDS are face-down (only the
+/// count is spoken); the refill's identities go ToPlayer only.
 /// </summary>
 public static class AssemblyTurnFlow
 {
@@ -180,9 +180,18 @@ public static class AssemblyTurnFlow
 			: null;
 	}
 
-	/// <summary>End of turn: refill the actor's hand up to size (identities ToPlayer only,
-	/// the table hears the count), then pass the turn.</summary>
+	/// <summary>End of turn: refill the actor, then advance through any players whose hands
+	/// were emptied by an effect. An empty hand has no decision to make: it is a forced pass,
+	/// followed by that player's normal refill.</summary>
 	private static async Task EndAssemblyTurnAsync(GameContext context, Player player, IRandomSource random)
+	{
+		await RefillAndAnnounceAsync(context, player, random);
+		await AdvanceTurnAsync(context, random);
+	}
+
+	/// <summary>Refill one player's hand. Card identities remain private; the table hears
+	/// only how many cards moved.</summary>
+	private static async Task RefillAndAnnounceAsync(GameContext context, Player player, IRandomSource random)
 	{
 		var runtime = context.Family<AssemblyRuntime>();
 		var drawn = AssemblyRulebook.RefillHand(context.GameState.Assembly!, player.Id, runtime.Rules, random);
@@ -218,8 +227,60 @@ public static class AssemblyTurnFlow
 				}
 			}
 		}
+	}
 
+	/// <summary>Advance to the next player who can make a decision. A special such as
+	/// scrapHands can empty several rival hands at once; each affected player automatically
+	/// passes, refills and loses that turn. The bounded walk also prevents malformed or
+	/// exhausted custom decks from creating an infinite server loop.</summary>
+	private static async Task AdvanceTurnAsync(GameContext context, IRandomSource random)
+	{
 		context.Helper.NextTurn();
+		var assembly = context.GameState.Assembly!;
+		var runtime = context.Family<AssemblyRuntime>();
+		for (var visited = 0; visited < context.GameState.Players.Count; visited++)
+		{
+			var candidate = context.Helper.GetCurrentPlayer();
+			if (candidate == null)
+			{
+				return;
+			}
+
+			var seat = assembly.Seats.FirstOrDefault(s => s.PlayerId == candidate.Id);
+			if (seat == null)
+			{
+				break;
+			}
+
+			if (seat.Retired)
+			{
+				context.Helper.NextTurn();
+				continue;
+			}
+
+			if (seat.Hand.Count > 0)
+			{
+				break;
+			}
+
+			// Preserve the same rulebook path as an explicit empty-list pass. This is a
+			// forced transition rather than a client command because there is no choice.
+			var pass = AssemblyRulebook.Discard(assembly, candidate.Id, Array.Empty<string>(), runtime.Rules);
+			if (!pass.Ok)
+			{
+				break;
+			}
+
+			await context.Announce("game.assembly_passed", new()
+			{
+				["player"] = candidate.Name,
+				["count"] = 0,
+				["actorId"] = candidate.Id,
+			});
+			await RefillAndAnnounceAsync(context, candidate, random);
+			context.Helper.NextTurn();
+		}
+
 		var next = context.Helper.GetCurrentPlayer();
 		if (next != null)
 		{

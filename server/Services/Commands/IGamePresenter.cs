@@ -4,17 +4,16 @@ namespace CorroServer.Services.Commands;
 
 /// <summary>
 /// Client-facing notification sink the rulebook fires while resolving a command.
-/// Bundles the presentation callbacks — full-state snapshots, single-square visual
-/// refreshes and card reveals — into one cohesive abstraction so <see cref="GameContext"/>
-/// does not keep growing an open-ended list of <c>Func&lt;&gt;</c> delegates.
+/// Bundles ordered state checkpoints, single-square visual refreshes and card reveals into
+/// one cohesive abstraction so <see cref="GameContext"/> does not keep growing an open-ended
+/// list of <c>Func&lt;&gt;</c> delegates. Normal full-state delivery belongs to the command host
+/// after <c>GameService</c> has flushed the command's announcement batch; handlers cannot
+/// bypass that ordering.
 /// <see cref="GameService"/> provides the live implementation; tests use a no-op or a
 /// capturing fake.
 /// </summary>
 public interface IGamePresenter
 {
-	/// <summary>Pushes the full game-state snapshot to clients (and persists it).</summary>
-	Task NotifyStateChangedAsync();
-
 	/// <summary>
 	/// Closes the current turn segment mid-command: flushes the announcements buffered so
 	/// far as their own ordered batch, then pushes the current state snapshot. Lets a

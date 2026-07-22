@@ -69,6 +69,12 @@ This is the most important client subsystem and has its own doc —
   step on each other or on a piece animation still moving. Your *own* actions are flushed
   **assertively** (interrupting), because a screen reader has usually just read the card
   you focused and the polite queue would arrive too late.
+- `TurnSequencer` preserves the server's events-before-state contract all the way to the
+  accessibility tree. Ordinary batches reach their live region before the paired state.
+  For a local hand whose physical card ids change, `cardHandState.ts` selects a stronger
+  path: `handPanel.ts` focuses a stable action status containing the complete utterance,
+  then the list reconciles without rescuing focus to a replacement row. Timing alone is
+  insufficient because JAWS can prioritize focus even when a live write happened first.
 - `soundEvents.ts` maps announcement keys to **earcons** (short sounds): dice, card draw,
   a piece hop, a family-specific cue. The package ships the actual `.ogg` files; a missing
   file is simply silent.

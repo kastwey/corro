@@ -799,7 +799,9 @@ A `"gameType": "assembly"` package also ships **only a deck**: collect one
 FUNCTIONAL piece per colour while rivals damage them. Hands, the draw pile **and the
 discard pile** (face-down in this genre, reshuffled when the pile dries) are hidden
 information. The turn is: play ONE card or discard 1..`maxDiscard` face-down, then the
-hand refills automatically.
+hand refills automatically. If an effect leaves a player with no cards when their turn
+arrives, that turn is a forced pass: the server refills the hand and advances again without
+waiting for a client command.
 
 ### cards.json (assembly)
 

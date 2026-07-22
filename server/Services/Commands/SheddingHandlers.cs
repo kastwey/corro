@@ -203,7 +203,7 @@ public static class SheddingTurnFlow
 		}
 
 		await context.Announcer.ToAllExcept(player.Id, "game.shedding_drew",
-			new() { ["player"] = player.Name });
+			new() { ["player"] = player.Name, ["actorId"] = player.Id });
 
 		var card = runtime.Catalog[drawn[0].CardId];
 		var playable = runtime.Rules.DrawnCardPlayable
@@ -217,12 +217,12 @@ public static class SheddingTurnFlow
 				InstanceId = drawn[0].InstanceId,
 			};
 			await context.Announcer.ToPlayer(player.Id, "game.shedding_drew_playable",
-				new() { ["card"] = card.NameKey });
+				new() { ["card"] = card.NameKey, ["actorId"] = player.Id });
 			return new SheddingActionResponse { Action = "draw", TurnEnded = false };
 		}
 
 		await context.Announcer.ToPlayer(player.Id, "game.shedding_drew_unplayable",
-			new() { ["card"] = card.NameKey });
+			new() { ["card"] = card.NameKey, ["actorId"] = player.Id });
 		await AdvanceTurnAsync(context, shedding, player.Id, skipOne: false);
 		return new SheddingActionResponse { Action = "draw", TurnEnded = true };
 	}

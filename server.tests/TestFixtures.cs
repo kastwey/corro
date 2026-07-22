@@ -62,23 +62,13 @@ internal static class TestFixtures
 
 		public CapturingPresenter(Func<CardDrawnNotification, Task>? onCardDrawn = null) => _onCardDrawn = onCardDrawn;
 
-		public int StateChangeCount { get; private set; }
 		public int CheckpointCount { get; private set; }
 		public List<Square> SquareChanges { get; } = new();
 		public List<CardDrawnNotification> CardsDrawn { get; } = new();
 
-		public Task NotifyStateChangedAsync()
-		{
-			StateChangeCount++;
-			return Task.CompletedTask;
-		}
-
 		public Task CheckpointTurnSegmentAsync()
 		{
-			// A checkpoint flushes a segment and pushes the current state, so it counts as a
-			// state change too — mirroring the live GameService.
 			CheckpointCount++;
-			StateChangeCount++;
 			return Task.CompletedTask;
 		}
 

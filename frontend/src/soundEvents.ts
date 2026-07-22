@@ -191,7 +191,13 @@ const ANNOUNCEMENT_SOUND_MAP: Readonly<Record<string, string>> = {
 	// Reshuffling the deck is a generic card action, so it reuses the shared cards.shuffle
 	// cue (the engine default pack) rather than a family-specific one — like drawing does.
 	'game.exploding_shuffled': 'cards.shuffle',
+	// The table hears saw_future, while the actor privately hears the revealed identities
+	// through count-suffixed future keys. Every audience must get the same effect cue.
 	'game.exploding_saw_future': 'exploding.future',
+	'game.exploding_future': 'exploding.future',
+	'game.exploding_future_2': 'exploding.future',
+	'game.exploding_future_3': 'exploding.future',
+	'game.exploding_future_empty': 'exploding.future',
 	'game.exploding_drew': 'card.draw',
 	'game.exploding_drew_self': 'card.draw',
 	'game.exploding_drew_bomb_defused': 'exploding.defuse',

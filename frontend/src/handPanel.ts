@@ -11,7 +11,7 @@
 // Keyboard model (shared with the manage dialog / players panel via RovingToolbarList):
 //   - Up/Down/Home/End move between cards; each card is one focus stop reading its label.
 //   - Right enters the card's action toolbar; Shift+F10 / Applications mirrors it as a menu
-//     (play, discard, family-appropriate sorting, only-playable filter toggle).
+//     (play, discard, family-appropriate sorting, and the card-display radio modes).
 //   - Enter plays the focused card (spoken refusal with the reason when it can't be played).
 //   - Space draws (turn-gated by the family; spoken refusal otherwise).
 //   - Delete discards — behind a modal yes/no (it is irreversible), same dialog on every
@@ -22,6 +22,7 @@ import { dialogManager } from './dialogManager.js';
 import { reconcileChildren } from './domReconcile.js';
 import { reconcileToolbarButtons, type ToolbarAction } from './toolbarButtons.js';
 import type { HelpShortcut } from './shortcuts.js';
+import { registerHandAnnouncementFocusTarget } from './handAnnouncementFocus.js';
 
 /** The hand's keyboard bindings, as keymap-style specs for the shortcuts help. These MUST
  *  mirror onKeydown (which reads native key events): they are the single declaration of
@@ -145,11 +146,14 @@ export interface HandPanelDeps {
 }
 
 type BuiltInSortMode = 'hand' | 'type' | 'value' | 'valueAsc' | 'colour';
+type PlayabilityMode = 'all' | 'first' | 'only';
 
 const SORT_MODES: readonly BuiltInSortMode[] = ['hand', 'type', 'value', 'valueAsc', 'colour'];
+const PLAYABILITY_MODES: readonly PlayabilityMode[] = ['all', 'first', 'only'];
 
-/** Sort/filter are per-player PRESENTATION preferences (like theme or sound): they live in
- *  localStorage — not in the game document — and survive reloads on this browser. */
+/** Ordering/display preferences are per-player PRESENTATION preferences (like theme or
+ *  sound): they live in localStorage — not in the game document — and survive reloads on
+ *  this browser. */
 const PREFS_KEY = 'corro.handPreferences';
 
 export class HandPanel {
@@ -157,8 +161,12 @@ export class HandPanel {
 	private root: HTMLElement | null = null;
 	private listEl: HTMLUListElement | null = null;
 	private emptyEl: HTMLParagraphElement | null = null;
-	/** The LIST-level tools (sorts + filter): painted ONCE for the whole hand as a visible
-	 *  toolbar — never duplicated on every row — and mirrored into the context menu. */
+	/** Stable focused narration while an authoritative update changes the card rows. */
+	private actionStatusEl: HTMLParagraphElement | null = null;
+	private actionReturnFocusId: string | null = null;
+	private unregisterActionFocus: (() => void) | null = null;
+	/** The LIST-level tools (sorts + card-display mode): painted ONCE for the whole hand as
+	 *  a visible toolbar — never duplicated on every row — and mirrored into the context menu. */
 	private listActionsEl: HTMLElement | null = null;
 	private nav: RovingToolbarList | null = null;
 	/** Single-tab-stop roving over the tools toolbar (arrows move inside it). */
@@ -166,7 +174,8 @@ export class HandPanel {
 
 	// "What advances me most" is the natural top of a card hand: value order by default.
 	private sortMode = 'value';
-	private onlyPlayable = false;
+	/** Exactly one view applies: normal order, playable-first tiers, or playable cards only. */
+	private playabilityMode: PlayabilityMode = 'all';
 
 	// ── Multi-select state (per PANEL instance = per game, deliberately NOT persisted:
 	// the mode preference lives for the session, as agreed) ──
@@ -200,8 +209,8 @@ export class HandPanel {
 			root.appendChild(draw);
 		}
 
-		// The list-level tools (sort + filter) affect the WHOLE hand, so they are painted
-		// once, here — not repeated on every row. One tab stop (roving, like any toolbar);
+		// The list-level tools (sort + card-display mode) affect the WHOLE hand, so they are
+		// painted once, here — not repeated on every row. One tab stop (roving, like any toolbar);
 		// the Shift+F10 menu of any row mirrors them after the row's own actions.
 		const tools = document.createElement('div');
 		tools.className = 'hand-panel__list-actions';
@@ -210,6 +219,16 @@ export class HandPanel {
 		root.appendChild(tools);
 		this.listActionsEl = tools;
 		this.toolsNav = new RovingCheckboxList({ container: tools, itemSelector: 'button' });
+
+		// A focused card can disappear after play/discard. Moving straight to its replacement
+		// makes JAWS announce "1 of N" ahead of the server voice even when the live region was
+		// updated first. This stable status receives that action's complete utterance as focused
+		// content and survives the following list reconciliation. It is programmatic-only; the
+		// next Tab/arrow/action key deliberately returns the player to the changed hand.
+		const actionStatus = document.createElement('p');
+		actionStatus.className = 'hand-panel__action-status sr-only';
+		actionStatus.tabIndex = -1;
+		root.appendChild(actionStatus);
 
 		const list = document.createElement('ul');
 		list.className = 'hand-panel__list';
@@ -231,6 +250,21 @@ export class HandPanel {
 		this.root = root;
 		this.listEl = list;
 		this.emptyEl = empty;
+		this.actionStatusEl = actionStatus;
+		this.unregisterActionFocus = registerHandAnnouncementFocusTarget(utterance => {
+			const active = document.activeElement;
+			if (!this.root || !this.actionStatusEl || !active || !this.root.contains(active)) {
+				return false;
+			}
+			this.actionReturnFocusId = active.closest<HTMLElement>('.hand-card')?.dataset.focusId ?? null;
+			this.actionStatusEl.textContent = utterance;
+			this.actionStatusEl.focus();
+			return document.activeElement === this.actionStatusEl;
+		});
+		actionStatus.addEventListener('focusout', () => {
+			actionStatus.textContent = '';
+			this.actionReturnFocusId = null;
+		});
 
 		this.nav = new RovingToolbarList({
 			list,
@@ -240,12 +274,18 @@ export class HandPanel {
 			menuLabel: () => deps.t('game.hand_menu_label'),
 			menuClass: 'hand-context-menu',
 			menuItemClass: 'hand-context-menu-item',
+			// Visible popups belong to the active landmark, never as orphan content under body.
+			menuHost: () => root.closest<HTMLElement>(
+				'dialog[open], main, [role="main"], [role="region"]') ?? root,
 		});
 
 		// Registered AFTER the roving controller so navigation keys are already resolved;
 		// this layer only adds the game keys (Space draw/mark, Enter play/send, Delete
 		// discard, Ctrl+Space mode switch).
-		root.addEventListener('keydown', (e) => this.onKeydown(e));
+		root.addEventListener('keydown', (e) => {
+			if (e.target === this.actionStatusEl && this.reenterHandFromActionStatus(e)) return;
+			this.onKeydown(e);
+		});
 		// Mouse projection of the same multi-select state: in multi mode a row click
 		// toggles its mark; Ctrl+click from single mode enters multi with that card marked.
 		list.addEventListener('click', (e) => this.onListClick(e));
@@ -297,7 +337,7 @@ export class HandPanel {
 		});
 		this.nav?.refreshRovingTabindex();
 
-		// Keep the list-level tools fresh (sort/filter state shows in the toolbar and
+		// Keep the list-level tools fresh (ordering/display state shows in the toolbar and
 		// travels into the context menu — even when the filter left no row).
 		if (this.listActionsEl) {
 			reconcileToolbarButtons(this.listActionsEl, this.listLevelSpecs(), {
@@ -342,6 +382,8 @@ export class HandPanel {
 	}
 
 	private destroyDom(): void {
+		this.unregisterActionFocus?.();
+		this.unregisterActionFocus = null;
 		this.nav?.destroy();
 		this.nav = null;
 		this.toolsNav?.destroy();
@@ -350,15 +392,62 @@ export class HandPanel {
 		this.root = null;
 		this.listEl = null;
 		this.emptyEl = null;
+		this.actionStatusEl = null;
+		this.actionReturnFocusId = null;
 		this.listActionsEl = null;
 		this.sortMode = 'value'; // back to the default ordering
-		this.onlyPlayable = false;
+		this.playabilityMode = 'all';
 		this.userMode = null; // the mode preference lives one game, not across them
 		this.forcedCount = null;
 		this.markedOrder = [];
 	}
 
 	// ── Multi-select ──────────────────────────────────────────────────────────
+
+	/**
+	 * The status is a deliberate pause between the server voice and the changed list. A
+	 * navigation/action key first re-enters the hand and is consumed, so a player hears the
+	 * newly focused card before deciding what to do with it. Tab keeps native order: forward
+	 * enters the first row and backward reaches the list tools/draw control.
+	 */
+	private reenterHandFromActionStatus(event: KeyboardEvent): boolean {
+		if (event.key === 'Tab') return false;
+		const keys = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter', ' ', 'Delete']);
+		if (!keys.has(event.key)) return false;
+
+		event.preventDefault();
+		event.stopPropagation();
+		this.actionStatusEl!.textContent = '';
+		const items = this.nav?.getItems() ?? [];
+		const ownerIndex = this.actionReturnFocusId
+			? items.findIndex(item => item.dataset.focusId === this.actionReturnFocusId)
+			: -1;
+		const targetIndex = ownerIndex >= 0
+			? ownerIndex
+			: items.length > 0 && (event.key === 'ArrowUp' || event.key === 'End')
+				? items.length - 1
+				: 0;
+		this.actionReturnFocusId = null;
+		if (items.length > 0) this.nav!.focusItem(targetIndex);
+		else this.focus();
+
+		// If the known card survived (a draw changed the hand around it), replay the key from
+		// that row: arrows continue relative navigation and action keys continue naturally.
+		// A removed card never transfers a key to an unfamiliar replacement row: the first
+		// press only enters and reads it.
+		if (ownerIndex >= 0) {
+			items[ownerIndex].dispatchEvent(new KeyboardEvent('keydown', {
+				key: event.key,
+				ctrlKey: event.ctrlKey,
+				shiftKey: event.shiftKey,
+				altKey: event.altKey,
+				metaKey: event.metaKey,
+				bubbles: true,
+				cancelable: true,
+			}));
+		}
+		return true;
+	}
 
 	/** Whether the hand is in multi-select right now: forced episodes win, then the
 	 *  player's own choice, and single-card is the default. */
@@ -464,40 +553,39 @@ export class HandPanel {
 	// ── Rendering ─────────────────────────────────────────────────────────────
 
 	private visibleCards(all: HandCard[]): HandCard[] {
-		const filtered = this.onlyPlayable ? all.filter(c => c.playable) : [...all];
+		const filtered = this.playabilityMode === 'only' ? all.filter(c => c.playable) : [...all];
 		const custom = this.customSorting()?.options.find(option => option.id === this.sortMode);
-		if (custom) {
-			return filtered
-				.map((c, i) => ({ c, i }))
-				.sort((a, b) => custom.compare(a.c, b.c) || a.i - b.i)
-				.map(x => x.c);
-		}
-		if (this.sortMode === 'type') {
-			// Group by type (alphabetical on the stable key), hand order within a group.
-			return filtered
-				.map((c, i) => ({ c, i }))
-				.sort((a, b) => a.c.typeKey.localeCompare(b.c.typeKey) || a.i - b.i)
-				.map(x => x.c);
-		}
-		if (this.sortMode === 'value' || this.sortMode === 'valueAsc') {
-			// Biggest first by default ("what advances me most"), or smallest first when
-			// the player prefers building up.
-			const sign = this.sortMode === 'value' ? -1 : 1;
-			return filtered
-				.map((c, i) => ({ c, i }))
-				.sort((a, b) => sign * (a.c.value - b.c.value) || a.i - b.i)
-				.map(x => x.c);
-		}
-		if (this.sortMode === 'colour') {
-			// Group by the family's deck colour order, biggest value
-			// first within a colour, colourless cards (wilds) pooled last in hand order.
-			const rank = (c: HandCard): number => c.colourOrder ?? Number.MAX_SAFE_INTEGER;
-			return filtered
-				.map((c, i) => ({ c, i }))
-				.sort((a, b) => rank(a.c) - rank(b.c) || b.c.value - a.c.value || a.i - b.i)
-				.map(x => x.c);
-		}
-		return filtered;
+		const compareBySelectedOrder = (a: HandCard, b: HandCard): number => {
+			if (custom) return custom.compare(a, b);
+			if (this.sortMode === 'type') {
+				// Group by type (alphabetical on the stable key), hand order within a group.
+				return a.typeKey.localeCompare(b.typeKey);
+			}
+			if (this.sortMode === 'value' || this.sortMode === 'valueAsc') {
+				// Biggest first by default ("what advances me most"), or smallest first when
+				// the player prefers building up.
+				const sign = this.sortMode === 'value' ? -1 : 1;
+				return sign * (a.value - b.value);
+			}
+			if (this.sortMode === 'colour') {
+				// Group by the family's deck colour order, biggest value first within a
+				// colour, colourless cards (wilds) pooled last in hand order.
+				const rank = (c: HandCard): number => c.colourOrder ?? Number.MAX_SAFE_INTEGER;
+				return rank(a) - rank(b) || b.value - a.value;
+			}
+			return 0; // Original hand order.
+		};
+
+		// In playable-first mode, playability is the primary key. The chosen family/generic
+		// ordering remains secondary inside both tiers, and deal order makes every tie stable.
+		return filtered
+			.map((c, i) => ({ c, i }))
+			.sort((a, b) => (this.playabilityMode === 'first'
+				? Number(b.c.playable) - Number(a.c.playable)
+				: 0)
+				|| compareBySelectedOrder(a.c, b.c)
+				|| a.i - b.i)
+			.map(x => x.c);
 	}
 
 	private createRow(card: HandCard): HTMLElement {
@@ -585,8 +673,8 @@ export class HandPanel {
 		}
 	}
 
-	/** Per-card actions ONLY (play/discard): the list-level sort/filter live once in the
-	 *  tools toolbar, and the context menu composes both. */
+	/** Per-card actions ONLY (play/discard): the list-level ordering/display tools live once
+	 *  in the tools toolbar, and the context menu composes both. */
 	private actionSpecs(card: HandCard): ToolbarAction[] {
 		const t = this.deps!.t;
 		const specs: ToolbarAction[] = [
@@ -620,16 +708,23 @@ export class HandPanel {
 	}
 
 	/** The row-independent actions (they also feed the list-level menu on a filtered-empty
-	 *  hand): the active ordering set as RADIOS under one "Sort by" submenu (checked = the
-	 *  applied order), and the only-playable filter as ONE toggle
-	 *  (checked = only the playable cards show), read as a menuitemcheckbox. */
+	 *  hand): ordering and card display are two RADIO submenus. Card display always has one
+	 *  selected mode, including the neutral "all cards" option. */
 	private listLevelSpecs(): ToolbarAction[] {
 		const t = this.deps!.t;
 		const sortGroup = t('game.hand_sort_group');
+		const playabilityGroup = t('game.hand_playability_group');
 		const sortAction = (key: string, mode: string, labelKey: string): ToolbarAction => ({
 			key, label: t(labelKey), group: sortGroup,
 			pressed: this.sortMode === mode,
 			onClick: () => this.setSort(mode),
+		});
+		const playabilityAction = (
+			key: string, mode: PlayabilityMode, labelKey: string
+		): ToolbarAction => ({
+			key, label: t(labelKey), group: playabilityGroup,
+			pressed: this.playabilityMode === mode,
+			onClick: () => this.setPlayabilityMode(mode),
 		});
 		// Multi-select lives in the tools too (the mouse projection of Ctrl+Space), and
 		// in multi mode the SEND button with its live count leads the toolbar.
@@ -660,12 +755,9 @@ export class HandPanel {
 				sortAction('sort-type', 'type', 'game.hand_sort_by_type'),
 				sortAction('sort-hand', 'hand', 'game.hand_sort_hand'),
 			]),
-			{
-				key: 'filter-playable',
-				label: t('game.hand_filter_playable'),
-				pressed: this.onlyPlayable,
-				onClick: () => this.setFilter(!this.onlyPlayable),
-			},
+			playabilityAction('show-all-cards', 'all', 'game.hand_show_all'),
+			playabilityAction('prioritize-playable', 'first', 'game.hand_prioritize_playable'),
+			playabilityAction('filter-playable', 'only', 'game.hand_filter_playable'),
 		];
 	}
 
@@ -737,16 +829,21 @@ export class HandPanel {
 		this.deps!.announce(this.deps!.t(custom?.announcementKey ?? `game.hand_sorted_${mode}`));
 	}
 
-	private setFilter(onlyPlayable: boolean): void {
-		this.onlyPlayable = onlyPlayable;
+	private setPlayabilityMode(mode: PlayabilityMode): void {
+		if (this.playabilityMode === mode) return;
+		this.playabilityMode = mode;
 		this.savePreferences();
 		this.update();
 		const all = this.deps!.getCards();
-		this.deps!.announce(onlyPlayable
-			? this.deps!.t('game.hand_filter_applied', {
+		if (mode === 'only') {
+			this.deps!.announce(this.deps!.t('game.hand_filter_applied', {
 				playable: all.filter(c => c.playable).length, total: all.length,
-			})
-			: this.deps!.t('game.hand_filter_cleared', { total: all.length }));
+			}));
+			return;
+		}
+		this.deps!.announce(this.deps!.t(mode === 'first'
+			? 'game.hand_prioritize_playable_applied'
+			: 'game.hand_show_all_applied'));
 	}
 
 	// ── Keyboard ──────────────────────────────────────────────────────────────
@@ -856,7 +953,16 @@ export class HandPanel {
 				? this.customSorting()!.options.some(option => option.id === prefs.sort)
 				: SORT_MODES.some(mode => mode === prefs.sort));
 			if (knownSort) this.sortMode = prefs.sort;
-			if (typeof prefs.onlyPlayable === 'boolean') this.onlyPlayable = prefs.onlyPlayable;
+			const knownPlayabilityMode = typeof prefs.playabilityMode === 'string'
+				&& PLAYABILITY_MODES.some(mode => mode === prefs.playabilityMode);
+			if (knownPlayabilityMode) {
+				this.playabilityMode = prefs.playabilityMode;
+			} else if (prefs.onlyPlayable === true) {
+				// Legacy checkbox preferences could contain both flags. The narrower filter wins.
+				this.playabilityMode = 'only';
+			} else if (prefs.playableFirst === true) {
+				this.playabilityMode = 'first';
+			}
 		} catch {
 			// Unavailable/corrupted storage (private mode…): the defaults still work.
 		}
@@ -865,7 +971,10 @@ export class HandPanel {
 	private savePreferences(): void {
 		try {
 			window.localStorage.setItem(this.preferencesKey(),
-				JSON.stringify({ sort: this.sortMode, onlyPlayable: this.onlyPlayable }));
+				JSON.stringify({
+					sort: this.sortMode,
+					playabilityMode: this.playabilityMode,
+				}));
 		} catch {
 			// Best effort: losing the preference never breaks the game.
 		}

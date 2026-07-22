@@ -1,8 +1,9 @@
 import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { setupDom, installFakeI18next } from './helpers/dom.js';
-import { createAnnouncer, setAnnouncerHost, announceHistoryNext, announceHistoryLast, flushAnnouncerNow } from '../src/announcer.js';
+import { announceHistoryLast, announceHistoryNext, commitAnnouncerBeforeState, createAnnouncer, setAnnouncerHost } from '../src/announcer.js';
 import { managePropertiesDialog } from '../src/managePropertiesDialog.js';
+import { registerHandAnnouncementFocusTarget } from '../src/handAnnouncementFocus.js';
 // Regression: a native modal (showModal) makes the page background inert, which silences
 // body-level ARIA live regions (JAWS stops reading). The fix hosts the live regions INSIDE
 // the open dialog while it is up, and restores them to <body> on close. These tests verify
@@ -50,6 +51,27 @@ test('setAnnouncerHost(null) restores both live regions to <body>', () => {
 // went silent. The fix clears the region and re-writes on the next frame, guaranteeing a
 // real DOM mutation every time.
 const nextFrame = () => new Promise(resolve => setTimeout(resolve, 30));
+
+/** Capture the actual live-region mutation instead of racing a fixed test timer against
+ * the announcer's window timer under parallel-suite load. */
+function waitForText(region: HTMLElement, pattern: RegExp): Promise<string> {
+	const current = region.textContent ?? '';
+	if (pattern.test(current)) return Promise.resolve(current);
+	return new Promise((resolve, reject) => {
+		const observer = new window.MutationObserver(() => {
+			const text = region.textContent ?? '';
+			if (!pattern.test(text)) return;
+			observer.disconnect();
+			window.clearTimeout(timeout);
+			resolve(text);
+		});
+		observer.observe(region, { childList: true, characterData: true, subtree: true });
+		const timeout = window.setTimeout(() => {
+			observer.disconnect();
+			reject(new Error(`No live-region write matched ${pattern}`));
+		}, 1000);
+	});
+}
 
 test('an instant announcement clears the region then writes the message on the next frame', async () => {
 	const announce = createAnnouncer();
@@ -239,8 +261,7 @@ test('a second polite flush within the clear gap merges with the first instead o
 	// Second line arrives behind it (no token movement, so it is released immediately).
 	announce({ key: '_raw', vars: { text: 'You stay in holding. 2 turns left' } });
 
-	await new Promise(resolve => setTimeout(resolve, 80));
-	const spoken = polite().textContent ?? '';
+	const spoken = await waitForText(polite(), /You stay in holding\. 2 turns left/);
 	assert.match(spoken, /You rolled 3 \+ 1 = 4/, 'the dice roll line survives');
 	assert.match(spoken, /You stay in holding\. 2 turns left/, 'the holding line is also present');
 });
@@ -256,8 +277,8 @@ test('an assertive-flagged line flushes its whole batch through the assertive re
 	announce({ key: '_raw', vars: { text: 'You play Reactor' } }, { assertive: true });
 	announce({ key: '_raw', vars: { text: 'You draw 1: Coolant' } });
 
-	await nextFrame();
-	assert.equal(assertive().textContent, 'You play Reactor. You draw 1: Coolant.');
+	const spoken = await waitForText(assertive(), /You play Reactor/);
+	assert.equal(spoken, 'You play Reactor. You draw 1: Coolant.');
 	assert.ok(!(polite().textContent ?? '').includes('You play Reactor'), 'the polite region is not used');
 });
 
@@ -279,30 +300,58 @@ test('the assertive upgrade does not leak into the next (rival) batch', async ()
 	await nextFrame();
 
 	announce({ key: '_raw', vars: { text: 'Rival plays quietly' } });
-	await new Promise(resolve => setTimeout(resolve, 80)); // flush + clear gap + write
-	assert.match(polite().textContent ?? '', /Rival plays quietly/, 'the rival line stays polite');
+	const spoken = await waitForText(polite(), /Rival plays quietly/);
+	assert.match(spoken, /Rival plays quietly/, 'the rival line stays polite');
 	assert.ok(!(assertive().textContent ?? '').includes('Rival plays quietly'));
 });
 
-// Live-play timing ("primero leo la nueva carta y luego el anuncio"): the turn sequencer
-// delivers the announcement and THEN applies the state (which moves focus off the played
-// card). If the assertive line only lands on a later tick, the reader voices the new card
-// first. flushAnnouncerNow writes the own-action line SYNCHRONOUSLY, so it precedes the move.
-test('flushAnnouncerNow writes the own-action line synchronously (ahead of the focus move)', () => {
+test('commitAnnouncerBeforeState yields an accessibility turn after an assertive write', async () => {
 	const announce = createAnnouncer();
+	let liveMutationObserved = false;
+	let laterTaskObserved = false;
+	const observer = new window.MutationObserver(records => {
+		if (!records.some(record => record.target === assertive()
+			|| record.target.parentElement === assertive())) return;
+		liveMutationObserved = true;
+		window.setTimeout(() => { laterTaskObserved = true; }, 0);
+	});
+	observer.observe(assertive(), { childList: true, characterData: true, subtree: true });
 
-	announce({ key: '_raw', vars: { text: 'You play Sashimi' } }, { assertive: true });
-	// Without the fast-track it would wait for the coalesce timer; flushing NOW lands it at once.
-	flushAnnouncerNow();
-	assert.equal(assertive().textContent, 'You play Sashimi.');
-	assert.ok(!(polite().textContent ?? '').includes('Sashimi'), 'the polite region is not used');
+	announce({ key: '_raw', vars: { text: 'You discard Reactor' } }, { assertive: true });
+	await commitAnnouncerBeforeState();
+
+	observer.disconnect();
+	assert.equal(liveMutationObserved, true, 'the live-region mutation was observable');
+	assert.equal(laterTaskObserved, true, 'state is released after a later event-loop task');
+	assert.equal(assertive().textContent, 'You discard Reactor.');
 });
 
-test('flushAnnouncerNow is a no-op for a polite (rival) batch', () => {
+test('commitAnnouncerBeforeState waits for the polite region write too', async () => {
 	const announce = createAnnouncer();
 
-	announce({ key: '_raw', vars: { text: 'Rival plays Nigiri' } }); // polite, not own-action
-	flushAnnouncerNow();
-	assert.ok(!(assertive().textContent ?? '').includes('Nigiri'), 'a rival line is never fast-tracked to assertive');
+	announce({ key: '_raw', vars: { text: 'A rival draws a card' } });
+	await commitAnnouncerBeforeState();
+
+	assert.equal(polite().textContent, 'A rival draws a card.');
+});
+
+test('a changing focused hand receives the utterance through stable focus, without live duplication', async () => {
+	const announce = createAnnouncer();
+	let focusedText = '';
+	const unregister = registerHandAnnouncementFocusTarget(utterance => {
+		focusedText = utterance;
+		return true;
+	});
+	try {
+		announce({ key: '_raw', vars: { text: 'You play Bone' } }, { assertive: true });
+		announce({ key: '_raw', vars: { text: 'You draw Brain' } });
+		await commitAnnouncerBeforeState({ focusChangingHand: true });
+
+		assert.equal(focusedText, 'You play Bone. You draw Brain.');
+		assert.ok(!(assertive().textContent ?? '').includes('You play Bone'));
+		assert.ok(!(polite().textContent ?? '').includes('You play Bone'));
+	} finally {
+		unregister();
+	}
 });
 

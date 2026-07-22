@@ -1,6 +1,7 @@
 import { tSync, i18nBinder } from './i18nBinder.js';
 import { pickLocale } from './localizeSquare.js';
 import type { AnnouncementEvent } from './gameClient.js';
+import { focusHandAnnouncement } from './handAnnouncementFocus.js';
 
 const SELF_SUFFIX = '_self';
 const VICTIM_SUFFIX = '_victim';
@@ -158,6 +159,11 @@ export interface AnnounceOptions {
 
 export type AnnounceFn = (event: AnnouncementEvent, options?: AnnounceOptions) => void;
 
+export interface CommitBeforeStateOptions {
+	/** The paired state adds/removes a local card, so row focus must not narrate first. */
+	focusChangingHand?: boolean;
+}
+
 /**
  * Coalescing announcer for a single ARIA live region.
  *
@@ -194,6 +200,8 @@ class AnnouncerQueue {
 	private instantTimer: number | null = null;
 	/** The current polite batch must flush through the ASSERTIVE region (own-action story). */
 	private batchAssertive = false;
+	/** Resolvers waiting for the next polite live-region write before state may repaint. */
+	private politeWriteWaiters: Array<() => void> = [];
 	/** Rolling history of spoken game announcements, oldest first. */
 	private history: string[] = [];
 	/** Index into history currently under review; -1 means "live" (not browsing). */
@@ -211,6 +219,15 @@ class AnnouncerQueue {
 	 */
 	private readonly coalesceMs = 0;
 	private readonly clearGapMs = 40;
+	/**
+	 * A live-region DOM write is asynchronous from the screen reader's point of view. Give
+	 * the browser/AT bridge one explicit timer turn after that write before a state repaint
+	 * can remove or insert a focused card. There is no web API for "speech finished"; this
+	 * lead guarantees event ordering without guessing the user's speech rate.
+	 *
+	 * A timer (not requestAnimationFrame) is deliberate: background tabs must still advance.
+	 */
+	private readonly assistiveTechnologyCommitMs = 0;
 	/**
 	 * How long an utterance stays in the live region before it is wiped. The
 	 * region is visually hidden but still reachable by a screen reader's virtual
@@ -367,12 +384,9 @@ class AnnouncerQueue {
 
 	/**
 	 * Flush the pending OWN-ACTION (assertive) batch RIGHT NOW, synchronously. The turn
-	 * sequencer delivers the announcements and THEN applies the state (which repaints the
-	 * hand and moves focus off the played card). If the assertive line only lands on a
-	 * later tick, the screen reader has already begun reading the newly-focused card. Writing
-	 * it here — before the state applies — puts the player's own move ahead of that focus
-	 * reading. Only the assertive batch is fast-tracked; a polite batch keeps its normal
-	 * coalescing flush.
+	 * sequencer calls this through {@link commitBeforeState}, which then leaves a separate
+	 * accessibility turn before applying the state that repaints the hand. Only the
+	 * assertive batch is fast-tracked; a polite batch keeps its clear/write cycle.
 	 */
 	flushNow(): void {
 		if (!this.batchAssertive || this.batch.length === 0) return;
@@ -386,6 +400,54 @@ class AnnouncerQueue {
 		this.assertiveRegion.textContent = utterance;
 		this.scheduleAssertiveTextClear();
 		console.debug(`[SR] +${Math.round(performance.now())}ms ASSERTIVE(sync) <- "${utterance}"`);
+	}
+
+	/**
+	 * Commit the current server-action batch to its live region, then resolve only after
+	 * assistive technology has had a separate event-loop turn to observe it. The turn
+	 * sequencer awaits this before applying the accompanying authoritative state, so hand
+	 * reconciliation and its focus rescue cannot overtake the action's narration.
+	 *
+	 * Returns undefined when this action delivered no audible line (for example, every
+	 * resolve-phase event is still held by the movement gate), avoiding needless state lag.
+	 */
+	commitBeforeState(options: CommitBeforeStateOptions = {}): Promise<void> | undefined {
+		if (this.batch.length === 0) return undefined;
+
+		// A focused hand row is about to be added/removed. Deliver the complete utterance as
+		// focused content on the hand's stable status target instead of racing a live-region
+		// event against the replacement row's focus event. The status survives reconciliation;
+		// the player re-enters the changed list with their next navigation key.
+		if (options.focusChangingHand) {
+			const utterance = this.batch.map(text => this.withPeriod(text)).join(' ');
+			if (focusHandAnnouncement(utterance)) {
+				if (this.flushTimer !== null) {
+					window.clearTimeout(this.flushTimer);
+					this.flushTimer = null;
+				}
+				this.batch = [];
+				this.batchAssertive = false;
+				console.debug(`[SR] +${Math.round(performance.now())}ms HAND-FOCUS <- "${utterance}"`);
+				return new Promise<void>(resolve => window.setTimeout(resolve, 0));
+			}
+		}
+
+		let written: Promise<void>;
+		if (this.batchAssertive) {
+			this.flushNow();
+			written = Promise.resolve();
+		} else {
+			written = new Promise<void>(resolve => this.politeWriteWaiters.push(resolve));
+			if (this.flushTimer !== null) {
+				window.clearTimeout(this.flushTimer);
+				this.flushTimer = null;
+			}
+			this.flush();
+		}
+
+		return written.then(() => new Promise<void>(resolve => {
+			window.setTimeout(resolve, this.assistiveTechnologyCommitMs);
+		}));
 	}
 
 	/** (Re)arm the coalesce timer so a settling burst flushes as one utterance. */
@@ -438,6 +500,8 @@ class AnnouncerQueue {
 			this.liveRegion.textContent = text;
 			this.lastLiveWriteAt = performance.now();
 			this.scheduleTextClear();
+			const waiters = this.politeWriteWaiters.splice(0, this.politeWriteWaiters.length);
+			for (const resolve of waiters) resolve();
 		}, this.clearGapMs);
 	}
 
@@ -562,12 +626,11 @@ export function setAnnouncerHost(host: HTMLElement | null): void {
 }
 
 /**
- * Flush a pending own-action assertive batch synchronously (see {@link AnnouncerQueue.flushNow}).
- * Call it right after announcing an own action and BEFORE applying the state that moves focus,
- * so the move is voiced ahead of the newly-focused card. A no-op if nothing is pending.
+ * Commit the pending server-action announcement before its state is allowed to repaint.
+ * See {@link AnnouncerQueue.commitBeforeState}.
  */
-export function flushAnnouncerNow(): void {
-	queue?.flushNow();
+export function commitAnnouncerBeforeState(options?: CommitBeforeStateOptions): Promise<void> | undefined {
+	return queue?.commitBeforeState(options);
 }
 
 /** Read the previous (older) announcement from history. */

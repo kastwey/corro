@@ -52,6 +52,11 @@ public partial class GameHub
 			{
 				await Clients.Caller.SendAsync("CommandResponse", response);
 			}
+			// ExecuteCommandAsync does not return until this command's GameEvents batch has
+			// been sent. Keep the authoritative snapshot here, after that flush (and after the
+			// response handlers that arm movement), so no ordinary handler can make a hand or
+			// board repaint overtake its narration. Mid-command snapshots use the explicitly
+			// ordered CheckpointTurnSegmentAsync path instead.
 			await gameService.NotifyStateChangedAsync();
 
 			// Declining a pending purchase (by ending the turn or re-rolling) can start an

@@ -29,6 +29,12 @@ contradict. One authoritative voice keeps every player hearing the same, correct
   screen reader reads aloud when its content changes — and may also render a visual toast.
 - Announcements are **coalesced into a batch** per server action and released together, so
   a multi-step outcome reads as one sequence, not a stutter.
+- **Announcements commit before state repaints.** The server sends each action's event
+  batch before its authoritative snapshot. Ordinary updates use the live region before the
+  paired state. When that state changes the focused player's hand, timing is not trusted:
+  JAWS may always prioritize a replacement row's focus event. Instead, the complete server
+  sentence receives focus on a stable status inside the hand; reconciliation cannot move
+  that focus, and the next navigation/action key deliberately re-enters the updated list.
 - The batch is **paced against animation**: if a piece is still sliding across the board,
   the announcements wait at a "gate" until it settles, so "Ana moves to Mayfair" doesn't
   arrive before the token gets there.
@@ -81,6 +87,11 @@ accessible list:
 - An optional **multi-select mode** (Ctrl+Space) for families that need to send several
   cards at once (draft's "chopsticks", assembly's multi-discard): Space marks, Enter sends,
   and a rules-forced multi-pick switches it on automatically with its own earcon.
+- If a server action adds/removes a local card, a stable focused status narrates the whole
+  action while the list reconciles. No replacement row is focused automatically; the next
+  Tab/arrow/action key returns to the surviving card (when it still exists) or enters the
+  refreshed hand. This prevents JAWS/NVDA position speech ("1 of 3") from overtaking the
+  game voice.
 
 ## Parallel presentation channels
 

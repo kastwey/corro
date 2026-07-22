@@ -281,7 +281,11 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 
 	/// <summary>
 	/// Notifies clients that the game state has changed.
-	/// Public so the Hub can control the message order.
+	/// Public for command hosts (the Hub and bot driver) so they can call it only after
+	/// <see cref="ExecuteCommandAsync"/> has flushed the command's announcement batch.
+	/// Command handlers deliberately cannot access this through <see cref="IGamePresenter"/>;
+	/// a true mid-command segment must use <see cref="CheckpointTurnSegmentAsync"/>, which
+	/// guarantees events before state itself.
 	/// </summary>
 	public async Task NotifyStateChangedAsync()
 	{

@@ -50,8 +50,6 @@ public partial class CorroRulebook
 			["target"] = trade.TargetName
 		});
 
-		await context.Presenter.NotifyStateChangedAsync();
-
 		return new TradeOutcome { Success = true, Trade = trade, Outcome = "proposed" };
 	}
 
@@ -80,7 +78,6 @@ public partial class CorroRulebook
 		{
 			trade.IsActive = false;
 			context.GameState.ActiveTrade = null;
-			await context.Presenter.NotifyStateChangedAsync();
 			return new TradeOutcome
 			{
 				Success = false,
@@ -108,8 +105,6 @@ public partial class CorroRulebook
 			["offeredCards"] = trade.Initiator.ReleasePasses,
 			["requestedCards"] = trade.Target.ReleasePasses
 		});
-
-		await context.Presenter.NotifyStateChangedAsync();
 
 		return new TradeOutcome { Success = true, Trade = trade, Outcome = "accepted" };
 	}
@@ -143,8 +138,6 @@ public partial class CorroRulebook
 			["target"] = trade.TargetName
 		});
 
-		await context.Presenter.NotifyStateChangedAsync();
-
 		return new TradeOutcome { Success = true, Trade = trade, Outcome = "declined" };
 	}
 
@@ -176,8 +169,6 @@ public partial class CorroRulebook
 			["initiator"] = trade.InitiatorName,
 			["target"] = trade.TargetName
 		});
-
-		await context.Presenter.NotifyStateChangedAsync();
 
 		return new TradeOutcome { Success = true, Trade = trade, Outcome = "cancelled" };
 	}

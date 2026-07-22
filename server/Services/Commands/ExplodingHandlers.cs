@@ -272,7 +272,7 @@ public static class ExplodingTurnFlow
 					{
 						var cardName = runtime.Catalog.GetValueOrDefault(stolen.CardId)?.NameKey ?? stolen.CardId;
 						await context.Announcer.ToPlayer(pending.ActorId, "game.exploding_stole_self",
-							new() { ["target"] = targetName, ["card"] = cardName });
+							new() { ["target"] = targetName, ["card"] = cardName, ["actorId"] = pending.ActorId });
 						await context.Announcer.ToPlayer(pending.TargetId!, "game.exploding_stole_victim",
 							new() { ["player"] = actorName, ["card"] = cardName });
 						foreach (var other in context.GameState.Players
@@ -440,7 +440,7 @@ public static class ExplodingTurnFlow
 		await context.Announcer.ToPlayer(favor.RequesterId, "game.exploding_favor_got_self",
 			new() { ["player"] = player.Name, ["card"] = cardName });
 		await context.Announcer.ToPlayer(player.Id, "game.exploding_favor_gave_self",
-			new() { ["player"] = requesterName, ["card"] = cardName });
+			new() { ["player"] = requesterName, ["card"] = cardName, ["actorId"] = player.Id });
 		foreach (var other in context.GameState.Players
 					 .Where(p => p.Id != favor.RequesterId && p.Id != player.Id && !p.IsBot))
 		{

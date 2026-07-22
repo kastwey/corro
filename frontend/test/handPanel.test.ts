@@ -3,13 +3,14 @@ import assert from 'node:assert/strict';
 import { setupDom } from './helpers/dom.js';
 import { HandPanel, type HandCard } from '../src/handPanel.js';
 import { dialogManager } from '../src/dialogManager.js';
+import { focusHandAnnouncement } from '../src/handAnnouncementFocus.js';
 
 /**
  * The accessible hand — the central surface of card families (approved spec): a roving
  * role=list where Enter plays, Space draws, Delete discards behind a modal yes/no,
- * and the Shift+F10 / Applications menu mirrors the per-card toolbar (play, discard, sort
- * by value asc/desc, type, original, only-playable filter). The panel speaks only UI
- * mechanics; game outcomes are the server's voice.
+ * and the Shift+F10 / Applications menu mirrors the per-card toolbar (play, discard,
+ * sorting, and the mutually exclusive all/playable-first/only-playable display modes).
+ * The panel speaks only UI mechanics; game outcomes are the server's voice.
  */
 
 before(() => setupDom());
@@ -54,6 +55,10 @@ function rowLabels(): string[] {
 	return rows().map(r => r.getAttribute('aria-label') ?? '');
 }
 
+function rowNames(): string[] {
+	return rows().map(r => r.querySelector<HTMLElement>('.hand-card__name')?.textContent ?? '');
+}
+
 /** The toolbar button with the given data-focus-id on the FOCUSED row. */
 function actionOn(row: HTMLElement, action: string): HTMLElement {
 	const btn = row.querySelector<HTMLElement>(`[data-focus-id="${action}"]`);
@@ -61,7 +66,7 @@ function actionOn(row: HTMLElement, action: string): HTMLElement {
 	return btn!;
 }
 
-/** A list-level tool (sort/filter): painted ONCE in the tools toolbar, never on rows. */
+/** A list-level tool (sort/display): painted ONCE in the tools toolbar, never on rows. */
 function listAction(action: string): HTMLElement {
 	const btn = document.querySelector<HTMLElement>(
 		`.hand-panel__list-actions [data-focus-id="${action}"]`);
@@ -70,7 +75,7 @@ function listAction(action: string): HTMLElement {
 }
 
 beforeEach(() => {
-	// The panel persists sort/filter preferences: start every test from the defaults.
+	// The panel persists ordering/display preferences: start every test from the defaults.
 	try { (globalThis as any).window.localStorage.removeItem('corro.handPreferences'); } catch {}
 	document.body.innerHTML = '<div id="mount"></div>';
 	// The body reset detached the dialog singleton's cached elements: drop the cache so
@@ -116,11 +121,12 @@ test('renders a roving list, value-ordered by default; only the unplayable row i
 	assert.equal(tools.getAttribute('role'), 'toolbar');
 	assert.deepEqual(
 		Array.from(tools.querySelectorAll<HTMLElement>('button')).map(b => b.dataset.focusId),
-		['sort-value', 'sort-value-asc', 'sort-type', 'sort-hand', 'filter-playable']);
+		['sort-value', 'sort-value-asc', 'sort-type', 'sort-hand',
+			'show-all-cards', 'prioritize-playable', 'filter-playable']);
 	// One tab stop: the toolbar roves like any other.
 	assert.deepEqual(
 		Array.from(tools.querySelectorAll<HTMLElement>('button')).map(b => b.tabIndex),
-		[0, -1, -1, -1, -1]);
+		[0, -1, -1, -1, -1, -1, -1]);
 });
 
 test('arrows move between cards; Right enters the toolbar with play first', () => {
@@ -232,22 +238,78 @@ test('cancelling the discard keeps the card and returns focus to the hand', () =
 		'focus is back on the card the question was about');
 });
 
-test('the only-playable filter is ONE toggle: checked narrows, unchecked restores', () => {
+test('the only-playable radio narrows the hand; selecting all cards restores it', () => {
+	const all = listAction('show-all-cards');
 	const filter = listAction('filter-playable');
+	assert.equal(all.getAttribute('aria-pressed'), 'true');
 	assert.equal(filter.getAttribute('aria-pressed'), 'false');
 
 	(filter as HTMLButtonElement).click();
 	assert.deepEqual(rowLabels(), ['100 km', '25 km']);
 	assert.deepEqual(announced, ['game.hand_filter_applied:{"playable":2,"total":3}']);
 	assert.equal(listAction('filter-playable').getAttribute('aria-pressed'), 'true');
+	assert.equal(listAction('show-all-cards').getAttribute('aria-pressed'), 'false');
 
-	(listAction('filter-playable') as HTMLButtonElement).click(); // same action, unchecked
+	(listAction('show-all-cards') as HTMLButtonElement).click();
 	assert.equal(rows().length, 3);
-	assert.deepEqual(announced.at(-1), 'game.hand_filter_cleared:{"total":3}');
+	assert.deepEqual(announced.at(-1), 'game.hand_show_all_applied');
+	assert.equal(listAction('show-all-cards').getAttribute('aria-pressed'), 'true');
+	assert.equal(listAction('filter-playable').getAttribute('aria-pressed'), 'false');
 });
 
-test('sort/filter preferences survive a reload (a fresh panel picks them up)', () => {
-	// Change both, as a player would…
+test('playable-first is independent of every built-in order and preserves that order inside each tier', () => {
+	cards = [
+		card({ id: 'c1', label: '25 km', typeKey: 'distance', value: 25, colourOrder: 1 }),
+		card({ id: 'c2', label: 'Stop', typeKey: 'attack', value: 0, colourOrder: 0, playable: false }),
+		card({ id: 'c3', label: '100 km', typeKey: 'distance', value: 100, colourOrder: 0 }),
+		card({ id: 'c4', label: '200 km', typeKey: 'distance', value: 200, playable: false }),
+	];
+	panel.update();
+
+	const priority = listAction('prioritize-playable');
+	assert.equal(listAction('show-all-cards').getAttribute('aria-pressed'), 'true');
+	assert.equal(priority.getAttribute('aria-pressed'), 'false');
+	(priority as HTMLButtonElement).click();
+	assert.equal(listAction('prioritize-playable').getAttribute('aria-pressed'), 'true');
+	assert.equal(listAction('show-all-cards').getAttribute('aria-pressed'), 'false');
+	assert.equal(listAction('filter-playable').getAttribute('aria-pressed'), 'false');
+	assert.deepEqual(announced, ['game.hand_prioritize_playable_applied']);
+
+	const cases: Array<[string, string[]]> = [
+		['sort-value', ['100 km', '25 km', '200 km', 'Stop']],
+		['sort-value-asc', ['25 km', '100 km', 'Stop', '200 km']],
+		['sort-colour', ['100 km', '25 km', 'Stop', '200 km']],
+		['sort-type', ['25 km', '100 km', 'Stop', '200 km']],
+		['sort-hand', ['25 km', '100 km', 'Stop', '200 km']],
+	];
+	for (const [sort, expected] of cases) {
+		(listAction(sort) as HTMLButtonElement).click();
+		assert.deepEqual(rowNames(), expected, `${sort} remains the secondary ordering`);
+		assert.equal(listAction('prioritize-playable').getAttribute('aria-pressed'), 'true');
+	}
+
+	// Selecting the neutral radio returns to the currently selected hand order.
+	(listAction('show-all-cards') as HTMLButtonElement).click();
+	assert.deepEqual(rowNames(), ['25 km', 'Stop', '100 km', '200 km']);
+	assert.deepEqual(announced.at(-1), 'game.hand_show_all_applied');
+});
+
+test('playable-first re-partitions on playability changes and keeps focus on the same card', () => {
+	(listAction('sort-hand') as HTMLButtonElement).click();
+	(listAction('prioritize-playable') as HTMLButtonElement).click();
+	assert.deepEqual(rowNames(), ['25 km', '100 km', 'Stop']);
+
+	const stop = rows().find(row => row.dataset.focusId === 'c2')!;
+	stop.focus();
+	cards = cards.map(c => ({ ...c, playable: c.id === 'c2' }));
+	panel.update();
+
+	assert.deepEqual(rowNames(), ['Stop', '25 km', '100 km']);
+	assert.equal((document.activeElement as HTMLElement).dataset.focusId, 'c2');
+});
+
+test('ordering/display preferences survive a reload (a fresh panel picks them up)', () => {
+	// Change the ordering and select one card-display radio, as a player would…
 	(listAction('sort-hand') as HTMLButtonElement).click();
 	(listAction('filter-playable') as HTMLButtonElement).click();
 
@@ -266,8 +328,38 @@ test('sort/filter preferences survive a reload (a fresh panel picks them up)', (
 
 	// Hand order + only-playable, exactly as left: c1 then c3 (c2 filtered out).
 	assert.deepEqual(rowLabels(), ['25 km', '100 km']);
+	assert.equal(listAction('show-all-cards').getAttribute('aria-pressed'), 'false');
+	assert.equal(listAction('prioritize-playable').getAttribute('aria-pressed'), 'false');
 	assert.equal(listAction('filter-playable').getAttribute('aria-pressed'), 'true');
 	assert.equal(listAction('sort-hand').getAttribute('aria-pressed'), 'true');
+	assert.deepEqual(JSON.parse((globalThis as any).window.localStorage.getItem('corro.handPreferences')), {
+		sort: 'hand', playabilityMode: 'only',
+	});
+});
+
+test('legacy checkbox preferences migrate to one radio mode; only-playable wins a conflict', () => {
+	(globalThis as any).window.localStorage.setItem('corro.handPreferences', JSON.stringify({
+		sort: 'hand', playableFirst: true, onlyPlayable: true,
+	}));
+	document.body.innerHTML = '<div id="mount"></div>';
+	panel = new HandPanel();
+	panel.init(document.getElementById('mount')!, {
+		getCards: () => cards,
+		onPlay: () => {}, announce: text => announced.push(text), t: key => key,
+		shortcutText: { play: 'game.help_cmd_play_card' },
+	});
+
+	assert.deepEqual(rowLabels(), ['25 km', '100 km']);
+	assert.equal(listAction('show-all-cards').getAttribute('aria-pressed'), 'false');
+	assert.equal(listAction('prioritize-playable').getAttribute('aria-pressed'), 'false');
+	assert.equal(listAction('filter-playable').getAttribute('aria-pressed'), 'true');
+
+	// The next choice writes the canonical format and can never preserve both old flags.
+	(listAction('prioritize-playable') as HTMLButtonElement).click();
+	assert.equal(rows().length, 3);
+	assert.deepEqual(JSON.parse((globalThis as any).window.localStorage.getItem('corro.handPreferences')), {
+		sort: 'hand', playabilityMode: 'first',
+	});
 });
 
 test('corrupted preferences fall back to the defaults', () => {
@@ -301,7 +393,10 @@ test('a filter with no matches is a plain zero-item list — no extra message or
 	assert.equal(list.getAttribute('role'), 'list');
 	assert.equal(list.getAttribute('aria-describedby'), null,
 		'the zero-item list semantics are sufficient and do not trigger a redundant phrase');
-	assert.equal(document.querySelector('.hand-panel .sr-only'), null,
+	const actionStatus = document.querySelector<HTMLElement>('.hand-panel__action-status')!;
+	assert.equal(actionStatus.textContent, '',
+		'the stable action narrator is empty and adds no explanation to the result');
+	assert.equal(document.querySelector('.hand-panel .sr-only:not(.hand-panel__action-status)'), null,
 		'the empty result has no hidden explanatory message');
 	assert.equal(document.querySelector<HTMLElement>('.hand-panel__empty')!.hidden, true);
 	// Focus still has somewhere to land so its list name and zero-item count can be read.
@@ -314,10 +409,17 @@ test('a filter with no matches is a plain zero-item list — no extra message or
 	let menu = document.querySelector<HTMLElement>('.hand-context-menu');
 	assert.ok(menu, 'list-level menu opened with Shift+F10');
 	const entryQuery = '[role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"]';
+	const displayGroup = Array.from(menu!.querySelectorAll<HTMLElement>(entryQuery))
+		.find(mi => mi.textContent === 'game.hand_playability_group')!;
+	assert.equal(displayGroup.getAttribute('aria-haspopup'), 'menu');
+	displayGroup.click();
 	const filterEntry = Array.from(menu!.querySelectorAll<HTMLElement>(entryQuery))
 		.find(mi => mi.textContent === 'game.hand_filter_playable')!;
+	assert.equal(filterEntry.getAttribute('role'), 'menuitemradio');
 	assert.equal(filterEntry.getAttribute('aria-checked'), 'true');
-	filterEntry.click(); // unchecking restores the hand
+	const allEntry = Array.from(menu!.querySelectorAll<HTMLElement>(entryQuery))
+		.find(mi => mi.textContent === 'game.hand_show_all')!;
+	allEntry.click(); // selecting the neutral mode restores the hand
 	assert.equal(rows().length, 1);
 
 	// …and right-click on the emptied list too.
@@ -384,7 +486,9 @@ test('a family can replace meaningless generic sort axes with scoped semantic or
 		'the default priority group and every tie are alphabetical');
 	const tools = Array.from(document.querySelectorAll<HTMLElement>(
 		'.hand-panel__list-actions button')).map(button => button.dataset.focusId);
-	assert.deepEqual(tools, ['sort-pairs', 'sort-attacks', 'sort-name', 'sort-hand', 'filter-playable']);
+	assert.deepEqual(tools,
+		['sort-pairs', 'sort-attacks', 'sort-name', 'sort-hand',
+			'show-all-cards', 'prioritize-playable', 'filter-playable']);
 	assert.ok(!tools.includes('sort-value'), 'the family does not expose a meaningless value axis');
 
 	(listAction('sort-attacks') as HTMLButtonElement).click();
@@ -393,7 +497,16 @@ test('a family can replace meaningless generic sort axes with scoped semantic or
 	assert.equal((globalThis as any).window.localStorage.getItem('corro.handPreferences'), null,
 		'the family preference does not overwrite the generic hand preference');
 	assert.deepEqual(JSON.parse((globalThis as any).window.localStorage.getItem(preferenceKey)), {
-		sort: 'attacks', onlyPlayable: false,
+		sort: 'attacks', playabilityMode: 'all',
+	});
+
+	// The independent priority composes with the family's selected attack-first comparator.
+	cards = cards.map(c => ({ ...c, playable: c.id === 'pair-b' || c.id === 'guard' }));
+	panel.update();
+	(listAction('prioritize-playable') as HTMLButtonElement).click();
+	assert.deepEqual(rowNames(), ['Guard', 'Zebra', 'Blast', 'Ant']);
+	assert.deepEqual(JSON.parse((globalThis as any).window.localStorage.getItem(preferenceKey)), {
+		sort: 'attacks', playabilityMode: 'first',
 	});
 });
 
@@ -435,6 +548,60 @@ test('when the focused card leaves the hand, focus lands on the first remaining 
 	assert.equal((document.activeElement as HTMLElement).dataset.focusId, 'c1');
 });
 
+test('a server action owns stable focus until the player re-enters the changed hand', () => {
+	const items = rows();
+	items[0].focus();
+	assert.equal(focusHandAnnouncement('You play 100 km. You draw Stop.'), true);
+
+	const status = document.querySelector<HTMLElement>('.hand-panel__action-status')!;
+	assert.equal(document.activeElement, status);
+	assert.equal(status.textContent, 'You play 100 km. You draw Stop.');
+
+	// The focused card leaves, but reconciliation cannot focus and announce a replacement
+	// row because the stable narration status now owns focus outside the list.
+	cards = cards.filter(c => c.id !== 'c3');
+	panel.update();
+	assert.equal(document.activeElement, status);
+
+	// The next navigation key deliberately enters the refreshed hand; only now is its first
+	// card exposed to the screen reader.
+	key(status, 'ArrowDown');
+	assert.equal((document.activeElement as HTMLElement).dataset.focusId, 'c1');
+	assert.equal(status.textContent, '');
+});
+
+test('an action key continues on the known focused card when it survived the hand change', () => {
+	const focused = rows()[0];
+	const focusedId = focused.dataset.focusId!;
+	focused.focus();
+	assert.equal(focusHandAnnouncement('You draw a card.'), true);
+
+	cards = [...cards, card({ id: 'new', label: 'New card' })];
+	panel.update();
+	const status = document.querySelector<HTMLElement>('.hand-panel__action-status')!;
+	key(status, 'Enter');
+
+	assert.equal((document.activeElement as HTMLElement).dataset.focusId, focusedId);
+	assert.deepEqual(played, [focusedId]);
+});
+
+test('an arrow continues relative navigation when the focused card survived the hand change', () => {
+	const focused = rows()[0];
+	const focusedId = focused.dataset.focusId!;
+	focused.focus();
+	assert.equal(focusHandAnnouncement('You draw a card.'), true);
+
+	cards = [...cards, card({ id: 'new', label: 'New card' })];
+	panel.update();
+	const refreshed = rows();
+	const ownerIndex = refreshed.findIndex(row => row.dataset.focusId === focusedId);
+	const expected = refreshed[(ownerIndex + 1) % refreshed.length].dataset.focusId;
+	const status = document.querySelector<HTMLElement>('.hand-panel__action-status')!;
+	key(status, 'ArrowDown');
+
+	assert.equal((document.activeElement as HTMLElement).dataset.focusId, expected);
+});
+
 test('an empty hand shows the empty message and Space still draws from it', () => {
 	cards = [];
 	panel.update();
@@ -448,24 +615,26 @@ test('an empty hand shows the empty message and Space still draws from it', () =
 	assert.equal(drawn, 1);
 });
 
-test('Shift+F10 menu: sorts fold into ONE submenu of radios; the filter is a checkbox', () => {
+test('Shift+F10 menu: sorting and card display are separate radio submenus', () => {
 	const items = rows();
 	items[0].focus();
 	key(items[0], 'F10', { shiftKey: true });
-	const menu = document.querySelector<HTMLElement>('.hand-context-menu')!;
-	assert.ok(menu, 'context menu opened');
 	const entryQuery = '[role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"]';
-	const entries = () => Array.from(menu.querySelectorAll<HTMLElement>(entryQuery));
+	const entries = () => Array.from(document.querySelector<HTMLElement>('.hand-context-menu')
+		?.querySelectorAll<HTMLElement>(entryQuery) ?? []);
+	assert.ok(document.querySelector('.hand-context-menu'), 'context menu opened');
+	assert.equal(document.querySelector('.hand-context-menu')?.parentElement,
+		document.querySelector('.hand-panel'), 'the popup is hosted in the hand, never orphaned under body');
 
-	// Root: play, discard, the ONE sort-group entry, the filter checkbox.
+	// Root: play, discard, and one submenu for each independent radio choice.
 	assert.deepEqual(entries().map(mi => mi.textContent), [
-		'game.hand_play', 'game.hand_discard', 'game.hand_sort_group', 'game.hand_filter_playable',
+		'game.hand_play', 'game.hand_discard', 'game.hand_sort_group',
+		'game.hand_playability_group',
 	]);
 	const sortGroup = entries().find(mi => mi.textContent === 'game.hand_sort_group')!;
 	assert.equal(sortGroup.getAttribute('aria-haspopup'), 'menu');
-	const filter = entries().find(mi => mi.textContent === 'game.hand_filter_playable')!;
-	assert.equal(filter.getAttribute('role'), 'menuitemcheckbox');
-	assert.equal(filter.getAttribute('aria-checked'), 'false');
+	const displayGroup = entries().find(mi => mi.textContent === 'game.hand_playability_group')!;
+	assert.equal(displayGroup.getAttribute('aria-haspopup'), 'menu');
 
 	// Opening the submenu shows the four orderings as a radio set, value-desc checked (default).
 	sortGroup.click();
@@ -482,12 +651,33 @@ test('Shift+F10 menu: sorts fold into ONE submenu of radios; the filter is a che
 	assert.ok(document.querySelector('.hand-context-menu'), 'menu still open');
 	assert.equal((document.activeElement as HTMLElement).textContent, 'game.hand_sort_group');
 
-	// Checking the filter filters; reopening shows it checked.
+	// The display submenu starts with exactly one checked radio: the neutral all-cards mode.
+	entries().find(mi => mi.textContent === 'game.hand_playability_group')!.click();
+	assert.deepEqual(entries().map(mi => [mi.textContent, mi.getAttribute('role'), mi.getAttribute('aria-checked')]), [
+		['game.hand_show_all', 'menuitemradio', 'true'],
+		['game.hand_prioritize_playable', 'menuitemradio', 'false'],
+		['game.hand_filter_playable', 'menuitemradio', 'false'],
+	]);
+
+	// Choosing one mode deselects the previous one; choosing only-playable next also
+	// deselects playable-first rather than leaving two display modes active.
+	entries().find(mi => mi.textContent === 'game.hand_prioritize_playable')!.click();
+	key(rows()[0], 'F10', { shiftKey: true });
+	entries().find(mi => mi.textContent === 'game.hand_playability_group')!.click();
+	assert.deepEqual(entries().map(mi => [mi.textContent, mi.getAttribute('aria-checked')]), [
+		['game.hand_show_all', 'false'],
+		['game.hand_prioritize_playable', 'true'],
+		['game.hand_filter_playable', 'false'],
+	]);
 	entries().find(mi => mi.textContent === 'game.hand_filter_playable')!.click();
 	assert.deepEqual(rowLabels(), ['100 km', '25 km']);
 	key(rows()[0], 'F10', { shiftKey: true });
-	const reopened = Array.from(document.querySelectorAll<HTMLElement>('.hand-context-menu [role="menuitemcheckbox"]'));
-	assert.equal(reopened[0]?.getAttribute('aria-checked'), 'true');
+	entries().find(mi => mi.textContent === 'game.hand_playability_group')!.click();
+	assert.deepEqual(entries().map(item => [item.textContent, item.getAttribute('aria-checked')]), [
+		['game.hand_show_all', 'false'],
+		['game.hand_prioritize_playable', 'false'],
+		['game.hand_filter_playable', 'true'],
+	]);
 });
 
 test('a card FACE renders aria-hidden and repaints when the label changes (late i18n)', () => {

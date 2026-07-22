@@ -88,7 +88,7 @@ test('shedding: matches, the drawn-card pause, a penalty and the on-demand count
 	await expect(bertoList).not.toHaveAttribute('aria-describedby', /./);
 	await expect(berto.locator('.hand-panel__empty')).toBeHidden();
 	await flushAxeAudit(berto);
-	await bertoFilter.click();
+	await berto.locator('.hand-panel__list-actions [data-focus-id="show-all-cards"]').click();
 
 	// Berto DRAWS (Space) — and the drawn Azul 2
 	// matches by value, so the game pauses on his play-it-or-keep-it choice. ──

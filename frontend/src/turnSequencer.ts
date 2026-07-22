@@ -11,13 +11,13 @@
 // seconds. If segment 2's state were applied straight away, the animator would recompute
 // its path from the start directly to the final square (skipping the visible stop at the
 // first one) and the announcement gate would dump both consequences together. This
-// sequencer plays one segment at a time: deliver its announcements, apply its state (which
-// starts the hop), and only advance to the next segment once that hop settles — so the turn
-// reads "move → consequence → move → consequence".
+// sequencer plays one segment at a time: deliver its announcements, cross the optional
+// accessibility barrier, apply its state (which starts the hop), and only advance to the
+// next segment once that hop settles — so the turn reads
+// "announcement → state/move → consequence → announcement → state/move → consequence".
 //
-// With a single segment (the overwhelmingly common case) it behaves exactly as before: the
-// segment plays immediately, and if nothing animates the next one (if any) follows with no
-// added latency.
+// With a single segment (the overwhelmingly common case), only an audible batch adds the
+// short accessibility commit lead; states without announcements still apply immediately.
 
 import type { AnnouncementEvent } from './gameClient.js';
 import type { GameState } from './models.js';
@@ -25,6 +25,11 @@ import type { GameState } from './models.js';
 export interface TurnSequencerOptions {
 	/** Deliver a segment's announcements (each goes through the announcement gate). */
 	deliverEvents: (events: AnnouncementEvent[]) => void;
+	/**
+	 * Optional accessibility barrier after event delivery and before state application.
+	 * Card surfaces use it to commit the live-region utterance before their hand mutates.
+	 */
+	beforeApplyState?: (events: AnnouncementEvent[], state: GameState) => void | Promise<void>;
 	/** Apply a segment's authoritative state (assigns it and starts the token hop). */
 	applyState: (state: GameState) => void;
 	/** Whether a token is currently mid-hop (typically `() => tokenAnimator.isAnimating`). */
@@ -46,15 +51,19 @@ interface Segment {
 export class TurnSequencer {
 	private pendingEvents: AnnouncementEvent[] = [];
 	private readonly queue: Segment[] = [];
+	/** True while announcements are crossing the accessibility barrier. */
+	private preparingState = false;
 	/** True while the current segment's hop is animating: the next segment waits. */
-	private busy = false;
+	private waitingForAnimation = false;
 
 	private readonly deliverEvents: (events: AnnouncementEvent[]) => void;
+	private readonly beforeApplyState?: (events: AnnouncementEvent[], state: GameState) => void | Promise<void>;
 	private readonly applyState: (state: GameState) => void;
 	private readonly isAnimating: () => boolean;
 
 	constructor(opts: TurnSequencerOptions) {
 		this.deliverEvents = opts.deliverEvents;
+		this.beforeApplyState = opts.beforeApplyState;
 		this.applyState = opts.applyState;
 		this.isAnimating = opts.isAnimating;
 	}
@@ -74,21 +83,44 @@ export class TurnSequencer {
 
 	/** Call when the current segment's token hop settles, to advance to the next segment. */
 	onSettle(): void {
-		if (!this.busy) return;
-		this.busy = false;
+		if (!this.waitingForAnimation) return;
+		this.waitingForAnimation = false;
 		this.pump();
 	}
 
 	private pump(): void {
-		if (this.busy || this.queue.length === 0) return;
+		if (this.preparingState || this.waitingForAnimation || this.queue.length === 0) return;
 		const segment = this.queue.shift()!;
 		this.deliverEvents(segment.events);
-		this.applyState(segment.state);
+
+		let barrier: void | Promise<void>;
+		try {
+			barrier = this.beforeApplyState?.(segment.events, segment.state);
+		} catch {
+			// Accessibility pacing must never strand authoritative state if its hook fails.
+			this.applySegmentState(segment.state);
+			return;
+		}
+		if (barrier) {
+			this.preparingState = true;
+			void barrier.then(
+				() => this.applySegmentState(segment.state),
+				() => this.applySegmentState(segment.state),
+			);
+			return;
+		}
+
+		this.applySegmentState(segment.state);
+	}
+
+	private applySegmentState(state: GameState): void {
+		this.preparingState = false;
+		this.applyState(state);
 		// If applying the state started a hop, hold the next segment until it settles;
 		// otherwise (a snap, or no movement at all) this segment is already done, so
-		// continue immediately with no added latency.
+		// continue immediately.
 		if (this.isAnimating()) {
-			this.busy = true;
+			this.waitingForAnimation = true;
 		} else {
 			this.pump();
 		}

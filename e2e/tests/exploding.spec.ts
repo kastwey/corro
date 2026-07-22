@@ -9,6 +9,7 @@
 import { test, expect } from '../helpers/test';
 import {
 	createGame, expectAnnouncement, joinGame, newPlayerPage, resetDice, scriptDice, startGame,
+	watchAnnouncementBeforeHandUpdate,
 } from '../helpers/game';
 import { flushAxeAudit } from '../helpers/axeAudit';
 
@@ -27,10 +28,13 @@ test('exploding: the playable filter keeps the hand stable when an action ends t
 	await startGame(ana, [ana, berto]);
 
 	const cards = ana.locator('.hand-card:not(.hand-card--info)');
+	const allCards = ana.locator('.hand-panel__list-actions [data-focus-id="show-all-cards"]');
 	const filter = ana.locator('.hand-panel__list-actions [data-focus-id="filter-playable"]');
 	await expect(cards).toHaveCount(8);
+	await expect(allCards).toHaveAttribute('aria-pressed', 'true');
 	await filter.click();
 	await expect(filter).toHaveAttribute('aria-pressed', 'true');
+	await expect(allCards).toHaveAttribute('aria-pressed', 'false');
 	await expect(cards).toHaveCount(7); // the Defuse is not hand-playable
 
 	// Playing Skip removes only that card. The one-second Nope window must not transiently
@@ -56,6 +60,68 @@ test('exploding: the playable filter keeps the hand stable when an action ends t
 	await expectAnnouncement(ana, /No es tu turno/i);
 	await expect(cards).toHaveCount(6);
 	await flushAxeAudit(ana);
+});
+
+test('exploding: playable-first priority composes with family orders and is persisted', async ({ browser }) => {
+	const ana = await newPlayerPage(browser);
+	const berto = await newPlayerPage(browser);
+
+	const code = await createGame(ana, 'Ana', BOARD);
+	await joinGame(berto, code, 'Berto');
+	await startGame(ana, [ana, berto]);
+
+	const cards = ana.locator('.hand-card:not(.hand-card--info)');
+	const allCards = ana.locator(
+		'.hand-panel__list-actions [data-focus-id="show-all-cards"]');
+	const priority = ana.locator(
+		'.hand-panel__list-actions [data-focus-id="prioritize-playable"]');
+	const filter = ana.locator(
+		'.hand-panel__list-actions [data-focus-id="filter-playable"]');
+	await expect(cards).toHaveCount(8);
+	await expect(ana.locator(
+		'.hand-card:not(.hand-card--info).hand-card--unplayable')).toHaveCount(1);
+	await expect(priority).toHaveText('Jugables primero');
+	await expect(allCards).toHaveAttribute('aria-pressed', 'true');
+	await expect(priority).toHaveAttribute('aria-pressed', 'false');
+
+	// Original order and card display are separate radio choices. The row menu exposes the
+	// display modes as one named radio submenu, including the neutral way back to all cards.
+	await ana.locator('[data-focus-id="sort-hand"]').click();
+	await cards.first().focus();
+	await ana.keyboard.press('Shift+F10');
+	const menu = ana.locator('.hand-context-menu');
+	expect(await menu.evaluate(element => element.closest('main') !== null)).toBe(true);
+	await menu.getByRole('menuitem', { name: 'Mostrar cartas', exact: true }).click();
+	const displayRadios = menu.getByRole('menuitemradio');
+	await expect(displayRadios).toHaveCount(3);
+	await expect(displayRadios).toHaveText(['Todas las cartas', 'Jugables primero', 'Solo jugables']);
+	await expect(displayRadios.nth(0)).toHaveAttribute('aria-checked', 'true');
+	await expect(displayRadios.nth(1)).toHaveAttribute('aria-checked', 'false');
+	await expect(displayRadios.nth(2)).toHaveAttribute('aria-checked', 'false');
+	await flushAxeAudit(ana);
+
+	// Once playable-first is selected, it replaces all-cards and every playable card forms
+	// the leading tier.
+	await displayRadios.nth(1).click();
+	await expect(priority).toHaveAttribute('aria-pressed', 'true');
+	await expect(allCards).toHaveAttribute('aria-pressed', 'false');
+	await expect(filter).toHaveAttribute('aria-pressed', 'false');
+	await expectAnnouncement(ana, /Las cartas jugables aparecen ahora antes que las demás/i);
+	const tiers = () => cards.evaluateAll(rows => rows.map(row =>
+		!row.classList.contains('hand-card--unplayable')));
+	expect(await tiers()).toEqual([true, true, true, true, true, true, true, false]);
+	await flushAxeAudit(ana);
+
+	// Changing the secondary family order cannot move an unplayable card above that tier.
+	await ana.locator('[data-focus-id="sort-name"]').click();
+	expect(await tiers()).toEqual([true, true, true, true, true, true, true, false]);
+	await expect(priority).toHaveAttribute('aria-pressed', 'true');
+	await flushAxeAudit(ana);
+
+	expect(await ana.evaluate(() => JSON.parse(
+		localStorage.getItem('corro.handPreferences.exploding') ?? '{}'))).toEqual({
+		sort: 'name', playabilityMode: 'first',
+	});
 });
 
 test('exploding: asks for a target only when several active rivals remain', async ({ browser }) => {
@@ -149,7 +215,8 @@ test('exploding: draw the bomb, defuse and tuck it, then explode into a win', as
 		(window as any).__defuseTimeline = timeline;
 		const sample = () => {
 			const now = performance.now();
-			const liveText = [...document.querySelectorAll('#sr-live, #sr-live-assertive')]
+			const liveText = [...document.querySelectorAll(
+				'#sr-live, #sr-live-assertive, .hand-panel__action-status')]
 				.map(node => node.textContent ?? '').join(' ');
 			if (!timeline.announcement && /grisú/i.test(liveText)) timeline.announcement = now;
 			if (!timeline.reveal && document.querySelector('.exploding-reveal--defusing')) timeline.reveal = now;
@@ -226,44 +293,16 @@ test('exploding: announces an ordinary draw before adding the card to the hand',
 	await expect(cards).toHaveCount(8);
 	await berto.locator('#board').focus();
 
-	// The screen-reader regression is about DOM mutation order. The own-action line must
-	// reach the assertive live region synchronously, before the state repaint mutates the
-	// hand list; otherwise the reader starts describing the changed list first.
-	await berto.evaluate(() => {
-		const order: string[] = [];
-		(window as any).__drawMutationOrder = order;
-		const observer = new MutationObserver(records => {
-			for (const record of records) {
-				const target = record.target instanceof Element
-					? record.target
-					: record.target.parentElement;
-				if (target?.closest('[aria-live]')) {
-					const addedText = [...record.addedNodes].map(node => node.textContent ?? '').join('').trim();
-					if (addedText && !order.includes('announcement')) order.push('announcement');
-				}
-				if (target?.closest('.hand-panel__list') && !order.includes('hand')) order.push('hand');
-			}
-		});
-		observer.observe(document.body, {
-			subtree: true,
-			childList: true,
-			characterData: true,
-			attributes: true,
-		});
-		(window as any).__drawMutationObserver = observer;
-	});
-
+	// The live-region write must complete an event-loop turn before the authoritative
+	// repaint inserts the card; simple mutation order inside one turn is not enough for NVDA.
+	const finishDrawOrder = await watchAnnouncementBeforeHandUpdate(berto, /Robas Cortar la mecha/i);
 	await berto.keyboard.press(' ');
 	await expectAnnouncement(berto, /Robas Cortar la mecha/i);
 	await expect(cards).toHaveCount(9);
 
-	const mutationOrder = await berto.evaluate(() => {
-		(window as any).__drawMutationObserver?.disconnect();
-		return (window as any).__drawMutationOrder as string[];
-	});
-	expect(mutationOrder.indexOf('announcement')).toBeGreaterThanOrEqual(0);
-	expect(mutationOrder.indexOf('hand')).toBeGreaterThanOrEqual(0);
-	expect(mutationOrder.indexOf('announcement')).toBeLessThan(mutationOrder.indexOf('hand'));
+	const drawOrder = await finishDrawOrder();
+	expect(drawOrder.usedStableHandFocus).toBe(true);
+	await expect(berto.locator('.hand-panel__action-status')).toBeFocused();
 
 	// Continue through the known identity-shuffled pile until Berto holds two matching
 	// Escarabajos. Selecting either ONE row is deliberately enough: there is no legal

@@ -404,10 +404,16 @@ export class ExplodingBoard {
 
 		const drawCount = gs.exploding?.drawCount ?? 0;
 		const middle = Math.floor(drawCount / 2);
+		const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 		popupMenu.open({
 			ariaLabel: this.deps.tSync('game.exploding_pick_depth'),
 			openAnnouncement: this.deps.tSync('game.exploding_pick_depth'),
-			anchor: document.activeElement instanceof HTMLElement ? document.activeElement : null,
+			// The preceding bomb/defuse announcement may own the hand's visually-hidden
+			// narration focus. It is not a semantic popup trigger and has no usable screen
+			// position, so anchor to the visible draw button in that case.
+			anchor: active?.classList.contains('hand-panel__action-status')
+				? this.element.querySelector<HTMLElement>('.hand-panel__draw')
+				: active,
 			items: [
 				{ label: this.deps.tSync('game.exploding_depth_top'), onSelect: () => this.deps.commands.defuse(0) },
 				{ label: this.deps.tSync('game.exploding_depth_middle'), onSelect: () => this.deps.commands.defuse(middle) },

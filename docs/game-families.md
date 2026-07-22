@@ -49,8 +49,8 @@ Add a family only for a genuinely different interaction model. A new family must
 
 Card families share the stable presentation pieces:
 
-- `handPanel.ts` provides the accessible roving hand, sort/filter actions and optional
-  multi-selection;
+- `handPanel.ts` provides the accessible roving hand, sorting, mutually exclusive
+    all/playable-first/only-playable display modes and optional multi-selection;
 - `cardBoardShell.ts` resets the common game container and wires shared status behavior;
 - `makeCardFamily(...)` in `gameFamilies.ts` builds the common client registration.
 

@@ -95,6 +95,13 @@ test('every exploding action warns while its Nope window is open', () => {
 	assert.equal(soundEventForAnnouncement('game.exploding_stole'), 'exploding.steal');
 	assert.equal(soundEventForAnnouncement('game.exploding_stole_self'), 'exploding.steal');
 	assert.equal(soundEventForAnnouncement('game.exploding_stole_victim'), 'exploding.steal');
+	// Other players hear the public effect line; the actor hears one private identity line
+	// whose key varies with the configured reveal count. All variants share the effect cue.
+	assert.equal(soundEventForAnnouncement('game.exploding_saw_future'), 'exploding.future');
+	assert.equal(soundEventForAnnouncement('game.exploding_future'), 'exploding.future');
+	assert.equal(soundEventForAnnouncement('game.exploding_future_2'), 'exploding.future');
+	assert.equal(soundEventForAnnouncement('game.exploding_future_3'), 'exploding.future');
+	assert.equal(soundEventForAnnouncement('game.exploding_future_empty'), 'exploding.future');
 	// Packages may still replace the complete play cue.
 	assert.equal(soundEventForAnnouncement(
 		'game.exploding_played', undefined, { 'game.exploding_played': 'custom.warning' }),
@@ -325,6 +332,20 @@ test('the event player sounds the cat together with the rising warning, then the
 
 		player.playForAnnouncement('game.exploding_stole_self');
 		assert.deepEqual(played, ['exploding.played#0', 'exploding.cat#0', 'exploding.steal#0']);
+	} finally { restore(); }
+});
+
+test('the event player sounds See the Future for the actor private reveal', async () => {
+	const { played, restore } = stubAudio({
+		ok: true,
+		events: { 'exploding.future': ['/future.ogg'] },
+	});
+	try {
+		const player = new SoundEventPlayer();
+		await player.preload();
+
+		player.playForAnnouncement('game.exploding_future_3');
+		assert.deepEqual(played, ['exploding.future#0']);
 	} finally { restore(); }
 });
 

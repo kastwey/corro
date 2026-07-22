@@ -288,8 +288,10 @@ public class ExplodingTurnFlowTests
 			state.Exploding!.Seats.First(s => s.PlayerId == "a").Hand.Select(c => c.InstanceId));
 		Assert.DoesNotContain("skip#1",
 			state.Exploding!.Seats.First(s => s.PlayerId == "b").Hand.Select(c => c.InstanceId));
-		Assert.True(TestFixtures.Announcer(context).Has(
+		var announcer = TestFixtures.Announcer(context);
+		Assert.True(announcer.Has(
 			AnnouncementAudience.Player, "a", "game.exploding_favor_got_self"));
+		Assert.Equal("b", announcer.Sent.Single(d => d.Key == "game.exploding_favor_gave_self").Vars["actorId"]);
 	}
 
 	[Fact]
@@ -318,6 +320,7 @@ public class ExplodingTurnFlowTests
 		var announcer = TestFixtures.Announcer(context);
 		Assert.True(announcer.Has(AnnouncementAudience.Player, "a", "game.exploding_stole_self"));
 		Assert.True(announcer.Has(AnnouncementAudience.Player, "b", "game.exploding_stole_victim"));
+		Assert.Equal("a", announcer.Sent.Single(d => d.Key == "game.exploding_stole_self").Vars["actorId"]);
 	}
 
 	[Fact]

@@ -18,6 +18,7 @@ import {
 	newPlayerPage,
 	resetDice,
 	startGame,
+	watchAnnouncementBeforeHandUpdate,
 } from '../helpers/game';
 
 const BOARD = 'great-route';
@@ -165,11 +166,15 @@ test('journey: the hand is home — private draw, playing an immunity, statuses 
 	await expect(anaCards.first()).toBeFocused();
 
 	// ── Ana draws with Space: everyone hears THAT, only Ana hears WHAT. ─────────
+	const finishDrawOrder = await watchAnnouncementBeforeHandUpdate(ana, /Robas:/);
 	await ana.keyboard.press(' ');
 	await expectAnnouncement(berto, /Ana roba una carta/);
 	await expectAnnouncement(ana, /Robas:/);
 	await expectAnnouncement(ana, /Rueda de recambio/);
 	await expect(anaCards).toHaveCount(7);
+	const drawOrder = await finishDrawOrder();
+	expect(drawOrder.usedStableHandFocus).toBe(true);
+	await expect(ana.locator('.hand-panel__action-status')).toBeFocused();
 	// …and the separate visual deck plus its D readout followed the draw.
 	await expect(ana.locator('.journey-centre__stack .jcard__back-label')).toHaveText('93');
 	await ana.keyboard.press('d');

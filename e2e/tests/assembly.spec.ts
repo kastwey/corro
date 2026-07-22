@@ -12,6 +12,7 @@
 // private refill voice, repairs on both sides, and the shared status line (panel + S key).
 
 import { test, expect } from '../helpers/test';
+import { flushAxeAudit } from '../helpers/axeAudit';
 import {
 	createGame,
 	expectAnnouncement,
@@ -19,6 +20,7 @@ import {
 	newPlayerPage,
 	resetDice,
 	startGame,
+	watchAnnouncementBeforeHandUpdate,
 } from '../helpers/game';
 
 const BOARD = 'galactic-workshop';
@@ -69,6 +71,11 @@ test('assembly: install, auto-targeted breakdown, refusal, face-down discard, re
 	await expectAnnouncement(berto, /Reactor/);
 	await expectAnnouncement(ana, /Robas 1/);
 	await expectAnnouncement(ana, /Sobrecarga/); // the drawn identity: hers alone
+	// Exact JAWS regression: playing removes the focused card and auto-refill inserts
+	// another while the hand remains 3 items. The complete server sentence owns stable
+	// focus; no replacement row may jump in with "1 de 3" before that sentence.
+	await expect(ana.locator('.hand-panel__action-status')).toBeFocused();
+	await expect(ana.locator('.hand-card:focus')).toHaveCount(0);
 	await expect(ana.locator('#board .assembly-rack').first().locator('.assembly-module')).toHaveCount(1);
 	await expect(ana.locator('#board .assembly-rack').first().locator('[data-card-art="package"]')).toHaveCount(1);
 	await expect(ana.locator('#board .assembly-rack').first()).toContainText('1/4');
@@ -95,8 +102,12 @@ test('assembly: install, auto-targeted breakdown, refusal, face-down discard, re
 	await ana.keyboard.press('Enter');
 	const discardOffer = ana.locator('.game-dialog', { hasText: /Ya tienes un módulo de ese sistema/ });
 	await expect(discardOffer).toBeVisible();
+	const finishDiscardOrder = await watchAnnouncementBeforeHandUpdate(ana, /Descartas 1 carta/);
 	await discardOffer.locator('.btn-primary').click();
 	await expectAnnouncement(berto, /Ana descarta 1 carta/);
+	const discardOrder = await finishDiscardOrder();
+	expect(discardOrder.usedStableHandFocus).toBe(true);
+	await expect(ana.locator('.hand-panel__action-status')).toBeFocused();
 	await expect(ana.locator('.assembly-piles [data-pile="discard"] .gcard__back-label')).toHaveText('1');
 	await ana.locator('.hand-card').first().focus();
 	await ana.keyboard.press('d');
@@ -142,4 +153,54 @@ test('assembly: install, auto-targeted breakdown, refusal, face-down discard, re
 	const heard: string[] = await ana.evaluate(() => (window as any).__announcements ?? []);
 	const table = heard.filter(line => /Berto: 1 de 4/.test(line)).pop()!;
 	expect(table).not.toMatch(/Ana:/);
+});
+
+test('assembly: a scrapped empty hand passes and refills automatically instead of blocking', async ({ browser }) => {
+	const ana = await newPlayerPage(browser);
+	const berto = await newPlayerPage(browser);
+
+	const code = await createGame(ana, 'Ana', BOARD);
+	await joinGame(berto, code, 'Berto');
+	await startGame(ana, [ana, berto]);
+
+	const discardAndAdvance = async (
+		page: typeof ana,
+		nextPage: typeof ana,
+		nextPlayer: string,
+	): Promise<void> => {
+		const previousTurnLines = await nextPage.evaluate(() =>
+			((window as any).__announcements as string[] ?? [])
+				.filter(line => /Es tu turno/i.test(line)).length);
+		await page.locator('#board').focus();
+		await page.locator('.hand-card:not(.hand-card--info)').first().focus();
+		await page.keyboard.press('Delete');
+		const confirmation = page.locator('.game-dialog.dialog-confirm');
+		await expect(confirmation).toBeVisible();
+		await flushAxeAudit(page);
+		await confirmation.locator('.btn-primary').click();
+		await expect(nextPage.locator('#turn-indicator .turn-indicator__name')).toHaveText(nextPlayer);
+		await nextPage.waitForFunction((previous: number) =>
+			((window as any).__announcements as string[] ?? [])
+				.filter(line => /Es tu turno/i.test(line)).length > previous,
+		previousTurnLines);
+	};
+
+	// Identity shuffle deals from the package tail. Five discard/refill cycles per player
+	// bring Imperial Inspection into Ana's hand without bypassing the real UI or server.
+	for (let cycle = 0; cycle < 5; cycle++) {
+		await discardAndAdvance(ana, berto, 'Berto');
+		await discardAndAdvance(berto, ana, 'Ana');
+	}
+
+	const inspection = ana.locator('.hand-card:not(.hand-card--info)', { hasText: /Inspección imperial/i });
+	await expect(inspection).toHaveCount(1);
+	await inspection.focus();
+	await ana.keyboard.press('Enter');
+
+	// Berto has no decision to make: the server passes his empty turn, gives him three
+	// private cards and returns play to Ana. No draw/pass button or client rescue is needed.
+	await expectAnnouncement(berto, /Pasas \(sin cartas\)/i);
+	await expectAnnouncement(berto, /Robas 3:/i);
+	await expect(berto.locator('.hand-card:not(.hand-card--info)')).toHaveCount(3);
+	await expect(ana.locator('#turn-indicator .turn-indicator__name')).toHaveText('Ana');
 });

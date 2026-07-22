@@ -139,7 +139,9 @@ test('the hand replaces value sorting with pair, attack, name and original order
 	const sort = (id: string) => boardElement.querySelector<HTMLButtonElement>(
 		`.hand-panel__list-actions [data-focus-id="sort-${id}"]`)!;
 
-	assert.deepEqual(tools(), ['sort-pairs', 'sort-attacks', 'sort-name', 'sort-hand', 'filter-playable']);
+	assert.deepEqual(tools(),
+		['sort-pairs', 'sort-attacks', 'sort-name', 'sort-hand',
+			'show-all-cards', 'prioritize-playable', 'filter-playable']);
 	assert.equal(boardElement.querySelector('[data-focus-id="sort-value"]'), null);
 	assert.equal(sort('pairs').getAttribute('aria-pressed'), 'true');
 	assert.deepEqual(labels(), ['cards.cat_a', 'cards.cat_b', 'cards.cat_c', 'cards.defuse', 'cards.zz_attack'],
@@ -149,7 +151,7 @@ test('the hand replaces value sorting with pair, attack, name and original order
 	assert.deepEqual(labels(), ['cards.zz_attack', 'cards.cat_a', 'cards.cat_b', 'cards.cat_c', 'cards.defuse']);
 	assert.deepEqual(announcements, ['game.exploding_sorted_attacks_first']);
 	assert.deepEqual(JSON.parse(localStorage.getItem('corro.handPreferences.exploding')!), {
-		sort: 'attacks', onlyPlayable: false,
+		sort: 'attacks', playabilityMode: 'all',
 	});
 	assert.equal(localStorage.getItem('corro.handPreferences'), null);
 

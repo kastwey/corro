@@ -26,6 +26,12 @@ client → SignalR hub → CommandDispatcher → ICommandHandler → rulebook �
    outcome (see [accessibility.md](accessibility.md)). Handlers emit announcements and
    state changes; they don't contain the rules themselves.
 
+At command completion, `GameService` flushes the ordered `GameEvents` batch before the Hub
+sends `GameStateChanged`. A handler cannot push an ordinary full-state snapshot through
+`IGamePresenter`; the only mid-command state path is `CheckpointTurnSegmentAsync`, which
+itself flushes that segment's events first. This structural rule keeps every family on the
+same narration-before-repaint contract.
+
 ## Rulebooks — the rules, pure
 
 The actual game logic lives in **rulebooks** (`server/Services/Rules/`): `CorroRulebook`

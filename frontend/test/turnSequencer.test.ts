@@ -42,6 +42,50 @@ test('a single segment plays immediately: events then state, in order', () => {
 	assert.deepEqual(r.log, ['event:dice', 'event:rent', 'state:X']);
 });
 
+test('an asynchronous announcement barrier holds the state and every following segment', async () => {
+	const log: string[] = [];
+	let release!: () => void;
+	let barrierCalls = 0;
+	const sequencer = new TurnSequencer({
+		deliverEvents: events => events.forEach(event => log.push(`event:${event.key}`)),
+		beforeApplyState: () => {
+			barrierCalls++;
+			return new Promise<void>(resolve => { release = resolve; });
+		},
+		applyState: s => log.push(`state:${(s as unknown as { label: string }).label}`),
+		isAnimating: () => false,
+	});
+
+	sequencer.enqueueEvents([ev('draw')]);
+	sequencer.enqueueState(state('X'));
+	assert.deepEqual(log, ['event:draw'], 'the hand state waits while the live region commits');
+
+	sequencer.enqueueEvents([ev('play')]);
+	sequencer.enqueueState(state('Y'));
+	assert.deepEqual(log, ['event:draw'], 'later segments cannot overtake the held state');
+	assert.equal(barrierCalls, 1);
+
+	release();
+	await Promise.resolve();
+	assert.deepEqual(log, ['event:draw', 'state:X', 'event:play']);
+	assert.equal(barrierCalls, 2, 'the next segment starts only after the first state applies');
+});
+
+test('a rejected announcement barrier still applies authoritative state', async () => {
+	const log: string[] = [];
+	const sequencer = new TurnSequencer({
+		deliverEvents: events => events.forEach(event => log.push(`event:${event.key}`)),
+		beforeApplyState: () => Promise.reject(new Error('live region unavailable')),
+		applyState: s => log.push(`state:${(s as unknown as { label: string }).label}`),
+		isAnimating: () => false,
+	});
+
+	sequencer.enqueueEvents([ev('draw')]);
+	sequencer.enqueueState(state('X'));
+	await Promise.resolve();
+	assert.deepEqual(log, ['event:draw', 'state:X']);
+});
+
 test('a non-animating second segment follows immediately with no settle needed', () => {
 	const r = recorder();
 	// First segment does not animate (e.g. no movement), so the queued second segment runs
