@@ -87,6 +87,26 @@ h1 {
 	color: var(--text);
 }
 
+.brand-lockup {
+	display: grid;
+	gap: 0.4rem;
+	text-align: center;
+}
+
+.brand-title:not(.sr-only) {
+	display: block;
+	font-size: clamp(2rem, 9vw, 3rem);
+	line-height: 1.05;
+	letter-spacing: -0.04em;
+}
+
+.brand-tagline {
+	margin: 0;
+	color: var(--text-muted);
+	font-size: 0.95rem;
+	line-height: 1.45;
+}
+
 .lobby-header {
 	display: grid;
 	gap: 1.25rem;
@@ -100,6 +120,10 @@ h1 {
 .brand-logo {
 	display: block;
 	width: clamp(11rem, 55vw, 15rem);
+}
+
+.brand-logo[hidden] {
+	display: none;
 }
 
 .brand-logo__image {

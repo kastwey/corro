@@ -286,12 +286,9 @@
   .bill { transition: none; }
 }
 
-/* ---------- Center-board toast (transient, visual-only) ----------
-   A short message that fades in over the felt for salient game moments a sighted
-   player would otherwise miss (money in/out, holding, milestones). aria-hidden: a
-   screen-reader user already hears the spoken announcement, so this never enters
-   the live region nor steals focus. Colour-coded by tone so a gain (green) or a
-   loss (red) reads at a glance. It sits above the decorative Free Parking pot. */
+/* ---------- Center-board error toast (transient, visual-only) ----------
+  Game events use the persistent shared visual narrative. This short overlay is reserved
+  for explicit errors/refusals, where a temporary interruption is the right interaction. */
 .board-toast {
   position: absolute;
   left: 50%;

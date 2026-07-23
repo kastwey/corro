@@ -30,11 +30,10 @@ contradict. One authoritative voice keeps every player hearing the same, correct
 - Announcements are **coalesced into a batch** per server action and released together, so
   a multi-step outcome reads as one sequence, not a stutter.
 - **Announcements commit before state repaints.** The server sends each action's event
-  batch before its authoritative snapshot. Ordinary updates use the live region before the
-  paired state. When that state changes the focused player's hand, timing is not trusted:
-  JAWS may always prioritize a replacement row's focus event. Instead, the complete server
-  sentence receives focus on a stable status inside the hand; reconciliation cannot move
-  that focus, and the next navigation/action key deliberately re-enters the updated list.
+  batch before its authoritative snapshot. When that state changes the local hand, the
+  client writes the complete sentence to the live region and delays only the hand's DOM
+  reconciliation for a short lead. Focus remains on the real card; when the list eventually
+  changes, JAWS/NVDA append its new position after the already-started game sentence.
 - The batch is **paced against animation**: if a piece is still sliding across the board,
   the announcements wait at a "gate" until it settles, so "Ana moves to Mayfair" doesn't
   arrive before the token gets there.
@@ -87,20 +86,23 @@ accessible list:
 - An optional **multi-select mode** (Ctrl+Space) for families that need to send several
   cards at once (draft's "chopsticks", assembly's multi-discard): Space marks, Enter sends,
   and a rules-forced multi-pick switches it on automatically with its own earcon.
-- If a server action adds/removes a local card, a stable focused status narrates the whole
-  action while the list reconciles. No replacement row is focused automatically; the next
-  Tab/arrow/action key returns to the surviving card (when it still exists) or enters the
-  refreshed hand. This prevents JAWS/NVDA position speech ("1 of 3") from overtaking the
-  game voice.
+- If a server action adds/removes a local card, the authoritative state and other surfaces
+  update normally, but the accessible hand waits briefly after the live-region write. No
+  artificial focus stop is introduced; normal list focus and arrow navigation are preserved.
 
 ## Parallel presentation channels
 
 The visual and spoken/structural channels carry the same game information, but neither
 implements the rules. Visual-only effects must not interfere with assistive technology:
 
-- Visual-only layers (`boardToast`, `cardReveal`, `cardFlight`, the racks/tables/hands
+- Visual-only layers (`boardToast`, `cardReveal`, `cardFlight`, `visualNarrative`, the racks/tables/hands
   echoes) are **`aria-hidden`**, never touch the live region, never steal focus, never
   gate the turn.
+- A transient animation is never the sighted player's only account. Actions that are otherwise easy
+  to miss in any family retain the server-authored sentence in one non-interactive “latest action”
+  surface; motion illustrates origin and destination, while reduced-motion mode presents the same
+  result and target emphasis immediately. Because the account persists until the next action, it
+  needs no timeout-dependent reading or dismiss control.
 - The accessible identity of a thing is its **name + keyboard affordance**, not its
   colour. Colour is decoration; the spoken name and the shortcut carry the meaning.
 - Optional package card illustrations (`assets/cards/<id>.svg`) and neutral fallback drawings are

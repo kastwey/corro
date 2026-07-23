@@ -3,9 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title data-i18n="page.title">Corro - Create/Join Game</title>
-	<link rel="icon" href="assets/brand/corro-favicon-light.svg" type="image/svg+xml" media="(prefers-color-scheme: light)">
-	<link rel="icon" href="assets/brand/corro-favicon-dark.svg" type="image/svg+xml" media="(prefers-color-scheme: dark)">
+	<title>All Welcome</title>
 
 	<script>
 		// Apply the saved/system theme before first paint to avoid a flash.
@@ -32,15 +30,13 @@
 <body>
 	<main class="container">
 		<header class="lobby-header">
-			<h1 class="brand-heading">
-				<span class="sr-only" data-i18n="lobby.title">Corro</span>
-				<span class="brand-logo" aria-hidden="true">
-					<img class="brand-logo__image brand-logo__image--light" src="assets/brand/corro-logo-on-light.svg"
-						width="420" height="120" alt="">
-					<img class="brand-logo__image brand-logo__image--dark" src="assets/brand/corro-logo-on-dark.svg"
-						width="420" height="120" alt="">
-				</span>
-			</h1>
+			<div class="brand-lockup">
+				<h1 class="brand-heading">
+					<span class="brand-title" data-site-title>All Welcome</span>
+					<span class="brand-logo" data-site-logo aria-hidden="true" hidden></span>
+				</h1>
+				<p class="brand-tagline" data-site-tagline>Play together, play your way.</p>
+			</div>
 
 			<!-- Language and theme are preferences, not page navigation. -->
 			<div class="language-selector">
@@ -368,22 +364,20 @@
 	<footer class="app-footer">
 		<p class="app-footer__brand">
 			<span data-i18n="footer.poweredBy">Powered by</span>
-			<strong>Corro</strong>.
+			<a class="app-footer__external-link" href="https://github.com/kastwey/corro" target="_blank"
+				rel="noopener noreferrer" data-footer-link="corro"
+				aria-label="Corro on GitHub, opens in a new window"
+				data-i18n-attr:aria-label="footer.corroNewWindowLabel">
+				<strong>Corro</strong>
+				<svg class="app-footer__external-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+					stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+					<path d="M14 5h5v5" />
+					<path d="M10 14 19 5" />
+					<path d="M19 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h4" />
+				</svg>
+			</a>.
 		</p>
 		<ul class="app-footer__links">
-			<li>
-				<a class="app-footer__external-link" href="https://github.com/kastwey/corro" target="_blank" rel="noopener noreferrer"
-					data-footer-link="repository" aria-label="GitHub repository, opens in a new window"
-					data-i18n-attr:aria-label="footer.repositoryNewWindowLabel">
-					<span data-i18n="footer.repository">GitHub repository</span>
-					<svg class="app-footer__external-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-						stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-						<path d="M14 5h5v5" />
-						<path d="M10 14 19 5" />
-						<path d="M19 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h4" />
-					</svg>
-				</a>
-			</li>
 			<li>
 				<a class="app-footer__external-link" href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank"
 					rel="license noopener noreferrer" data-footer-link="license"

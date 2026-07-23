@@ -41,19 +41,18 @@ for (const surface of ['light', 'dark']) {
 	});
 }
 
-test('the lobby exposes one textual heading and keeps both visual logo variants decorative', () => {
+test('the lobby ships an accessible configurable text identity and optional decorative logo mount', () => {
 	const document = readDocument(`${SRC_DIR}index.html`);
 	const header = document.querySelector('main > header.lobby-header');
 	const heading = document.querySelector('h1.brand-heading');
-	const images = heading?.querySelectorAll('img') ?? [];
 
 	assert.ok(header);
 	assert.ok(heading);
-	assert.equal(header.firstElementChild, heading, 'the brand leads the lobby header');
-	assert.equal(heading.querySelector('.sr-only[data-i18n="lobby.title"]')?.textContent, 'Corro');
-	assert.equal(images.length, 2);
-	for (const image of images) assert.equal(image.getAttribute('alt'), '');
-	assert.equal(heading.querySelector('.brand-logo')?.getAttribute('aria-hidden'), 'true');
+	assert.equal(header.firstElementChild?.querySelector('h1'), heading, 'the brand leads the lobby header');
+	assert.equal(heading.querySelector('[data-site-title]')?.textContent, 'All Welcome');
+	assert.equal(heading.querySelector('[data-site-logo]')?.getAttribute('aria-hidden'), 'true');
+	assert.ok(heading.querySelector('[data-site-logo]')?.hasAttribute('hidden'));
+	assert.equal(header.querySelector('[data-site-tagline]')?.textContent, 'Play together, play your way.');
 
 	const preferences = header.querySelector('.language-selector');
 	assert.ok(preferences, 'language and theme preferences belong below the brand');
@@ -62,25 +61,9 @@ test('the lobby exposes one textual heading and keeps both visual logo variants 
 });
 
 for (const page of ['index.html', 'board.html']) {
-	test(`${page} offers matching light and dark SVG favicons`, () => {
+	test(`${page} does not mislabel an unconfigured host with the Corro favicon`, () => {
 		const document = readDocument(`${SRC_DIR}${page}`);
-		const icons = [...document.querySelectorAll<HTMLLinkElement>('link[rel="icon"]')];
-
-		assert.deepEqual(
-			icons.map(icon => ({ href: icon.getAttribute('href'), media: icon.media, type: icon.type })),
-			[
-				{
-					href: 'assets/brand/corro-favicon-light.svg',
-					media: '(prefers-color-scheme: light)',
-					type: 'image/svg+xml',
-				},
-				{
-					href: 'assets/brand/corro-favicon-dark.svg',
-					media: '(prefers-color-scheme: dark)',
-					type: 'image/svg+xml',
-				},
-			],
-		);
+		assert.equal(document.querySelectorAll('link[rel="icon"]').length, 0);
 	});
 }
 

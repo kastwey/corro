@@ -291,6 +291,8 @@ export class TrackBoard {
 			if (!a || !b) continue;
 			const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
 			group.setAttribute('class', `track-connector track-connector--${effect.kind}`);
+			group.setAttribute('data-from', String(effect.from));
+			group.setAttribute('data-to', String(effect.to));
 			if (effect.kind === 'ladder') this.drawLadder(group, a, b);
 			else if (effect.kind === 'snake') this.drawSnake(group, a, b);
 			else this.drawPlainConnector(group, a, b, effect);
@@ -369,6 +371,7 @@ export class TrackBoard {
 			const player = gs.players.find(p => p.id === pos.playerId);
 			const piece = document.createElement('span');
 			piece.className = 'track-piece';
+			piece.dataset.playerId = pos.playerId;
 			piece.style.background = player?.color ?? '#888'; // the chip holds the player's colour…
 			piece.innerHTML = tokenIconHtml(player?.token ?? '', 'track-piece__icon'); // …and their token
 			const nth = counts.get(square) ?? 0;

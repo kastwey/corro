@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { setupDom, installFakeI18next } from './helpers/dom.js';
 import { announceHistoryLast, announceHistoryNext, commitAnnouncerBeforeState, createAnnouncer, setAnnouncerHost } from '../src/announcer.js';
 import { managePropertiesDialog } from '../src/managePropertiesDialog.js';
-import { registerHandAnnouncementFocusTarget } from '../src/handAnnouncementFocus.js';
+import { clearHandUpdatePacing, HAND_UPDATE_LEAD_MS, takeHandUpdateDelay } from '../src/handUpdatePacing.js';
 // Regression: a native modal (showModal) makes the page background inert, which silences
 // body-level ARIA live regions (JAWS stops reading). The fix hosts the live regions INSIDE
 // the open dialog while it is up, and restores them to <body> on close. These tests verify
@@ -335,23 +335,20 @@ test('commitAnnouncerBeforeState waits for the polite region write too', async (
 	assert.equal(polite().textContent, 'A rival draws a card.');
 });
 
-test('a changing focused hand receives the utterance through stable focus, without live duplication', async () => {
+test('a changing hand is paced only after its utterance reaches the live region', async () => {
 	const announce = createAnnouncer();
-	let focusedText = '';
-	const unregister = registerHandAnnouncementFocusTarget(utterance => {
-		focusedText = utterance;
-		return true;
-	});
+	clearHandUpdatePacing();
 	try {
 		announce({ key: '_raw', vars: { text: 'You play Bone' } }, { assertive: true });
 		announce({ key: '_raw', vars: { text: 'You draw Brain' } });
-		await commitAnnouncerBeforeState({ focusChangingHand: true });
+		await commitAnnouncerBeforeState({ paceChangingHand: true });
 
-		assert.equal(focusedText, 'You play Bone. You draw Brain.');
-		assert.ok(!(assertive().textContent ?? '').includes('You play Bone'));
-		assert.ok(!(polite().textContent ?? '').includes('You play Bone'));
+		assert.equal(assertive().textContent, 'You play Bone. You draw Brain.');
+		const delay = takeHandUpdateDelay();
+		assert.ok(delay > HAND_UPDATE_LEAD_MS - 100,
+			`the list keeps almost the full ${HAND_UPDATE_LEAD_MS} ms lead; got ${delay}`);
 	} finally {
-		unregister();
+		clearHandUpdatePacing();
 	}
 });
 

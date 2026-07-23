@@ -415,21 +415,22 @@ export class RaceBoard {
 			}
 
 			for (const [square, count] of circuitCounts) {
-				this.addPieces(this.cellEl({ zone: 'circuit', square }), color, count);
+				this.addPieces(this.cellEl({ zone: 'circuit', square }), color, count, seat.playerId);
 			}
 			for (const [cell, count] of corridor) {
-				this.addPieces(this.cellEl({ zone: 'seat', seatIndex, cell }), color, count);
+				this.addPieces(this.cellEl({ zone: 'seat', seatIndex, cell }), color, count, seat.playerId);
 			}
 			this.addCount(this.cellEl({ zone: 'seat', seatIndex, cell: HOME_CELL }), home);
 			this.addCount(this.cellEl({ zone: 'seat', seatIndex, cell: goalCell(board) }), goal);
 		}
 	}
 
-	private addPieces(cell: HTMLElement | null, color: string, count: number): void {
+	private addPieces(cell: HTMLElement | null, color: string, count: number, playerId: string): void {
 		if (!cell) return;
 		for (let i = 0; i < count; i++) {
 			const dot = document.createElement('span');
 			dot.className = 'race-piece' + (count >= 2 ? ' race-piece--barrier' : '');
+			dot.dataset.playerId = playerId;
 			dot.style.background = color;
 			cell.appendChild(dot);
 		}

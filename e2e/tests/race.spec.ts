@@ -106,6 +106,8 @@ test('race: exits, auto-moves, piece choice on a barrier, and circuit exploratio
 	// ── Ana rolls 5: mandatory exit, auto-played; the turn passes (5 ≠ 6) ─────
 	await roll(ana, 5);
 	await expectAnnouncement(berto, /Ana pone una ficha en juego/);
+	await expect(berto.locator('.board-frame > .visual-narrative--race')).toContainText(/Ana pone una ficha en juego/i);
+	await expect(berto.locator('.board-frame > .visual-narrative--race')).toHaveAttribute('data-kind', 'movement');
 	await expect(circuitCell(berto, 5).locator('.race-piece')).toHaveCount(1);
 
 	// ── Berto rolls 5: exits onto his own start (square 22) ──────────────────

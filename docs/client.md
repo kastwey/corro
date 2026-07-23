@@ -71,10 +71,10 @@ This is the most important client subsystem and has its own doc —
   you focused and the polite queue would arrive too late.
 - `TurnSequencer` preserves the server's events-before-state contract all the way to the
   accessibility tree. Ordinary batches reach their live region before the paired state.
-  For a local hand whose physical card ids change, `cardHandState.ts` selects a stronger
-  path: `handPanel.ts` focuses a stable action status containing the complete utterance,
-  then the list reconciles without rescuing focus to a replacement row. Timing alone is
-  insufficient because JAWS can prioritize focus even when a live write happened first.
+  For a local hand whose physical card ids change, `cardHandState.ts` arms
+  `handUpdatePacing.ts`: authoritative state applies, while `handPanel.ts` alone waits a
+  short fixed lead before reconciling its rows. The reader starts the action sentence first
+  and naturally appends the later list position, without moving focus out of the hand.
 - `soundEvents.ts` maps announcement keys to **earcons** (short sounds): dice, card draw,
   a piece hop, a family-specific cue. The package ships the actual `.ogg` files; a missing
   file is simply silent.
@@ -84,9 +84,17 @@ This is the most important client subsystem and has its own doc —
 Sighted players get a visual surface in parallel with the spoken/structural one. It is
 never the source of authoritative rules and never interferes with the screen reader:
 
-- Visual-only effects (`boardToast`, `cardReveal`, `cardFlight`, the card families' rack /
-  table / hand echoes) are **`aria-hidden`**. They never touch the live region, never
+- Visual-only effects (`boardToast`, `cardReveal`, `cardFlight`, `visualNarrative`, the card
+  families' rack / table / hand echoes) are **`aria-hidden`**. They never touch the live region, never
   steal focus, never gate the turn.
+- `visualNarrative.ts` is the single persistent “latest action” surface for every family. Spatial
+  boards host it above the board, card families beside their visual table, and Property reuses its
+  printed centre. It consumes reserved, package-neutral `visual*` variables attached to selected
+  server announcements and can illustrate a draw, transfer, rack impact, shuffle or private peek;
+  existing token animators keep ownership of movement. Property's older curated gain/loss policy
+  feeds this same surface, while `boardToast` remains only for transient errors/refusals. Public
+  audiences receive only backs/counts; card ids are attached only to the same private audience that
+  already hears the identity. The client never infers mechanics from localized prose or package ids.
 - The card families in particular have **no spatial board**: the interactive surface is
   the **hand** (an accessible list — `handPanel.ts`), and the "table" (racks, tables,
   discards, direction) is an aria-hidden echo of information already spoken by the status

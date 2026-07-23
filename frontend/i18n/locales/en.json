@@ -1,14 +1,10 @@
 {
   "footer": {
     "poweredBy": "Powered by",
-    "repository": "GitHub repository",
-    "repositoryNewWindowLabel": "GitHub repository, opens in a new window",
+    "corroNewWindowLabel": "Corro on GitHub, opens in a new window",
     "licenseNewWindowLabel": "AGPL-3.0 license, opens in a new window"
   },
   "_comment": "This file contains English translations and serves as reference for translators. Now processed like any other language for consistency.",
-  "page": {
-    "title": "Corro - Create/Join Game"
-  },
   "language": {
     "selectLabel": "Select language",
     "applyButton": "Apply",
@@ -16,8 +12,6 @@
     "spanish": "Spanish"
   },
   "lobby": {
-    "title": "Corro",
-    "intro": "Welcome to the Corro lobby. Create a new game or join an existing one.",
     "backToHome": "Back to home",
     "home": {
       "createButton": "Create game",
@@ -838,6 +832,7 @@
     "exploding_resolve_favor_first": "Resolve the pending favor first",
     "exploding_no_favor_pending": "No one asked you for a favor",
     "exploding_favor_asked": "{{player}} asks {{target}} for a favor",
+    "exploding_favor_asked_self": "You ask {{target}} for a favor",
     "exploding_favor_asked_victim": "{{player}} asks you for a favor: give them a card",
     "exploding_favor_got_self": "{{player}} gives you $t({{card}})",
     "exploding_favor_gave_self": "You give $t({{card}}) to {{player}}",
@@ -1404,7 +1399,9 @@
     "debt_waiting_message": "{{player}} is resolving their debts",
     "turn_with_debt": "{{currentPlayer}}'s turn. Waiting for {{debtPlayer}} to resolve debts.",
     "current_turn_label": "Current turn",
+    "turn_badge": "Turn",
     "your_turn": "Your turn!",
+    "visual_route": "From {{source}} to {{target}}.",
     "game_rule_passed_through_go": "{{player}} passed {{start}} and collects {{amount}} {{currencyName}}",
     "game_rule_landed_on_go": "{{player}} landed exactly on {{start}} and collects {{amount}} {{currencyName}}",
     "game_rule_tax_paid": "{{player}} paid {{amount}} {{currencyName}} in taxes",

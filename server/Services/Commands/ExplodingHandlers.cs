@@ -126,6 +126,8 @@ public static class ExplodingTurnFlow
 			["actorId"] = player.Id,
 			["card"] = card.NameKey,
 		};
+		VisualNarrativeVars.Add(playVars, "card-play-discard", player.Id, targetId,
+			card.Id, card.Type, spent.Count);
 		if (card.Type == "cat")
 		{
 			playVars["target"] = context.GameState.Players
@@ -175,11 +177,11 @@ public static class ExplodingTurnFlow
 		pending.WindowStartedAt = DateTime.UtcNow; // restart the suspense window
 		ExplodingRulebook.SyncCounts(exploding);
 
-		await context.Announce("game.exploding_noped", new()
+		await context.Announce("game.exploding_noped", VisualNarrativeVars.Add(new()
 		{
 			["player"] = player.Name,
 			["actorId"] = player.Id,
-		});
+		}, "card-play-discard", player.Id, cardId: instance.CardId, cardType: "nope"));
 		return new ExplodingActionResponse { Action = "nope", WindowOpen = true };
 	}
 
@@ -204,11 +206,11 @@ public static class ExplodingTurnFlow
 		if (ExplodingRulebook.NopeCancels(pending.NopeCount))
 		{
 			// Cancelled: the action never happened. The actor's turn simply continues.
-			await context.Announce("game.exploding_action_cancelled", new()
+			await context.Announce("game.exploding_action_cancelled", VisualNarrativeVars.Add(new()
 			{
 				["player"] = actorName,
 				["actorId"] = pending.ActorId,
-			});
+			}, "outcome", pending.ActorId));
 			ExplodingRulebook.SyncCounts(exploding);
 			return new ExplodingActionResponse { Action = "resolve" };
 		}
@@ -218,14 +220,17 @@ public static class ExplodingTurnFlow
 		switch (pending.CardId is { } id && runtime.Catalog.TryGetValue(id, out var def) ? def.Type : "")
 		{
 			case "skip":
-				await context.Announce("game.exploding_skipped", new()
-				{ ["player"] = actorName, ["actorId"] = pending.ActorId });
+				await context.Announce("game.exploding_skipped", VisualNarrativeVars.Add(new()
+					{ ["player"] = actorName, ["actorId"] = pending.ActorId },
+					"outcome", pending.ActorId));
 				turnEnded = await EndOneDrawAsync(context, exploding, pending.ActorId);
 				break;
 
 			case "attack":
-				await context.Announce("game.exploding_attacked", new()
-				{ ["player"] = actorName, ["actorId"] = pending.ActorId });
+				var attackedId = ExplodingRulebook.NextPlayer(exploding, pending.ActorId);
+				await context.Announce("game.exploding_attacked", VisualNarrativeVars.Add(new()
+					{ ["player"] = actorName, ["actorId"] = pending.ActorId },
+					"attack", pending.ActorId, attackedId, count: runtime.Rules.AttackDraws));
 				await AdvanceTurnAsync(context, exploding, pending.ActorId);
 				exploding.DrawsOwed = runtime.Rules.AttackDraws; // the next player owes the stack
 				turnEnded = true;
@@ -233,15 +238,17 @@ public static class ExplodingTurnFlow
 
 			case "shuffle":
 				ExplodingRulebook.ShuffleDraw(exploding, random);
-				await context.Announce("game.exploding_shuffled", new()
-				{ ["player"] = actorName, ["actorId"] = pending.ActorId });
+				await context.Announce("game.exploding_shuffled", VisualNarrativeVars.Add(new()
+					{ ["player"] = actorName, ["actorId"] = pending.ActorId },
+					"deck-shuffle", pending.ActorId));
 				break;
 
 			case "seeFuture":
 				var top = ExplodingRulebook.PeekTop(exploding, runtime.Rules.SeeFutureCount);
 				await WhisperFutureAsync(context, pending.ActorId, top, runtime);
 				await context.Announcer.ToAllExcept(pending.ActorId, "game.exploding_saw_future",
-					new() { ["player"] = actorName });
+					VisualNarrativeVars.Add(new() { ["player"] = actorName },
+						"cards-peek", pending.ActorId, count: top.Count));
 				break;
 
 			case "favor":
@@ -255,10 +262,19 @@ public static class ExplodingTurnFlow
 						RequesterId = pending.ActorId,
 						TargetId = pending.TargetId!,
 					};
-					await context.Announcer.ToPlayer(pending.TargetId!, "game.exploding_favor_asked_victim",
-						new() { ["player"] = actorName });
-					await context.Announcer.ToAllExcept(pending.TargetId!, "game.exploding_favor_asked",
-						new() { ["player"] = actorName, ["target"] = targetName });
+					var favorVars = VisualNarrativeVars.Add(new Dictionary<string, object>
+					{
+						["player"] = actorName,
+						["actorId"] = pending.ActorId,
+						["target"] = targetName,
+					}, "favor-request", pending.ActorId, pending.TargetId);
+					await context.Announcer.ToPlayer(pending.ActorId, "game.exploding_favor_asked_self", favorVars);
+					await context.Announcer.ToPlayer(pending.TargetId!, "game.exploding_favor_asked_victim", favorVars);
+					foreach (var other in context.GameState.Players
+							 .Where(p => p.Id != pending.ActorId && p.Id != pending.TargetId && !p.IsBot))
+					{
+						await context.Announcer.ToPlayer(other.Id, "game.exploding_favor_asked", favorVars);
+					}
 					break;
 				}
 
@@ -272,20 +288,27 @@ public static class ExplodingTurnFlow
 					{
 						var cardName = runtime.Catalog.GetValueOrDefault(stolen.CardId)?.NameKey ?? stolen.CardId;
 						await context.Announcer.ToPlayer(pending.ActorId, "game.exploding_stole_self",
-							new() { ["target"] = targetName, ["card"] = cardName, ["actorId"] = pending.ActorId });
+							VisualNarrativeVars.Add(new()
+							{
+								["target"] = targetName, ["card"] = cardName, ["actorId"] = pending.ActorId,
+							}, "card-transfer", pending.TargetId, pending.ActorId, stolen.CardId));
 						await context.Announcer.ToPlayer(pending.TargetId!, "game.exploding_stole_victim",
-							new() { ["player"] = actorName, ["card"] = cardName });
+							VisualNarrativeVars.Add(new() { ["player"] = actorName, ["card"] = cardName },
+								"card-transfer", pending.TargetId, pending.ActorId, stolen.CardId));
 						foreach (var other in context.GameState.Players
 									 .Where(p => p.Id != pending.ActorId && p.Id != pending.TargetId && !p.IsBot))
 						{
 							await context.Announcer.ToPlayer(other.Id, "game.exploding_stole",
-							new() { ["player"] = actorName, ["target"] = targetName });
+								VisualNarrativeVars.Add(new() { ["player"] = actorName, ["target"] = targetName },
+									"card-transfer", pending.TargetId, pending.ActorId));
 						}
 					}
 					else
 					{
-						await context.Announce("game.exploding_stole_empty", new()
-						{ ["player"] = actorName, ["actorId"] = pending.ActorId, ["target"] = targetName });
+						await context.Announce("game.exploding_stole_empty", VisualNarrativeVars.Add(new()
+						{
+							["player"] = actorName, ["actorId"] = pending.ActorId, ["target"] = targetName,
+						}, "outcome", pending.ActorId, pending.TargetId));
 					}
 					break;
 				}
@@ -348,8 +371,10 @@ public static class ExplodingTurnFlow
 				};
 				ExplodingRulebook.SyncCounts(exploding);
 				// Public: everyone hears the scare and the save. WHERE it goes stays secret.
-				await context.Announce("game.exploding_drew_bomb_defused", new()
-				{ ["player"] = player.Name, ["actorId"] = player.Id });
+				await context.Announce("game.exploding_drew_bomb_defused", VisualNarrativeVars.Add(new()
+				{
+					["player"] = player.Name, ["actorId"] = player.Id,
+				}, "card-draw", targetPlayerId: player.Id, cardId: card.CardId, cardType: "bomb"));
 				return new ExplodingActionResponse { Action = "draw", AwaitingReinsert = true };
 			}
 
@@ -359,8 +384,10 @@ public static class ExplodingTurnFlow
 			ExplodingRulebook.Retire(exploding, player.Id);
 			player.FinishPlace = place;
 			player.Status = PlayerStatus.Eliminated;
-			await context.Announce("game.exploding_exploded", new()
-			{ ["player"] = player.Name, ["actorId"] = player.Id });
+			await context.Announce("game.exploding_exploded", VisualNarrativeVars.Add(new()
+			{
+				["player"] = player.Name, ["actorId"] = player.Id,
+			}, "card-draw", targetPlayerId: player.Id, cardId: card.CardId, cardType: "bomb"));
 
 			if (await EndGameIfSoleSurvivorAsync(context, exploding))
 			{
@@ -377,9 +404,11 @@ public static class ExplodingTurnFlow
 		seat.Hand.Add(card);
 		ExplodingRulebook.SyncCounts(exploding);
 		await context.Announcer.ToPlayer(player.Id, "game.exploding_drew_self",
-			new() { ["card"] = def?.NameKey ?? card.CardId, ["actorId"] = player.Id });
+			VisualNarrativeVars.Add(new() { ["card"] = def?.NameKey ?? card.CardId, ["actorId"] = player.Id },
+				"card-draw", targetPlayerId: player.Id, cardId: card.CardId, cardType: def?.Type));
 		await context.Announcer.ToAllExcept(player.Id, "game.exploding_drew",
-			new() { ["player"] = player.Name, ["actorId"] = player.Id });
+			VisualNarrativeVars.Add(new() { ["player"] = player.Name, ["actorId"] = player.Id },
+				"card-draw", targetPlayerId: player.Id));
 
 		var ended = await EndOneDrawAsync(context, exploding, player.Id);
 		return new ExplodingActionResponse { Action = "draw", TurnEnded = ended };
@@ -404,7 +433,8 @@ public static class ExplodingTurnFlow
 
 		// Private: only the tucker learns where it went (their memory is the whole point).
 		await context.Announcer.ToPlayer(player.Id, "game.exploding_tucked_self",
-			new() { ["depth"] = Math.Clamp(command.Depth, 0, exploding.DrawPile.Count) });
+			VisualNarrativeVars.Add(new() { ["depth"] = Math.Clamp(command.Depth, 0, exploding.DrawPile.Count) },
+				"card-tuck", player.Id, cardId: bomb.CardId, cardType: "bomb"));
 
 		// Drawing the bomb and defusing it WAS this turn's draw: the turn resolves now.
 		var ended = await EndOneDrawAsync(context, exploding, player.Id);
@@ -438,14 +468,17 @@ public static class ExplodingTurnFlow
 
 		// Private identities: the two of them learn WHICH card; the table just hears the favour paid.
 		await context.Announcer.ToPlayer(favor.RequesterId, "game.exploding_favor_got_self",
-			new() { ["player"] = player.Name, ["card"] = cardName });
+			VisualNarrativeVars.Add(new() { ["player"] = player.Name, ["card"] = cardName },
+				"card-transfer", player.Id, favor.RequesterId, moved.CardId));
 		await context.Announcer.ToPlayer(player.Id, "game.exploding_favor_gave_self",
-			new() { ["player"] = requesterName, ["card"] = cardName, ["actorId"] = player.Id });
+			VisualNarrativeVars.Add(new() { ["player"] = requesterName, ["card"] = cardName, ["actorId"] = player.Id },
+				"card-transfer", player.Id, favor.RequesterId, moved.CardId));
 		foreach (var other in context.GameState.Players
 					 .Where(p => p.Id != favor.RequesterId && p.Id != player.Id && !p.IsBot))
 		{
 			await context.Announcer.ToPlayer(other.Id, "game.exploding_favor_done",
-				new() { ["player"] = player.Name, ["target"] = requesterName });
+				VisualNarrativeVars.Add(new() { ["player"] = player.Name, ["target"] = requesterName },
+					"card-transfer", player.Id, favor.RequesterId));
 		}
 
 		ExplodingRulebook.SyncCounts(exploding);
@@ -538,12 +571,15 @@ public static class ExplodingTurnFlow
 			{
 				vars[$"card{n + 1}"] = keys[n]!;
 			}
+			VisualNarrativeVars.Add(vars, "cards-peek", playerId, count: top.Count);
+			VisualNarrativeVars.AddPrivateCardIds(vars, top.Select(card => card.CardId));
 
 			await context.Announcer.ToPlayer(playerId, $"game.exploding_future{suffix}", vars);
 		}
 		else if (top.Count == 0)
 		{
-			await context.Announcer.ToPlayer(playerId, "game.exploding_future_empty");
+			await context.Announcer.ToPlayer(playerId, "game.exploding_future_empty",
+				VisualNarrativeVars.Add(new(), "cards-peek", playerId, count: 0));
 		}
 		else
 		{

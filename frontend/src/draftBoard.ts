@@ -173,6 +173,7 @@ export class DraftBoard {
 			const picked = seat.committedInstanceId === instance.instanceId;
 			return {
 				id: instance.instanceId,
+				cardId: instance.cardId,
 				// The committed card announces itself as the current pick, so arrowing
 				// through the hand always tells you where your choice stands.
 				label: picked ? this.deps.tSync('game.draft_card_picked', { card: label }) : label,
@@ -249,7 +250,7 @@ export class DraftBoard {
 			const short = seat.handCount !== handSize && seat.handCount > 0
 				? ` (${seat.handCount})` : '';
 			const cards = seat.retired ? '' : `<span class="draft-table__cards">🂠 ${seat.handCount}${short}</span>`;
-			return `<div class="draft-table${seat.retired ? ' draft-table--retired' : ''}" style="--seat-color:${color}">`
+			return `<div class="draft-table${seat.retired ? ' draft-table--retired' : ''}" data-player-id="${escapeHtml(seat.playerId)}" style="--seat-color:${color}">`
 				+ `<span class="draft-table__name">${name}${picked}</span>`
 				+ `<span class="draft-table__chips">${tiles || `<span class="draft-table__empty">—</span>`}</span>`
 				+ `<span class="draft-table__score">${seat.score}</span>`

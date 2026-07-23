@@ -72,6 +72,9 @@ test('track: entry walk, a themed ladder climb, roll-again on 6, and board explo
 	await roll(ana, 4);
 	await expectAnnouncement(berto, /Ana saca un 4/);
 	await expectAnnouncement(berto, /¡Ana encuentra una escalera y trepa de la casilla 4 a la 14!/);
+	await expect(berto.locator('.board-frame > .visual-narrative--track')).toContainText(/Ana encuentra una escalera/i);
+	await expect(berto.locator('.board-frame > .visual-narrative--track')).toHaveAttribute('data-kind', 'track-effect');
+	await expect(berto.locator('.track-connector[data-from="4"][data-to="14"]')).toHaveCount(1);
 	await expect(cell(berto, 14).locator('.track-piece')).toHaveCount(1);
 	await expectAnnouncement(ana, /Turno de Berto/);
 

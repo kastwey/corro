@@ -13,6 +13,25 @@ public static class ServiceCollectionExtensions
 {
 	public static IServiceCollection AddCorroServices(this IServiceCollection services, IConfiguration configuration)
 	{
+		services.AddOptions<SiteBrandingOptions>()
+			.Bind(configuration.GetSection(SiteBrandingOptions.SectionName))
+			.Validate(options =>
+				!string.IsNullOrWhiteSpace(options.Title)
+				&& options.Title == options.Title.Trim()
+				&& options.Title.Length <= SiteBrandingOptions.MaxTitleLength,
+				$"{SiteBrandingOptions.SectionName}:Title must contain between 1 and {SiteBrandingOptions.MaxTitleLength} characters.")
+			.Validate(options => options.Tagline is null || options.Tagline.Length <= SiteBrandingOptions.MaxTaglineLength,
+				$"{SiteBrandingOptions.SectionName}:Tagline must not exceed {SiteBrandingOptions.MaxTaglineLength} characters.")
+			.Validate(options => SiteBrandingOptions.IsSupportedAssetUrl(options.LogoUrl),
+				$"{SiteBrandingOptions.SectionName}:LogoUrl must be a relative path or an HTTPS URL.")
+			.Validate(options => SiteBrandingOptions.IsSupportedAssetUrl(options.LogoDarkUrl),
+				$"{SiteBrandingOptions.SectionName}:LogoDarkUrl must be a relative path or an HTTPS URL.")
+			.Validate(options => SiteBrandingOptions.IsSupportedAssetUrl(options.FaviconUrl),
+				$"{SiteBrandingOptions.SectionName}:FaviconUrl must be a relative path or an HTTPS URL.")
+			.Validate(options => SiteBrandingOptions.IsSupportedAssetUrl(options.FaviconDarkUrl),
+				$"{SiteBrandingOptions.SectionName}:FaviconDarkUrl must be a relative path or an HTTPS URL.")
+			.ValidateOnStart();
+
 		services.AddOptions<GameRetentionOptions>()
 			.Bind(configuration.GetSection(GameRetentionOptions.SectionName))
 			.Validate(options => options.InactivityDays > 0, "GameRetention:InactivityDays must be greater than zero.")

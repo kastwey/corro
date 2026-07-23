@@ -1,6 +1,6 @@
-using System.Text.Json;
 using CorroServer.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace CorroServer.Controllers;
 
@@ -11,12 +11,16 @@ namespace CorroServer.Controllers;
 [Route("api/[controller]")]
 public class ConfigController : ControllerBase
 {
-	private readonly ILogger<ConfigController> _logger;
+	private readonly SiteBrandingOptions _siteBranding;
 
-	public ConfigController(ILogger<ConfigController> logger)
+	public ConfigController(IOptions<SiteBrandingOptions> siteBranding)
 	{
-		_logger = logger;
+		_siteBranding = siteBranding.Value;
 	}
+
+	/// <summary>Get the public identity selected by this deployment.</summary>
+	[HttpGet("branding")]
+	public ActionResult<SiteBrandingOptions> GetBranding() => _siteBranding;
 
 	/// <summary>
 	/// The canonical board keymap (key → client command). Served from the server so it is the single

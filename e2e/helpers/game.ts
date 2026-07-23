@@ -59,8 +59,7 @@ export function appI18n(lang: string): Record<string, any> {
 /**
  * A fresh context+page for one player. Contexts are per-player browsers: cookies,
  * storage and the SignalR connection are isolated, exactly like two real devices.
- * Captures every spoken delivery into window.__announcements for later assertions: ARIA
- * live writes plus the stable focused hand status used when card rows are about to change.
+ * Captures every aria-live write into window.__announcements for later assertions.
  */
 export async function newPlayerPage(
 	browser: Browser,
@@ -89,9 +88,9 @@ export async function newPlayerPage(
 		const observer = new MutationObserver(records => {
 			for (const r of records) {
 				const el = r.target instanceof Element ? r.target : r.target.parentElement;
-				// Most speech uses aria-live. A changing focused hand uses a stable focused
-				// status instead, because JAWS prioritizes replacement-row focus over live text.
-				if (!el?.closest?.('[aria-live], .hand-panel__action-status')) continue;
+				// Match by the aria-live ATTRIBUTE: the board's static polite region carries
+				// no class (only announcer-created ones do), and the attribute is what matters.
+				if (!el?.closest?.('[aria-live]')) continue;
 				if (r.type === 'characterData') push(r.target.textContent);
 				else r.addedNodes.forEach(n => push(n.textContent));
 			}
@@ -106,8 +105,8 @@ export async function newPlayerPage(
 }
 
 /**
- * Waits until an announcement matching the pattern has been voiced on this page through
- * either supported screen-reader channel.
+ * Waits until an announcement matching the pattern has been voiced on this page
+ * (i.e. written into an aria-live region — what a screen reader would read).
  */
 export async function expectAnnouncement(page: Page, pattern: RegExp): Promise<void> {
 	// A bounded wait (NOT the whole test timeout): a missed announcement must fail fast
@@ -128,14 +127,11 @@ export async function expectAnnouncement(page: Page, pattern: RegExp): Promise<v
 export interface AnnouncementHandUpdateOrder {
 	announcementAt: number;
 	handUpdateAt: number;
-	/** The action used the hand's stable focused narrator instead of a racing live region. */
-	usedStableHandFocus: boolean;
 }
 
 /**
- * Observe one server action's matching accessible narration and the next hand
- * mutation. The returned finisher proves that a changing focused hand used its stable
- * narration target, so no removed/inserted row can steal focus and speak first.
+ * Observe one server action's matching live-region write and the next hand mutation.
+ * The gap is the deliberate narration lead before list/focus events are emitted.
  */
 export async function watchAnnouncementBeforeHandUpdate(
 	page: Page,
@@ -146,7 +142,6 @@ export async function watchAnnouncementBeforeHandUpdate(
 		const timeline: AnnouncementHandUpdateOrder = {
 			announcementAt: 0,
 			handUpdateAt: 0,
-			usedStableHandFocus: false,
 		};
 		(window as any).__announcementHandOrder = timeline;
 
@@ -162,10 +157,9 @@ export async function watchAnnouncementBeforeHandUpdate(
 					? record.target
 					: record.target.parentElement;
 				if (!timeline.announcementAt
-					&& element?.closest('[aria-live], .hand-panel__action-status')
+					&& element?.closest('[aria-live]')
 					&& matchingAddedText(record)) {
 					timeline.announcementAt = performance.now();
-					timeline.usedStableHandFocus = !!element.closest('.hand-panel__action-status');
 				}
 				if (!timeline.handUpdateAt && element?.closest('.hand-panel__list')) {
 					timeline.handUpdateAt = performance.now();

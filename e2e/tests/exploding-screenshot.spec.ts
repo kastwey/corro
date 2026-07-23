@@ -29,6 +29,16 @@ test('exploding: board and the defuse picker (screenshots)', async ({ browser },
 	await expect(ana.locator('.exploding-draw .xcard__back-label')).toHaveText(/^\d+$/);
 	await expect(ana.locator('.exploding-hand [data-card-art="package"]')).toHaveCount(8);
 	await expect(ana.locator('.exploding-hand [data-card-art="neutral"]')).toHaveCount(0);
+	const cardsPerRow = await ana.locator('.hand-card:not(.hand-card--info)').evaluateAll(cards => {
+		const rows = new Map<number, number>();
+		for (const card of cards) {
+			// offsetTop captures the grid row; hover/focus can visually lift a card by 4px.
+			const top = (card as HTMLElement).offsetTop;
+			rows.set(top, (rows.get(top) ?? 0) + 1);
+		}
+		return [...rows.values()];
+	});
+	expect(cardsPerRow).toEqual([4, 4]);
 	await expect(ana.locator('.hand-panel__draw')).toBeVisible();
 	await expect(ana.locator('.dice-control')).toBeHidden();
 	await captureScreenshot(ana, testInfo, 'exploding-01-start.png');
@@ -37,6 +47,11 @@ test('exploding: board and the defuse picker (screenshots)', async ({ browser },
 	// visual beat of its own before the focus-taking depth picker opens.
 	await ana.locator('#board').focus();
 	await ana.keyboard.press(' ');
+	// Motion-enabled sighted narrative: a card visibly leaves the draw pile while the
+	// persistent sentence explains the same event. It remains aria-hidden and non-blocking.
+	await expect(ana.locator('.visual-card-flight')).toBeVisible();
+	await expect(ana.locator('.visual-narrative')).toContainText(/Destapas gris/i);
+	await expect(ana.locator('.visual-narrative')).toHaveAttribute('aria-hidden', 'true');
 	const reveal = ana.locator('.exploding-reveal--defusing');
 	await expect(reveal).toBeVisible();
 	await expect(reveal).not.toHaveClass(/exploding-reveal--static/);

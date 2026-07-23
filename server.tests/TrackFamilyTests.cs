@@ -174,7 +174,10 @@ public class TrackFamilyTests
 	{
 		var (state, ctx) = Game();
 		await TrackTurnFlow.ProcessRollAsync(3, state.Players[0], ctx); // 3 → ladder → 12
-		Assert.Contains(TestFixtures.Announcer(ctx).Sent, a => a.Key == "game.track_effect_up");
+		var effect = TestFixtures.Announcer(ctx).Sent.Single(a => a.Key == "game.track_effect_up");
+		Assert.Equal("track-effect", effect.Vars["visualKind"]);
+		Assert.Equal(3, effect.Vars["from"]);
+		Assert.Equal(12, effect.Vars["to"]);
 		Assert.Equal(12, Pos(state, "A"));
 
 		state.CurrentTurn = "A";

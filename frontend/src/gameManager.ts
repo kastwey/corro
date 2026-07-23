@@ -183,7 +183,7 @@ export class GameManager {
 		// could process the resulting focus/list mutation first. Commit the audible batch and
 		// give the accessibility tree its own timer turn before any state-driven DOM mutation.
 		beforeApplyState: (_events, state) => commitAnnouncerBeforeState({
-			focusChangingHand: localHandChanged(this.GameState, state, this.getMyPlayerId()),
+			paceChangingHand: localHandChanged(this.GameState, state, this.getMyPlayerId()),
 		}),
 		applyState: (state) => {
 			this.GameState = state;

@@ -145,6 +145,7 @@
 .exploding-piles {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 1.1rem;
   padding: 0.4rem 0.2rem 0.2rem;
 }
@@ -318,19 +319,30 @@
 
 .exploding-hand { margin-top: 0.5rem; }
 
+/* A Favor's target must give a card rather than play one. Keep that instruction visually
+ * attached to the whole hand until the authoritative pending choice clears. */
+.exploding-hand .hand-panel--favor-choice {
+  padding: 0.65rem;
+  border: 3px solid var(--warning);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--warning) 9%, var(--surface));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--warning) 22%, transparent);
+}
+
 .exploding-hand .hand-panel__list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(var(--hand-columns, 4), max-content);
   align-items: flex-start;
   gap: 0.7rem;
+  justify-content: center;
   margin: 0;
   padding: 0.25rem 0;
   list-style: none;
 }
 
-/* Unavailable cards stay fully readable; shape and colour, not opacity, carry the state. */
+/* Unavailable cards stay fully readable. The hand adds an explicit localized badge; the
+ * solid inset frame replaces the old dotted/dashed border that looked like a rendering bug. */
 .exploding-hand .hand-card--visual.hand-card--unplayable .xcard {
-  border-style: dashed;
   filter: saturate(0.58);
   box-shadow: inset 0 0 0 2px #6b7378, 0 2px 5px rgba(0, 0, 0, 0.22);
 }
@@ -341,4 +353,11 @@
   .exploding-reveal { width: 82px; height: 114px; }
   .exploding-piles .xcard { width: 82px; height: 114px; }
   .exploding-piles .xcard__svg { width: 56px; height: 56px; }
+}
+
+@media (max-width: 480px) {
+  .exploding-hand .hand-panel__list {
+    display: flex;
+    flex-wrap: wrap;
+  }
 }

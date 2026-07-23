@@ -376,6 +376,7 @@ export class SheddingBoard {
 			const ci = def?.color ? colourRank.indexOf(def.color) : -1;
 			return {
 				id: instance.instanceId,
+				cardId: instance.cardId,
 				// The just-drawn card announces itself: it is the one the pause is about.
 				label: drawn ? this.deps.tSync('game.shedding_card_drawn', { card: label }) : label,
 				typeKey: def?.type ?? 'unknown',
@@ -475,7 +476,7 @@ export class SheddingBoard {
 			const name = escapeHtml(player?.name ?? seat.playerId);
 			const turn = gs.currentTurn === seat.playerId ? ' shedding-seat--turn' : '';
 			const retired = seat.retired ? ' shedding-seat--retired' : '';
-			return `<div class="shedding-seat${turn}${retired}" style="--seat-color:${color};--seat-ink:${ink}">`
+			return `<div class="shedding-seat${turn}${retired}" data-player-id="${escapeHtml(seat.playerId)}" style="--seat-color:${color};--seat-ink:${ink}">`
 				+ `<span class="shedding-seat__name">${name}</span>`
 				+ `<span class="shedding-seat__cards">🂠 ${seat.handCount}</span>`
 				+ `<span class="shedding-seat__score">${seat.score}</span>`

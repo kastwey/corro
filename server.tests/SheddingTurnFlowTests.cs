@@ -96,6 +96,8 @@ public class SheddingTurnFlowTests
 		Assert.Equal("b", state.CurrentTurn);
 		var played = TestFixtures.Announcer(context).Sent.First(d => d.Key == "game.shedding_played");
 		Assert.Equal("c.red7", played.Vars["card"]);
+		Assert.Equal("card-play-discard", played.Vars["visualKind"]);
+		Assert.Equal("red-7", played.Vars["visualCardId"]);
 		// No one-card-left shout — the count is on-demand (S / Shift+S), by design.
 		Assert.DoesNotContain(Keys(context), k => k.Contains("one_left"));
 	}
@@ -134,6 +136,10 @@ public class SheddingTurnFlowTests
 		var announcer = TestFixtures.Announcer(context);
 		// The table hears WHO drew HOW MANY and the lost turn; the names are b's alone.
 		Assert.Contains("game.shedding_drew_penalty", Keys(context));
+		var penalty = announcer.Sent.Single(d => d.Key == "game.shedding_drew_penalty");
+		Assert.Equal("card-draw", penalty.Vars["visualKind"]);
+		Assert.Equal("b", penalty.Vars["visualTargetPlayerId"]);
+		Assert.False(penalty.Vars.ContainsKey("visualCardId"));
 		Assert.Contains("game.shedding_skipped", Keys(context));
 		Assert.True(announcer.Has(AnnouncementAudience.Player, "b", "game.shedding_penalty_cards_2"));
 		Assert.Equal(3, SheddingRulebook.SeatOf(state.Shedding!, "b").Hand.Count);
@@ -248,7 +254,9 @@ public class SheddingTurnFlowTests
 		Assert.NotNull(state.Shedding!.PendingDrawnPlay);
 		var announcer = TestFixtures.Announcer(context);
 		Assert.True(announcer.Has(AnnouncementAudience.Player, "a", "game.shedding_drew_playable"));
-		Assert.Equal("a", announcer.Sent.Single(d => d.Key == "game.shedding_drew_playable").Vars["actorId"]);
+		var drawnLine = announcer.Sent.Single(d => d.Key == "game.shedding_drew_playable");
+		Assert.Equal("a", drawnLine.Vars["actorId"]);
+		Assert.Equal("red-7", drawnLine.Vars["visualCardId"]);
 
 		// A second draw mid-pause is refused; the KEEP resolves it and passes the turn.
 		var again = await SheddingTurnFlow.DrawAsync(state.Players[0], context, new ScriptedRandomSource());

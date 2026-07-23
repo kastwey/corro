@@ -74,14 +74,15 @@ test('each player is a focusable row whose aria-label reads name, money, positio
 	assert.equal(rows[1].getAttribute('aria-label'), 'Bob. Money: 800 euros. Position: Pink 1. In holding');
 });
 
-test('the row holding the turn wears a visible (decorative) die; the others none', () => {
-	// Live-play bug: the subtle glow alone didn't tell a sighted player who plays. The 🎲
-	// glyph is aria-hidden — the row label + aria-current already carry it for a reader.
+test('the row holding the turn wears a neutral visible badge; the others none', () => {
+	// The old die was misleading in card games. The localized badge is aria-hidden — the
+	// row label + aria-current already carry the same state for a reader.
 	makePanel();
 	const rows = Array.from(document.querySelectorAll('.player-card')) as HTMLElement[];
-	const die = rows[0].querySelector('.player-card__turn')!;
-	assert.ok(die, 'the current-turn row shows the die');
-	assert.equal(die.getAttribute('aria-hidden'), 'true');
+	const badge = rows[0].querySelector('.player-card__turn')!;
+	assert.ok(badge, 'the current-turn row shows the badge');
+	assert.equal(badge.textContent, 'Turn');
+	assert.equal(badge.getAttribute('aria-hidden'), 'true');
 	assert.equal(rows[1].querySelector('.player-card__turn'), null, 'other rows show none');
 });
 

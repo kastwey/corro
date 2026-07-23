@@ -3,9 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Corro</title>
-	<link rel="icon" href="assets/brand/corro-favicon-light.svg" type="image/svg+xml" media="(prefers-color-scheme: light)" />
-	<link rel="icon" href="assets/brand/corro-favicon-dark.svg" type="image/svg+xml" media="(prefers-color-scheme: dark)" />
+  <title>All Welcome</title>
   <script>
 	// Apply the saved/system theme before first paint to avoid a flash.
 	(function () {
@@ -28,6 +26,7 @@
   <link rel="stylesheet" href="css/dice.css" />
   <link rel="stylesheet" href="css/cards.css" />
 	<link rel="stylesheet" href="css/card-art.css" />
+	<link rel="stylesheet" href="css/visual-narrative.css" />
   <link rel="stylesheet" href="css/action-bar.css" />
   <link rel="stylesheet" href="css/end-screen.css" />
   <link rel="stylesheet" href="css/race-board.css" />
@@ -42,7 +41,7 @@
 <body>
   <div class="app-main">
 	<header class="app-header">
-	  <h1 class="app-title">Corro</h1>
+	  <h1 class="app-title" data-site-title>All Welcome</h1>
 	  <div class="app-header__controls" id="app-controls"></div>
 	</header>
 	<main>
@@ -80,22 +79,20 @@
 	<footer class="app-footer">
 		<p class="app-footer__brand">
 			<span data-i18n="footer.poweredBy">Powered by</span>
-			<strong>Corro</strong>.
+			<a class="app-footer__external-link" href="https://github.com/kastwey/corro" target="_blank"
+				rel="noopener noreferrer" data-footer-link="corro"
+				aria-label="Corro on GitHub, opens in a new window"
+				data-i18n-attr:aria-label="footer.corroNewWindowLabel">
+				<strong>Corro</strong>
+				<svg class="app-footer__external-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+					stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+					<path d="M14 5h5v5" />
+					<path d="M10 14 19 5" />
+					<path d="M19 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h4" />
+				</svg>
+			</a>.
 		</p>
 		<ul class="app-footer__links">
-			<li>
-				<a class="app-footer__external-link" href="https://github.com/kastwey/corro" target="_blank" rel="noopener noreferrer"
-					data-footer-link="repository" aria-label="GitHub repository, opens in a new window"
-					data-i18n-attr:aria-label="footer.repositoryNewWindowLabel">
-					<span data-i18n="footer.repository">GitHub repository</span>
-					<svg class="app-footer__external-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-						stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-						<path d="M14 5h5v5" />
-						<path d="M10 14 19 5" />
-						<path d="M19 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h4" />
-					</svg>
-				</a>
-			</li>
 			<li>
 				<a class="app-footer__external-link" href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank"
 					rel="license noopener noreferrer" data-footer-link="license"

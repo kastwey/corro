@@ -38,14 +38,13 @@ You are in a match-and-discard game, focused on a card in your hand, and you pre
 
 **Client — render and speak**
 9. The announcement batch is rendered by i18next into the player's language and sent to a
-   visual toast while `soundEvents` fires the matching earcon. Normally speech uses the
-   ARIA live region. If the paired state changes the locally focused hand, the complete
-   utterance instead receives focus on the hand's stable action status; this is stronger
-   than trying to beat a replacement row with a timer.
+   visual toast and **ARIA live region**, while `soundEvents` fires the matching earcon. If
+   the paired state changes the local hand, that live write also arms a brief hand-update
+   lead.
 10. The client stores the paired state and repaints the active surface (the hand list + the
-    aria-hidden table echo). During a hand change, focus remains on that stable sentence;
-    only the player's next navigation/action key re-enters the reconciled list, so "1 of N"
-    cannot speak before the game outcome.
+    aria-hidden table echo). Only the hand rows wait for the lead; focus stays on the actual
+    card throughout. Its later replacement/position speech therefore follows the action
+    sentence instead of preceding it.
 
 The whole loop is server-authoritative: your browser never decided anything, it asked and
 displayed. The E2E test `e2e/tests/shedding.spec.ts` drives exactly this with two real

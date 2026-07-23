@@ -120,6 +120,9 @@ test('trivia: roll, pick a headquarters, answer, the judge rules, a wedge is ear
 	await expectAnnouncement(ana, /La respuesta correcta era: Canberra/);
 	await expectAnnouncement(ana, /Ganas el quesito de Geografía/);
 	await expectAnnouncement(ana, /Vuelve a tirar/); // a correct answer grants another roll — say so
+	const narrative = ana.locator('.board-frame > .visual-narrative--trivia');
+	await expect(narrative).toContainText(/La respuesta correcta era: Canberra.*Ganas el quesito de Geografía/i);
+	await expect(narrative).toHaveClass(/visual-narrative--gain/);
 
 	// ── The wheel's radial keyboard navigation. ──────────────────────────────────
 	await ana.locator('#board').focus();

@@ -44,6 +44,14 @@ export default defineConfig({
 		env: {
 			ASPNETCORE_ENVIRONMENT: 'E2E',
 			ASPNETCORE_URLS: E2E_BASE_URL,
+			// Exercise deployment overrides (including both theme assets) through the real
+			// configuration endpoint rather than special-casing the browser test.
+			SiteBranding__Title: 'All Welcome',
+			SiteBranding__Tagline: 'Play together, play your way.',
+			SiteBranding__LogoUrl: 'assets/brand/corro-logo-on-light.svg',
+			SiteBranding__LogoDarkUrl: 'assets/brand/corro-logo-on-dark.svg',
+			SiteBranding__FaviconUrl: 'assets/brand/corro-favicon-light.svg',
+			SiteBranding__FaviconDarkUrl: 'assets/brand/corro-favicon-dark.svg',
 			// Additional shipped-package root read only in E2E mode. It never enters the
 			// server's production Packages directory or publish artifact.
 			E2E__PackagesRoot: path.resolve(__dirname, 'fixtures', 'packages'),

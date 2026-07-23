@@ -161,6 +161,19 @@
 
 .hand-card--visual:hover { transform: translateY(-4px); }
 
+/* A new authoritative row exists for keyboard/screen-reader interaction immediately, while
+ * its decorative sighted presentation waits for the deck/player flight and then settles into
+ * the hand. Transform only: no low-contrast opacity phase and no turn gating. */
+.hand-card--arriving {
+  transform-origin: 50% 50%;
+  animation: hand-card-arrive 1.05s cubic-bezier(0.22, 0.75, 0.2, 1) both;
+}
+@keyframes hand-card-arrive {
+  0%, 72% { transform: translateY(-18px) scale(0.08); }
+  88% { transform: translateY(2px) scale(1.08); }
+  100% { transform: translateY(0) scale(1); }
+}
+
 .hand-card--visual:has(.jcard) .hand-card__name,
 .hand-card--visual:has(.xcard) .hand-card__name,
 .hand-card--visual:has(.gcard) .hand-card__name { display: none; }
@@ -208,11 +221,34 @@
 .hand-card--unplayable:not(.hand-card--visual) {
   color: var(--text-muted);
   background: color-mix(in srgb, var(--surface-2) 68%, var(--surface-3));
-  border-style: dashed;
+  border-color: var(--border-strong);
 }
 .hand-card--visual.hand-card--unplayable .jcard {
   filter: grayscale(0.85) saturate(0.55) brightness(0.94);
-  border-style: dashed;
+  box-shadow: inset 0 0 0 2px #69747a, 0 2px 5px rgba(0, 0, 0, 0.22);
+}
+
+.hand-card__availability:empty { display: none; }
+.hand-card__availability {
+  margin-inline-start: auto;
+  padding: 0.12rem 0.42rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface-3);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.hand-card--visual .hand-card__availability {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  z-index: 7;
+  max-width: calc(100% - 0.7rem);
+  background: #fffdf5;
+  color: #37474f;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
 .hand-card__name { flex: 1; }
@@ -285,14 +321,11 @@
   color: var(--on-accent);
 }
 
-/* The narration node is visually hidden, so mirror its focus around the complete hand. */
-.hand-panel:has(.hand-panel__action-status:focus) {
-  outline: 3px solid var(--focus-color, #1e88e5);
-  outline-offset: 4px;
-  border-radius: 0.75rem;
-}
-
 .hand-panel__empty { font-style: italic; opacity: 0.8; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hand-card--arriving { animation: none; transform: none; }
+}
 
 /* ── Table centre: the draw pile (stacked backs) and the top discard ───────── */
 .journey-centre {

@@ -1,0 +1,217 @@
+/* visual-narrative.css — persistent, visual-only account of the latest game action.
+ * The authoritative sentence is the same localized server announcement screen-reader users hear.
+ * This layer is aria-hidden, pointer-inert, never takes focus and never gates the turn. */
+
+.visual-narrative {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  min-height: 3.5rem;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--border-strong);
+  border-inline-start: 0.5rem solid var(--accent);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--surface-2), var(--surface));
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+  pointer-events: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.visual-narrative.is-active {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
+.visual-narrative[data-kind="attack"],
+.visual-narrative[data-kind="cards-discard"] {
+  border-inline-start-color: var(--danger);
+}
+
+.visual-narrative[data-kind="card-draw"],
+.visual-narrative[data-kind="cards-peek"] {
+  border-inline-start-color: var(--good);
+}
+
+.visual-narrative--gain { border-inline-start-color: var(--good); }
+.visual-narrative--loss { border-inline-start-color: var(--danger); }
+.visual-narrative--neutral { border-inline-start-color: var(--accent); }
+
+/* Spatial boards cannot accept an extra child inside their grid. Their shared stage sits
+ * between the turn banner and board; Property instead reuses its established visual centre. */
+.visual-narrative--race,
+.visual-narrative--track,
+.visual-narrative--trivia {
+  margin: 0 1rem 1rem;
+}
+
+.board-center > .visual-narrative--property {
+  position: relative;
+  z-index: 4;
+  width: min(88%, 36rem);
+  min-height: 0;
+  margin-top: auto;
+  padding: clamp(0.5rem, 1vw, 0.8rem) clamp(0.7rem, 1.4vw, 1rem);
+  background: rgba(25, 30, 34, 0.92);
+  border-color: rgba(255, 255, 255, 0.42);
+  color: #fff;
+  box-shadow: 0 7px 20px rgba(0, 0, 0, 0.34);
+}
+
+.board-center > .visual-narrative--property .visual-narrative__route {
+  color: #e0e5e8;
+}
+
+.board-center > .visual-narrative--property.visual-narrative--gain {
+  border-inline-start-color: #56e08a;
+}
+.board-center > .visual-narrative--property.visual-narrative--loss {
+  border-inline-start-color: #ff7474;
+}
+.board-center > .visual-narrative--property.visual-narrative--neutral {
+  border-inline-start-color: #f2c14e;
+}
+
+.visual-narrative__copy { min-width: 0; }
+
+.visual-narrative__message {
+  margin: 0;
+  font-size: clamp(1rem, 1.5vw, 1.2rem);
+  font-weight: 800;
+  line-height: 1.35;
+  text-wrap: balance;
+}
+
+.visual-narrative__route {
+  margin: 0.3rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 750;
+}
+
+.visual-narrative__peek {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: min(10rem, 85vw);
+  padding-inline: 1rem;
+}
+
+.visual-narrative__peek-card {
+  display: inline-flex;
+  width: 62px;
+  height: 86px;
+  margin-inline: -0.75rem;
+  transform: rotate(-7deg);
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.24));
+}
+
+.visual-narrative__peek-card:nth-child(2) {
+  z-index: 2;
+  transform: translateY(-5px) rotate(0deg);
+}
+
+.visual-narrative__peek-card:nth-child(3) { transform: rotate(7deg); }
+.visual-narrative__peek-card:nth-child(4) { transform: translateY(3px) rotate(13deg); }
+
+.visual-narrative__card {
+  position: relative;
+  display: inline-flex;
+  width: 62px;
+  height: 86px;
+  justify-self: end;
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.24));
+}
+
+.visual-narrative__peek-card > :is(.gcard, .xcard, .jcard),
+.visual-narrative__card > :is(.gcard, .xcard, .jcard),
+.visual-card-flight > :is(.gcard, .xcard, .jcard),
+.visual-card-flight > .visual-card-flight__face {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 8px;
+}
+
+.visual-narrative__peek-card :is(.gcard__svg, .xcard__svg, .jcard__face svg),
+.visual-narrative__card :is(.gcard__svg, .xcard__svg, .jcard__face svg),
+.visual-card-flight :is(.gcard__svg, .xcard__svg, .jcard__face svg) {
+  width: 68%;
+  height: 68%;
+}
+
+.visual-narrative__peek-card :is(.gcard__name, .xcard__name, .jcard__name),
+.visual-narrative__card :is(.gcard__name, .xcard__name, .jcard__name),
+.visual-card-flight :is(.gcard__name, .xcard__name, .jcard__name) {
+  min-height: 2.1em;
+  font-size: 0.5rem;
+}
+
+.visual-card-flight {
+  position: fixed;
+  z-index: 1080;
+  display: block;
+  box-sizing: border-box;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.34));
+}
+
+.visual-card-flight--impact {
+  display: grid;
+  place-items: center;
+  border: 3px solid var(--danger);
+  border-radius: 50%;
+  background: var(--danger);
+  color: var(--on-danger);
+}
+
+.visual-card-flight__impact {
+  font-size: 2rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.visual-card-flight__count {
+  position: absolute;
+  right: -0.6rem;
+  bottom: -0.5rem;
+  display: grid;
+  min-width: 1.8rem;
+  height: 1.8rem;
+  place-items: center;
+  padding-inline: 0.25rem;
+  border: 2px solid var(--surface);
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 0.8rem;
+  font-weight: 900;
+  box-shadow: var(--shadow-sm);
+}
+
+.visual-narrative-target {
+  outline: 4px solid var(--accent) !important;
+  outline-offset: 4px;
+  animation: visual-narrative-target-pulse 0.55s ease-in-out 2 alternate;
+}
+
+@keyframes visual-narrative-target-pulse {
+  from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); }
+  to { box-shadow: 0 0 0 9px transparent; }
+}
+
+@media (max-width: 620px) {
+  .visual-narrative { grid-template-columns: 1fr; }
+  .visual-narrative__peek { justify-self: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .visual-narrative,
+  .visual-narrative.is-active { transform: none; }
+  .visual-narrative-target { animation: none; }
+}

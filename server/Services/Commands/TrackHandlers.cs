@@ -35,7 +35,8 @@ public static class TrackTurnFlow
 		{
 			// "stay" finish rule: the overshoot loses the move.
 			await context.Announce("game.track_overshoot_stay",
-				new() { ["player"] = player.Name, ["actorId"] = player.Id });
+				VisualNarrativeVars.Add(new() { ["player"] = player.Name, ["actorId"] = player.Id },
+					"outcome", targetPlayerId: player.Id, tone: "loss"));
 			await EndTrackTurnAsync(context);
 			return new TrackRollResponse { Value = rolled, TurnEnded = true };
 		}
@@ -47,14 +48,20 @@ public static class TrackTurnFlow
 		// used by other staged moves: "land here → hop → land there").
 		TrackRulebook.PositionOf(track, player.Id).Square = result.Landed;
 		await context.Announcer.Announce("game.track_moved",
-			new() { ["player"] = player.Name, ["square"] = result.Landed, ["actorId"] = player.Id },
+			VisualNarrativeVars.Add(new()
+			{
+				["player"] = player.Name, ["square"] = result.Landed, ["actorId"] = player.Id,
+			}, "movement", player.Id, player.Id),
 			AnnouncementPhase.Move);
 
 		// The bounce is a consequence of the walk segment, spoken once the piece settles.
 		if (result.Bounced)
 		{
 			await context.Announce("game.track_bounced",
-				new() { ["player"] = player.Name, ["square"] = result.Landed, ["actorId"] = player.Id });
+				VisualNarrativeVars.Add(new()
+				{
+					["player"] = player.Name, ["square"] = result.Landed, ["actorId"] = player.Id,
+				}, "detail", targetPlayerId: player.Id));
 		}
 
 		foreach (var effect in result.EffectsApplied)
@@ -67,13 +74,14 @@ public static class TrackTurnFlow
 			// Direction picks the engine line ("you climb…" / "you slide down…"); the
 			// shipped package THEMES these keys in its own i18n (ladder/snake wording).
 			var key = effect.To > effect.From ? "game.track_effect_up" : "game.track_effect_down";
-			await context.Announcer.Announce(key, new()
+			await context.Announcer.Announce(key, VisualNarrativeVars.Add(new()
 			{
 				["player"] = player.Name,
 				["from"] = effect.From,
 				["to"] = effect.To,
 				["actorId"] = player.Id,
-			}, AnnouncementPhase.Move);
+			}, "track-effect", player.Id, player.Id,
+				tone: effect.To > effect.From ? "gain" : "loss"), AnnouncementPhase.Move);
 		}
 
 		if (result.Won)
@@ -104,7 +112,9 @@ public static class TrackTurnFlow
 		player.FinishPlace = players.Count(p => p.FinishPlace > 0) + 1;
 		player.Status = PlayerStatus.Finished;
 
-		var vars = new Dictionary<string, object> { ["player"] = player.Name, ["actorId"] = player.Id };
+		var vars = VisualNarrativeVars.Add(
+			new Dictionary<string, object> { ["player"] = player.Name, ["actorId"] = player.Id },
+			"milestone", targetPlayerId: player.Id, tone: "gain");
 		if (player.FinishPlace == 1)
 		{
 			context.GameState.WinnerId = player.Id;

@@ -1,7 +1,7 @@
 import { tSync, i18nBinder } from './i18nBinder.js';
 import { pickLocale } from './localizeSquare.js';
 import type { AnnouncementEvent } from './gameClient.js';
-import { focusHandAnnouncement } from './handAnnouncementFocus.js';
+import { armHandUpdateAfterAnnouncement } from './handUpdatePacing.js';
 
 const SELF_SUFFIX = '_self';
 const VICTIM_SUFFIX = '_victim';
@@ -160,8 +160,8 @@ export interface AnnounceOptions {
 export type AnnounceFn = (event: AnnouncementEvent, options?: AnnounceOptions) => void;
 
 export interface CommitBeforeStateOptions {
-	/** The paired state adds/removes a local card, so row focus must not narrate first. */
-	focusChangingHand?: boolean;
+	/** The paired state changes local cards; give its hand repaint a short speech lead. */
+	paceChangingHand?: boolean;
 }
 
 /**
@@ -221,9 +221,8 @@ class AnnouncerQueue {
 	private readonly clearGapMs = 40;
 	/**
 	 * A live-region DOM write is asynchronous from the screen reader's point of view. Give
-	 * the browser/AT bridge one explicit timer turn after that write before a state repaint
-	 * can remove or insert a focused card. There is no web API for "speech finished"; this
-	 * lead guarantees event ordering without guessing the user's speech rate.
+	 * the browser/AT bridge one explicit timer turn before applying the paired state. A
+	 * changing hand gets its longer, list-only lead from handUpdatePacing instead.
 	 *
 	 * A timer (not requestAnimationFrame) is deliberate: background tabs must still advance.
 	 */
@@ -405,32 +404,14 @@ class AnnouncerQueue {
 	/**
 	 * Commit the current server-action batch to its live region, then resolve only after
 	 * assistive technology has had a separate event-loop turn to observe it. The turn
-	 * sequencer awaits this before applying the accompanying authoritative state, so hand
-	 * reconciliation and its focus rescue cannot overtake the action's narration.
+	 * sequencer then applies authoritative state; a changing HandPanel separately consumes
+	 * the longer narration lead armed below.
 	 *
 	 * Returns undefined when this action delivered no audible line (for example, every
 	 * resolve-phase event is still held by the movement gate), avoiding needless state lag.
 	 */
 	commitBeforeState(options: CommitBeforeStateOptions = {}): Promise<void> | undefined {
 		if (this.batch.length === 0) return undefined;
-
-		// A focused hand row is about to be added/removed. Deliver the complete utterance as
-		// focused content on the hand's stable status target instead of racing a live-region
-		// event against the replacement row's focus event. The status survives reconciliation;
-		// the player re-enters the changed list with their next navigation key.
-		if (options.focusChangingHand) {
-			const utterance = this.batch.map(text => this.withPeriod(text)).join(' ');
-			if (focusHandAnnouncement(utterance)) {
-				if (this.flushTimer !== null) {
-					window.clearTimeout(this.flushTimer);
-					this.flushTimer = null;
-				}
-				this.batch = [];
-				this.batchAssertive = false;
-				console.debug(`[SR] +${Math.round(performance.now())}ms HAND-FOCUS <- "${utterance}"`);
-				return new Promise<void>(resolve => window.setTimeout(resolve, 0));
-			}
-		}
 
 		let written: Promise<void>;
 		if (this.batchAssertive) {
@@ -445,9 +426,15 @@ class AnnouncerQueue {
 			this.flush();
 		}
 
-		return written.then(() => new Promise<void>(resolve => {
-			window.setTimeout(resolve, this.assistiveTechnologyCommitMs);
-		}));
+		return written.then(() => {
+			// State may apply immediately, but the shared HandPanel consumes this deadline and
+			// delays only its keyed DOM reconciliation. The live sentence therefore starts
+			// before JAWS/NVDA receive the changed list position, without moving focus away.
+			if (options.paceChangingHand) armHandUpdateAfterAnnouncement();
+			return new Promise<void>(resolve => {
+				window.setTimeout(resolve, this.assistiveTechnologyCommitMs);
+			});
+		});
 	}
 
 	/** (Re)arm the coalesce timer so a settling burst flushes as one utterance. */

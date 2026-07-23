@@ -34,30 +34,42 @@ public static class AssemblyTurnFlow
 		var target = command.TargetPlayerId is { } tid
 			? context.GameState.Players.FirstOrDefault(p => p.Id == tid)
 			: null;
+		var visualTargetId = target?.Id ?? (card.Type is "piece" or "remedy" ? player.Id : null);
+		var visualKind = card.Type switch
+		{
+			"piece" or "attack" or "remedy" => "card-play-rack",
+			"special" when card.SpecialKind == "scrapHands" => "cards-discard",
+			"special" when card.SpecialKind == "stealPiece" => "rack-transfer",
+			"special" when card.SpecialKind is "swapPiece" or "fullSwap" => "rack-swap",
+			"special" when card.SpecialKind == "plague" => "rack-spread",
+			_ => "card-play-discard",
+		};
+		var playVars = VisualNarrativeVars.Add(new Dictionary<string, object>
+		{
+			["player"] = player.Name,
+			["actorId"] = player.Id,
+			["target"] = target?.Name ?? string.Empty,
+			["color"] = card.Color ?? string.Empty,
+		}, visualKind, player.Id, visualTargetId, card.Id,
+			card.SpecialKind ?? card.Type, card.SpecialKind == "scrapHands" ? 1 : null);
 
 		if (!string.IsNullOrEmpty(card.PlayedKey))
 		{
 			// The package themes this card's play in ONE line. Attacks (and targeted
 			// specials) have three audiences, one line each — attacker, victim, table —
 			// with the client's _victim → base fallback chain.
-			var vars = new Dictionary<string, object>
-			{
-				["player"] = player.Name,
-				["actorId"] = player.Id,
-				["target"] = target?.Name ?? string.Empty,
-			};
 			if (target != null)
 			{
-				await context.Announcer.ToPlayer(player.Id, card.PlayedKey + "_self", vars);
-				await context.Announcer.ToPlayer(target.Id, card.PlayedKey + "_victim", vars);
+				await context.Announcer.ToPlayer(player.Id, card.PlayedKey + "_self", playVars);
+				await context.Announcer.ToPlayer(target.Id, card.PlayedKey + "_victim", playVars);
 				foreach (var other in context.GameState.Players.Where(p => p.Id != player.Id && p.Id != target.Id))
 				{
-					await context.Announcer.ToPlayer(other.Id, card.PlayedKey, vars);
+					await context.Announcer.ToPlayer(other.Id, card.PlayedKey, playVars);
 				}
 			}
 			else
 			{
-				await context.Announce(card.PlayedKey, vars);
+				await context.Announce(card.PlayedKey, playVars);
 			}
 		}
 		else
@@ -69,15 +81,9 @@ public static class AssemblyTurnFlow
 				"remedy" => "game.assembly_played_remedy",
 				_ => "game.assembly_played_special",
 			};
-			await context.Announce(key, new()
-			{
-				["player"] = player.Name,
-				["target"] = target?.Name ?? string.Empty,
-				["actorId"] = player.Id,
-				// The piece's colour rides along for the client's PER-PIECE earcon
-				// (assembly.piece.<color>): a pack ships one sound per piece.
-				["color"] = card.Color ?? string.Empty,
-			});
+			// The piece's colour in playVars also drives the client's per-piece earcon
+			// (assembly.piece.<color>): a pack ships one sound per piece.
+			await context.Announce(key, playVars);
 			await context.Announce(card.NameKey, new() { ["actorId"] = player.Id });
 		}
 
@@ -91,6 +97,7 @@ public static class AssemblyTurnFlow
 				["piece"] = pieceKey,
 				["target"] = target.Name,
 			};
+			VisualNarrativeVars.Add(vars, "outcome", player.Id, target.Id);
 			await context.Announcer.ToPlayer(target.Id, $"game.assembly_hit_{outcome}_victim", vars);
 			await context.Announcer.ToAllExcept(target.Id, $"game.assembly_hit_{outcome}", vars);
 		}
@@ -100,12 +107,12 @@ public static class AssemblyTurnFlow
 		// remedy", for the actor AND for the table). actorId gives the first person.
 		if (result.RemedyOutcome is { } remedyOutcome && result.RemediedPieceKey is { } remedied)
 		{
-			await context.Announce($"game.assembly_remedy_{remedyOutcome}", new()
+			await context.Announce($"game.assembly_remedy_{remedyOutcome}", VisualNarrativeVars.Add(new()
 			{
 				["player"] = player.Name,
 				["actorId"] = player.Id,
 				["piece"] = remedied,
-			});
+			}, "outcome", player.Id, player.Id));
 		}
 
 		// What a steal/swap actually MOVED (live-play: the picker auto-resolves a step with
@@ -124,6 +131,7 @@ public static class AssemblyTurnFlow
 			{
 				vars["given"] = g;
 			}
+			VisualNarrativeVars.Add(vars, "outcome", player.Id, target.Id);
 
 			await context.Announcer.ToPlayer(player.Id, stem + "_self", vars);
 			await context.Announcer.ToPlayer(target.Id, stem + "_victim", vars);
@@ -198,7 +206,8 @@ public static class AssemblyTurnFlow
 		if (drawn.Count > 0)
 		{
 			await context.Announcer.ToAllExcept(player.Id, "game.assembly_refilled",
-				new() { ["player"] = player.Name, ["count"] = drawn.Count });
+				VisualNarrativeVars.Add(new() { ["player"] = player.Name, ["count"] = drawn.Count },
+					"card-draw", targetPlayerId: player.Id, count: drawn.Count));
 			// ONE utterance with the names nested in ($t-resolved per language): a single
 			// line survives a screen reader busy with the focus change, where a trailing
 			// name-only line got swallowed (live-play bug: "it never says I drew").
@@ -214,13 +223,17 @@ public static class AssemblyTurnFlow
 				{
 					vars[$"card{n + 1}"] = keys[n]!;
 				}
+				VisualNarrativeVars.Add(vars, "card-draw", targetPlayerId: player.Id, count: drawn.Count);
+				VisualNarrativeVars.AddPrivateCardIds(vars, drawn.Select(card => card.CardId));
 
 				await context.Announcer.ToPlayer(player.Id, $"game.assembly_refilled_self{suffix}", vars);
 			}
 			else
 			{
-				await context.Announcer.ToPlayer(player.Id, "game.assembly_refilled_self_many",
-					new() { ["count"] = drawn.Count });
+				var vars = VisualNarrativeVars.Add(new() { ["count"] = drawn.Count },
+					"card-draw", targetPlayerId: player.Id, count: drawn.Count);
+				VisualNarrativeVars.AddPrivateCardIds(vars, drawn.Select(card => card.CardId));
+				await context.Announcer.ToPlayer(player.Id, "game.assembly_refilled_self_many", vars);
 				foreach (var key in keys.Where(k => k != null))
 				{
 					await context.Announcer.ToPlayer(player.Id, key!);

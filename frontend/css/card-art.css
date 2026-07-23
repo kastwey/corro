@@ -113,8 +113,9 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Compact public piles live on the visual table, never as fake cards appended to a player's
- * hand. The card back carries the count; the explicit caption distinguishes draw/discard. */
+/* Public piles live on the visual table, never as fake cards appended to a player's hand.
+ * Keep them close to a hand card's scale: the former 64×88 thumbnails looked like controls
+ * or counters rather than the deck and discard that drive the game. */
 .card-table-piles {
   display: flex;
   align-items: flex-end;
@@ -131,9 +132,9 @@
 }
 
 .card-table-piles .gcard {
-  width: 64px;
-  height: 88px;
-  border-radius: 8px;
+  width: 92px;
+  height: 128px;
+  border-radius: 10px;
 }
 
 .card-table-pile__label {
@@ -159,11 +160,11 @@
   font-weight: 800;
 }
 
-/* Unplayable remains readable: saturation + a dashed frame, never lowered text opacity. */
+/* Unplayable remains readable: saturation + an inset frame and explicit visible badge,
+ * never lowered text opacity or an ambiguous dotted/dashed border. */
 .hand-card--visual.hand-card--unplayable .gcard {
-  border-style: dashed;
   filter: saturate(0.55);
-  box-shadow: inset 0 0 0 1px #69747a, 0 2px 5px rgba(0, 0, 0, 0.22);
+  box-shadow: inset 0 0 0 2px #69747a, 0 2px 5px rgba(0, 0, 0, 0.22);
 }
 
 /* Public-table thumbnails reuse exactly the package/fallback geometry at a smaller size. */

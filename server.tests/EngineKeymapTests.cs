@@ -2,7 +2,7 @@ using System.Text.Json;
 using CorroServer.Controllers;
 using CorroServer.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace CorroServer.Tests;
@@ -66,7 +66,7 @@ public class EngineKeymapTests
 	[Fact]
 	public void ConfigController_serves_the_keymap_json()
 	{
-		var result = new ConfigController(NullLogger<ConfigController>.Instance).GetKeymap();
+		var result = new ConfigController(Options.Create(new SiteBrandingOptions())).GetKeymap();
 
 		Assert.Equal("application/json", result.ContentType);
 		Assert.Equal(EngineKeymap.Json, result.Content);

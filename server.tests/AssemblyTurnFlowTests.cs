@@ -102,6 +102,9 @@ public class AssemblyTurnFlowTests
 		Assert.All(state.Assembly!.Seats, seat => Assert.Equal(Rules.HandSize, seat.Hand.Count));
 
 		var announcements = TestFixtures.Announcer(context).Sent;
+		var scrap = announcements.Single(a => a.Key == "cards.scrap_played_self");
+		Assert.Equal("cards-discard", scrap.Vars["visualKind"]);
+		Assert.Equal("scrap", scrap.Vars["visualCardId"]);
 		var forcedPasses = announcements
 			.Where(a => a.Key == "game.assembly_passed")
 			.Select(a => Assert.IsType<string>(a.Vars["actorId"]))
@@ -111,6 +114,12 @@ public class AssemblyTurnFlowTests
 			AnnouncementAudience.Player, "b", "game.assembly_refilled_self_3"));
 		Assert.True(TestFixtures.Announcer(context).Has(
 			AnnouncementAudience.Player, "c", "game.assembly_refilled_self_3"));
+		var refill = announcements.Single(a =>
+			a.Audience == AnnouncementAudience.Player && a.PlayerId == "b"
+			&& a.Key == "game.assembly_refilled_self_3");
+		Assert.Equal("card-draw", refill.Vars["visualKind"]);
+		Assert.Equal("b", refill.Vars["visualTargetPlayerId"]);
+		Assert.Equal("piece", refill.Vars["visualCard1Id"]);
 
 		var passB = announcements.FindIndex(a =>
 			a.Key == "game.assembly_passed" && Equals(a.Vars["actorId"], "b"));

@@ -119,6 +119,10 @@ export class ExplodingBoard {
 		this.maybeOpenDefusePicker(gs);
 		this.renderTable(gs);
 		this.hand.update();
+		this.element.querySelector<HTMLElement>('.hand-panel')?.classList.toggle(
+			'hand-panel--favor-choice',
+			gs.exploding?.pendingFavor?.targetId === this.deps.getMyPlayerId(),
+		);
 		if (firstBuild && document.activeElement === this.element) this.hand.focus();
 	}
 
@@ -179,6 +183,7 @@ export class ExplodingBoard {
 
 		this.hand.init(handMount, {
 			getCards: () => this.myHandCards(),
+			maxVisualColumns: 4,
 			sorting: EXPLODING_HAND_SORTING,
 			canDraw: () => this.canDrawNow(),
 			onDraw: () => this.deps.commands.draw(),
@@ -276,6 +281,7 @@ export class ExplodingBoard {
 			const label = def ? this.deps.tSync(def.nameKey) : instance.cardId;
 			return {
 				id: instance.instanceId,
+				cardId: instance.cardId,
 				label,
 				typeKey: def?.type ?? 'unknown',
 				value: 0,
@@ -404,16 +410,10 @@ export class ExplodingBoard {
 
 		const drawCount = gs.exploding?.drawCount ?? 0;
 		const middle = Math.floor(drawCount / 2);
-		const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 		popupMenu.open({
 			ariaLabel: this.deps.tSync('game.exploding_pick_depth'),
 			openAnnouncement: this.deps.tSync('game.exploding_pick_depth'),
-			// The preceding bomb/defuse announcement may own the hand's visually-hidden
-			// narration focus. It is not a semantic popup trigger and has no usable screen
-			// position, so anchor to the visible draw button in that case.
-			anchor: active?.classList.contains('hand-panel__action-status')
-				? this.element.querySelector<HTMLElement>('.hand-panel__draw')
-				: active,
+			anchor: document.activeElement instanceof HTMLElement ? document.activeElement : null,
 			items: [
 				{ label: this.deps.tSync('game.exploding_depth_top'), onSelect: () => this.deps.commands.defuse(0) },
 				{ label: this.deps.tSync('game.exploding_depth_middle'), onSelect: () => this.deps.commands.defuse(middle) },
@@ -476,7 +476,7 @@ export class ExplodingBoard {
 			const turn = gs.currentTurn === seat.playerId ? ' exploding-seat--turn' : '';
 			const dead = seat.retired ? ' exploding-seat--exploded' : '';
 			const cards = seat.retired ? '💥' : `🂠 ${seat.handCount}`;
-			return `<div class="exploding-seat${turn}${dead}" style="--seat-color:${color};--seat-ink:${ink}">`
+			return `<div class="exploding-seat${turn}${dead}" data-player-id="${escapeHtml(seat.playerId)}" style="--seat-color:${color};--seat-ink:${ink}">`
 				+ `<span class="exploding-seat__name">${name}</span>`
 				+ `<span class="exploding-seat__cards">${cards}</span>`
 				+ `</div>`;

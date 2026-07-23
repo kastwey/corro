@@ -1,14 +1,10 @@
 {
   "footer": {
     "poweredBy": "Funciona con",
-    "repository": "Repositorio en GitHub",
-    "repositoryNewWindowLabel": "Repositorio en GitHub, se abre en una ventana nueva",
+    "corroNewWindowLabel": "Corro en GitHub, se abre en una ventana nueva",
     "licenseNewWindowLabel": "Licencia AGPL-3.0, se abre en una ventana nueva"
   },
   "_comment": "Archivo de traducciones al español. El inglés se usa nativamente desde el HTML.",
-  "page": {
-    "title": "Corro - Crear/Unirse a Partida"
-  },
   "language": {
     "selectLabel": "Seleccionar idioma",
     "applyButton": "Aplicar",
@@ -16,8 +12,6 @@
     "spanish": "Español"
   },
   "lobby": {
-    "title": "Corro",
-    "intro": "Bienvenido al lobby de Corro. Crea una nueva partida o únete a una existente.",
     "backToHome": "Volver al inicio",
     "home": {
       "createButton": "Crear partida",
@@ -838,6 +832,7 @@
     "exploding_resolve_favor_first": "Primero hay que resolver el favor pendiente",
     "exploding_no_favor_pending": "No te han pedido ningún favor",
     "exploding_favor_asked": "{{player}} pide un favor a {{target}}",
+    "exploding_favor_asked_self": "Pides un favor a {{target}}",
     "exploding_favor_asked_victim": "{{player}} te pide un favor: dale una carta",
     "exploding_favor_got_self": "{{player}} te da $t({{card}})",
     "exploding_favor_gave_self": "Le das $t({{card}}) a {{player}}",
@@ -1404,7 +1399,9 @@
     "debt_waiting_message": "{{player}} está resolviendo sus deudas",
     "turn_with_debt": "Turno de {{currentPlayer}}. Esperando a que {{debtPlayer}} resuelva sus deudas.",
     "current_turn_label": "Turno actual",
+    "turn_badge": "Turno",
     "your_turn": "¡Tu turno!",
+    "visual_route": "De {{source}} a {{target}}.",
     "game_rule_passed_through_go": "{{player}} pasó por {{start}} y cobra {{amount}} {{currencyName}}",
     "game_rule_landed_on_go": "{{player}} cayó exactamente en {{start}} y cobra {{amount}} {{currencyName}}",
     "game_rule_tax_paid": "{{player}} pagó {{amount}} {{currencyName}} de impuestos",

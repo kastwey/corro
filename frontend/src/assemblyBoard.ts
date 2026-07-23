@@ -188,6 +188,7 @@ export class AssemblyBoard {
 			const ci = def?.color && def.color !== 'wild' ? colourRank.indexOf(def.color) : -1;
 			return {
 				id: instance.instanceId,
+				cardId: instance.cardId,
 				label,
 				typeKey: def?.type ?? 'unknown',
 				value: 0,
@@ -388,7 +389,7 @@ export class AssemblyBoard {
 			const done = seat.slots.filter(isFunctional).length;
 			const cards = seat.retired ? '' : `<span class="assembly-rack__cards">🂠 ${seat.handCount}</span>`;
 			const progress = seat.retired ? '' : `<span class="assembly-rack__progress">${done}/${goal}</span>`;
-			return `<div class="assembly-rack${seat.retired ? ' assembly-rack--retired' : ''}" style="--seat-color:${color}">`
+			return `<div class="assembly-rack${seat.retired ? ' assembly-rack--retired' : ''}" data-player-id="${escapeHtml(seat.playerId)}" style="--seat-color:${color}">`
 				+ `<span class="assembly-rack__name">${name}</span>`
 				+ `<span class="assembly-rack__slots">${slots || `<span class="assembly-rack__empty">—</span>`}</span>`
 				+ progress

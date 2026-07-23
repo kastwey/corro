@@ -189,14 +189,14 @@ export class PlayerPanel {
 			refs.youRef = you;
 			return you;
 		}, () => { refs.youRef = null; });
-		// A visible die on the row that holds the TURN (live-play request: the subtle glow
-		// wasn't enough to tell who plays). Decorative: the row label already says it and
-		// aria-current marks the row for assistive tech.
+		// A neutral visible badge on the row that holds the TURN. A die was misleading in
+		// card families, which have no roll at all. Decorative: the row label already says it
+		// and aria-current marks the row for assistive tech.
 		toggleChild(refs.name, refs.turnRef, isCurrent, () => {
 			const turn = document.createElement('span');
 			turn.className = 'player-card__turn';
 			turn.setAttribute('aria-hidden', 'true');
-			turn.textContent = '🎲';
+			turn.textContent = t('turn_badge');
 			refs.turnRef = turn;
 			return turn;
 		}, () => { refs.turnRef = null; });

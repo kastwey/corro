@@ -171,10 +171,12 @@ test('journey: the hand is home — private draw, playing an immunity, statuses 
 	await expectAnnouncement(berto, /Ana roba una carta/);
 	await expectAnnouncement(ana, /Robas:/);
 	await expectAnnouncement(ana, /Rueda de recambio/);
+	await expect(ana.locator('.visual-narrative--journey')).toContainText(/Robas:.*Rueda de recambio/i);
+	await expect(ana.locator('.visual-narrative--journey .jcard')).toBeVisible();
+	await expect(berto.locator('.visual-narrative--journey')).toContainText(/Ana roba una carta/i);
 	await expect(anaCards).toHaveCount(7);
 	const drawOrder = await finishDrawOrder();
-	expect(drawOrder.usedStableHandFocus).toBe(true);
-	await expect(ana.locator('.hand-panel__action-status')).toBeFocused();
+	expect(drawOrder.handUpdateAt - drawOrder.announcementAt).toBeGreaterThanOrEqual(300);
 	// …and the separate visual deck plus its D readout followed the draw.
 	await expect(ana.locator('.journey-centre__stack .jcard__back-label')).toHaveText('93');
 	await ana.keyboard.press('d');
@@ -184,6 +186,7 @@ test('journey: the hand is home — private draw, playing an immunity, statuses 
 	await ana.keyboard.press('Enter');
 	await expectAnnouncement(berto, /¡Ana se corona como As del volante!/);
 	await expectAnnouncement(ana, /¡Te coronas como As del volante!/);
+	await expect(ana.locator('.visual-narrative--journey')).toContainText(/Te coronas como As del volante/i);
 	await expectAnnouncement(ana, /Turno de Berto/);
 	await expect(anaCards).toHaveCount(6);
 
@@ -198,6 +201,7 @@ test('journey: the hand is home — private draw, playing an immunity, statuses 
 	await berto.locator('#board').focus();
 	await berto.keyboard.press(' ');
 	await expectAnnouncement(berto, /Robas:/);
+	await expect(berto.locator('.hand-card:not(.hand-card--info)')).toHaveCount(7);
 	await berto.keyboard.press('ArrowDown'); // Rueda maciza → Prioridad de paso
 	await berto.keyboard.press('Enter');
 	await expectAnnouncement(ana, /¡Berto juega la Prioridad de paso!/);

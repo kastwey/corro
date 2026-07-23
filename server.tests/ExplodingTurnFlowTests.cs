@@ -178,7 +178,11 @@ public class ExplodingTurnFlowTests
 
 		Assert.Equal("b", state.CurrentTurn);
 		Assert.Equal(2, state.Exploding!.DrawsOwed); // the classic "take two turns"
-		Assert.Contains("game.exploding_attacked", Keys(context));
+		var attacked = TestFixtures.Announcer(context).Sent.Single(d => d.Key == "game.exploding_attacked");
+		Assert.Equal("attack", attacked.Vars["visualKind"]);
+		Assert.Equal("a", attacked.Vars["visualSourcePlayerId"]);
+		Assert.Equal("b", attacked.Vars["visualTargetPlayerId"]);
+		Assert.Equal(2, attacked.Vars["visualCount"]);
 	}
 
 	[Fact]
@@ -192,7 +196,13 @@ public class ExplodingTurnFlowTests
 		await Resolve(context);
 
 		var announcer = TestFixtures.Announcer(context);
-		Assert.True(announcer.Has(AnnouncementAudience.Player, "a", "game.exploding_future_3"));
+		var future = announcer.Sent.Single(d =>
+			d.Audience == AnnouncementAudience.Player && d.PlayerId == "a"
+			&& d.Key == "game.exploding_future_3");
+		Assert.Equal("cards-peek", future.Vars["visualKind"]);
+		Assert.Equal("skip", future.Vars["visualCard1Id"]);
+		Assert.Equal("taco", future.Vars["visualCard2Id"]);
+		Assert.Equal("bomb", future.Vars["visualCard3Id"]);
 		Assert.Contains("game.exploding_saw_future", Keys(context));
 		Assert.Equal("a", state.CurrentTurn); // peeking does not end the turn
 	}
@@ -217,6 +227,9 @@ public class ExplodingTurnFlowTests
 		// Marks this as the drawer's own batch: the client writes the announcement before
 		// applying the state that adds the new row to the hand.
 		Assert.Equal("a", mine.Vars["actorId"]);
+		Assert.Equal("card-draw", mine.Vars["visualKind"]);
+		Assert.Equal("a", mine.Vars["visualTargetPlayerId"]);
+		Assert.Equal("taco", mine.Vars["visualCardId"]);
 	}
 
 	[Fact]
@@ -239,7 +252,11 @@ public class ExplodingTurnFlowTests
 		Assert.Null(state.Exploding!.PendingBomb);
 		Assert.Equal("bomb", state.Exploding!.DrawPile[^1].CardId); // depth 0 = back on top
 		Assert.Equal("b", state.CurrentTurn);
-		Assert.True(TestFixtures.Announcer(context).Has(AnnouncementAudience.Player, "a", "game.exploding_tucked_self"));
+		var tuckedLine = TestFixtures.Announcer(context).Sent.Single(d =>
+			d.Audience == AnnouncementAudience.Player && d.PlayerId == "a"
+			&& d.Key == "game.exploding_tucked_self");
+		Assert.Equal("card-tuck", tuckedLine.Vars["visualKind"]);
+		Assert.Equal("bomb", tuckedLine.Vars["visualCardId"]);
 	}
 
 	[Fact]
@@ -277,6 +294,8 @@ public class ExplodingTurnFlowTests
 		Assert.Equal("b", state.Exploding!.PendingFavor!.TargetId);
 		Assert.True(TestFixtures.Announcer(context).Has(
 			AnnouncementAudience.Player, "b", "game.exploding_favor_asked_victim"));
+		Assert.True(TestFixtures.Announcer(context).Has(
+			AnnouncementAudience.Player, "a", "game.exploding_favor_asked_self"));
 
 		// The requester can't act while the favor is pending: b must give first.
 		Assert.Equal("EXPLODING_ILLEGAL",
@@ -292,6 +311,11 @@ public class ExplodingTurnFlowTests
 		Assert.True(announcer.Has(
 			AnnouncementAudience.Player, "a", "game.exploding_favor_got_self"));
 		Assert.Equal("b", announcer.Sent.Single(d => d.Key == "game.exploding_favor_gave_self").Vars["actorId"]);
+		var got = announcer.Sent.Single(d => d.Key == "game.exploding_favor_got_self");
+		Assert.Equal("card-transfer", got.Vars["visualKind"]);
+		Assert.Equal("b", got.Vars["visualSourcePlayerId"]);
+		Assert.Equal("a", got.Vars["visualTargetPlayerId"]);
+		Assert.Equal("skip", got.Vars["visualCardId"]);
 	}
 
 	[Fact]

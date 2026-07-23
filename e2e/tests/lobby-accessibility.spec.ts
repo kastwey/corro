@@ -77,6 +77,9 @@ test('switching shipped games keeps the loading feedback visual-only', async ({ 
 
 	const firstToken = packageManifest(TRACK_BOARD).tokens[0].id as string;
 	await expect(page.locator(`#create-form input.token-radio[value="${firstToken}"]`)).toBeAttached();
+	const tokenPreview = page.locator(`#create-form input.token-radio[value="${firstToken}"]`)
+		.locator('..').locator('.token-icon');
+	expect(await tokenPreview.evaluate(icon => parseFloat(getComputedStyle(icon).width))).toBeGreaterThanOrEqual(44);
 	await expect(visualStatus).toBeEmpty();
 	const heard = await page.evaluate(() => (window as any).__announcements as string[]);
 	expect(heard).not.toContain(loading);
@@ -86,19 +89,22 @@ test('home, dark theme, runtime language and create/join validation states are A
 	const host = await newPlayerPage(browser);
 	await gotoLobbyHome(host);
 	const brand = host.locator('.brand-heading');
-	await expect(brand).toHaveAccessibleName('Corro');
+	await expect(brand).toHaveAccessibleName('All Welcome');
+	await expect(host.locator('[data-site-tagline]')).toHaveText('Play together, play your way.');
+	await expect(host).toHaveTitle('All Welcome');
 	await expect(brand.locator('.brand-logo__image--light')).toBeVisible();
 	await expect(brand.locator('.brand-logo__image--dark')).toBeHidden();
 	const preferences = host.locator('.language-selector');
-	const repository = host.locator('.app-footer a[data-footer-link="repository"]');
+	const corro = host.locator('.app-footer a[data-footer-link="corro"]');
 	const license = host.locator('.app-footer a[data-footer-link="license"]');
-	await expect(repository).toHaveAttribute('href', 'https://github.com/kastwey/corro');
-	await expect(repository).toHaveText(appI18n('es').footer.repository as string);
-	await expect(repository).toHaveAttribute('target', '_blank');
-	await expect(repository).toHaveAttribute('aria-label', appI18n('es').footer.repositoryNewWindowLabel as string);
+	await expect(corro).toHaveAttribute('href', 'https://github.com/kastwey/corro');
+	await expect(corro).toContainText('Corro');
+	await expect(corro).toHaveAttribute('target', '_blank');
+	await expect(corro).toHaveAttribute('aria-label', appI18n('es').footer.corroNewWindowLabel as string);
+	await expect(host.locator('.app-footer a[data-footer-link="repository"]')).toHaveCount(0);
 	await expect(license).toHaveAttribute('target', '_blank');
 	await expect(license).toHaveAttribute('aria-label', appI18n('es').footer.licenseNewWindowLabel as string);
-	for (const link of [repository, license]) {
+	for (const link of [corro, license]) {
 		await expect(link.locator('.app-footer__external-icon')).toHaveAttribute('aria-hidden', 'true');
 	}
 	const brandBox = (await brand.boundingBox())!;
@@ -116,8 +122,7 @@ test('home, dark theme, runtime language and create/join validation states are A
 	await host.locator('#language-selector').selectOption('en');
 	await host.locator('#language-apply-btn').click();
 	await expect(host.locator('#home-heading')).toHaveText('Your games');
-	await expect(repository).toHaveText(appI18n('en').footer.repository as string);
-	await expect(repository).toHaveAttribute('aria-label', appI18n('en').footer.repositoryNewWindowLabel as string);
+	await expect(corro).toHaveAttribute('aria-label', appI18n('en').footer.corroNewWindowLabel as string);
 	await expect(license).toHaveAttribute('aria-label', appI18n('en').footer.licenseNewWindowLabel as string);
 
 	await host.locator('#go-create-btn').click();
@@ -189,9 +194,7 @@ test('compact lobby keeps brand, preferences, content and footer in one vertical
 		scroll: document.documentElement.scrollWidth,
 	}));
 	expect(horizontalExtent.scroll).toBeLessThanOrEqual(horizontalExtent.client);
-	await expect(page.locator('.app-footer a[data-footer-link="repository"]')).toHaveText(
-		appI18n('es').footer.repository as string,
-	);
+	await expect(page.locator('.app-footer a[data-footer-link="corro"]')).toContainText('Corro');
 });
 
 test('invalid and successful .corro upload states, including removal, are Axe-clean', async ({ browser }) => {

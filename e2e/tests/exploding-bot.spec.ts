@@ -77,7 +77,7 @@ test('a bot pays a Favor directed at it without wedging the game', async ({ brow
 	await favor.focus();
 	await ana.keyboard.press('Enter');
 	await expect(ana.locator('.popup-menu[role="menu"]')).toHaveCount(0);
-	await expectAnnouncement(ana, /Ana pide un favor a Bot Minero/i);
+	await expectAnnouncement(ana, /Pides un favor a Bot Minero/i);
 
 	// Paying the Favor is an off-turn bot obligation. Its chosen card reaches Ana and the
 	// pending interaction clears, so she can draw and finish the same turn normally.

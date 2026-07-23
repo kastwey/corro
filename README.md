@@ -283,6 +283,21 @@ The server picks its persistence automatically from whether connection strings a
 configured — no code changes. Everything below is cross-platform (Windows, macOS, Linux,
 including Apple Silicon). Pick the level you want.
 
+### Brand a self-hosted site
+
+The public site identity is deployment configuration, not an engine fork. Edit the
+`SiteBranding` section in `server/appsettings.json`, or override individual values with
+standard ASP.NET Core environment variables such as `SiteBranding__Title` and
+`SiteBranding__Tagline`. The included defaults are **All Welcome** and
+**Play together, play your way.**
+
+`LogoUrl` and `LogoDarkUrl` are optional. With neither set, the lobby renders the title as
+text; with one set, that image is used in both themes; with both set, the active theme chooses
+the appropriate image. `FaviconUrl` and `FaviconDarkUrl` follow the same rule. Asset values may
+be same-site paths or HTTPS URLs. The engine attribution is deliberately separate from host
+branding: every deployment retains **Powered by Corro**, with **Corro** linking directly to the
+source repository.
+
 ### Level 0 — Just run it (no Docker, no Azure)
 
 Games live **in memory** (lost on restart) and uploaded boards go to a temp folder. Only the

@@ -45,8 +45,8 @@
   background: var(--surface-2);
   transition: border-color 0.15s ease, box-shadow 0.2s ease, transform 0.1s ease;
 }
-/* The row holding the TURN: an unmistakable accent edge + glow (live-play bug: the old
- * glow alone was too subtle to tell who plays), plus the 🎲 glyph next to the name. */
+/* The row holding the TURN: an unmistakable accent edge + glow plus a neutral badge. A die
+ * was wrong for card families, whose turns never roll. */
 .player-card.is-current {
   border-color: var(--accent);
   border-left-width: 5px;
@@ -55,7 +55,15 @@
 }
 .player-card__turn {
   margin-left: 4px;
-  font-size: 0.95em;
+  padding: 0.12rem 0.42rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 0.62rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
 .player-card__token {

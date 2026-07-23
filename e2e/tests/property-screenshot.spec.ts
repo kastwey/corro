@@ -52,6 +52,11 @@ test('visual: property board gameplay, dialogs and both themes', async ({ browse
 	await expect(buyDialog).toBeVisible();
 	await captureScreenshot(ana, testInfo, 'property-05-buy-dialog.png');
 	await buyDialog.locator('.btn-primary').click();
+	const propertyNarrative = ana.locator('.board-center > .visual-narrative--property');
+	await expect(propertyNarrative).toBeVisible();
+	await expect(propertyNarrative).toHaveClass(/visual-narrative--neutral/);
+	await expect(propertyNarrative).not.toBeEmpty();
+	await expect(ana.locator('.board-toast')).toHaveCount(0);
 	await captureScreenshot(ana, testInfo, 'property-06-after-buy.png');
 
 	// ── The trade builder (owner side populated).
@@ -61,6 +66,8 @@ test('visual: property board gameplay, dialogs and both themes', async ({ browse
 	await captureScreenshot(ana, testInfo, 'property-07-trade-builder.png');
 	await ana.keyboard.press('Escape');
 	await actionButton(ana, 'endTurn').click();
+	await expect(berto.locator('#turn-indicator .turn-indicator__name')).toHaveText('Berto');
+	await expect(actionButton(berto, 'rollDice')).not.toHaveAttribute('aria-disabled', 'true');
 
 	// ── Berto lands on square 3 and declines → live auction on both screens.
 	await roll(berto, 1, 2);

@@ -100,7 +100,10 @@ public class RaceTurnFlowTests
 
 		Assert.Equal(RacePieceLocation.Home, Piece(state, "B", 0).Location);
 		// The +20 bonus was auto-played with the only movable piece: 5 + 20 → wraps to 5 on a 20-circuit.
-		Assert.Contains(TestFixtures.Announcer(ctx).Sent, d => d.Key == "game.race_captured");
+		var captured = TestFixtures.Announcer(ctx).Sent.Single(d => d.Key == "game.race_captured");
+		Assert.Equal("capture", captured.Vars["visualKind"]);
+		Assert.Equal("A", captured.Vars["visualSourcePlayerId"]);
+		Assert.Equal("B", captured.Vars["visualTargetPlayerId"]);
 		Assert.Equal(5, Piece(state, "A", 0).Square); // 5 + 20 = 25 → 25-20 = 5
 		Assert.Equal("B", state.CurrentTurn);
 	}

@@ -42,10 +42,16 @@ public static class DraftTurnFlow
 		// actorId marks this as the PICKER's own line so the client can voice it assertively,
 		// ahead of the screen reader's reading of the newly-focused card (the picked one just
 		// left the hand). Without it the pick reads AFTER the new focus — tedious in live play.
-		var cardVars = new Dictionary<string, object> { ["card"] = result.Card!.NameKey, ["actorId"] = player.Id };
+		var cardVars = VisualNarrativeVars.Add(new Dictionary<string, object>
+		{
+			["card"] = result.Card!.NameKey,
+			["actorId"] = player.Id,
+		}, "card-pick", player.Id, player.Id, result.Card.Id, result.Card.Type,
+			two ? 2 : 1, "neutral");
 		if (two)
 		{
 			cardVars["card2"] = result.SecondCard!.NameKey;
+			VisualNarrativeVars.AddPrivateCardIds(cardVars, new[] { result.Card.Id, result.SecondCard.Id });
 		}
 
 		if (result.Replaced)
@@ -58,7 +64,8 @@ public static class DraftTurnFlow
 			await context.Announcer.ToPlayer(player.Id,
 				two ? "game.draft_picked_two_self" : "game.draft_picked_self", cardVars);
 			await context.Announcer.ToAllExcept(player.Id, "game.draft_picked",
-				new() { ["player"] = player.Name });
+				VisualNarrativeVars.Add(new() { ["player"] = player.Name },
+					"state-change", player.Id, player.Id, count: two ? 2 : 1));
 		}
 
 		if (!result.AllCommitted)
@@ -87,21 +94,22 @@ public static class DraftTurnFlow
 		var round = draft.Round;
 
 		var reveal = DraftRulebook.Reveal(draft, runtime.Catalog);
-		await context.Announce("game.draft_all_picked", new());
+		await context.Announce("game.draft_all_picked", VisualNarrativeVars.Add(new(), "detail"));
 		foreach (var entry in reveal.Entries)
 		{
 			var name = context.GameState.Players.FirstOrDefault(p => p.Id == entry.Seat.PlayerId)?.Name
 				?? entry.Seat.PlayerId;
 			if (entry.Multiplier is { } boost)
 			{
-				await context.Announce("game.draft_revealed_boosted", new()
+				await context.Announce("game.draft_revealed_boosted", VisualNarrativeVars.Add(new()
 				{
 					["player"] = name,
 					["actorId"] = entry.Seat.PlayerId,
 					["card"] = entry.Card.NameKey,
 					["multiplier"] = boost.NameKey,
 					["factor"] = boost.Factor,
-				});
+				}, "card-reveal-table", entry.Seat.PlayerId, entry.Seat.PlayerId,
+					entry.Card.Id, entry.Card.Type, 2, "gain"));
 			}
 			else
 			{
@@ -109,30 +117,32 @@ public static class DraftTurnFlow
 				// reveal is a redundant echo — send it only to the OTHERS, for whom the pick
 				// was secret. (A BOOSTED reveal keeps its self line above: the multiplier and
 				// score are new information worth hearing.)
-				await context.Announcer.ToAllExcept(entry.Seat.PlayerId, "game.draft_revealed", new()
+				await context.Announcer.ToAllExcept(entry.Seat.PlayerId, "game.draft_revealed", VisualNarrativeVars.Add(new()
 				{
 					["player"] = name,
 					["actorId"] = entry.Seat.PlayerId,
 					["card"] = entry.Card.NameKey,
-				});
+				}, "card-reveal-table", entry.Seat.PlayerId, entry.Seat.PlayerId,
+					entry.Card.Id, entry.Card.Type));
 			}
 			// The second card of a double pick: say what paid for it and that it now
 			// travels with the passing hand (the next player inherits it).
 			if (entry.SpentExtra is { } extra)
 			{
-				await context.Announce("game.draft_extra_returned", new()
+				await context.Announce("game.draft_extra_returned", VisualNarrativeVars.Add(new()
 				{
 					["player"] = name,
 					["actorId"] = entry.Seat.PlayerId,
 					["extra"] = extra.NameKey,
-				});
+				}, "detail"));
 			}
 		}
 
 		if (!reveal.RoundEnded)
 		{
 			var handSize = draft.Seats.FirstOrDefault()?.Hand.Count ?? 0;
-			await context.Announce("game.draft_hands_passed", new() { ["count"] = handSize });
+			await context.Announce("game.draft_hands_passed", VisualNarrativeVars.Add(
+				new() { ["count"] = handSize }, "hands-pass", count: handSize));
 			return (false, false);
 		}
 
@@ -141,25 +151,25 @@ public static class DraftTurnFlow
 		{
 			var name = context.GameState.Players.FirstOrDefault(p => p.Id == score.Seat.PlayerId)?.Name
 				?? score.Seat.PlayerId;
-			await context.Announce("game.draft_round_scored", new()
+			await context.Announce("game.draft_round_scored", VisualNarrativeVars.Add(new()
 			{
 				["player"] = name,
 				["actorId"] = score.Seat.PlayerId,
 				["round"] = round,
 				["points"] = score.Points,
 				["total"] = score.Total,
-			});
+			}, "outcome", targetPlayerId: score.Seat.PlayerId, tone: "gain"));
 		}
 
 		if (draft.Round < runtime.Rules.Rounds)
 		{
 			draft.Round++;
 			DraftRulebook.DealRound(draft, runtime.Rules);
-			await context.Announce("game.draft_round_started", new()
+			await context.Announce("game.draft_round_started", VisualNarrativeVars.Add(new()
 			{
 				["round"] = draft.Round,
 				["count"] = DraftRulebook.HandSizeFor(runtime.Rules, draft.Seats.Count),
-			});
+			}, "deck-shuffle"));
 			return (true, false);
 		}
 
@@ -179,14 +189,16 @@ public static class DraftTurnFlow
 			var name = context.GameState.Players.FirstOrDefault(p => p.Id == dessert.Seat.PlayerId)?.Name
 				?? dessert.Seat.PlayerId;
 			await context.Announce(
-				dessert.Delta > 0 ? "game.draft_dessert_bonus" : "game.draft_dessert_penalty", new()
+				dessert.Delta > 0 ? "game.draft_dessert_bonus" : "game.draft_dessert_penalty",
+				VisualNarrativeVars.Add(new()
 				{
 					["player"] = name,
 					["actorId"] = dessert.Seat.PlayerId,
 					["count"] = dessert.Seat.Desserts.Count,
 					["points"] = Math.Abs(dessert.Delta),
 					["total"] = dessert.Total,
-				});
+				}, "outcome", targetPlayerId: dessert.Seat.PlayerId,
+					tone: dessert.Delta > 0 ? "gain" : "loss"));
 		}
 
 		var placings = DraftRulebook.Placings(draft);
@@ -199,12 +211,12 @@ public static class DraftTurnFlow
 		context.GameState.WinnerId = placings[0].PlayerId;
 		context.GameState.IsGameOver = true;
 
-		await context.Announce("game.draft_final_score", new()
+		await context.Announce("game.draft_final_score", VisualNarrativeVars.Add(new()
 		{
 			["player"] = winner?.Name ?? placings[0].PlayerId,
 			["actorId"] = placings[0].PlayerId,
 			["total"] = placings[0].Score,
-		});
+		}, "milestone", targetPlayerId: placings[0].PlayerId, tone: "gain"));
 		await context.Announce("game.game_over", new()
 		{
 			["winner"] = winner?.Name ?? placings[0].PlayerId,

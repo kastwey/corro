@@ -46,6 +46,11 @@ test('assembly: install, auto-targeted breakdown, refusal, face-down discard, re
 	await expect(ana.locator('.assembly-piles [data-pile="deck"] .gcard__back-label')).toHaveText('62');
 	await expect(ana.locator('.assembly-piles [data-pile="discard"] .gcard__back-label')).toHaveText('0');
 	await expect(ana.locator('#board .assembly-rack')).toHaveCount(2);
+	const pileSize = await ana.locator('.assembly-piles [data-pile="deck"] .gcard').evaluate(element => {
+		const style = getComputedStyle(element);
+		return { width: style.width, height: style.height };
+	});
+	expect(pileSize).toEqual({ width: '92px', height: '128px' });
 	// No draw button: the refill is automatic in this family.
 	await expect(ana.locator('.hand-panel__draw')).toHaveCount(0);
 	await expect(ana.locator('.dice-control')).toBeHidden();
@@ -66,16 +71,20 @@ test('assembly: install, auto-targeted breakdown, refusal, face-down discard, re
 	// ── Ana installs her Reactor (Enter, no targeting) and hears her refill privately. ──
 	await ana.locator('#board').focus();
 	await expect(anaCards.first()).toBeFocused();
+	const finishInstallOrder = await watchAnnouncementBeforeHandUpdate(ana, /Instalas un módulo/);
 	await ana.keyboard.press('Enter');
 	await expectAnnouncement(berto, /Ana instala un módulo/);
 	await expectAnnouncement(berto, /Reactor/);
 	await expectAnnouncement(ana, /Robas 1/);
 	await expectAnnouncement(ana, /Sobrecarga/); // the drawn identity: hers alone
-	// Exact JAWS regression: playing removes the focused card and auto-refill inserts
-	// another while the hand remains 3 items. The complete server sentence owns stable
-	// focus; no replacement row may jump in with "1 de 3" before that sentence.
-	await expect(ana.locator('.hand-panel__action-status')).toBeFocused();
-	await expect(ana.locator('.hand-card:focus')).toHaveCount(0);
+	// Exact JAWS regression: the complete ARIA sentence gets a substantial head start
+	// before playing removes the focused card and auto-refill inserts its replacement.
+	const installOrder = await finishInstallOrder();
+	expect(installOrder.handUpdateAt - installOrder.announcementAt).toBeGreaterThanOrEqual(300);
+	const installStory = ana.locator('.visual-narrative');
+	await expect(installStory).toBeVisible();
+	await expect(installStory).toContainText(/Instalas un módulo.*Robas 1.*Sobrecarga/i);
+	await expect(installStory).toHaveAttribute('aria-hidden', 'true');
 	await expect(ana.locator('#board .assembly-rack').first().locator('.assembly-module')).toHaveCount(1);
 	await expect(ana.locator('#board .assembly-rack').first().locator('[data-card-art="package"]')).toHaveCount(1);
 	await expect(ana.locator('#board .assembly-rack').first()).toContainText('1/4');
@@ -88,6 +97,7 @@ test('assembly: install, auto-targeted breakdown, refusal, face-down discard, re
 	await berto.keyboard.press('Enter');
 	// The victim hears the themed second-person line; her slot shows broken everywhere.
 	await expectAnnouncement(ana, /sobrecarga tu reactor/i);
+	await expect(ana.locator('.visual-narrative')).toContainText(/sobrecarga tu reactor/i);
 	await expect(berto.locator('.player-card[data-player-id]').first()).toContainText('averiado');
 	await expect(ana.locator('#board .assembly-rack').first()).toContainText('0/4');
 	// Visual echo: her reactor module reads as broken, and the three bays still to fill show as
@@ -106,8 +116,7 @@ test('assembly: install, auto-targeted breakdown, refusal, face-down discard, re
 	await discardOffer.locator('.btn-primary').click();
 	await expectAnnouncement(berto, /Ana descarta 1 carta/);
 	const discardOrder = await finishDiscardOrder();
-	expect(discardOrder.usedStableHandFocus).toBe(true);
-	await expect(ana.locator('.hand-panel__action-status')).toBeFocused();
+	expect(discardOrder.handUpdateAt - discardOrder.announcementAt).toBeGreaterThanOrEqual(300);
 	await expect(ana.locator('.assembly-piles [data-pile="discard"] .gcard__back-label')).toHaveText('1');
 	await ana.locator('.hand-card').first().focus();
 	await ana.keyboard.press('d');
@@ -172,12 +181,17 @@ test('assembly: a scrapped empty hand passes and refills automatically instead o
 			((window as any).__announcements as string[] ?? [])
 				.filter(line => /Es tu turno/i.test(line)).length);
 		await page.locator('#board').focus();
-		await page.locator('.hand-card:not(.hand-card--info)').first().focus();
+		const discarded = page.locator('.hand-card:not(.hand-card--info)').first();
+		const discardedId = await discarded.getAttribute('data-focus-id');
+		await discarded.focus();
 		await page.keyboard.press('Delete');
 		const confirmation = page.locator('.game-dialog.dialog-confirm');
 		await expect(confirmation).toBeVisible();
 		await flushAxeAudit(page);
 		await confirmation.locator('.btn-primary').click();
+		if (discardedId) {
+			await expect(page.locator(`.hand-card[data-focus-id="${discardedId}"]`)).toHaveCount(0);
+		}
 		await expect(nextPage.locator('#turn-indicator .turn-indicator__name')).toHaveText(nextPlayer);
 		await nextPage.waitForFunction((previous: number) =>
 			((window as any).__announcements as string[] ?? [])
@@ -202,5 +216,6 @@ test('assembly: a scrapped empty hand passes and refills automatically instead o
 	await expectAnnouncement(berto, /Pasas \(sin cartas\)/i);
 	await expectAnnouncement(berto, /Robas 3:/i);
 	await expect(berto.locator('.hand-card:not(.hand-card--info)')).toHaveCount(3);
+	await expect(berto.locator('.visual-narrative')).toContainText(/Robas 3:/i);
 	await expect(ana.locator('#turn-indicator .turn-indicator__name')).toHaveText('Ana');
 });

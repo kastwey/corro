@@ -38,39 +38,40 @@ public static class SheddingTurnFlow
 		// card keeps the classic line.
 		if (result.Copies > 1)
 		{
-			await context.Announce("game.shedding_played_doubles", new()
+			await context.Announce("game.shedding_played_doubles", VisualNarrativeVars.Add(new()
 			{
 				["player"] = player.Name,
 				["actorId"] = player.Id,
 				["card"] = card.NameKey,
 				["count"] = result.Copies,
-			});
+			}, "card-play-discard", player.Id, cardId: card.Id, cardType: card.Type,
+				count: result.Copies));
 		}
 		else
 		{
-			await context.Announce("game.shedding_played", new()
+			await context.Announce("game.shedding_played", VisualNarrativeVars.Add(new()
 			{
 				["player"] = player.Name,
 				["actorId"] = player.Id,
 				["card"] = card.NameKey,
-			});
+			}, "card-play-discard", player.Id, cardId: card.Id, cardType: card.Type));
 		}
 		if (card.Type is "wild" or "wildDrawFour")
 		{
-			await context.Announce("game.shedding_color_chosen", new()
+			await context.Announce("game.shedding_color_chosen", VisualNarrativeVars.Add(new()
 			{
 				["player"] = player.Name,
 				["actorId"] = player.Id,
 				["color"] = $"colors.{result.ColorInForce}",
-			});
+			}, "detail"));
 		}
 		if (result.Reversed)
 		{
-			await context.Announce("game.shedding_reversed", new()
+			await context.Announce("game.shedding_reversed", VisualNarrativeVars.Add(new()
 			{
 				["player"] = player.Name,
 				["actorId"] = player.Id,
-			});
+			}, "detail"));
 		}
 
 		// Deliberately NO one-card-left shout (design decision with Juanjo): hand counts
@@ -114,12 +115,13 @@ public static class SheddingTurnFlow
 				Amount = result.PenaltyDraws,
 				LastType = card.Type,
 			};
-			await context.Announce("game.shedding_stack", new()
+			var stackTarget = SheddingRulebook.NextVictim(shedding, player.Id);
+			await context.Announce("game.shedding_stack", VisualNarrativeVars.Add(new()
 			{
 				["player"] = player.Name,
 				["actorId"] = player.Id,
 				["total"] = result.PenaltyDraws,
-			});
+			}, "state-change", player.Id, stackTarget, count: result.PenaltyDraws, tone: "loss"));
 			await AdvanceTurnAsync(context, shedding, player.Id, skipOne: false);
 			return new SheddingActionResponse { Action = "play", TurnEnded = true };
 		}
@@ -134,21 +136,21 @@ public static class SheddingTurnFlow
 			{
 				var drawn = SheddingRulebook.DrawInto(
 					shedding, SheddingRulebook.SeatOf(shedding, victimId), result.PenaltyDraws, random);
-				await context.Announce("game.shedding_drew_penalty", new()
+				await context.Announce("game.shedding_drew_penalty", VisualNarrativeVars.Add(new()
 				{
 					["player"] = victim.Name,
 					["actorId"] = victimId,
 					["count"] = drawn.Count,
-				});
+				}, "card-draw", targetPlayerId: victimId, count: drawn.Count, tone: "loss"));
 				await WhisperDrawnAsync(context, victimId, drawn, runtime);
 			}
 			if (result.SkipsNext && victim != null)
 			{
-				await context.Announce("game.shedding_skipped", new()
+				await context.Announce("game.shedding_skipped", VisualNarrativeVars.Add(new()
 				{
 					["player"] = victim.Name,
 					["actorId"] = victimId,
-				});
+				}, "detail", targetPlayerId: victimId, tone: "loss"));
 			}
 		}
 
@@ -179,12 +181,12 @@ public static class SheddingTurnFlow
 		{
 			var taken = SheddingRulebook.DrawInto(shedding, seat, pending.Amount, random);
 			shedding.PendingPenalty = null;
-			await context.Announce("game.shedding_drew_penalty", new()
+			await context.Announce("game.shedding_drew_penalty", VisualNarrativeVars.Add(new()
 			{
 				["player"] = player.Name,
 				["actorId"] = player.Id,
 				["count"] = taken.Count,
-			});
+			}, "card-draw", targetPlayerId: player.Id, count: taken.Count, tone: "loss"));
 			await WhisperDrawnAsync(context, player.Id, taken, runtime);
 			await AdvanceTurnAsync(context, shedding, player.Id, skipOne: false);
 			return new SheddingActionResponse { Action = "draw", TurnEnded = true };
@@ -193,17 +195,18 @@ public static class SheddingTurnFlow
 		if (drawn.Count == 0)
 		{
 			// Nearly every card sits in hands: nothing to draw, the turn just passes.
-			await context.Announce("game.shedding_deck_empty", new()
+			await context.Announce("game.shedding_deck_empty", VisualNarrativeVars.Add(new()
 			{
 				["player"] = player.Name,
 				["actorId"] = player.Id,
-			});
+			}, "outcome", targetPlayerId: player.Id, tone: "loss"));
 			await AdvanceTurnAsync(context, shedding, player.Id, skipOne: false);
 			return new SheddingActionResponse { Action = "draw", TurnEnded = true };
 		}
 
 		await context.Announcer.ToAllExcept(player.Id, "game.shedding_drew",
-			new() { ["player"] = player.Name, ["actorId"] = player.Id });
+			VisualNarrativeVars.Add(new() { ["player"] = player.Name, ["actorId"] = player.Id },
+				"card-draw", targetPlayerId: player.Id));
 
 		var card = runtime.Catalog[drawn[0].CardId];
 		var playable = runtime.Rules.DrawnCardPlayable
@@ -217,12 +220,14 @@ public static class SheddingTurnFlow
 				InstanceId = drawn[0].InstanceId,
 			};
 			await context.Announcer.ToPlayer(player.Id, "game.shedding_drew_playable",
-				new() { ["card"] = card.NameKey, ["actorId"] = player.Id });
+				VisualNarrativeVars.Add(new() { ["card"] = card.NameKey, ["actorId"] = player.Id },
+					"card-draw", targetPlayerId: player.Id, cardId: card.Id, cardType: card.Type));
 			return new SheddingActionResponse { Action = "draw", TurnEnded = false };
 		}
 
 		await context.Announcer.ToPlayer(player.Id, "game.shedding_drew_unplayable",
-			new() { ["card"] = card.NameKey, ["actorId"] = player.Id });
+			VisualNarrativeVars.Add(new() { ["card"] = card.NameKey, ["actorId"] = player.Id },
+				"card-draw", targetPlayerId: player.Id, cardId: card.Id, cardType: card.Type));
 		await AdvanceTurnAsync(context, shedding, player.Id, skipOne: false);
 		return new SheddingActionResponse { Action = "draw", TurnEnded = true };
 	}
@@ -241,11 +246,11 @@ public static class SheddingTurnFlow
 		}
 
 		shedding.PendingDrawnPlay = null;
-		await context.Announce("game.shedding_kept", new()
+		await context.Announce("game.shedding_kept", VisualNarrativeVars.Add(new()
 		{
 			["player"] = player.Name,
 			["actorId"] = player.Id,
-		});
+		}, "outcome", targetPlayerId: player.Id));
 		await AdvanceTurnAsync(context, shedding, player.Id, skipOne: false);
 		return new SheddingActionResponse { Action = "keep", TurnEnded = true };
 	}
@@ -308,7 +313,9 @@ public static class SheddingTurnFlow
 			["catcher"] = player.Name,
 			["victim"] = victim?.Name ?? victimId,
 			["count"] = drawn.Count,
+			["actorId"] = player.Id,
 		};
+		VisualNarrativeVars.Add(vars, "capture", player.Id, victimId, count: drawn.Count, tone: "loss");
 		await context.Announcer.ToPlayer(player.Id, "game.shedding_last_card_caught_self", vars);
 		await context.Announcer.ToPlayer(victimId, "game.shedding_last_card_caught_victim", vars);
 		foreach (var other in context.GameState.Players
@@ -324,11 +331,11 @@ public static class SheddingTurnFlow
 
 	/// <summary>Announces the declaration in first person to the caller and third person to the table.</summary>
 	private static async Task AnnounceLastCardCalledAsync(GameContext context, Player player)
-		=> await context.Announce("game.shedding_last_card_called", new()
+		=> await context.Announce("game.shedding_last_card_called", VisualNarrativeVars.Add(new()
 		{
 			["player"] = player.Name,
 			["actorId"] = player.Id,
-		});
+		}, "milestone", targetPlayerId: player.Id));
 
 	// ── Shared pieces ─────────────────────────────────────────────────────────
 
@@ -351,11 +358,13 @@ public static class SheddingTurnFlow
 		if (drawn.Count is >= 1 and <= 4 && keys.All(k => k != null))
 		{
 			var suffix = drawn.Count == 1 ? "" : $"_{drawn.Count}";
-			var vars = new Dictionary<string, object> { ["count"] = drawn.Count };
+			var vars = VisualNarrativeVars.Add(new Dictionary<string, object> { ["count"] = drawn.Count },
+				"card-draw", targetPlayerId: victimId, count: drawn.Count, tone: "loss");
 			for (var n = 0; n < drawn.Count; n++)
 			{
 				vars[$"card{n + 1}"] = keys[n]!;
 			}
+			VisualNarrativeVars.AddPrivateCardIds(vars, drawn.Select(card => card.CardId));
 
 			await context.Announcer.ToPlayer(victimId, $"game.shedding_penalty_cards{suffix}", vars);
 		}
@@ -392,26 +401,26 @@ public static class SheddingTurnFlow
 		var round = shedding.Round;
 
 		var score = SheddingRulebook.ScoreRound(shedding, winner.Id, runtime.Catalog);
-		await context.Announce("game.shedding_round_won", new()
+		await context.Announce("game.shedding_round_won", VisualNarrativeVars.Add(new()
 		{
 			["player"] = winner.Name,
 			["actorId"] = winner.Id,
 			["round"] = round,
 			["points"] = score.Points,
 			["total"] = score.Total,
-		});
+		}, "milestone", targetPlayerId: winner.Id, tone: "gain"));
 
 		if (runtime.Rules.TargetScore > 0 && score.Total < runtime.Rules.TargetScore)
 		{
 			shedding.Round++;
 			var opener = SheddingRulebook.DealRound(shedding, runtime.Deck, runtime.Rules, random);
 			context.GameState.CurrentTurn = winner.Id; // the round winner leads the next
-			await context.Announce("game.shedding_round_started", new()
+			await context.Announce("game.shedding_round_started", VisualNarrativeVars.Add(new()
 			{
 				["round"] = shedding.Round,
 				["count"] = runtime.Rules.HandSize,
 				["card"] = opener.NameKey,
-			});
+			}, "deck-shuffle"));
 			await context.Announce("game.turn_of", new()
 			{
 				["player"] = winner.Name,

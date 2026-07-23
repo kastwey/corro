@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { setupDom } from './helpers/dom.js';
 import { HandPanel, type HandCard } from '../src/handPanel.js';
 import { dialogManager } from '../src/dialogManager.js';
-import { focusHandAnnouncement } from '../src/handAnnouncementFocus.js';
+import { armHandUpdateAfterAnnouncement, clearHandUpdatePacing } from '../src/handUpdatePacing.js';
 
 /**
  * The accessible hand — the central surface of card families (approved spec): a roving
@@ -75,6 +75,7 @@ function listAction(action: string): HTMLElement {
 }
 
 beforeEach(() => {
+	clearHandUpdatePacing();
 	// The panel persists ordering/display preferences: start every test from the defaults.
 	try { (globalThis as any).window.localStorage.removeItem('corro.handPreferences'); } catch {}
 	document.body.innerHTML = '<div id="mount"></div>';
@@ -393,10 +394,7 @@ test('a filter with no matches is a plain zero-item list — no extra message or
 	assert.equal(list.getAttribute('role'), 'list');
 	assert.equal(list.getAttribute('aria-describedby'), null,
 		'the zero-item list semantics are sufficient and do not trigger a redundant phrase');
-	const actionStatus = document.querySelector<HTMLElement>('.hand-panel__action-status')!;
-	assert.equal(actionStatus.textContent, '',
-		'the stable action narrator is empty and adds no explanation to the result');
-	assert.equal(document.querySelector('.hand-panel .sr-only:not(.hand-panel__action-status)'), null,
+	assert.equal(document.querySelector('.hand-panel .sr-only'), null,
 		'the empty result has no hidden explanatory message');
 	assert.equal(document.querySelector<HTMLElement>('.hand-panel__empty')!.hidden, true);
 	// Focus still has somewhere to land so its list name and zero-item count can be read.
@@ -540,6 +538,15 @@ test('update() preserves focus on the same card by id when the hand changes', ()
 	assert.equal(rows().length, 3);
 });
 
+test('a newly held card settles visually into an already-rendered hand', () => {
+	assert.equal(rows().some(row => row.classList.contains('hand-card--arriving')), false,
+		'opening deal does not animate card by card');
+	cards.push(card({ id: 'c4', label: 'Repair', typeKey: 'remedy', value: 0 }));
+	panel.update();
+	const arriving = rows().find(row => row.dataset.focusId === 'c4');
+	assert.ok(arriving?.classList.contains('hand-card--arriving'));
+});
+
 test('when the focused card leaves the hand, focus lands on the first remaining card', () => {
 	const items = rows();
 	items[0].focus(); // c3 ("100 km")
@@ -548,58 +555,18 @@ test('when the focused card leaves the hand, focus lands on the first remaining 
 	assert.equal((document.activeElement as HTMLElement).dataset.focusId, 'c1');
 });
 
-test('a server action owns stable focus until the player re-enters the changed hand', () => {
+test('a server announcement gets a lead before the focused card leaves the hand', async () => {
 	const items = rows();
 	items[0].focus();
-	assert.equal(focusHandAnnouncement('You play 100 km. You draw Stop.'), true);
-
-	const status = document.querySelector<HTMLElement>('.hand-panel__action-status')!;
-	assert.equal(document.activeElement, status);
-	assert.equal(status.textContent, 'You play 100 km. You draw Stop.');
-
-	// The focused card leaves, but reconciliation cannot focus and announce a replacement
-	// row because the stable narration status now owns focus outside the list.
+	armHandUpdateAfterAnnouncement(40);
 	cards = cards.filter(c => c.id !== 'c3');
 	panel.update();
-	assert.equal(document.activeElement, status);
+	assert.equal(rows().length, 3, 'the old list remains during the narration lead');
+	assert.equal(document.activeElement, items[0], 'focus never leaves the hand');
 
-	// The next navigation key deliberately enters the refreshed hand; only now is its first
-	// card exposed to the screen reader.
-	key(status, 'ArrowDown');
+	await new Promise(resolve => setTimeout(resolve, 70));
+	assert.equal(rows().length, 2, 'the latest authoritative cards render after the lead');
 	assert.equal((document.activeElement as HTMLElement).dataset.focusId, 'c1');
-	assert.equal(status.textContent, '');
-});
-
-test('an action key continues on the known focused card when it survived the hand change', () => {
-	const focused = rows()[0];
-	const focusedId = focused.dataset.focusId!;
-	focused.focus();
-	assert.equal(focusHandAnnouncement('You draw a card.'), true);
-
-	cards = [...cards, card({ id: 'new', label: 'New card' })];
-	panel.update();
-	const status = document.querySelector<HTMLElement>('.hand-panel__action-status')!;
-	key(status, 'Enter');
-
-	assert.equal((document.activeElement as HTMLElement).dataset.focusId, focusedId);
-	assert.deepEqual(played, [focusedId]);
-});
-
-test('an arrow continues relative navigation when the focused card survived the hand change', () => {
-	const focused = rows()[0];
-	const focusedId = focused.dataset.focusId!;
-	focused.focus();
-	assert.equal(focusHandAnnouncement('You draw a card.'), true);
-
-	cards = [...cards, card({ id: 'new', label: 'New card' })];
-	panel.update();
-	const refreshed = rows();
-	const ownerIndex = refreshed.findIndex(row => row.dataset.focusId === focusedId);
-	const expected = refreshed[(ownerIndex + 1) % refreshed.length].dataset.focusId;
-	const status = document.querySelector<HTMLElement>('.hand-panel__action-status')!;
-	key(status, 'ArrowDown');
-
-	assert.equal((document.activeElement as HTMLElement).dataset.focusId, expected);
 });
 
 test('an empty hand shows the empty message and Space still draws from it', () => {

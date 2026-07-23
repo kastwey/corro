@@ -94,9 +94,12 @@ public class DraftTurnFlowTests
 		// screen reader's reading of the newly-focused card (the picked one just left the hand).
 		var mine = announcer.Sent.Single(d => d.Key == "game.draft_picked_self");
 		Assert.Equal("a", mine.Vars["actorId"]);
+		Assert.Equal("card-pick", mine.Vars["visualKind"]);
+		Assert.Equal("bite1", mine.Vars["visualCardId"]);
 		// The public line never carries the card: WHO picked is public, WHAT is not.
 		var table = announcer.Sent.Single(d => d.Key == "game.draft_picked");
 		Assert.False(table.Vars.ContainsKey("card"));
+		Assert.False(table.Vars.ContainsKey("visualCardId"));
 	}
 
 	[Fact]
@@ -153,6 +156,9 @@ public class DraftTurnFlowTests
 		var revealed = announcer.Sent.First(d => d.Key == "game.draft_revealed");
 		Assert.Equal("c.bite1", revealed.Vars["card"]);
 		Assert.Equal("a", revealed.Vars["actorId"]);
+		Assert.Equal("card-reveal-table", revealed.Vars["visualKind"]);
+		Assert.Equal("bite1", revealed.Vars["visualCardId"]);
+		Assert.Equal("hands-pass", announcer.Sent.Single(d => d.Key == "game.draft_hands_passed").Vars["visualKind"]);
 		Assert.True(announcer.Has(AnnouncementAudience.AllExcept, "a", "game.draft_revealed"));
 		Assert.False(announcer.Has(AnnouncementAudience.Player, "a", "game.draft_revealed"),
 			"the picker does NOT hear their own plain reveal");

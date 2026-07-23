@@ -74,6 +74,8 @@ test('draft: secret pick, re-pick, reveal, tray rotation, boosted serve, status 
 	await ana.keyboard.press('Enter');
 	await expectAnnouncement(ana, /Pides Pincho de gamba\. Esperando al resto de la mesa\./);
 	await expectAnnouncement(berto, /Ana ya ha pedido/);
+	await expect(ana.locator('.visual-narrative--draft')).toContainText(/Pides Pincho de gamba/i);
+	await expect(berto.locator('.visual-narrative--draft')).toContainText(/Ana ya ha pedido/i);
 
 	await anaSauce.focus();
 	await ana.keyboard.press('Enter');
@@ -91,6 +93,8 @@ test('draft: secret pick, re-pick, reveal, tray rotation, boosted serve, status 
 	// line returns when it is BOOSTED — see trick 2 below ("Te sirves … con tu Salsa brava").
 	await expectAnnouncement(ana, /Berto se sirve Pincho de gamba/);
 	await expectAnnouncement(ana, /Gira la cinta de bandejas: 9 tapas en cada una/);
+	await expect(ana.locator('.visual-narrative--draft')).toContainText(/Berto se sirve Pincho de gamba.*Gira la cinta/i);
+	await expect(ana.locator('.visual-narrative--draft')).toHaveAttribute('data-kind', 'card-reveal-table');
 
 	// The reveal is public on every table (Ana's sauce chip, Berto's skewer chip).
 	await expect(berto.locator('#board .draft-table').first()).toContainText('Salsa brava');
@@ -124,12 +128,16 @@ test('draft: secret pick, re-pick, reveal, tray rotation, boosted serve, status 
 	// ── Play the round out: both keep taking the top of whatever tray arrives. The
 	// rotation line's shrinking count proves every trick resolved in order. ──
 	for (let trick = 3; trick <= 9; trick++) {
+		await expect(anaCards).toHaveCount(11 - trick);
+		await expect(berto.locator('.hand-card:not(.hand-card--info)')).toHaveCount(11 - trick);
 		await ana.locator('#board').focus();
 		await ana.keyboard.press('Enter');
 		await berto.locator('#board').focus();
 		await berto.keyboard.press('Enter');
 		await expectAnnouncement(ana, new RegExp(`cinta de bandejas: ${10 - trick} tapas`));
 	}
+	await expect(anaCards).toHaveCount(1);
+	await expect(berto.locator('.hand-card:not(.hand-card--info)')).toHaveCount(1);
 	await ana.locator('#board').focus();
 	await ana.keyboard.press('Enter');
 	await berto.locator('#board').focus();
@@ -154,6 +162,8 @@ test('draft: secret pick, re-pick, reveal, tray rotation, boosted serve, status 
 	await berto.locator('.hand-card:not(.hand-card--info)', { hasText: /Montadito/ }).first().focus();
 	await berto.keyboard.press('Enter');
 	await expect(berto.locator('#board .draft-table').first()).toContainText('Pinzas de servir');
+	await expect(anaCards).toHaveCount(9);
+	await expect(berto.locator('.hand-card:not(.hand-card--info)')).toHaveCount(9);
 
 	// ── Trick 2: the double pick through the REAL multi-select mode. Ctrl+Space
 	// switches (spoken), Space marks with a running count, Enter sends — the first

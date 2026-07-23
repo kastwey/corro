@@ -398,6 +398,7 @@ export class JourneyBoard {
 			// check (see playCard/discard gates), spoken when you actually try.
 			return {
 				id: instance.instanceId,
+				cardId: instance.cardId,
 				label,
 				typeKey: def?.type ?? 'unknown',
 				value: def?.value ?? 0,

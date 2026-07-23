@@ -43,7 +43,8 @@ public static class RaceTurnFlow
 		{
 			var punished = RaceRulebook.ApplyThreeSixesPenalty(race, moverId);
 			await context.Announce(punished != null ? "game.race_three_sixes" : "game.race_three_sixes_spared",
-				new() { ["player"] = player.Name, ["actorId"] = player.Id });
+				VisualNarrativeVars.Add(new() { ["player"] = player.Name, ["actorId"] = player.Id },
+					"outcome", targetPlayerId: player.Id, tone: punished != null ? "loss" : "neutral"));
 			await EndRaceTurnAsync(context);
 			return new RaceRollResponse { Value = rolled, TurnEnded = true };
 		}
@@ -67,7 +68,9 @@ public static class RaceTurnFlow
 		}
 		if (options.Count == 0)
 		{
-			await context.Announce("game.race_no_move", new() { ["player"] = player.Name, ["actorId"] = player.Id });
+			await context.Announce("game.race_no_move", VisualNarrativeVars.Add(
+				new() { ["player"] = player.Name, ["actorId"] = player.Id },
+				"outcome", targetPlayerId: player.Id, tone: "loss"));
 			if (isExtra)
 			{
 				await AnnounceRollAgainAsync(player, context);
@@ -124,22 +127,26 @@ public static class RaceTurnFlow
 			// "you rolled X… <rival> brings a piece into play" burst once read as if a
 			// non-5 had exited a piece).
 			await context.Announcer.Announce("game.race_exited",
-				new(vars) { ["square"] = option.ToSquare }, AnnouncementPhase.Move);
+				VisualNarrativeVars.Add(new(vars) { ["square"] = option.ToSquare },
+					"movement", player.Id, moverId), AnnouncementPhase.Move);
 		}
 		else if (option.ToLocation == RacePieceLocation.Goal)
 		{
 			await context.Announcer.Announce("game.race_goal",
-				new(vars) { ["bonus"] = rules.GoalBonus }, AnnouncementPhase.Move);
+				VisualNarrativeVars.Add(new(vars) { ["bonus"] = rules.GoalBonus },
+					"movement", player.Id, moverId, tone: "gain"), AnnouncementPhase.Move);
 		}
 		else if (option.ToLocation == RacePieceLocation.Corridor)
 		{
 			await context.Announcer.Announce("game.race_moved_corridor",
-				new(vars) { ["square"] = option.ToSquare }, AnnouncementPhase.Move);
+				VisualNarrativeVars.Add(new(vars) { ["square"] = option.ToSquare },
+					"movement", player.Id, moverId), AnnouncementPhase.Move);
 		}
 		else
 		{
 			await context.Announcer.Announce("game.race_moved",
-				new(vars) { ["square"] = option.ToSquare }, AnnouncementPhase.Move);
+				VisualNarrativeVars.Add(new(vars) { ["square"] = option.ToSquare },
+					"movement", player.Id, moverId), AnnouncementPhase.Move);
 		}
 
 		// Landing facts a sighted player sees at a glance, voiced AFTER the piece lands
@@ -148,22 +155,29 @@ public static class RaceTurnFlow
 		// exit announcement already names it.
 		if (result.FormedBarrier)
 		{
-			await context.Announce("game.race_barrier_formed", new(vars) { ["square"] = option.ToSquare });
+			await context.Announce("game.race_barrier_formed", VisualNarrativeVars.Add(
+				new(vars) { ["square"] = option.ToSquare }, "detail"));
 		}
 		if (!option.ExitsHome && option.ToLocation == RacePieceLocation.Circuit
 			&& board.SafeSquares.Contains(option.ToSquare))
 		{
-			await context.Announce("game.race_landed_safe", new(vars) { ["square"] = option.ToSquare });
+			await context.Announce("game.race_landed_safe", VisualNarrativeVars.Add(
+				new(vars) { ["square"] = option.ToSquare }, "detail"));
 		}
 
 		if (result.CapturedPlayerId is { } victimId)
 		{
 			var victim = context.Helper.GetPlayer(victimId);
 			await context.Announce("game.race_captured",
-				new(vars) { ["victim"] = victim?.Name ?? victimId, ["bonus"] = rules.CaptureBonus });
+				VisualNarrativeVars.Add(new(vars)
+				{
+					["victim"] = victim?.Name ?? victimId,
+					["bonus"] = rules.CaptureBonus,
+				}, "capture", player.Id, victimId, tone: "loss"));
 			// The victim gets a first-person message describing what happened to their piece
 			await context.Announcer.ToPlayer(victimId, "game.race_captured_victim",
-				new() { ["player"] = player.Name, ["square"] = option.ToSquare });
+				VisualNarrativeVars.Add(new() { ["player"] = player.Name, ["square"] = option.ToSquare },
+					"capture", player.Id, victimId, tone: "loss"));
 			race.PendingBonuses.Add(rules.CaptureBonus);
 			race.PendingBonusKinds.Add("captureBonus");
 		}
@@ -217,17 +231,18 @@ public static class RaceTurnFlow
 			context.GameState.IsGameOver = true;
 			race.PendingBonuses.Clear();
 			race.PendingBonusKinds.Clear();
-			await context.Announce("game.race_team_won", new()
+			await context.Announce("game.race_team_won", VisualNarrativeVars.Add(new()
 			{
 				["playerA"] = mover?.Name ?? moverId,
 				["playerB"] = partner?.Name ?? partnerId!,
 				["actorId"] = player.Id,
-			});
+			}, "milestone", targetPlayerId: player.Id, tone: "gain"));
 			return;
 		}
 
 		await context.Announce("game.race_finished_team",
-			new() { ["player"] = player.Name, ["actorId"] = player.Id });
+			VisualNarrativeVars.Add(new() { ["player"] = player.Name, ["actorId"] = player.Id },
+				"milestone", targetPlayerId: moverId, tone: "gain"));
 		// Follow-ups continue on the PARTNER's seat (bonuses, extra roll or turn end).
 		await ResolveFollowupsAsync(rolled, player, partnerId ?? moverId, context);
 	}
@@ -245,7 +260,9 @@ public static class RaceTurnFlow
 		player.FinishPlace = players.Count(p => p.FinishPlace > 0) + 1;
 		player.Status = PlayerStatus.Finished;
 
-		var vars = new Dictionary<string, object> { ["player"] = player.Name, ["actorId"] = player.Id };
+		var vars = VisualNarrativeVars.Add(
+			new Dictionary<string, object> { ["player"] = player.Name, ["actorId"] = player.Id },
+			"milestone", targetPlayerId: player.Id, tone: "gain");
 		if (player.FinishPlace == 1)
 		{
 			context.GameState.WinnerId = player.Id;
@@ -303,7 +320,10 @@ public static class RaceTurnFlow
 			if (options.Count == 0)
 			{
 				await context.Announce("game.race_bonus_lost",
-					new() { ["player"] = player.Name, ["steps"] = steps, ["actorId"] = player.Id });
+					VisualNarrativeVars.Add(new()
+					{
+						["player"] = player.Name, ["steps"] = steps, ["actorId"] = player.Id,
+					}, "outcome", targetPlayerId: player.Id, tone: "loss"));
 				continue;
 			}
 			if (options.Count == 1)

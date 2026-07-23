@@ -21,6 +21,7 @@ import { i18nBinder, tSync, localizeColor, money } from './i18nBinder.js';
 import { soundManager, playSound } from './sound.js';
 import { soundEvents } from './soundEvents.js';
 import { boardToast } from './boardToast.js';
+import { visualNarrative } from './visualNarrative.js';
 import { dialogManager } from './dialogManager.js';
 import { showHelpDialog } from './helpDialog.js';
 import { showGameRulesDialog } from './gameRulesDialog.js';
@@ -31,6 +32,7 @@ import { turnIndicator } from './turnIndicator.js';
 import { cardReveal } from './cardReveal.js';
 import { squareGroupLabel } from './localizeSquare.js';
 import { boardPageTitle } from './boardTitle.js';
+import { initializeSiteBranding } from './siteBranding.js';
 import { updateGameSurfaceIntro } from './gameSurfaceIntro.js';
 import { setPackageTokens } from './tokenIcons.js';
 import { setBoardVocabulary } from './boardVocabulary.js';
@@ -187,6 +189,10 @@ async function initBoard() {
 
   // Initialize TurnIndicator
   turnIndicator.init();
+
+	// The deployment owns the shell identity around every game; Corro attribution remains in the
+	// footer. Load it before the rest of startup so the heading and browser title agree immediately.
+	const siteBranding = await initializeSiteBranding();
 
   // i18n must be ready BEFORE any dialog/announcement below, otherwise the
   // session-validation dialogs render raw translation keys (e.g. a screen reader
@@ -604,12 +610,11 @@ async function initBoard() {
   // contextual menu (info plus build/sell/mortgage/buy when applicable).
   gameBoard.onSquareActivated((squareIndex) => openSquareMenu(squareIndex));
 
-  // Initialize gameManager. We wrap the announcer so every server-authoritative
-  // announcement also fires its earcon AND its optional center-board toast from this
-  // single central point (DRY): no command handler needs to know about sound or visuals.
+	// Every authoritative announcement fans out here exactly once: earcon, persistent
+	// visual narrative and spoken live region. BoardToast is reserved for explicit errors.
   const announceWithSound: AnnounceFn = (event, options) => {
 	soundEvents.playForAnnouncement(event.key, event.vars);
-	boardToast.playForAnnouncement(event.key, event.vars);
+	visualNarrative.playForAnnouncement(event);
 	globalAnnounce(event, options);
   };
   // Hold an action's landing consequences (sound + toast + voice) until its token finishes
@@ -620,6 +625,10 @@ async function initBoard() {
 	deliver: announceWithSound,
 	isAnimating: () => tokenAnimator.isAnimating || familyAnimating(),
   });
+	visualNarrative.init({
+	getGameState: () => gameManager.getCurrentGameState(),
+	getMyPlayerId: () => gameManager.getMyPlayerId(),
+	});
   gameManager.initialize(
 	gameBoard,
 	announcementGate.announce,
@@ -969,12 +978,12 @@ async function initBoard() {
 	// re-sync the builder's caps/valuation to the live state without disturbing my selections.
 	tradeDialog.refreshBuilder();
 
-	// Tab title: "<board name> - Corro". A package game carries its localized name in the
+	// Tab title: "<board name> - <site title>". A package game carries its localized name in the
 	// state (shared by all players); a built-in board localizes its saved id. Refreshed on each
 	// update so it also tracks a mid-game language switch.
 	document.title = boardPageTitle(
 	  gs.boardName, i18nBinder.getCurrentLanguage(),
-	  GameSessionStore.getGame(gameId)?.board, k => i18nBinder.tSync(k));
+	  GameSessionStore.getGame(gameId)?.board, k => i18nBinder.tSync(k), siteBranding.title);
 
 	// A package game brings its own tokens + translations. Register the tokens so the board/panels
 	// render the package's icons, and merge its i18n once, then re-render so its keys resolve.

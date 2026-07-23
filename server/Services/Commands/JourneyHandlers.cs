@@ -36,14 +36,18 @@ public static class JourneyTurnFlow
 		// Everyone hears THAT you drew; only you hear WHAT (two dispatches, never shared vars).
 		// actorId makes the drawer's private batch flush before the hand repaint, rather than
 		// letting the newly-added list row reach the screen reader before the draw announcement.
-		await context.Announcer.ToAllExcept(player.Id, "game.journey_drew",
-			new() { ["player"] = player.Name, ["actorId"] = player.Id });
-		await context.Announcer.ToPlayer(player.Id, "game.journey_drew_self",
-			new() { ["actorId"] = player.Id });
 		var runtime = context.Family<JourneyRuntime>();
-		if (runtime.Catalog.GetValueOrDefault(result.Card!.CardId) is { } drawn)
+		var drawn = runtime.Catalog.GetValueOrDefault(result.Card!.CardId);
+		await context.Announcer.ToAllExcept(player.Id, "game.journey_drew",
+			VisualNarrativeVars.Add(new() { ["player"] = player.Name, ["actorId"] = player.Id },
+				"card-draw", targetPlayerId: player.Id));
+		await context.Announcer.ToPlayer(player.Id, "game.journey_drew_self",
+			VisualNarrativeVars.Add(new() { ["actorId"] = player.Id }, "card-draw",
+				targetPlayerId: player.Id, cardId: result.Card.CardId, cardType: drawn?.Type));
+		if (drawn != null)
 		{
-			await context.Announcer.ToPlayer(player.Id, drawn.NameKey);
+			await context.Announcer.ToPlayer(player.Id, drawn.NameKey,
+				VisualNarrativeVars.Add(new(), "detail"));
 		}
 
 		return new JourneyActionResponse { Action = "draw" };
@@ -77,20 +81,32 @@ public static class JourneyTurnFlow
 		// The attack's victim is a SEAT: a lone player by name, a team by its colour word.
 		var victimSeat = command.TargetId is { } tid ? JourneyRulebook.SeatOf(journey, tid) : null;
 		var targetName = victimSeat != null ? SeatName(context, journey, victimSeat) : null;
+		// Journey already animates the exact row to the centre and flashes/shakes attack targets
+		// from authoritative state. Metadata supplies the persistent card face and sentence only;
+		// it must not launch a second overlapping flight.
+		const string visualKind = "card-existing-effect";
+		var playVars = VisualNarrativeVars.Add(new Dictionary<string, object>
+		{
+			["player"] = player.Name,
+			["actorId"] = player.Id,
+			["tokenId"] = player.Token ?? string.Empty,
+		}, visualKind, player.Id, victimSeat?.PlayerId, card.Id, card.Type,
+			tone: card.Type == "attack" ? "loss" : "neutral");
+		if (card.Type == "distance")
+		{
+			playVars["km"] = card.Value;
+			playVars["total"] = seat.Km;
+		}
+		if (targetName != null)
+		{
+			playVars["target"] = targetName;
+		}
 
 		if (!string.IsNullOrEmpty(card.PlayedKey))
 		{
 			// The package themes this card's play in ONE line ("{{player}} llena el tanque de
 			// su {{token}}"), replacing the generic sentence + card-name pair. The client
 			// resolves tokenId into the piece's localized name as {{token}}.
-			var vars = new Dictionary<string, object>
-			{
-				["player"] = player.Name,
-				["actorId"] = player.Id,
-				["tokenId"] = player.Token ?? string.Empty,
-			};
-			if (card.Type == "distance") { vars["km"] = card.Value; vars["total"] = seat.Km; }
-
 			if (card.Type == "attack" && victimSeat != null)
 			{
 				// An attack has THREE audiences, one line each: the attacker ("You attack..."),
@@ -99,21 +115,20 @@ public static class JourneyTurnFlow
 				// _victim_team → _victim → base when a package skips a variant.
 				var victimIds = victimSeat.Members.Select(m => m.PlayerId).ToHashSet();
 				var victimSuffix = victimSeat.Members.Count > 1 ? "_victim_team" : "_victim";
-				vars["target"] = targetName ?? string.Empty;
-				await context.Announcer.ToPlayer(player.Id, card.PlayedKey + "_self", vars);
+				await context.Announcer.ToPlayer(player.Id, card.PlayedKey + "_self", playVars);
 				foreach (var victim in victimIds)
 				{
-					await context.Announcer.ToPlayer(victim, card.PlayedKey + victimSuffix, vars);
+					await context.Announcer.ToPlayer(victim, card.PlayedKey + victimSuffix, playVars);
 				}
 
 				foreach (var other in context.GameState.Players.Where(p => p.Id != player.Id && !victimIds.Contains(p.Id)))
 				{
-					await context.Announcer.ToPlayer(other.Id, card.PlayedKey, vars);
+					await context.Announcer.ToPlayer(other.Id, card.PlayedKey, playVars);
 				}
 			}
 			else
 			{
-				await context.Announce(card.PlayedKey, vars);
+				await context.Announce(card.PlayedKey, playVars);
 			}
 		}
 		else
@@ -121,41 +136,25 @@ public static class JourneyTurnFlow
 			switch (card.Type)
 			{
 				case "distance":
-					await context.Announce("game.journey_played_distance", new()
-					{
-						["player"] = player.Name,
-						["km"] = card.Value,
-						["total"] = seat.Km,
-						["actorId"] = player.Id,
-					});
+					await context.Announce("game.journey_played_distance", playVars);
 					break;
 
 				case "attack":
-					await context.Announce("game.journey_attacked", new()
-					{
-						["player"] = player.Name,
-						["target"] = targetName ?? string.Empty,
-						["actorId"] = player.Id,
-					});
-					await context.Announce(card.NameKey, new() { ["actorId"] = player.Id });
+					await context.Announce("game.journey_attacked", playVars);
+					await context.Announce(card.NameKey,
+						VisualNarrativeVars.Add(new() { ["actorId"] = player.Id }, "detail"));
 					break;
 
 				case "remedy":
-					await context.Announce("game.journey_played_remedy", new()
-					{
-						["player"] = player.Name,
-						["actorId"] = player.Id,
-					});
-					await context.Announce(card.NameKey, new() { ["actorId"] = player.Id });
+					await context.Announce("game.journey_played_remedy", playVars);
+					await context.Announce(card.NameKey,
+						VisualNarrativeVars.Add(new() { ["actorId"] = player.Id }, "detail"));
 					break;
 
 				case "immunity":
-					await context.Announce("game.journey_played_immunity", new()
-					{
-						["player"] = player.Name,
-						["actorId"] = player.Id,
-					});
-					await context.Announce(card.NameKey, new() { ["actorId"] = player.Id });
+					await context.Announce("game.journey_played_immunity", playVars);
+					await context.Announce(card.NameKey,
+						VisualNarrativeVars.Add(new() { ["actorId"] = player.Id }, "detail"));
 					break;
 			}
 		}
@@ -164,18 +163,19 @@ public static class JourneyTurnFlow
 		// would leak their hand. (Outside the switch: themed attacks pause the game too.)
 		if (result.CoupOffered && journey.PendingCoup is { } coup)
 		{
-			await context.Announcer.ToPlayer(coup.VictimId, "game.journey_coup_offer");
+			await context.Announcer.ToPlayer(coup.VictimId, "game.journey_coup_offer",
+				VisualNarrativeVars.Add(new(), "milestone", targetPlayerId: coup.VictimId));
 		}
 
 		// The moment that matters at the table: a remedy/immunity that clears your LAST
 		// stopper puts you back on the road — say so ("Rolling!"), not just the card.
 		if (wasStopped && !JourneyRulebook.IsStopped(seat, runtime.Catalog))
 		{
-			await context.Announce("game.journey_now_rolling", new()
+			await context.Announce("game.journey_now_rolling", VisualNarrativeVars.Add(new()
 			{
 				["player"] = player.Name,
 				["actorId"] = player.Id,
-			});
+			}, "detail", targetPlayerId: player.Id, tone: "gain"));
 		}
 
 		if (result.HandComplete || JourneyRulebook.HandOver(journey, runtime.Rules))
@@ -212,14 +212,16 @@ public static class JourneyTurnFlow
 		}
 
 		// The discard pile is face-up: the identity is public, same two-line pattern.
-		await context.Announce("game.journey_discarded", new()
+		var discarded = result.Card;
+		await context.Announce("game.journey_discarded", VisualNarrativeVars.Add(new()
 		{
 			["player"] = player.Name,
 			["actorId"] = player.Id,
-		});
+		}, "card-existing-effect", player.Id, cardId: discarded?.Id, cardType: discarded?.Type));
 		if (result.Card is { } card)
 		{
-			await context.Announce(card.NameKey, new() { ["actorId"] = player.Id });
+			await context.Announce(card.NameKey,
+				VisualNarrativeVars.Add(new() { ["actorId"] = player.Id }, "detail"));
 		}
 
 		// Discarding the last card with an exhausted pile can end the hand.
@@ -251,16 +253,17 @@ public static class JourneyTurnFlow
 		if (result.Accepted && pending != null)
 		{
 			var attacker = context.GameState.Players.FirstOrDefault(p => p.Id == pending.AttackerId);
-			await context.Announce("game.journey_coup", new()
+			await context.Announce("game.journey_coup", VisualNarrativeVars.Add(new()
 			{
 				["player"] = player.Name,
 				["attacker"] = attacker?.Name ?? string.Empty,
 				["actorId"] = player.Id,
-			});
+			}, "milestone", player.Id, pending.AttackerId, tone: "gain"));
 			var immunity = JourneyRulebook.SeatOf(journey, player.Id).Immunities.LastOrDefault();
 			if (immunity != null && runtime.Catalog.GetValueOrDefault(immunity) is { } card)
 			{
-				await context.Announce(card.NameKey, new() { ["actorId"] = player.Id });
+				await context.Announce(card.NameKey,
+					VisualNarrativeVars.Add(new() { ["actorId"] = player.Id }, "detail"));
 			}
 
 			// The classic reward: the turn passes to the coup's author — unless the coup
@@ -359,11 +362,11 @@ public static class JourneyTurnFlow
 				return;
 			}
 
-			await context.Announce("game.journey_no_cards_skip", new()
+			await context.Announce("game.journey_no_cards_skip", VisualNarrativeVars.Add(new()
 			{
 				["player"] = current.Name,
 				["actorId"] = current.Id,
-			});
+			}, "outcome", targetPlayerId: current.Id, tone: "loss"));
 			context.Helper.NextTurn();
 		}
 	}
@@ -381,29 +384,30 @@ public static class JourneyTurnFlow
 		{
 			// The SEAT completed the trip (the completer's team, when shared).
 			var completerSeat = JourneyRulebook.SeatOf(journey, completer.Id);
-			await context.Announce("game.journey_hand_won", new()
+			await context.Announce("game.journey_hand_won", VisualNarrativeVars.Add(new()
 			{
 				["player"] = SeatName(context, journey, completerSeat),
 				["goal"] = runtime.Rules.GoalKm,
 				["actorId"] = completer.Id,
-			});
+			}, "milestone", targetPlayerId: completer.Id, tone: "gain"));
 		}
 		else
 		{
-			await context.Announce("game.journey_hand_exhausted", null);
+			await context.Announce("game.journey_hand_exhausted",
+				VisualNarrativeVars.Add(new(), "milestone"));
 		}
 
 		var scores = JourneyRulebook.ScoreHand(journey, runtime.Catalog, runtime.Rules);
 		foreach (var score in scores.OrderByDescending(s => s.Total))
 		{
 			var seat = journey.Seats.First(s => s.PlayerId == score.PlayerId);
-			await context.Announce("game.journey_hand_score", new()
+			await context.Announce("game.journey_hand_score", VisualNarrativeVars.Add(new()
 			{
 				["player"] = SeatName(context, journey, seat),
 				["total"] = score.Total,
 				["match"] = score.MatchScore,
 				["actorId"] = score.PlayerId,
-			});
+			}, "detail"));
 		}
 
 		if (JourneyRulebook.MatchOver(journey, runtime.Rules))
@@ -438,7 +442,8 @@ public static class JourneyTurnFlow
 
 		// Same match, next hand: fresh deal, scores carried; the rotation simply continues.
 		context.GameState.Journey = JourneyRulebook.StartNextHand(journey, runtime.Deck, runtime.Rules, random);
-		await context.Announce("game.journey_new_hand", new() { ["round"] = context.GameState.Journey.Round });
+		await context.Announce("game.journey_new_hand", VisualNarrativeVars.Add(
+			new() { ["round"] = context.GameState.Journey.Round }, "deck-shuffle"));
 		await EndJourneyTurnAsync(context);
 	}
 }

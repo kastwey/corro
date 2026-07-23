@@ -22,7 +22,8 @@ import { dialogManager } from './dialogManager.js';
 import { reconcileChildren } from './domReconcile.js';
 import { reconcileToolbarButtons, type ToolbarAction } from './toolbarButtons.js';
 import type { HelpShortcut } from './shortcuts.js';
-import { registerHandAnnouncementFocusTarget } from './handAnnouncementFocus.js';
+import { isTokenMotionDisabled } from './motion.js';
+import { takeHandUpdateDelay } from './handUpdatePacing.js';
 
 /** The hand's keyboard bindings, as keymap-style specs for the shortcuts help. These MUST
  *  mirror onKeydown (which reads native key events): they are the single declaration of
@@ -57,6 +58,8 @@ export interface HandShortcutText {
 export interface HandCard {
 	/** Stable server-side card instance id (focus survives refreshes through it). */
 	id: string;
+	/** Public catalog id used only to clone package art into visual card movements. */
+	cardId?: string;
 	/** Full spoken/visible name ("Circule", "75 km", …). */
 	label: string;
 	/** Stable family type id, used by "sort by type" grouping ("distance", "attack"…). */
@@ -113,6 +116,9 @@ export interface HandMultiSelect {
 
 export interface HandPanelDeps {
 	getCards(): HandCard[];
+	/** Optional visual cap for card columns. The accessible list and its linear navigation stay
+	 * unchanged; only illustrated rows wrap into balanced table-like lines. */
+	maxVisualColumns?: number;
 	/** May the player draw right now? The family gates turn/phase and words the reason.
 	 *  OPTIONAL along with onDraw: a family whose refill is automatic (assembly) has no
 	 *  draw affordance at all — no button, and Space falls through. */
@@ -161,16 +167,17 @@ export class HandPanel {
 	private root: HTMLElement | null = null;
 	private listEl: HTMLUListElement | null = null;
 	private emptyEl: HTMLParagraphElement | null = null;
-	/** Stable focused narration while an authoritative update changes the card rows. */
-	private actionStatusEl: HTMLParagraphElement | null = null;
-	private actionReturnFocusId: string | null = null;
-	private unregisterActionFocus: (() => void) | null = null;
+	/** Pending narration lead; repeated states coalesce and render the latest cards. */
+	private handUpdateTimer: number | null = null;
 	/** The LIST-level tools (sorts + card-display mode): painted ONCE for the whole hand as
 	 *  a visible toolbar — never duplicated on every row — and mirrored into the context menu. */
 	private listActionsEl: HTMLElement | null = null;
 	private nav: RovingToolbarList | null = null;
 	/** Single-tab-stop roving over the tools toolbar (arrows move inside it). */
 	private toolsNav: RovingCheckboxList | null = null;
+	/** All held ids from the last authoritative render. Filters do not make a card "new". */
+	private renderedCardIds = new Set<string>();
+	private hasRenderedCards = false;
 
 	// "What advances me most" is the natural top of a card hand: value order by default.
 	private sortMode = 'value';
@@ -220,16 +227,6 @@ export class HandPanel {
 		this.listActionsEl = tools;
 		this.toolsNav = new RovingCheckboxList({ container: tools, itemSelector: 'button' });
 
-		// A focused card can disappear after play/discard. Moving straight to its replacement
-		// makes JAWS announce "1 of N" ahead of the server voice even when the live region was
-		// updated first. This stable status receives that action's complete utterance as focused
-		// content and survives the following list reconciliation. It is programmatic-only; the
-		// next Tab/arrow/action key deliberately returns the player to the changed hand.
-		const actionStatus = document.createElement('p');
-		actionStatus.className = 'hand-panel__action-status sr-only';
-		actionStatus.tabIndex = -1;
-		root.appendChild(actionStatus);
-
 		const list = document.createElement('ul');
 		list.className = 'hand-panel__list';
 		// A real ARIA list (role="list" survives the list-style:none / display:flex that
@@ -250,21 +247,6 @@ export class HandPanel {
 		this.root = root;
 		this.listEl = list;
 		this.emptyEl = empty;
-		this.actionStatusEl = actionStatus;
-		this.unregisterActionFocus = registerHandAnnouncementFocusTarget(utterance => {
-			const active = document.activeElement;
-			if (!this.root || !this.actionStatusEl || !active || !this.root.contains(active)) {
-				return false;
-			}
-			this.actionReturnFocusId = active.closest<HTMLElement>('.hand-card')?.dataset.focusId ?? null;
-			this.actionStatusEl.textContent = utterance;
-			this.actionStatusEl.focus();
-			return document.activeElement === this.actionStatusEl;
-		});
-		actionStatus.addEventListener('focusout', () => {
-			actionStatus.textContent = '';
-			this.actionReturnFocusId = null;
-		});
 
 		this.nav = new RovingToolbarList({
 			list,
@@ -282,10 +264,7 @@ export class HandPanel {
 		// Registered AFTER the roving controller so navigation keys are already resolved;
 		// this layer only adds the game keys (Space draw/mark, Enter play/send, Delete
 		// discard, Ctrl+Space mode switch).
-		root.addEventListener('keydown', (e) => {
-			if (e.target === this.actionStatusEl && this.reenterHandFromActionStatus(e)) return;
-			this.onKeydown(e);
-		});
+		root.addEventListener('keydown', (e) => this.onKeydown(e));
 		// Mouse projection of the same multi-select state: in multi mode a row click
 		// toggles its mark; Ctrl+click from single mode enters multi with that card marked.
 		list.addEventListener('click', (e) => this.onListClick(e));
@@ -295,16 +274,41 @@ export class HandPanel {
 
 	/** Re-render from the family's current cards, preserving focus by card id. */
 	update(): void {
+		const delay = takeHandUpdateDelay();
+		if (delay > 0) {
+			if (this.handUpdateTimer !== null) window.clearTimeout(this.handUpdateTimer);
+			this.handUpdateTimer = window.setTimeout(() => {
+				this.handUpdateTimer = null;
+				this.updateNow();
+			}, delay);
+			return;
+		}
+		// Another state/package refresh during the lead needs no second timer: updateNow()
+		// reads deps.getCards() at execution time, so it naturally renders the latest state.
+		if (this.handUpdateTimer !== null) return;
+		this.updateNow();
+	}
+
+	private updateNow(): void {
 		if (!this.deps || !this.listEl || !this.emptyEl) return;
 		this.syncMultiSelect();
 		const all = this.deps.getCards();
 		const visible = this.visibleCards(all);
+		const arrivingIds = this.hasRenderedCards && !isTokenMotionDisabled()
+			? new Set(all.filter(card => !this.renderedCardIds.has(card.id)).map(card => card.id))
+			: new Set<string>();
 
 		// Two distinct empties: NO CARDS AT ALL swaps in the empty-hand message; a filter
 		// with no matches stays a plain zero-item list. Its list semantics already say all
 		// that is useful, without an extra description that makes turn changes chatty.
 		const allEmpty = all.length === 0;
 		const filteredEmpty = !allEmpty && visible.length === 0;
+		if (this.deps.maxVisualColumns && this.deps.maxVisualColumns > 0) {
+			this.listEl.style.setProperty('--hand-columns',
+				String(Math.max(1, Math.min(this.deps.maxVisualColumns, visible.length))));
+		} else {
+			this.listEl.style.removeProperty('--hand-columns');
+		}
 		this.emptyEl.hidden = !allEmpty;
 		this.emptyEl.textContent = this.deps.t('game.hand_empty');
 		this.listEl.hidden = allEmpty;
@@ -336,6 +340,18 @@ export class HandPanel {
 			},
 		});
 		this.nav?.refreshRovingTabindex();
+		for (const id of arrivingIds) {
+			const row = this.nav?.getItems().find(item => item.dataset.focusId === id);
+			if (!row) continue;
+			row.classList.remove('hand-card--arriving');
+			void row.offsetWidth;
+			row.classList.add('hand-card--arriving');
+			const clear = () => row.classList.remove('hand-card--arriving');
+			row.addEventListener('animationend', clear, { once: true });
+			window.setTimeout(clear, 1200);
+		}
+		this.renderedCardIds = new Set(all.map(card => card.id));
+		this.hasRenderedCards = true;
 
 		// Keep the list-level tools fresh (ordering/display state shows in the toolbar and
 		// travels into the context menu — even when the filter left no row).
@@ -382,8 +398,8 @@ export class HandPanel {
 	}
 
 	private destroyDom(): void {
-		this.unregisterActionFocus?.();
-		this.unregisterActionFocus = null;
+		if (this.handUpdateTimer !== null) window.clearTimeout(this.handUpdateTimer);
+		this.handUpdateTimer = null;
 		this.nav?.destroy();
 		this.nav = null;
 		this.toolsNav?.destroy();
@@ -392,9 +408,9 @@ export class HandPanel {
 		this.root = null;
 		this.listEl = null;
 		this.emptyEl = null;
-		this.actionStatusEl = null;
-		this.actionReturnFocusId = null;
 		this.listActionsEl = null;
+		this.renderedCardIds.clear();
+		this.hasRenderedCards = false;
 		this.sortMode = 'value'; // back to the default ordering
 		this.playabilityMode = 'all';
 		this.userMode = null; // the mode preference lives one game, not across them
@@ -403,51 +419,6 @@ export class HandPanel {
 	}
 
 	// ── Multi-select ──────────────────────────────────────────────────────────
-
-	/**
-	 * The status is a deliberate pause between the server voice and the changed list. A
-	 * navigation/action key first re-enters the hand and is consumed, so a player hears the
-	 * newly focused card before deciding what to do with it. Tab keeps native order: forward
-	 * enters the first row and backward reaches the list tools/draw control.
-	 */
-	private reenterHandFromActionStatus(event: KeyboardEvent): boolean {
-		if (event.key === 'Tab') return false;
-		const keys = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter', ' ', 'Delete']);
-		if (!keys.has(event.key)) return false;
-
-		event.preventDefault();
-		event.stopPropagation();
-		this.actionStatusEl!.textContent = '';
-		const items = this.nav?.getItems() ?? [];
-		const ownerIndex = this.actionReturnFocusId
-			? items.findIndex(item => item.dataset.focusId === this.actionReturnFocusId)
-			: -1;
-		const targetIndex = ownerIndex >= 0
-			? ownerIndex
-			: items.length > 0 && (event.key === 'ArrowUp' || event.key === 'End')
-				? items.length - 1
-				: 0;
-		this.actionReturnFocusId = null;
-		if (items.length > 0) this.nav!.focusItem(targetIndex);
-		else this.focus();
-
-		// If the known card survived (a draw changed the hand around it), replay the key from
-		// that row: arrows continue relative navigation and action keys continue naturally.
-		// A removed card never transfers a key to an unfamiliar replacement row: the first
-		// press only enters and reads it.
-		if (ownerIndex >= 0) {
-			items[ownerIndex].dispatchEvent(new KeyboardEvent('keydown', {
-				key: event.key,
-				ctrlKey: event.ctrlKey,
-				shiftKey: event.shiftKey,
-				altKey: event.altKey,
-				metaKey: event.metaKey,
-				bubbles: true,
-				cancelable: true,
-			}));
-		}
-		return true;
-	}
 
 	/** Whether the hand is in multi-select right now: forced episodes win, then the
 	 *  player's own choice, and single-card is the default. */
@@ -612,6 +583,11 @@ export class HandPanel {
 		name.setAttribute('aria-hidden', 'true');
 		item.appendChild(name);
 
+		const availability = document.createElement('span');
+		availability.className = 'hand-card__availability';
+		availability.setAttribute('aria-hidden', 'true');
+		item.appendChild(availability);
+
 		const actions = document.createElement('div');
 		actions.className = 'hand-card__actions';
 		actions.setAttribute('role', 'toolbar');
@@ -633,6 +609,8 @@ export class HandPanel {
 			: `${card.label}. ${t('game.hand_unplayable_tag')}`;
 		if (marked) ariaLabel = `${ariaLabel}, ${t('game.hand_multi_marked_tag')}`;
 		if (item.getAttribute('aria-label') !== ariaLabel) item.setAttribute('aria-label', ariaLabel);
+		if (card.cardId) item.dataset.cardId = card.cardId;
+		else delete item.dataset.cardId;
 
 		// The visible checkbox only exists in multi mode (for the eye it isn't a "mode":
 		// checkboxes and a send button simply appear).
@@ -655,6 +633,9 @@ export class HandPanel {
 		const name = item.querySelector('.hand-card__name') as HTMLElement;
 		if (name.textContent !== card.label) name.textContent = card.label;
 		item.classList.toggle('hand-card--unplayable', !card.playable);
+		const availability = item.querySelector('.hand-card__availability') as HTMLElement;
+		const availabilityText = card.playable ? '' : t('game.hand_unplayable_tag');
+		if (availability.textContent !== availabilityText) availability.textContent = availabilityText;
 
 		const actions = item.querySelector('.hand-card__actions') as HTMLElement;
 		const actionsLabel = t('game.actions_for', { name: card.label });

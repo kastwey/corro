@@ -48,12 +48,12 @@
 	transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 	background: var(--surface);
 	color: var(--text);
-	min-height: 80px;
+	min-height: 112px;
 	gap: 0.25rem;
 }
 
 .token-emoji {
-	font-size: 1.5rem;
+	font-size: clamp(2.75rem, 5vw, 4rem);
 	line-height: 1;
 }
 
@@ -64,6 +64,13 @@
 	display: inline-block;
 	vertical-align: middle;
 	flex: 0 0 auto;
+}
+
+/* The picker is where players compare token silhouettes. The old 24px preview made detailed
+ * package pieces indistinguishable; gameplay chips retain their own smaller scoped sizes. */
+.token-label .token-icon {
+	width: clamp(2.75rem, 5vw, 4rem);
+	height: clamp(2.75rem, 5vw, 4rem);
 }
 
 .token-name {

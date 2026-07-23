@@ -31,6 +31,7 @@ test('exploding: the playable filter keeps the hand stable when an action ends t
 	const allCards = ana.locator('.hand-panel__list-actions [data-focus-id="show-all-cards"]');
 	const filter = ana.locator('.hand-panel__list-actions [data-focus-id="filter-playable"]');
 	await expect(cards).toHaveCount(8);
+	await expect(ana.locator('.player-card.is-current .player-card__turn')).toHaveText('Turno');
 	await expect(allCards).toHaveAttribute('aria-pressed', 'true');
 	await filter.click();
 	await expect(filter).toHaveAttribute('aria-pressed', 'true');
@@ -43,6 +44,7 @@ test('exploding: the playable filter keeps the hand stable when an action ends t
 	await skip.focus();
 	await ana.keyboard.press('Enter');
 	await expect(ana.locator('.exploding-discard--pending')).toBeVisible();
+	await expect(ana.locator('.visual-narrative')).toContainText(/Juegas Salir del pozo/i);
 	await expect(cards).toHaveCount(6);
 	await flushAxeAudit(ana);
 
@@ -148,14 +150,57 @@ test('exploding: asks for a target only when several active rivals remain', asyn
 	await flushAxeAudit(ana);
 
 	await menu.locator('.popup-menu__item', { hasText: 'Berto' }).click();
-	await expectAnnouncement(ana, /Ana pide un favor a Berto/i);
+	await expectAnnouncement(ana, /Pides un favor a Berto/i);
 	await expectAnnouncement(berto, /Ana te pide un favor/i);
+	await expect(berto.locator('.visual-narrative')).toContainText(/Ana te pide un favor/i);
+	await expect(berto.locator('.hand-panel')).toHaveClass(/hand-panel--favor-choice/);
 
 	// Finish the pending Favor so the scenario leaves the real-time flow settled.
 	const payment = berto.locator('.hand-card:not(.hand-card--info)').first();
 	await payment.focus();
 	await berto.keyboard.press('Enter');
 	await expectAnnouncement(ana, /Berto te da/i);
+	await expect(ana.locator('.visual-narrative')).toContainText(/Berto te da/i);
+	await expect(berto.locator('.hand-panel')).not.toHaveClass(/hand-panel--favor-choice/);
+});
+
+test('exploding: future, attack and shuffle keep a persistent visual account', async ({ browser }) => {
+	const ana = await newPlayerPage(browser);
+	const berto = await newPlayerPage(browser);
+
+	const code = await createGame(ana, 'Ana', BOARD);
+	await joinGame(berto, code, 'Berto');
+	await startGame(ana, [ana, berto]);
+
+	// See the Future is private: Ana gets three real faces; Berto gets three backs with the
+	// public action sentence. Both remain visible after the transient emphasis settles.
+	const future = ana.locator('.hand-card:not(.hand-card--info)', { hasText: 'El canario' }).first();
+	await future.focus();
+	await ana.keyboard.press('Enter');
+	await expect(ana.locator('.exploding-discard--pending')).toBeVisible();
+	await flushAxeAudit(ana);
+	await expectAnnouncement(ana, /Arriba del mazo:/i);
+	await expect(ana.locator('.visual-narrative__peek-card .xcard:not(.xcard--back)')).toHaveCount(3);
+	await expect(berto.locator('.visual-narrative__peek-card .xcard--back')).toHaveCount(3);
+	await flushAxeAudit(ana);
+	await flushAxeAudit(berto);
+
+	// Attack names and highlights the affected next player and leaves the extra-draw story.
+	const attack = ana.locator('.hand-card:not(.hand-card--info)', { hasText: 'Derrumbe' }).first();
+	await attack.focus();
+	await ana.keyboard.press('Enter');
+	await expectAnnouncement(ana, /Provocas un derrumbe/i);
+	await expect(ana.locator('.visual-narrative')).toContainText(/Provocas un derrumbe/i);
+	await expect(ana.locator('.visual-narrative__route')).toHaveText(/Ana.*Berto/i);
+	await flushAxeAudit(ana);
+
+	// Berto can act before paying the two draws. Shuffle gets its own persistent deck state.
+	const shuffle = berto.locator('.hand-card:not(.hand-card--info)', { hasText: 'Revuelto de galería' });
+	await shuffle.focus();
+	await berto.keyboard.press('Enter');
+	await expectAnnouncement(berto, /Revuelves la galería/i);
+	await expect(berto.locator('.visual-narrative')).toContainText(/Revuelves la galería/i);
+	await flushAxeAudit(berto);
 });
 
 test('exploding: draw the bomb, defuse and tuck it, then explode into a win', async ({ browser }) => {
@@ -172,6 +217,8 @@ test('exploding: draw the bomb, defuse and tuck it, then explode into a win', as
 	await expect(ana.locator('.hand-card:not(.hand-card--info)')).toHaveCount(8);
 	await expect(ana.locator('.hand-card--info')).toHaveCount(0);
 	await expect(ana.locator('.exploding-draw .xcard__back-label')).toHaveText(/^\d+$/);
+	expect(await ana.locator('.exploding-piles').evaluate(element =>
+		getComputedStyle(element).justifyContent)).toBe('center');
 	await expect(ana.locator('.hand-panel__draw')).toBeVisible();
 	await expect(ana.locator('.dice-control')).toBeHidden();
 	const sortTools = ana.locator('.hand-panel__list-actions [data-focus-id^="sort-"]');
@@ -215,8 +262,7 @@ test('exploding: draw the bomb, defuse and tuck it, then explode into a win', as
 		(window as any).__defuseTimeline = timeline;
 		const sample = () => {
 			const now = performance.now();
-			const liveText = [...document.querySelectorAll(
-				'#sr-live, #sr-live-assertive, .hand-panel__action-status')]
+			const liveText = [...document.querySelectorAll('#sr-live, #sr-live-assertive')]
 				.map(node => node.textContent ?? '').join(' ');
 			if (!timeline.announcement && /grisú/i.test(liveText)) timeline.announcement = now;
 			if (!timeline.reveal && document.querySelector('.exploding-reveal--defusing')) timeline.reveal = now;
@@ -244,6 +290,7 @@ test('exploding: draw the bomb, defuse and tuck it, then explode into a win', as
 	expect(timeline.menu - timeline.announcement).toBeGreaterThanOrEqual(1800);
 	await tuckOnTop(ana);
 	await expectAnnouncement(ana, /Escondes el gris/i);
+	await expect(ana.locator('.visual-narrative')).toContainText(/Escondes el gris/i);
 
 	// Exercise the same transient animation and picker in the dark theme. The package-driven
 	// defuse face is shared by every exploding-family board; only its art and wording differ.
@@ -271,6 +318,13 @@ test('exploding: draw the bomb, defuse and tuck it, then explode into a win', as
 	// The game is over: the last miner standing wins.
 	await expect(ana.locator('.end-screen')).toBeVisible();
 	await expect(berto.locator('.end-screen')).toBeVisible();
+
+	// A guest leaving the finished game navigates only that browser. This is the exact
+	// regression for the intermittent report that "Back home" might eject everybody.
+	await berto.locator('.dialog-end-screen .btn-primary').click();
+	await expect(berto).toHaveURL(/\/$/);
+	await expect(ana.locator('.end-screen')).toBeVisible();
+	await expect(ana).toHaveURL(/board\.html/);
 });
 
 test('exploding: announces an ordinary draw before adding the card to the hand', async ({ browser }) => {
@@ -299,10 +353,10 @@ test('exploding: announces an ordinary draw before adding the card to the hand',
 	await berto.keyboard.press(' ');
 	await expectAnnouncement(berto, /Robas Cortar la mecha/i);
 	await expect(cards).toHaveCount(9);
+	await expect(berto.locator('.visual-narrative')).toContainText(/Robas Cortar la mecha/i);
 
 	const drawOrder = await finishDrawOrder();
-	expect(drawOrder.usedStableHandFocus).toBe(true);
-	await expect(berto.locator('.hand-panel__action-status')).toBeFocused();
+	expect(drawOrder.handUpdateAt - drawOrder.announcementAt).toBeGreaterThanOrEqual(300);
 
 	// Continue through the known identity-shuffled pile until Berto holds two matching
 	// Escarabajos. Selecting either ONE row is deliberately enough: there is no legal

@@ -54,6 +54,14 @@ deployment instead of silently removing private games from production.
 - Production already has the `CosmosDB` and `PackageBlobs` App Service connection strings
   configured for durable games and uploaded packages. The deployment changes application
   files only and leaves both connection strings untouched.
+- The host identity comes from the `SiteBranding` section in `server/appsettings.json`. App
+  Service settings override it with ASP.NET Core's double-underscore convention:
+  `SiteBranding__Title`, `SiteBranding__Tagline`, `SiteBranding__LogoUrl`,
+  `SiteBranding__LogoDarkUrl`, `SiteBranding__FaviconUrl` and
+  `SiteBranding__FaviconDarkUrl`. Logo and favicon values accept same-site paths or HTTPS URLs;
+  omit both theme variants to render the title as text and use no host favicon. These values are
+  public by design and are returned by `/api/config/branding`; never place secrets in this
+  section. Branding does not alter the mandatory **Powered by Corro** source attribution.
 - Durable-game retention runs inside the existing App Service rather than a separate Function
   App, so it can coordinate with live SignalR sessions and reuse the canonical game-deletion
   path. The S1 plan's `Always On` setting is enforced by deployment, so it catches up on every

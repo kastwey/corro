@@ -59,6 +59,8 @@ test('shedding: matches, the drawn-card pause, a penalty and the on-demand count
 	await ana.keyboard.press('Enter');
 	await expectAnnouncement(berto, /Ana juega Amarillo 7/);
 	await expectAnnouncement(ana, /Juegas Amarillo 7/);
+	await expect(ana.locator('.visual-narrative--shedding')).toContainText(/Juegas Amarillo 7/i);
+	await expect(ana.locator('.visual-narrative--shedding')).toHaveAttribute('data-kind', 'card-play-discard');
 
 	await berto.locator('#board').focus();
 	await cardOf(berto, /Verde 7/).focus();
@@ -96,6 +98,7 @@ test('shedding: matches, the drawn-card pause, a penalty and the on-demand count
 	await berto.keyboard.press(' ');
 	await expectAnnouncement(ana, /Berto roba una carta/);
 	await expectAnnouncement(berto, /Robas Azul 2: Intro la juega, Espacio te la quedas/);
+	await expect(berto.locator('.visual-narrative--shedding')).toContainText(/Robas Azul 2/i);
 	const drawnRow = berto.locator('.hand-card:not(.hand-card--info)', { hasText: /recién robada/ });
 	await expect(drawnRow).toHaveCount(1);
 	await drawnRow.focus();

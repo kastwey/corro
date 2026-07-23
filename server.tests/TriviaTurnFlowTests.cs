@@ -99,6 +99,9 @@ public class TriviaTurnFlowTests
 		Assert.Contains("game.trivia_reveal", Keys(ctx));
 		Assert.Contains("game.trivia_correct", Keys(ctx));
 		Assert.Contains("game.trivia_wedge", Keys(ctx));
+		var wedge = TestFixtures.Announcer(ctx).Sent.Single(d => d.Key == "game.trivia_wedge");
+		Assert.Equal("milestone", wedge.Vars["visualKind"]);
+		Assert.Equal("A", wedge.Vars["visualTargetPlayerId"]);
 		Assert.Contains("game.trivia_again", Keys(ctx)); // a correct answer tells you to roll again
 	}
 

@@ -24,6 +24,7 @@ import { renderSeatSelector, getUsedSeats } from './seats.js';
 import { LatestOnly } from './latestOnly.js';
 import { tokenIconHtml, setPackageTokens } from '../tokenIcons.js';
 import { initThemeToggle } from '../themeToggle.js';
+import { initializeSiteBranding } from '../siteBranding.js';
 import { applyRuleSettings, readRuleSettings } from './ruleFields.js';
 import { buildBotNameForm } from './botNameForm.js';
 import { createPlayerIdentity } from './playerListItem.js';
@@ -53,7 +54,10 @@ class UnifiedLobbyUI {
 	}
 
 	private async init(): Promise<void> {
-		await this.initializeI18n();
+		await Promise.all([
+			this.initializeI18n(),
+			initializeSiteBranding(),
+		]);
 		this.setupThemeToggle();
 		dialogManager.init(); // Initialize DialogManager
 		// Keep keyboard focus inside the lobby: Tab / Shift+Tab wrap instead of

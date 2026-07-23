@@ -153,8 +153,11 @@ public class JourneyTurnFlowTests
 		var publicLine = dispatches.Single(d => d.Key == "game.journey_drew");
 		Assert.Equal(AnnouncementAudience.AllExcept, publicLine.Audience);
 		Assert.False(publicLine.Vars.ContainsKey("card"));
+		Assert.Equal("card-draw", publicLine.Vars["visualKind"]);
+		Assert.False(publicLine.Vars.ContainsKey("visualCardId"));
 		var mine = dispatches.Single(d => d.Key == "game.journey_drew_self");
 		Assert.Equal("A", mine.Vars["actorId"]); // own draw is voiced before the hand repaint
+		Assert.Equal("distance-25", mine.Vars["visualCardId"]);
 		var identity = dispatches.Single(d => d.Key == "cards.distance_25");
 		Assert.Equal(AnnouncementAudience.Player, identity.Audience);
 		Assert.Equal("A", identity.PlayerId);

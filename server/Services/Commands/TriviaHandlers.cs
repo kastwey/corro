@@ -64,7 +64,8 @@ public static class TriviaTurnFlow
 			// announcement gate holds it — and the question dialog — until the piece finishes
 			// walking to the square (see docs/game-families.md, "Pacing to the move animation").
 			await context.Announce("game.trivia_moved_center",
-				new() { ["player"] = player.Name, ["actorId"] = player.Id });
+				VisualNarrativeVars.Add(new() { ["player"] = player.Name, ["actorId"] = player.Id },
+					"movement", player.Id, player.Id));
 
 			if (TriviaRulebook.HasAllWedges(seat))
 			{
@@ -88,7 +89,8 @@ public static class TriviaTurnFlow
 		if (TriviaRulebook.IsRollAgain(board, node))
 		{
 			await context.Announce("game.trivia_roll_again",
-				new() { ["player"] = player.Name, ["actorId"] = player.Id });
+				VisualNarrativeVars.Add(new() { ["player"] = player.Name, ["actorId"] = player.Id },
+					"movement", player.Id, player.Id, tone: "gain"));
 			return new TriviaActionResponse { Action = "move", RollAgain = true };
 		}
 
@@ -97,12 +99,12 @@ public static class TriviaTurnFlow
 		var moveKey = onWedge ? "game.trivia_moved_wedge" : "game.trivia_moved";
 		// Resolve phase (not Move): the landing paces to the walk — the gate holds it and the
 		// question dialog until the piece arrives (see docs/game-families.md).
-		await context.Announce(moveKey, new()
+		await context.Announce(moveKey, VisualNarrativeVars.Add(new()
 		{
 			["player"] = player.Name,
 			["cat"] = CatKey(category),
 			["actorId"] = player.Id,
-		});
+		}, "movement", player.Id, player.Id));
 
 		return await PoseQuestionAsync(player, context, category, onWedge, atCenter: false, isFinal: false);
 	}
@@ -173,26 +175,29 @@ public static class TriviaTurnFlow
 		var q = trivia.PendingQuestion!;
 		var seat = trivia.Players.First(p => p.PlayerId == active.Id);
 
-		await context.Announce("game.trivia_reveal", new() { ["correct"] = q.CorrectAnswer ?? "" });
+		await context.Announce("game.trivia_reveal", VisualNarrativeVars.Add(
+			new() { ["correct"] = q.CorrectAnswer ?? "" }, "detail"));
 
 		if (correct)
 		{
 			await context.Announce("game.trivia_correct",
-				new() { ["player"] = active.Name, ["actorId"] = active.Id });
+				VisualNarrativeVars.Add(new() { ["player"] = active.Name, ["actorId"] = active.Id },
+					"outcome", targetPlayerId: active.Id, tone: "gain"));
 
 			if (q.OnWedge && !seat.Wedges.Contains(q.Category))
 			{
 				seat.Wedges.Add(q.Category);
-				await context.Announce("game.trivia_wedge", new()
+				await context.Announce("game.trivia_wedge", VisualNarrativeVars.Add(new()
 				{
 					["player"] = active.Name,
 					["cat"] = CatKey(q.Category),
 					["actorId"] = active.Id,
-				});
+				}, "milestone", targetPlayerId: active.Id, count: seat.Wedges.Count, tone: "gain"));
 				if (TriviaRulebook.HasAllWedges(seat))
 				{
 					await context.Announce("game.trivia_wedges_complete",
-						new() { ["player"] = active.Name, ["actorId"] = active.Id });
+						VisualNarrativeVars.Add(new() { ["player"] = active.Name, ["actorId"] = active.Id },
+							"detail", targetPlayerId: active.Id, tone: "gain"));
 				}
 			}
 
@@ -205,12 +210,15 @@ public static class TriviaTurnFlow
 			}
 
 			// A correct answer earns another roll — the same player keeps the turn, so say so.
-			await context.Announce("game.trivia_again", new() { ["player"] = active.Name, ["actorId"] = active.Id });
+			await context.Announce("game.trivia_again", VisualNarrativeVars.Add(
+				new() { ["player"] = active.Name, ["actorId"] = active.Id },
+				"detail", targetPlayerId: active.Id, tone: "gain"));
 			return new TriviaActionResponse { Action = action, RollAgain = true };
 		}
 
 		await context.Announce("game.trivia_wrong",
-			new() { ["player"] = active.Name, ["actorId"] = active.Id });
+			VisualNarrativeVars.Add(new() { ["player"] = active.Name, ["actorId"] = active.Id },
+				"outcome", targetPlayerId: active.Id, tone: "loss"));
 		trivia.PendingQuestion = null;
 		await EndTurnAsync(context);
 		return new TriviaActionResponse { Action = action, TurnEnded = true };
@@ -222,7 +230,9 @@ public static class TriviaTurnFlow
 		player.Status = PlayerStatus.Finished;
 		context.GameState.WinnerId = player.Id;
 		context.GameState.IsGameOver = true;
-		await context.Announce("game.trivia_won", new() { ["player"] = player.Name, ["actorId"] = player.Id });
+		await context.Announce("game.trivia_won", VisualNarrativeVars.Add(
+			new() { ["player"] = player.Name, ["actorId"] = player.Id },
+			"milestone", targetPlayerId: player.Id, tone: "gain"));
 		await context.Announce("game.game_over", new() { ["winner"] = player.Name, ["actorId"] = player.Id });
 	}
 
