@@ -42,6 +42,15 @@ public class SiteBrandingOptionsTests
 	}
 
 	[Theory]
+	[InlineData("assets/host/logo.svg")]
+	[InlineData("/assets/host/favicon.svg")]
+	[InlineData("https://cdn.example.org/logo.svg")]
+	public void Web_asset_urls_are_supported_independently_of_host_platform(string value)
+	{
+		Assert.True(SiteBrandingOptions.IsSupportedAssetUrl(value));
+	}
+
+	[Theory]
 	[InlineData("SiteBranding:Title", " ")]
 	[InlineData("SiteBranding:Title", " Padded title ")]
 	[InlineData("SiteBranding:LogoUrl", "http://cdn.example.org/logo.svg")]

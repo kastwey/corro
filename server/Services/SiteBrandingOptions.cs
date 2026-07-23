@@ -46,9 +46,16 @@ public sealed class SiteBrandingOptions
 			return false;
 		}
 
-		if (Uri.TryCreate(value, UriKind.Absolute, out var absolute))
+		// Classify an explicit URI scheme before asking System.Uri to parse the value. On Unix,
+		// System.Uri treats an origin-relative web path such as "/assets/logo.svg" as an absolute
+		// file URI, while Windows treats the same text as relative. Web asset configuration must
+		// have identical semantics on both hosts.
+		var colon = value.IndexOf(':');
+		var hasExplicitScheme = colon > 0 && Uri.CheckSchemeName(value[..colon]);
+		if (hasExplicitScheme)
 		{
-			return absolute.Scheme == Uri.UriSchemeHttps;
+			return Uri.TryCreate(value, UriKind.Absolute, out var absolute)
+				&& absolute.Scheme == Uri.UriSchemeHttps;
 		}
 
 		return Uri.TryCreate(value, UriKind.Relative, out _);
