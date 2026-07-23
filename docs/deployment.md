@@ -62,6 +62,12 @@ deployment instead of silently removing private games from production.
   omit both theme variants to render the title as text and use no host favicon. These values are
   public by design and are returned by `/api/config/branding`; never place secrets in this
   section. Branding does not alter the mandatory **Powered by Corro** source attribution.
+- Voice chat is optional and uses a separately operated LiveKit VPS; its deployment template
+  is documented in [the LiveKit infrastructure guide](../infra/livekit/README.md). Configure
+  App Service settings `LiveKit__Url`, `LiveKit__ApiUrl`, `LiveKit__ApiKey`,
+  `LiveKit__ApiSecret` and (optionally) `LiveKit__TokenLifetimeMinutes`. Keep the API secret in
+  an Azure Key Vault reference rather than source or GitHub. The workflow deliberately does
+  not overwrite app settings. With no complete LiveKit section, voice is cleanly unavailable.
 - Durable-game retention runs inside the existing App Service rather than a separate Function
   App, so it can coordinate with live SignalR sessions and reuse the canonical game-deletion
   path. The S1 plan's `Always On` setting is enforced by deployment, so it catches up on every

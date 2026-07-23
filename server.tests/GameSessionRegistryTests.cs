@@ -2,6 +2,7 @@ using CorroServer.Hubs;
 using CorroServer.Models;
 using CorroServer.Models.Corro;
 using CorroServer.Services;
+using CorroServer.Services.Voice;
 using Microsoft.AspNetCore.SignalR;
 using Xunit;
 
@@ -73,6 +74,24 @@ public class GameSessionRegistryTests
 		Assert.True(reg.HasService("g1"));            // still live
 		Assert.False(service.Ended);
 		Assert.Empty(repo.Deleted);
+	}
+
+	[Fact]
+	public async Task CleanupIfGameOver_deletes_the_voice_room()
+	{
+		var voice = new RecordingVoiceService();
+		var reg = new GameSessionRegistry(
+			new NoopHubContext(),
+			new RecordingRepo(),
+			new RecordingTimer(),
+			TestFixtures.NewPackageRestorer(),
+			voiceService: voice);
+		var service = new FakeService(gameOver: true);
+		reg.RegisterService("g1", service);
+
+		await reg.CleanupIfGameOverAsync("g1", service);
+
+		Assert.Equal(new[] { "g1" }, voice.DeletedRooms);
 	}
 
 	[Fact]
@@ -163,6 +182,21 @@ public class GameSessionRegistryTests
 		public Task<GameDocument?> GetByInviteCodeAsync(string inviteCode) => Task.FromResult<GameDocument?>(null);
 		public Task<GameDocument> CreateGameAsync(GameDocument game) => Task.FromResult(game);
 		public Task<GameDocument> UpdateGameAsync(GameDocument game) => Task.FromResult(game);
+	}
+
+	private sealed class RecordingVoiceService : ILiveKitVoiceService
+	{
+		public bool IsConfigured => true;
+		public List<string> DeletedRooms { get; } = new();
+		public VoiceJoinCredentials CreateJoinCredentials(string roomName, string participantId, string participantName)
+			=> throw new NotSupportedException();
+		public Task<bool> MuteParticipantAsync(string roomName, string participantId)
+			=> throw new NotSupportedException();
+		public Task DeleteRoomAsync(string roomName)
+		{
+			DeletedRooms.Add(roomName);
+			return Task.CompletedTask;
+		}
 	}
 
 	private sealed class FakeService : IGameService

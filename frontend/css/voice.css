@@ -1,0 +1,272 @@
+/* Optional LiveKit voice UI. The relay audio elements are transport-only and never enter
+	the accessibility tree. Player cards mirror read-only presence continuously; this roster
+	remains the detailed operable representation for volume and host moderation. */
+#voice-audio {
+	display: none;
+}
+
+.voice-toggle {
+	position: relative;
+}
+
+.voice-toggle__dot {
+	position: absolute;
+	right: 2px;
+	bottom: 2px;
+	width: 9px;
+	height: 9px;
+	border: 2px solid var(--surface);
+	border-radius: 50%;
+	background: var(--text-muted);
+}
+
+.voice-toggle--enabled .voice-toggle__dot {
+	background: var(--accent);
+}
+
+.voice-toggle--connected .voice-toggle__dot {
+	background: var(--good);
+	box-shadow: 0 0 0 3px var(--good-soft, var(--accent-soft));
+}
+
+.voice-panel {
+	width: min(34rem, calc(100vw - 2rem));
+	max-height: min(78vh, 44rem);
+}
+
+.voice-panel[open] {
+	display: block;
+}
+
+.voice-panel__surface {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+	max-height: min(78vh, 44rem);
+}
+
+.voice-panel__close {
+	position: absolute;
+	top: 0.65rem;
+	right: 0.75rem;
+	width: 2rem;
+	height: 2rem;
+	border: 1px solid var(--border-strong);
+	border-radius: 50%;
+	background: var(--surface-2);
+	color: var(--text);
+	font-size: 0;
+	cursor: pointer;
+}
+
+.voice-panel__close::before,
+.voice-panel__close::after {
+	content: '';
+	position: absolute;
+	left: 0.48rem;
+	top: 0.9rem;
+	width: 1rem;
+	height: 2px;
+	background: currentColor;
+}
+
+.voice-panel__close::before { transform: rotate(45deg); }
+.voice-panel__close::after { transform: rotate(-45deg); }
+
+.voice-panel__close:hover {
+	background: var(--surface-3);
+}
+
+.voice-panel .dialog-title {
+	padding-right: 3.5rem;
+}
+
+.voice-disclaimer,
+.voice-status,
+.voice-controls,
+.voice-participants {
+	margin-left: 1.5rem;
+	margin-right: 1.5rem;
+}
+
+.voice-disclaimer {
+	margin-top: 1rem;
+	padding: 0.8rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--surface-2);
+	color: var(--text-muted);
+	font-size: 0.85rem;
+}
+
+.voice-disclaimer p {
+	margin: 0 0 0.65rem;
+}
+
+.voice-disclaimer label {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin-bottom: 0.65rem;
+}
+
+.voice-status {
+	margin-top: 1rem;
+	margin-bottom: 0.75rem;
+	padding: 0.65rem 0.8rem;
+	border-left: 4px solid var(--accent);
+	border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+	background: var(--accent-soft);
+	color: var(--text);
+	font-weight: 600;
+}
+
+.voice-controls {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-bottom: 0.9rem;
+}
+
+.voice-controls .btn,
+.voice-disclaimer .btn {
+	padding: 0.55rem 0.85rem;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-sm);
+	background: var(--surface-2);
+	color: var(--text);
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.voice-controls .btn:hover:not([aria-disabled="true"]),
+.voice-disclaimer .btn:hover:not([aria-disabled="true"]) {
+	background: var(--surface-3);
+}
+
+.voice-controls .btn[aria-disabled="true"] {
+	border-style: dashed;
+	color: var(--text-muted);
+	cursor: not-allowed;
+}
+
+.voice-participants {
+	list-style: none;
+	min-height: 0;
+	margin-top: 0;
+	margin-bottom: 1.5rem;
+	padding: 0;
+	overflow-y: auto;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+}
+
+.voice-participant {
+	display: grid;
+	grid-template-columns: minmax(9rem, 1fr) minmax(10rem, 1.25fr) auto;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.75rem;
+	border-bottom: 1px solid var(--border);
+	background: var(--surface);
+}
+
+.voice-participant:last-child {
+	border-bottom: 0;
+}
+
+.voice-participant--speaking {
+	background: var(--good-soft, var(--accent-soft));
+	box-shadow: inset 4px 0 0 var(--good);
+}
+
+.voice-participant--muted {
+	background: var(--surface-2);
+	box-shadow: inset 4px 0 0 var(--text-muted);
+}
+
+.voice-participant__identity {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.4rem;
+	min-width: 0;
+}
+
+.voice-participant__name {
+	color: var(--text);
+	font-weight: 700;
+	overflow-wrap: anywhere;
+}
+
+.voice-participant__visual-state {
+	padding: 0.15rem 0.45rem;
+	border: 1px solid var(--border-strong);
+	border-radius: 999px;
+	background: var(--surface-2);
+	color: var(--text-muted);
+	font-size: 0.75rem;
+	font-weight: 700;
+}
+
+.voice-participant--speaking .voice-participant__visual-state {
+	border-color: var(--good);
+	background: var(--good);
+	color: var(--on-good);
+}
+
+.voice-participant__volume {
+	display: grid;
+	gap: 0.3rem;
+	color: var(--text);
+	font-size: 0.8rem;
+}
+
+.voice-participant__volume[hidden] {
+	display: none;
+}
+
+.voice-participant__volume input {
+	width: 100%;
+	accent-color: var(--accent);
+}
+
+.voice-participant__host-mute {
+	padding: 0.45rem 0.65rem;
+	border: 1px solid var(--danger);
+	border-radius: var(--radius-sm);
+	background: var(--surface);
+	color: var(--danger);
+	font: inherit;
+	font-size: 0.8rem;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.voice-participant__host-mute:hover:not([aria-disabled="true"]) {
+	background: var(--danger);
+	color: var(--on-danger);
+}
+
+.voice-participant__host-mute[aria-disabled="true"] {
+	border-style: dashed;
+	color: var(--text-muted);
+	cursor: not-allowed;
+}
+
+@media (max-width: 620px) {
+	.voice-panel {
+		inset: auto 0.5rem 0.5rem 0.5rem;
+		width: auto;
+	}
+
+	.voice-participant {
+		grid-template-columns: 1fr;
+	}
+
+	.voice-participant__host-mute {
+		justify-self: start;
+	}
+}

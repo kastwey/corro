@@ -42,6 +42,11 @@ public partial class GameHub
 				Board = boardName,
 				Language = LobbyInput.NormalizeLanguage(request.Language),
 			};
+			if (request.VoiceChatEnabled && _voiceService?.IsConfigured != true)
+			{
+				await Clients.Caller.SendAsync("Error", "VOICE_NOT_CONFIGURED");
+				return;
+			}
 
 			var gameId = IdGenerator.GameId();
 			var inviteCode = IdGenerator.InviteCode();
@@ -85,6 +90,7 @@ public partial class GameHub
 				RuleValues = request.RuleValues,
 				RaceTeams = request.RaceTeams,
 				TeamCount = request.TeamCount is 0 ? null : request.TeamCount,
+				VoiceChatEnabled = request.VoiceChatEnabled,
 				Settings = request.Settings ?? new GameSettings(),
 				Players = new List<LobbyPlayer>
 				{
@@ -677,6 +683,7 @@ public partial class GameHub
 			if (gameService.GameState is { } packageState)
 			{
 				packageState.PackageToken = packageToken; // released on game over; the client's sound pack id
+				packageState.VoiceChatEnabled = game.VoiceChatEnabled;
 			}
 
 			_registry.RegisterService(request.GameId, gameService);

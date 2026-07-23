@@ -1,5 +1,9 @@
 # Azure deployment infrastructure
 
+The self-hosted voice relay is intentionally separate from Azure application delivery. See
+[livekit/README.md](livekit/README.md) for the single-node VPS template and network/security
+requirements.
+
 [github-deploy.bicep](github-deploy.bicep) configures authentication and authorization
 for production delivery. It does **not** recreate or modify the existing App Service,
 storage account, Cosmos DB, DNS binding, certificate or connection strings.

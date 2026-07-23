@@ -1,6 +1,7 @@
 using CorroServer.Services;
 using CorroServer.Services.Corro;
 using CorroServer.Services.Rules;
+using CorroServer.Services.Voice;
 
 namespace CorroServer.Extensions;
 
@@ -30,6 +31,10 @@ public static class E2EExtensions
 		services.AddSingleton<IRandomSource>(sp => sp.GetRequiredService<ScriptedRandomSource>());
 		// Hermetic persistence: never touch Cosmos from an E2E run.
 		services.AddSingleton<IGameRepository, InMemoryGameRepository>();
+		// Voice UI/authorization must be covered without an external SFU or microphone. The
+		// browser suite injects its transport; this server double supplies harmless credentials
+		// and records no media, network traffic or state.
+		services.AddSingleton<ILiveKitVoiceService, E2ELiveKitVoiceService>();
 		// Bots act almost instantly: the humanizing pause would only slow the suite down.
 		services.AddSingleton(new CorroServer.Services.Bots.BotOptions
 		{
@@ -43,6 +48,22 @@ public static class E2EExtensions
 				additionalPackagesDirs: new[] { packagesRoot }));
 		}
 		return services;
+	}
+
+	private sealed class E2ELiveKitVoiceService : ILiveKitVoiceService
+	{
+		public bool IsConfigured => true;
+
+		public VoiceJoinCredentials CreateJoinCredentials(
+			string roomName,
+			string participantId,
+			string participantName)
+			=> new("wss://voice.e2e.invalid", $"e2e-{roomName}-{participantId}");
+
+		public Task<bool> MuteParticipantAsync(string roomName, string participantId)
+			=> Task.FromResult(true);
+
+		public Task DeleteRoomAsync(string roomName) => Task.CompletedTask;
 	}
 
 	/// <summary>Maps the test-only control endpoints the Playwright suite drives the script with.</summary>

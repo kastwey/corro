@@ -73,6 +73,13 @@ export interface GameClientEvents {
 	'gameDeleted': { gameId: string };
 	'chatMessage': ChatMessageDto;
 	'chatHistory': ChatMessageDto[];
+	'voiceChatEnabledChanged': { enabled: boolean };
+	'voiceParticipantMutedByHost': {
+		targetPlayerId: string;
+		targetPlayerName: string;
+		hostPlayerId: string;
+		hostPlayerName: string;
+	};
 	'error': string;
 }
 
@@ -234,6 +241,14 @@ export class UnifiedGameClient {
 			this.emit('chatHistory', messages);
 		});
 
+		this.connection.on('VoiceChatEnabledChanged', (data: { enabled: boolean }) => {
+			this.emit('voiceChatEnabledChanged', data);
+		});
+
+		this.connection.on('VoiceParticipantMutedByHost', (data: GameClientEvents['voiceParticipantMutedByHost']) => {
+			this.emit('voiceParticipantMutedByHost', data);
+		});
+
 		this.connection.on('GameDeleted', (data: { gameId: string }) => {
 			this.emit('gameDeleted', data);
 		});
@@ -386,6 +401,25 @@ export class UnifiedGameClient {
 	/** Sends an in-game chat message (authenticated with the player's secret, like the rejoin). */
 	async sendChatMessage(gameId: string, playerId: string, playerSecretId: string, text: string): Promise<void> {
 		await this.invoke("SendChatMessage", { gameId, playerId, playerSecretId, text });
+	}
+
+	/** Short-lived LiveKit credentials for the already-authenticated SignalR player. */
+	async requestVoiceToken(): Promise<{ url: string; token: string }> {
+		if (!this.isConnected || !this.connection) {
+			const revived = await this.kickReconnect();
+			if (!revived) throw new Error('Not connected to server');
+		}
+		return await this.connection!.invoke('RequestVoiceToken');
+	}
+
+	/** Host-only authoritative switch. Players disconnect immediately when it becomes false. */
+	async setVoiceChatEnabled(enabled: boolean): Promise<void> {
+		await this.invoke('SetVoiceChatEnabled', enabled);
+	}
+
+	/** Host-only one-shot mute. The target remains free to unmute afterwards. */
+	async muteVoiceParticipant(targetPlayerId: string): Promise<void> {
+		await this.invoke('MuteVoiceParticipant', targetPlayerId);
 	}
 
 	/**

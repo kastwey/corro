@@ -249,6 +249,9 @@ public record GameState
 	/// <summary>The game family this state belongs to ("property" | "race"), so client and
 	/// server pick the right rulebook/renderer. Defaults to the original family.</summary>
 	public string GameType { get; set; } = "property";
+	/// <summary>Public platform state: the host currently allows players to opt in to the
+	/// LiveKit voice room. Audio and participant presence remain outside persisted game rules.</summary>
+	public bool VoiceChatEnabled { get; set; }
 	/// <summary>Race-family sub-state (pieces, pending piece choice, bonuses). Null otherwise.</summary>
 	public RaceState? Race { get; set; }
 	/// <summary>The race board definition (circuit/seats/safe squares), shipped to the client the

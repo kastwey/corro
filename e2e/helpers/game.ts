@@ -75,6 +75,64 @@ export async function newPlayerPage(
 	// Context-level so EVERY page in this player's browser gets the collector —
 	// including a page reopened after a disconnect (the reconnection flow).
 	await context.addInitScript(() => {
+		// The E2E server mints harmless test credentials; this deterministic browser transport
+		// exercises the real panel, SignalR authorization and Axe states without contacting an
+		// SFU or asking CI machines for a microphone.
+		(window as any).__corroVoiceTransportFactory = (callbacks: any) => {
+			let participants: any[] = [];
+			let activeSpeakers: any[] = [];
+			const transport = {
+				connectedWith: null as null | { url: string; token: string },
+				disconnects: 0,
+				async connect(url: string, token: string) {
+					transport.connectedWith = { url, token };
+					const match = /^e2e-[^-]+-(.+)$/.exec(token);
+					const id = match?.[1] ?? 'local-player';
+					let name = 'Player';
+					try {
+						const games = JSON.parse(localStorage.getItem('corro_games') ?? '[]');
+						name = games.find((game: any) => game.playerId === id)?.playerName ?? name;
+					} catch { /* fallback name is sufficient for transport testing */ }
+					participants = [{ id, name, local: true, muted: false, speaking: false, volume: 1 }];
+					callbacks.onParticipantsChanged(participants);
+				},
+				async disconnect() { transport.disconnects++; },
+				async setMuted(muted: boolean) {
+					participants = participants.map(p => p.local ? { ...p, muted } : p);
+					callbacks.onParticipantsChanged(participants);
+				},
+				setParticipantVolume(id: string, volume: number) {
+					participants = participants.map(p => p.id === id ? { ...p, volume } : p);
+					callbacks.onParticipantsChanged(participants);
+				},
+				getParticipants: () => participants,
+				getActiveSpeakers: () => activeSpeakers,
+			};
+			(window as any).__voiceTest = {
+				transport,
+				addRemote(id: string, name: string) {
+					const participant = { id, name, local: false, muted: false, speaking: false, volume: 1 };
+					participants = [...participants.filter(p => p.id !== id), participant];
+					callbacks.onParticipantJoined(participant);
+					callbacks.onParticipantsChanged(participants);
+				},
+				setSpeaking(id: string, speaking: boolean) {
+					participants = participants.map(p => p.id === id ? { ...p, speaking } : p);
+					activeSpeakers = participants.filter(p => p.speaking);
+					callbacks.onParticipantsChanged(participants);
+				},
+				setMuted(id: string, muted: boolean) {
+					participants = participants.map(p => p.id === id ? { ...p, muted } : p);
+					callbacks.onParticipantsChanged(participants);
+				},
+				setLocalMuted(muted: boolean) {
+					participants = participants.map(p => p.local ? { ...p, muted } : p);
+					callbacks.onParticipantsChanged(participants);
+				},
+			};
+			return transport;
+		};
+
 		const log: string[] = [];
 		(window as any).__announcements = log;
 		const push = (text: string | null | undefined) => {

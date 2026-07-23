@@ -68,6 +68,9 @@ export interface KeyHandlersOptions {
 	onLeaveGame?: () => void; // Opens the confirm dialog to abandon the game (bankruptcy)
 	onToggleChat?: () => void; // Opens/collapses the chat panel (Ctrl+Shift+H)
 	onFocusChatInput?: () => void; // Jumps to the chat compose box, opening the panel if needed (Ctrl+Shift+R)
+	onToggleVoicePanel?: () => void; // Opens/collapses the optional voice controls
+	onToggleVoiceMute?: () => void; // Mutes/unmutes my published microphone
+	onAnnounceVoiceSpeakers?: () => boolean; // Voices a current-speaker snapshot on demand
 	/** C off the property board: announce my board identity (squadron / piece colour). */
 	onAnnounceIdentity?: () => boolean;
 	/** The generic real-time REACTION key (exploding: play a Nope). Global — it fires off-turn
@@ -157,6 +160,7 @@ const DIALOG_READONLY_COMMANDS = new Set([
 	'AnnounceTurn',
 	'HistoryPrev', 'HistoryNext', 'HistoryFirst', 'HistoryLast',
 	'ToggleSound',
+	'AnnounceVoiceSpeakers',
 ]);
 
 /** The active family, defaulting to "property" (lobby, tests, property boards). */
@@ -290,6 +294,14 @@ function createCommandExecutor(opts: KeyHandlersOptions) {
 					// browser's own Ctrl+Shift+R (hard reload) would fire.
 					if (opts.onFocusChatInput) { opts.onFocusChatInput(); return true; }
 					return false;
+				case 'ToggleVoicePanel':
+					if (opts.onToggleVoicePanel) { opts.onToggleVoicePanel(); return true; }
+					return false;
+				case 'ToggleVoiceMute':
+					if (opts.onToggleVoiceMute) { opts.onToggleVoiceMute(); return true; }
+					return false;
+				case 'AnnounceVoiceSpeakers':
+					return opts.onAnnounceVoiceSpeakers?.() ?? false;
 				case 'ShowHelp':
 					if (opts.showHelp) {
 						opts.showHelp();

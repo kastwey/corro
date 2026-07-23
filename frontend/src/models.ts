@@ -682,6 +682,8 @@ export interface RaceRulesConfig {
 export interface GameState {
   /** Game family ("property" | "race"); absent means property (the original family). */
   gameType?: string;
+  /** Public platform state: players may opt in to the voice room while true. */
+  voiceChatEnabled?: boolean;
   /** Race sub-state and board definition; only present in race games. */
   race?: RaceState | null;
   raceBoard?: RaceBoardDef | null;
@@ -786,6 +788,8 @@ export interface GameInfo {
   seats?: LobbySeatInfo[] | null;
   /** Journey team mode: how many equal teams (>= 2); absent/null = individual play. */
   teamCount?: number | null;
+  /** Whether the host currently offers the optional voice room. */
+  voiceChatEnabled?: boolean;
 }
 
 /** One in-game chat message (mirrors the server's ChatMessage). */
@@ -833,6 +837,8 @@ export interface CreateGameRequest {
   raceTeams?: boolean;
   /** Journey team mode: how many equal teams (a divisor of the exact player count). */
   teamCount?: number;
+  /** Initial host choice for the optional voice room. */
+  voiceChatEnabled?: boolean;
 }
 
 /** A group heading for the rules panel (id referenced by house rules + an i18n name key). */

@@ -43,11 +43,20 @@ export interface PlayerPanelDeps {
 	onGoToPlayer: (playerId: string) => void;
 }
 
+/** Local LiveKit presence projected onto the always-visible player cards. It is presentation
+ * state only: the authoritative game model remains independent of the optional voice relay. */
+export interface PlayerVoicePresence {
+	id: string;
+	muted: boolean;
+	speaking: boolean;
+}
+
 export class PlayerPanel {
 	private container: HTMLElement | null = null;
 	private list: HTMLElement | null = null;
 	private deps: PlayerPanelDeps | null = null;
 	private nav: RovingToolbarList | null = null;
+	private voiceByPlayerId = new Map<string, PlayerVoicePresence>();
 	/** row -> its persistent child nodes, so a row's content is mutated, never rebuilt. */
 	private readonly shells = new WeakMap<HTMLLIElement, CardRefs>();
 
@@ -92,6 +101,12 @@ export class PlayerPanel {
 		let idx = items.findIndex(it => it.dataset.playerId === currentId);
 		if (idx < 0) idx = 0;
 		return this.nav.focusItem(idx);
+	}
+
+	/** Mirror voice presence without adding controls or an aria-live stream to player rows. */
+	setVoiceParticipants(participants: readonly PlayerVoicePresence[]): void {
+		this.voiceByPlayerId = new Map(participants.map(participant => [participant.id, participant]));
+		this.update();
 	}
 
 	update(): void {
@@ -146,17 +161,18 @@ export class PlayerPanel {
 		const isCurrent = p.id === currentId;
 		const squareName = squares[p.position]?.name ?? '';
 		const debt = this.computeDebt(p);
+		const voice = this.voiceByPlayerId.get(p.id) ?? null;
 
 		// Build the row's persistent skeleton ONCE; every later update mutates it in place
 		// so a focused row — or a focused toolbar button — is never destroyed (which would
 		// throw focus to <body> and drop a screen reader into browse mode). Each step below
 		// touches only the parts that actually changed.
 		const refs = this.ensureCardShell(li);
-		this.updateIdentity(li, refs, p, isMe, isCurrent);
+		this.updateIdentity(li, refs, p, isMe, isCurrent, voice);
 		this.updateMoney(refs, p, debt);
-		this.updateMeta(refs, p, squareName);
+		this.updateMeta(refs, p, squareName, voice);
 		this.updateToolbar(li, refs, p, myId);
-		this.updateRowLabel(li, p, { isMe, isCurrent, squareName, debt });
+		this.updateRowLabel(li, p, { isMe, isCurrent, squareName, debt, voice });
 	}
 
 	/** A player's debt position: whether they owe, their net balance, and any shortfall. */
@@ -166,8 +182,17 @@ export class PlayerPanel {
 	}
 
 	/** Row class/state, the decorative token chip, and the player name (+ "you" badge). */
-	private updateIdentity(li: HTMLLIElement, refs: CardRefs, p: Player, isMe: boolean, isCurrent: boolean): void {
-		const className = 'player-card' + (isCurrent ? ' is-current' : '') + (isMe ? ' is-me' : '');
+	private updateIdentity(
+		li: HTMLLIElement,
+		refs: CardRefs,
+		p: Player,
+		isMe: boolean,
+		isCurrent: boolean,
+		voice: PlayerVoicePresence | null,
+	): void {
+		const isSpeaking = !!voice?.speaking && !voice.muted;
+		const className = 'player-card' + (isCurrent ? ' is-current' : '') + (isMe ? ' is-me' : '')
+			+ (isSpeaking ? ' is-voice-speaking' : '');
 		if (li.className !== className) li.className = className;
 		if (isCurrent) li.setAttribute('aria-current', 'true');
 		else li.removeAttribute('aria-current');
@@ -236,8 +261,13 @@ export class PlayerPanel {
 		if (refs.money.textContent !== moneyText) refs.money.textContent = moneyText;
 	}
 
-	/** Meta row: board position plus optional holding and "get out of holding free" card tags. */
-	private updateMeta(refs: CardRefs, p: Player, squareName: string): void {
+	/** Meta row: board position plus optional game and voice-state tags. */
+	private updateMeta(
+		refs: CardRefs,
+		p: Player,
+		squareName: string,
+		voice: PlayerVoicePresence | null,
+	): void {
 		if (refs.pos.textContent !== squareName) refs.pos.textContent = squareName;
 		// A player with no live connection is flagged so the table knows who they are
 		// waiting for (the server flips isConnected on disconnect/rejoin and announces it).
@@ -258,6 +288,18 @@ export class PlayerPanel {
 		const cardText = p.releasePasses > 0 ? t('release_pass_tag', { count: p.releasePasses }) : '';
 		toggleTag(refs.meta, refs.cardRef, p.releasePasses > 0, 'player-tag player-tag--card', cardText,
 			(el) => { refs.cardRef = el; }, () => { refs.cardRef = null; });
+		const voiceState = !voice ? null : voice.muted ? 'muted' : voice.speaking ? 'speaking' : 'listening';
+		const voiceText = voiceState === 'muted' ? t('voice_muted_visual')
+			: voiceState === 'speaking' ? t('voice_speaking_visual')
+				: voiceState === 'listening' ? t('voice_in_chat_visual') : '';
+		toggleTag(refs.meta, refs.voiceRef, voice !== null, 'player-tag player-tag--voice', voiceText,
+			(el) => { refs.voiceRef = el; }, () => { refs.voiceRef = null; });
+		if (refs.voiceRef && voiceState) {
+			refs.voiceRef.className = `player-tag player-tag--voice player-tag--voice-${voiceState}`;
+			// The row's stable aria-label carries membership/mute state. Speaking remains a
+			// visual snapshot so it never chatters while a screen-reader user rests on the row.
+			refs.voiceRef.setAttribute('aria-hidden', 'true');
+		}
 	}
 
 	/**
@@ -299,6 +341,7 @@ export class PlayerPanel {
 		if (ctx.isCurrent) parts.push(t('current_turn_label'));
 		if (p.isConnected === false) parts.push(t('disconnected_tag'));
 		if (p.isBankrupt) parts.push(t('bankrupt_tag'));
+		if (ctx.voice) parts.push(t(ctx.voice.muted ? 'voice_player_muted' : 'voice_player_listening'));
 		const seatName = this.deps?.getBoardIdentity?.(p.id) ?? null;
 		if (seatName !== null) {
 			parts.push(seatName); // the squadron / piece IS the player's board identity
@@ -343,7 +386,7 @@ export class PlayerPanel {
 		toolbar.setAttribute('role', 'toolbar');
 
 		li.append(token, name, money, meta, toolbar);
-		const refs: CardRefs = { token, name, nameText, youRef: null, turnRef: null, money, meta, pos, offlineRef: null, bankruptRef: null, holdingRef: null, cardRef: null, toolbar };
+		const refs: CardRefs = { token, name, nameText, youRef: null, turnRef: null, money, meta, pos, offlineRef: null, bankruptRef: null, holdingRef: null, cardRef: null, voiceRef: null, toolbar };
 		this.shells.set(li, refs);
 		return refs;
 	}
@@ -355,6 +398,7 @@ interface RowLabelContext {
 	isCurrent: boolean;
 	squareName: string;
 	debt: DebtInfo;
+	voice: PlayerVoicePresence | null;
 }
 
 /** A player's debt position: whether they owe, their net balance, and any shortfall. */
@@ -378,6 +422,7 @@ interface CardRefs {
 	bankruptRef: HTMLElement | null;
 	holdingRef: HTMLElement | null;
 	cardRef: HTMLElement | null;
+	voiceRef: HTMLElement | null;
 	toolbar: HTMLElement;
 }
 

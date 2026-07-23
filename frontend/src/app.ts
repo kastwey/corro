@@ -57,6 +57,8 @@ import type { AnnouncementEvent } from './gameClient.js';
 import { gameManager } from './gameManager.js';
 import { gameClient } from './gameClient.js';
 import { chatPanel } from './chatPanel.js';
+import { voicePanel } from './voicePanel.js';
+import { loadLiveKitClient } from './liveKitLoader.js';
 import { GameSessionStore } from './sessionUtils.js';
 import { actionBar } from './actions/actionBar.js';
 import { computeAvailableActions, deriveActionContext, rollForfeitGuard, endTurnForfeitGuard } from './actions/availableActions.js';
@@ -399,6 +401,32 @@ async function initBoard() {
   globalAnnounce = announce;
 	auctionDialog.setUnavailableAnnouncer(text =>
 		announce(createAnnouncement('_raw', { text }), { instant: true }));
+
+	// Voice is an optional deployment capability. The public probe contains one boolean only;
+	// the authenticated token call returns the relay URL just in time for an explicit join.
+	if (appControls) {
+		voicePanel.init(appControls, {
+			t: (key, vars) => tSync(key, vars),
+			gameId,
+			getMyPlayerId: () => playerSession.playerId,
+			isHost: () => playerSession.isHost,
+			requestToken: () => gameClient.requestVoiceToken(),
+			setEnabled: enabled => gameClient.setVoiceChatEnabled(enabled),
+			muteParticipant: playerId => gameClient.muteVoiceParticipant(playerId),
+			announce: (key, vars = {}, instant = false) =>
+				announce(createAnnouncement(key, vars), { instant }),
+			onPresenceChanged: participants => playerPanel.setVoiceParticipants(participants),
+			beforeOpen: () => { if (chatPanel.isOpen()) chatPanel.closePanel(); },
+		});
+		try {
+			const response = await fetch('/api/config/voice');
+			const config = response.ok ? await response.json() as { available?: boolean } : null;
+			const available = !!config?.available && await loadLiveKitClient();
+			voicePanel.setDeploymentAvailable(available);
+		} catch {
+			voicePanel.setDeploymentAvailable(false);
+		}
+	}
 
   announce(createAnnouncement('game.loading_board', {}));
 
@@ -914,7 +942,7 @@ async function initBoard() {
   // panel and is reachable directly with Ctrl+D. Modal dialogs trap focus on their own
   // and never appear here.
   const openNonModalDialog = () =>
-	document.querySelector<HTMLElement>('dialog[open][data-modal="false"]');
+	document.querySelector<HTMLElement>('dialog[open][data-modal="false"]:not(#chat-panel):not(#voice-panel)');
   panelNavigator.register({
 	id: 'dialog',
 	labelKey: 'game.panels.dialog',
@@ -955,6 +983,13 @@ async function initBoard() {
 	focus: () => chatPanel.focusInput(),
 	isAvailable: () => chatPanel.isOpen(),
   });
+	panelNavigator.register({
+	id: 'voice',
+	labelKey: 'game.panels.voice',
+	getElement: () => (voicePanel.isOpen() ? document.getElementById('voice-panel') : null),
+	focus: () => voicePanel.focus(),
+	isAvailable: () => voicePanel.isOpen(),
+  });
 
   // Subscribe to server updates
   // A drawn card is a CONSEQUENCE of landing: its visual reveal must be paced to the token
@@ -968,6 +1003,7 @@ async function initBoard() {
 
   gameManager.on('gameStateUpdated', (gs) => {
 	if (!gs) return;
+	voicePanel.setGameEnabled(!!gs.voiceChatEnabled);
 
 	// The page starts with a truthful loading message. Once the authoritative state tells us
 	// the family, explain the surface focus actually enters: a spatial board or a card hand.
@@ -1866,6 +1902,8 @@ async function initBoard() {
   });
   gameClient.on('chatMessage', m => chatPanel.addMessage(m));
   gameClient.on('chatHistory', ms => chatPanel.setHistory(ms));
+	gameClient.on('voiceChatEnabledChanged', data => voicePanel.setGameEnabled(data.enabled, true));
+	gameClient.on('voiceParticipantMutedByHost', data => voicePanel.handleHostMute(data));
 
   // Try to connect automatically and join the game
   try {
@@ -2011,8 +2049,11 @@ async function initBoard() {
 	  first: announceHistoryFirst,
 	  last: announceHistoryLast,
 	},
-	onToggleChat: () => chatPanel.toggle(),
-	onFocusChatInput: () => chatPanel.focusInput(),
+	onToggleChat: () => { if (voicePanel.isOpen()) voicePanel.closePanel(); chatPanel.toggle(); },
+	onFocusChatInput: () => { if (voicePanel.isOpen()) voicePanel.closePanel(); chatPanel.focusInput(); },
+	onToggleVoicePanel: () => voicePanel.togglePanel(),
+	onToggleVoiceMute: () => { void voicePanel.toggleSelfMute(); },
+	onAnnounceVoiceSpeakers: () => voicePanel.announceActiveSpeakers(),
 	// C off the property board: "how am I doing?" is your board identity there —
 	// the race squadron, or the track piece and its colour. The family owns the phrasing.
 	onAnnounceIdentity: () => {

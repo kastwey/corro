@@ -1,0 +1,39 @@
+# Copy to livekit.yaml (gitignored), replace every REPLACE_* value, and restrict it to
+# the operator account (chmod 600). The same key pair is configured on the Corro server.
+port: 7880
+
+redis:
+  address: 127.0.0.1:6379
+
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 60000
+  use_external_ip: true
+
+keys:
+  REPLACE_WITH_API_KEY: REPLACE_WITH_API_SECRET
+
+room:
+  empty_timeout: 300
+  departure_timeout: 20
+  max_participants: 8
+  enable_remote_unmute: false
+  enabled_codecs:
+    - mime: audio/opus
+    - mime: audio/red
+
+turn:
+  enabled: true
+  # TURN/UDP can share port 443 with an HTTPS reverse proxy because it uses UDP.
+  udp_port: 443
+  # On a single-IP VPS, HTTPS normally owns TCP 443. Use 5349 here, or put TURN/TLS
+  # on a second public IP / layer-4 SNI proxy and advertise TCP 443 there.
+  tls_port: 5349
+  domain: REPLACE_WITH_TURN_DOMAIN
+  cert_file: /etc/livekit/certs/fullchain.pem
+  key_file: /etc/livekit/certs/privkey.pem
+
+logging:
+  level: info
+  json: true
