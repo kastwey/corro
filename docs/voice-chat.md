@@ -18,6 +18,9 @@ works exactly as before and renders no dead voice control.
   LiveKit room but leaves text chat and gameplay untouched.
 - Every listener controls each remote participant's volume locally. Values are persisted
   per game in that browser and never sent to the server.
+- Each browser can choose a microphone before joining and change it while connected. Where
+  supported, it can also choose the output used for remote human voices. Device ids remain
+  in local storage and are applied before the unmuted microphone is first published.
 - A host mute is a one-shot moderation action against the current microphone track. The
   target is told who muted them and may turn their microphone back on. Persistent removal
   belongs to a future player-kick feature, not a hidden sticky mute.
@@ -73,16 +76,26 @@ client state bound any stale room access.
 
 `voiceTransport.ts` is the LiveKit boundary. The project still has no bundler: `build.js`
 copies LiveKit's UMD distribution and `board.html` loads its `LivekitClient` global, while
-TypeScript uses type-only imports. `voicePanel.ts` owns the native non-modal `<dialog>`,
-detailed roster and controls. It projects read-only presence into the existing player panel,
-so joining, muted microphones and active speakers remain visible while the dialog is closed.
+TypeScript uses type-only imports. `voicePanel.ts` owns an in-page disclosure controlled with
+`aria-expanded` and `aria-controls`, plus a persistent microphone button while connected. It
+projects read-only presence into the existing player panel, so joining, muted microphones and
+active speakers remain visible while the controls are collapsed.
 
 The always-visible player cards show voice membership, muted state and an active-speaker
-treatment. The dialog roster adds remote volume and host moderation. Speaking changes are
+treatment. The expanded roster adds remote volume and host moderation. Speaking changes are
 **visual only** continuously; screen readers get a snapshot only on request. This prevents a
 flood of names from talking over the humans the player is trying to hear. Join/leave,
 reconnection, permission errors, self mute and host mute are localized announcements;
-join/leave also have earcons.
+join/leave also have dedicated engine earcons distinct from game-connection cues.
+
+Device settings use Corro's established ARIA menu keyboard model. The root has sibling
+**Microphone** and **Voice output** submenus; device choices are `menuitemradio` options,
+because exactly one device is active in each group. Right/Enter opens a submenu, arrows and
+Home/End move, and Left/Escape returns to the root. Hardware changes refresh the catalog;
+a removed saved device falls back to the system default with visible and spoken feedback.
+Microphone labels require browser permission. Output selection depends on `setSinkId`; when
+unsupported, the menu keeps an operable explanatory item and uses the operating-system
+default. This setting routes LiveKit voices only, not game earcons or screen-reader speech.
 
 Shortcuts are part of the engine keymap and appear in Ctrl+F1 help:
 
@@ -115,8 +128,9 @@ secret configuration.
 
 - xUnit decodes token claims, verifies endpoint privacy, filters microphone tracks, checks
   lobby persistence, authenticated identity, host authorization, one-shot mute and cleanup.
-- Node tests cover permission errors, first-use notice, native dialog semantics, opt-in
-  unmuted joining, presence, visual speakers, on-demand narration, volume persistence,
+- Node tests cover permission errors, first-use notice, disclosure semantics, opt-in
+  unmuted joining, pre-join and live device changes, radio submenus, local persistence,
+  browser fallback, presence, visual speakers, on-demand narration, volume persistence,
   reversible mute and global keyboard routing.
 - `e2e/tests/voice.spec.ts` drives two browser contexts against the real server and SignalR.
   A deterministic E2E transport replaces only external media/SFU I/O; every reached state

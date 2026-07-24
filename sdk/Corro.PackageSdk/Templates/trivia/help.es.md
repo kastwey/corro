@@ -14,4 +14,4 @@ Pulsa **Espacio** para tirar. Elige un destino alcanzable en el diálogo no moda
 
 ## Cómo jugar con lector de pantalla
 
-**Escape** pasa del diálogo de destino a la rueda sin cancelarlo; **Ctrl+D** vuelve. Las flechas exploran, **E** salta al centro, **L** anuncia la posición horaria, **D** recorre destinos, **M** tu ficha y **N** todas. **S** anuncia tus quesitos y **Shift+S** los rivales. Se anuncian preguntas, opciones, resultados y quesitos. **F6** recorre zonas y **Ctrl+Shift+R** enfoca el chat.
+**Escape** pasa del diálogo de destino a la rueda sin cancelarlo; **Ctrl+D** vuelve. Las flechas exploran, **E** salta al centro, **L** anuncia la posición horaria, **D** recorre destinos, **M** tu ficha y **N** todas. **S** anuncia tus quesitos y **Shift+S** los rivales. Se anuncian preguntas, opciones, resultados y quesitos. **Ctrl+F6** recorre zonas y **Ctrl+Shift+R** enfoca el chat.

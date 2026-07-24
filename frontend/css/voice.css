@@ -9,6 +9,28 @@
 	position: relative;
 }
 
+.voice-toggle[hidden],
+.voice-microphone-toggle[hidden] {
+	display: none;
+}
+
+.voice-microphone-toggle {
+	position: relative;
+}
+
+.voice-microphone-toggle--muted::after {
+	content: '';
+	position: absolute;
+	left: 0.35rem;
+	top: 50%;
+	width: calc(100% - 0.7rem);
+	height: 3px;
+	border-radius: 2px;
+	background: var(--danger);
+	transform: rotate(-45deg);
+	transform-origin: center;
+}
+
 .voice-toggle__dot {
 	position: absolute;
 	right: 2px;
@@ -30,12 +52,15 @@
 }
 
 .voice-panel {
-	width: min(34rem, calc(100vw - 2rem));
+	width: 100%;
 	max-height: min(78vh, 44rem);
-}
-
-.voice-panel[open] {
-	display: block;
+	margin-bottom: 1rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	background: var(--surface);
+	color: var(--text);
+	box-shadow: var(--shadow-md);
+	overflow: hidden;
 }
 
 .voice-panel__surface {
@@ -44,6 +69,13 @@
 	flex-direction: column;
 	min-height: 0;
 	max-height: min(78vh, 44rem);
+}
+
+.voice-panel__title {
+	margin: 0;
+	padding: 1rem 3.5rem 0.85rem 1.5rem;
+	border-bottom: 1px solid var(--border);
+	font-size: 1.1rem;
 }
 
 .voice-panel__close {
@@ -78,16 +110,18 @@
 	background: var(--surface-3);
 }
 
-.voice-panel .dialog-title {
-	padding-right: 3.5rem;
-}
-
 .voice-disclaimer,
 .voice-status,
 .voice-controls,
+.voice-device-settings,
 .voice-participants {
 	margin-left: 1.5rem;
 	margin-right: 1.5rem;
+}
+
+.voice-device-settings {
+	align-self: flex-start;
+	margin-bottom: 0.9rem;
 }
 
 .voice-disclaimer {
@@ -257,11 +291,6 @@
 }
 
 @media (max-width: 620px) {
-	.voice-panel {
-		inset: auto 0.5rem 0.5rem 0.5rem;
-		width: auto;
-	}
-
 	.voice-participant {
 		grid-template-columns: 1fr;
 	}

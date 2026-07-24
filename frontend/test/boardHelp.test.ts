@@ -90,7 +90,7 @@ test('every physical package guide has help discovery, screen-reader guidance an
 				: '## Playing with a screen reader';
 
 			assert.ok(guide.includes(screenReaderHeading), `${context}: missing screen-reader section`);
-			for (const shortcut of ['**F1**', '**Ctrl+F1**', '**Ctrl+Shift+F1**', '**F6**', '**Ctrl+Shift+R**']) {
+			for (const shortcut of ['**F1**', '**Ctrl+F1**', '**Ctrl+Shift+F1**', '**Ctrl+F6**', '**Ctrl+Shift+R**']) {
 				assert.ok(guide.includes(shortcut), `${context}: missing ${shortcut}`);
 			}
 			if (cardFamilies.has(manifest.gameType)) {

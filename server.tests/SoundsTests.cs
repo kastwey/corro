@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CorroServer.Controllers;
 using CorroServer.Models;
 using CorroServer.Services.Sounds;
@@ -30,6 +31,28 @@ public class SoundsTests : IDisposable
 	private DefaultSoundPackProvider Provider() => new(_dir);
 
 	// ===== DefaultSoundPackProvider =====
+
+	[Fact]
+	public void Engine_voice_presence_events_use_dedicated_platform_files()
+	{
+		var soundsRoot = Path.Combine(Directory.GetParent(CorroTestPaths.PackagesRoot())!.FullName, "Assets", "Sounds");
+		using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(soundsRoot, "pack.json")));
+		var events = manifest.RootElement.GetProperty("events");
+		var join = events.GetProperty("voice.join").GetString();
+		var leave = events.GetProperty("voice.leave").GetString();
+
+		Assert.Equal("voice-join.wav", join);
+		Assert.Equal("voice-leave.wav", leave);
+		Assert.NotEqual(events.GetProperty("connect").GetString(), join);
+		Assert.NotEqual(events.GetProperty("disconnect").GetString(), leave);
+		Assert.True(File.Exists(Path.Combine(soundsRoot, join!)));
+		Assert.True(File.Exists(Path.Combine(soundsRoot, leave!)));
+		var provider = new DefaultSoundPackProvider(soundsRoot);
+		Assert.True(provider.TryGetSoundFile("default", join!, out _, out var joinContentType));
+		Assert.True(provider.TryGetSoundFile("default", leave!, out _, out var leaveContentType));
+		Assert.Equal("audio/wav", joinContentType);
+		Assert.Equal("audio/wav", leaveContentType);
+	}
 
 	[Fact]
 	public void ResolveEvents_ReturnsDeclaredEvents()

@@ -47,6 +47,6 @@ el tablero decide el resto. Gana quien llega primero a la casilla 100.
 
 ### Moverte entre zonas y usar el chat
 
-- **F6** recorre tablero, acciones, jugadores y conexión. **Shift+F6** lo hace en sentido contrario.
+- **Ctrl+F6** recorre tablero, acciones, jugadores y conexión. **Ctrl+Shift+F6** lo hace en sentido contrario.
 - **Ctrl+Shift+R** abre el chat y lleva el foco al cuadro de mensaje. **Ctrl+Shift+H** abre o cierra el chat.
 - Esta guía, los atajos y las reglas activas son documentos de lectura. Recorre sus encabezados y listas con tu lector y ciérralos con **Escape** para volver al juego.

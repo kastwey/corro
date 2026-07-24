@@ -110,7 +110,7 @@ public class GreatRoutePackageTests
 		}
 
 		// The screen-reader primer must also cover cross-panel movement and direct chat access.
-		foreach (var shortcut in new[] { "**F6**", "**Shift+F6**", "**Ctrl+Shift+R**", "**Escape**" })
+		foreach (var shortcut in new[] { "**Ctrl+F6**", "**Ctrl+Shift+F6**", "**Ctrl+Shift+R**", "**Escape**" })
 		{
 			Assert.Contains(shortcut, guide);
 		}

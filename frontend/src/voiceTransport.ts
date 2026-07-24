@@ -17,6 +17,23 @@ export interface VoiceParticipant {
 	volume: number;
 }
 
+export interface VoiceDevice {
+	deviceId: string;
+	label: string;
+}
+
+export interface VoiceDevicePreferences {
+	microphoneId: string;
+	outputId: string;
+}
+
+export interface VoiceDeviceSnapshot {
+	microphones: VoiceDevice[];
+	outputs: VoiceDevice[];
+	outputSelectionSupported: boolean;
+	outputPromptSupported: boolean;
+}
+
 export interface VoiceTransportCallbacks {
 	onParticipantJoined(participant: VoiceParticipant): void;
 	onParticipantLeft(participant: VoiceParticipant): void;
@@ -25,13 +42,19 @@ export interface VoiceTransportCallbacks {
 	onReconnected(): void;
 	onDisconnected(unexpected: boolean): void;
 	onPlaybackBlocked(): void;
+	onDevicesChanged(): void;
+	onDevicePreferenceFallback(kind: 'audioinput' | 'audiooutput'): void;
 }
 
 export interface VoiceTransport {
-	connect(url: string, token: string): Promise<void>;
+	connect(url: string, token: string, preferences?: VoiceDevicePreferences): Promise<void>;
 	disconnect(): Promise<void>;
 	setMuted(muted: boolean): Promise<void>;
 	setParticipantVolume(participantId: string, volume: number): void;
+	getDeviceSnapshot(): Promise<VoiceDeviceSnapshot>;
+	setMicrophoneDevice(deviceId: string): Promise<void>;
+	setOutputDevice(deviceId: string): Promise<void>;
+	requestOutputDevice(): Promise<VoiceDevice | null>;
 	getParticipants(): VoiceParticipant[];
 	getActiveSpeakers(): VoiceParticipant[];
 }
@@ -42,6 +65,11 @@ declare global {
 		LivekitClient?: typeof import('livekit-client');
 		/** Test hook: E2E supplies a deterministic transport without a real SFU or microphone. */
 		__corroVoiceTransportFactory?: (callbacks: VoiceTransportCallbacks) => VoiceTransport;
+		/** Test hook for pre-join discovery, which otherwise invokes browser media permissions. */
+		__corroVoiceDeviceProvider?: {
+			getAvailableDevices: () => Promise<VoiceDeviceSnapshot>;
+			requestOutputDevice: () => Promise<VoiceDevice | null>;
+		};
 	}
 }
 
@@ -56,6 +84,33 @@ export function createVoiceTransport(callbacks: VoiceTransportCallbacks): VoiceT
 		?? new LiveKitVoiceTransport(callbacks);
 }
 
+export async function getAvailableVoiceDevices(requestMicrophonePermission: boolean): Promise<VoiceDeviceSnapshot> {
+	if (window.__corroVoiceDeviceProvider) return window.__corroVoiceDeviceProvider.getAvailableDevices();
+	const sdk = window.LivekitClient;
+	if (!sdk) throw new Error('LiveKit browser client is unavailable.');
+	const outputSelectionSupported = sdk.supportsAudioOutputSelection();
+	const [microphones, outputs] = await Promise.all([
+		sdk.Room.getLocalDevices('audioinput', requestMicrophonePermission),
+		outputSelectionSupported
+			? sdk.Room.getLocalDevices('audiooutput', false)
+			: Promise.resolve([] as MediaDeviceInfo[]),
+	]);
+	return {
+		microphones: projectDevices(microphones),
+		outputs: projectDevices(outputs),
+		outputSelectionSupported,
+		outputPromptSupported: typeof selectableMediaDevices()?.selectAudioOutput === 'function',
+	};
+}
+
+export async function requestVoiceOutputDevice(): Promise<VoiceDevice | null> {
+	if (window.__corroVoiceDeviceProvider) return window.__corroVoiceDeviceProvider.requestOutputDevice();
+	const mediaDevices = selectableMediaDevices();
+	if (!mediaDevices?.selectAudioOutput) return null;
+	const selection = await mediaDevices.selectAudioOutput();
+	return { deviceId: selection.deviceId, label: selection.label };
+}
+
 class LiveKitVoiceTransport implements VoiceTransport {
 	private room: Room | null = null;
 	private intentionalDisconnect = false;
@@ -65,7 +120,7 @@ class LiveKitVoiceTransport implements VoiceTransport {
 
 	constructor(private readonly callbacks: VoiceTransportCallbacks) { }
 
-	async connect(url: string, token: string): Promise<void> {
+	async connect(url: string, token: string, preferences?: VoiceDevicePreferences): Promise<void> {
 		if (this.room) return;
 		const sdk = window.LivekitClient;
 		if (!sdk) {
@@ -82,6 +137,8 @@ class LiveKitVoiceTransport implements VoiceTransport {
 			// Joining is an explicit user gesture: start playback and publish the microphone
 			// immediately. If permission fails, leave rather than appearing to listen silently.
 			await room.startAudio();
+			await this.applyDevicePreference(room, 'audioinput', preferences?.microphoneId);
+			await this.applyDevicePreference(room, 'audiooutput', preferences?.outputId);
 			const microphone = await room.localParticipant.setMicrophoneEnabled(true);
 			if (!microphone) throw new Error('The microphone could not be published.');
 			this.emitParticipants();
@@ -106,6 +163,29 @@ class LiveKitVoiceTransport implements VoiceTransport {
 		if (!this.room) throw new Error('Voice chat is not connected.');
 		await this.room.localParticipant.setMicrophoneEnabled(!muted);
 		this.emitParticipants();
+	}
+
+	async getDeviceSnapshot(): Promise<VoiceDeviceSnapshot> {
+		if (!this.room) throw new Error('Voice chat is not connected.');
+		return getAvailableVoiceDevices(false);
+	}
+
+	async setMicrophoneDevice(deviceId: string): Promise<void> {
+		if (!this.room) throw new Error('Voice chat is not connected.');
+		await this.room.switchActiveDevice('audioinput', deviceId, deviceId !== 'default');
+	}
+
+	async setOutputDevice(deviceId: string): Promise<void> {
+		if (!this.room) throw new Error('Voice chat is not connected.');
+		await this.room.switchActiveDevice('audiooutput', deviceId, deviceId !== 'default');
+	}
+
+	async requestOutputDevice(): Promise<VoiceDevice | null> {
+		// Call before the first await: this API requires the menu click's transient user
+		// activation and intentionally rejects delayed/background prompts.
+		const selection = await requestVoiceOutputDevice();
+		if (selection) await this.setOutputDevice(selection.deviceId);
+		return selection;
 	}
 
 	setParticipantVolume(participantId: string, volume: number): void {
@@ -178,12 +258,37 @@ class LiveKitVoiceTransport implements VoiceTransport {
 		room.on(events.AudioPlaybackStatusChanged, () => {
 			if (!room.canPlaybackAudio) this.callbacks.onPlaybackBlocked();
 		});
+		room.on(events.MediaDevicesChanged, () => this.callbacks.onDevicesChanged());
+		room.on(events.ActiveDeviceChanged, () => this.callbacks.onDevicesChanged());
 		room.on(events.Disconnected, () => {
 			const unexpected = !this.intentionalDisconnect;
 			this.room = null;
 			this.cleanupAudio();
 			this.callbacks.onDisconnected(unexpected);
 		});
+	}
+
+	private async applyDevicePreference(
+		room: Room,
+		kind: 'audioinput' | 'audiooutput',
+		deviceId: string | undefined,
+	): Promise<void> {
+		if (!deviceId || deviceId === 'default') return;
+		const sdk = window.LivekitClient!;
+		if (kind === 'audiooutput' && !sdk.supportsAudioOutputSelection()) {
+			this.callbacks.onDevicePreferenceFallback(kind);
+			return;
+		}
+		try {
+			const available = await sdk.Room.getLocalDevices(kind, false);
+			if (!available.some(device => device.deviceId === deviceId)) {
+				this.callbacks.onDevicePreferenceFallback(kind);
+				return;
+			}
+			await room.switchActiveDevice(kind, deviceId);
+		} catch {
+			this.callbacks.onDevicePreferenceFallback(kind);
+		}
 	}
 
 	private projectParticipant(participant: Participant): VoiceParticipant {
@@ -217,4 +322,23 @@ class LiveKitVoiceTransport implements VoiceTransport {
 		this.audioHost?.remove();
 		this.audioHost = null;
 	}
+}
+
+function projectDevices(devices: readonly MediaDeviceInfo[]): VoiceDevice[] {
+	const seen = new Set<string>();
+	const projected: VoiceDevice[] = [];
+	for (const device of devices) {
+		if (!device.deviceId || device.deviceId === 'default' || seen.has(device.deviceId)) continue;
+		seen.add(device.deviceId);
+		projected.push({ deviceId: device.deviceId, label: device.label });
+	}
+	return projected;
+}
+
+interface SelectableMediaDevices extends MediaDevices {
+	selectAudioOutput?: (options?: { deviceId?: string }) => Promise<MediaDeviceInfo>;
+}
+
+function selectableMediaDevices(): SelectableMediaDevices | null {
+	return (navigator.mediaDevices as SelectableMediaDevices | undefined) ?? null;
 }

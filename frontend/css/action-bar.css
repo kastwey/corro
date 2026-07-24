@@ -257,6 +257,41 @@
 	cursor: pointer;
 }
 
+.popup-menu__item[aria-haspopup="menu"]::after {
+	content: '';
+	float: right;
+	width: 0.45rem;
+	height: 0.45rem;
+	margin: 0.25rem 0.2rem 0 1rem;
+	border-right: 2px solid currentColor;
+	border-bottom: 2px solid currentColor;
+	transform: rotate(-45deg);
+}
+
+.popup-menu__item[role="menuitemradio"]::before,
+.popup-menu__item[role="menuitemcheckbox"]::before {
+	content: '';
+	display: inline-block;
+	box-sizing: border-box;
+	width: 0.8rem;
+	height: 0.8rem;
+	margin-right: 0.45rem;
+	border: 2px solid currentColor;
+	border-radius: 2px;
+}
+
+.popup-menu__item[aria-checked="true"]::before {
+	width: 0.42rem;
+	height: 0.72rem;
+	margin-left: 0.15rem;
+	margin-right: 0.68rem;
+	border: 0;
+	border-right: 2px solid currentColor;
+	border-bottom: 2px solid currentColor;
+	border-radius: 0;
+	transform: rotate(45deg);
+}
+
 .popup-menu__item:hover {
 	background: var(--accent, #2d6cdf);
 	color: var(--on-accent, #fff);

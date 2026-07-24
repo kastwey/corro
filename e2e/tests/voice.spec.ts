@@ -48,13 +48,33 @@ test('voice chat: host enables it, players join unmuted, query speakers, adjust 
 	await joinGame(berto, code, 'Berto');
 	await startGame(ana, [ana, berto]);
 
-	await expect(ana.locator('#voice-toggle')).toBeVisible();
-	await expect(ana.locator('#voice-toggle')).toHaveAttribute('aria-pressed', 'false');
+	// Plain F6 belongs to browser chrome, where it can reach a microphone permission prompt.
+	// Corro cycles its regions only with Ctrl+F6; verify the real global route from the board.
+	const board = ana.locator('#board');
+	await board.focus();
+	const plainF6Consumed = await board.evaluate(element => {
+		const event = new KeyboardEvent('keydown', { key: 'F6', bubbles: true, cancelable: true });
+		element.dispatchEvent(event);
+		return event.defaultPrevented;
+	});
+	expect(plainF6Consumed).toBe(false);
+	await ana.keyboard.press('Control+F6');
+	await expect(ana.locator('#action-bar .action-bar-button').first()).toBeFocused();
 
-	// The global shortcut opens the native non-modal dialog. First contact lands on the
+	await expect(ana.locator('#voice-toggle')).toBeVisible();
+	expect(await ana.locator('#voice-toggle').getAttribute('aria-pressed')).toBeNull();
+	await expect(ana.locator('#voice-toggle')).toHaveAttribute('aria-expanded', 'false');
+	await expect(ana.locator('#voice-toggle')).toHaveAttribute('aria-controls', 'voice-panel');
+	await expect(ana.locator('#voice-toggle')).toHaveAttribute('aria-keyshortcuts', 'Control+Alt+V');
+	await expect(ana.locator('#voice-panel')).toHaveCount(1);
+	await expect(ana.locator('main #voice-panel')).toHaveCount(1);
+	await expect(ana.locator('dialog#voice-panel')).toHaveCount(0);
+
+	// The global shortcut expands the in-page controls. First contact lands on the
 	// relay/privacy notice; audit that transient state before dismissing it.
 	await ana.keyboard.press('Control+Alt+V');
 	await expect(ana.locator('#voice-panel')).toBeVisible();
+	await expect(ana.locator('#voice-toggle')).toHaveAttribute('aria-expanded', 'true');
 	await expect(ana.locator('#voice-disclaimer-text')).toBeFocused();
 	await flushAxeAudit(ana);
 	await ana.locator('#voice-disclaimer-dismiss').click();
@@ -69,21 +89,140 @@ test('voice chat: host enables it, players join unmuted, query speakers, adjust 
 	await expectAnnouncement(berto, exact(es.voice_enabled));
 	await flushAxeAudit(ana);
 
+	// Choose the first microphone before joining: the preference must reach LiveKit before
+	// the unmuted microphone is published, avoiding a brief leak from the wrong input.
+	const deviceSettings = ana.getByRole('button', { name: es.voice_devices_button });
+	await deviceSettings.click();
+	let deviceMenu = ana.locator('.popup-menu');
+	await expect(deviceMenu).toHaveAttribute('aria-label', es.voice_devices_menu);
+	await expect(deviceMenu.getByRole('menuitem')).toHaveCount(2);
+	await flushAxeAudit(ana);
+	await ana.keyboard.press('ArrowRight');
+	let deviceRadios = deviceMenu.getByRole('menuitemradio');
+	await expect(deviceMenu).toHaveAttribute('aria-label', es.voice_microphone_group);
+	await expect(deviceRadios).toHaveCount(3);
+	await flushAxeAudit(ana);
+	await deviceRadios.nth(1).click();
+	await expect.poll(() => ana.evaluate(() => JSON.parse(localStorage.getItem('corro.voiceDevices') ?? '{}')))
+		.toEqual({ microphoneId: 'mic-built-in', outputId: 'default' });
+
 	// Both players explicitly opt in. The deterministic transport records the real token URL
 	// and creates an unmuted local participant row.
 	await ana.getByRole('button', { name: es.voice_join }).click();
-	await expect(ana.locator('#voice-toggle')).toHaveAttribute('aria-pressed', 'true');
+	await expect(ana.locator('#voice-toggle')).toHaveClass(/voice-toggle--connected/);
 	await expect(ana.locator('.voice-participant').first()).toContainText('Ana');
 	await expect(ana.locator('.voice-participant').first()).toContainText(es.voice_listening_visual);
 	await expect(ana.locator('.voice-participant').first().locator('.voice-participant__volume')).toBeHidden();
 	await expect(ana.locator('.player-card.is-me .player-tag--voice')).toHaveText(es.voice_in_chat_visual);
+	const anaMicrophone = ana.locator('#voice-microphone-toggle');
+	await expect(anaMicrophone).toBeVisible();
+	await expect(anaMicrophone).toHaveAttribute('aria-keyshortcuts', 'Control+Alt+X');
+	await expect(anaMicrophone).toHaveAttribute('aria-pressed', 'true');
+	await expect.poll(() => ana.evaluate(() => (window as any).__voiceTest.connectedPreferences))
+		.toEqual({ microphoneId: 'mic-built-in', outputId: 'default' });
 	await expectAnnouncement(ana, exact(es.voice_joined_self));
+	await flushAxeAudit(ana);
+
+	// Device settings reuse Corro's ARIA menu convention: two sibling submenus whose
+	// mutually exclusive choices are menuitemradio options.
+	await deviceSettings.click();
+	deviceMenu = ana.locator('.popup-menu');
+	await expect(deviceMenu).toHaveAttribute('role', 'menu');
+	await expect(deviceMenu.getByRole('menuitem')).toHaveCount(2);
+	await expect(deviceMenu.getByRole('menuitem').first()).toHaveText(
+		interpolate(es.voice_microphone_menu, { device: 'Built-in microphone' }),
+	);
+	await flushAxeAudit(ana);
+	await ana.keyboard.press('ArrowRight');
+	await expect(deviceMenu).toHaveAttribute('aria-label', es.voice_microphone_group);
+	deviceRadios = deviceMenu.getByRole('menuitemradio');
+	await expect(deviceRadios).toHaveCount(3);
+	await expect(deviceRadios.nth(1)).toHaveAttribute('aria-checked', 'true');
+	await expect(deviceRadios.nth(2)).toHaveText('USB headset');
+	await flushAxeAudit(ana);
+	await deviceRadios.nth(2).click();
+	await expect.poll(() => ana.evaluate(() => (window as any).__voiceTest.microphoneChanges)).toEqual(['mic-usb']);
+	await expectAnnouncement(ana, exact(interpolate(es.voice_microphone_selected, { device: 'USB headset' })));
+
+	await deviceSettings.click();
+	deviceMenu = ana.locator('.popup-menu');
+	await expect(deviceMenu.getByRole('menuitem').first()).toHaveText(
+		interpolate(es.voice_microphone_menu, { device: 'USB headset' }),
+	);
+	await ana.keyboard.press('ArrowDown');
+	await ana.keyboard.press('ArrowRight');
+	await expect(deviceMenu).toHaveAttribute('aria-label', es.voice_output_group);
+	deviceRadios = deviceMenu.getByRole('menuitemradio');
+	await expect(deviceRadios).toHaveCount(3);
+	await expect(deviceRadios.first()).toHaveAttribute('aria-checked', 'true');
+	await flushAxeAudit(ana);
+	await deviceRadios.nth(1).click();
+	await expect.poll(() => ana.evaluate(() => (window as any).__voiceTest.outputChanges)).toEqual(['out-speakers']);
+	await expectAnnouncement(ana, exact(interpolate(es.voice_output_selected, { device: 'Speakers' })));
+	await expect.poll(() => ana.evaluate(() => JSON.parse(localStorage.getItem('corro.voiceDevices') ?? '{}')))
+		.toEqual({ microphoneId: 'mic-usb', outputId: 'out-speakers' });
+
+	// Browsers without selectable sinks expose an operable explanation instead of a dead
+	// submenu. Audit this separate settled menu state explicitly.
+	await ana.evaluate(() => (window as any).__voiceTest.setOutputSelectionSupported(false));
+	await deviceSettings.click();
+	deviceMenu = ana.locator('.popup-menu');
+	const systemOutput = deviceMenu.getByRole('menuitem', { name: es.voice_output_system });
+	await expect(systemOutput).toHaveAttribute('aria-disabled', 'true');
+	const outputHintId = await systemOutput.getAttribute('aria-describedby');
+	expect(outputHintId).toBeTruthy();
+	await expect(ana.locator(`#${outputHintId}`)).toHaveText(es.voice_output_unsupported);
+	await flushAxeAudit(ana);
+	await ana.keyboard.press('ArrowDown');
+	await expect(systemOutput).toBeFocused();
+	await ana.keyboard.press('Enter');
+	await expectAnnouncement(ana, exact(es.voice_output_unsupported));
+	await ana.keyboard.press('Escape');
+	await expect(deviceMenu).toBeHidden();
+	await ana.evaluate(() => (window as any).__voiceTest.setOutputSelectionSupported(true));
+
+	// Chromium variants with selectAudioOutput expose one additional command after the
+	// radio choices. Reach, audit and invoke that settled submenu state as well.
+	await ana.evaluate(() => (window as any).__voiceTest.setOutputPromptSupported(true));
+	await deviceSettings.click();
+	deviceMenu = ana.locator('.popup-menu');
+	await ana.keyboard.press('ArrowDown');
+	await ana.keyboard.press('ArrowRight');
+	await expect(deviceMenu).toHaveAttribute('aria-label', es.voice_output_group);
+	const chooseOutput = deviceMenu.getByRole('menuitem', { name: es.voice_choose_output });
+	await expect(chooseOutput).toBeVisible();
+	await flushAxeAudit(ana);
+	await chooseOutput.click();
+	await expectAnnouncement(ana, exact(interpolate(es.voice_output_selected, { device: 'Dock speakers' })));
+	await expect.poll(() => ana.evaluate(() => (window as any).__voiceTest.outputChanges))
+		.toEqual(['out-speakers', 'out-dock']);
+	await expect.poll(() => ana.evaluate(() => JSON.parse(localStorage.getItem('corro.voiceDevices') ?? '{}')))
+		.toEqual({ microphoneId: 'mic-usb', outputId: 'out-dock' });
+
+	// The global microphone shortcut works with the controls collapsed. Reopening derives
+	// its status from LiveKit's actual local participant, never stale "microphone on" copy.
+	await ana.keyboard.press('Control+Alt+V');
+	await expect(ana.locator('#voice-panel')).toBeHidden();
+	await ana.keyboard.press('Control+Alt+X');
+	await expect(anaMicrophone).toHaveAttribute('aria-pressed', 'false');
+	await expect(anaMicrophone).toHaveAttribute('aria-label', es.voice_microphone_button_muted);
+	await ana.keyboard.press('Control+Alt+V');
+	await expect(ana.locator('#voice-status')).toHaveText(es.voice_connected_muted);
+	await ana.setViewportSize({ width: 390, height: 844 });
+	await expect(ana.locator('#voice-toggle')).toBeInViewport();
+	await expect(anaMicrophone).toBeInViewport();
+	await expect(ana.locator('#voice-panel')).toBeInViewport();
+	await flushAxeAudit(ana);
+	await ana.setViewportSize({ width: 1280, height: 720 });
+	await anaMicrophone.click();
+	await expect(anaMicrophone).toHaveAttribute('aria-pressed', 'true');
+	await expect(ana.locator('#voice-status')).toHaveText(es.voice_connected);
 	await flushAxeAudit(ana);
 
 	await berto.keyboard.press('Control+Alt+V');
 	await berto.locator('#voice-disclaimer-dismiss').click();
 	await berto.getByRole('button', { name: es.voice_join }).click();
-	await expect(berto.locator('#voice-toggle')).toHaveAttribute('aria-pressed', 'true');
+	await expect(berto.locator('#voice-toggle')).toHaveClass(/voice-toggle--connected/);
 	await expect(berto.locator('.voice-participant').first()).toContainText('Berto');
 	await expect(berto.locator('.player-card.is-me .player-tag--voice')).toHaveText(es.voice_in_chat_visual);
 	await flushAxeAudit(berto);
@@ -111,6 +250,7 @@ test('voice chat: host enables it, players join unmuted, query speakers, adjust 
 	// leaves the active speaker visible beside that player's normal game state.
 	await ana.getByRole('button', { name: es.voice_close }).click();
 	await expect(ana.locator('#voice-panel')).toBeHidden();
+	await expect(ana.locator('#voice-toggle')).toHaveAttribute('aria-expanded', 'false');
 	await expect(bertoPlayerCard).toHaveClass(/is-voice-speaking/);
 	await expect(bertoPlayerCard.locator('.player-tag--voice')).toHaveText(es.voice_speaking_visual);
 	await flushAxeAudit(ana);
@@ -121,6 +261,9 @@ test('voice chat: host enables it, players join unmuted, query speakers, adjust 
 	await expectAnnouncement(ana, exact(interpolate(es.voice_speakers, { names: 'Berto' })));
 	await volume.fill('35');
 	await expect(volume).toHaveValue('35');
+	// The modified panel cycle is global from a focused voice control and wraps back to board.
+	await ana.keyboard.press('Control+F6');
+	await expect(board).toBeFocused();
 
 	// Moderation is a server-authorized one-shot mute, not a sticky permission. The target
 	// hears who acted, then LiveKit's simulated TrackMuted state still permits self-unmute.
@@ -146,8 +289,10 @@ test('voice chat: host enables it, players join unmuted, query speakers, adjust 
 	await ana.getByRole('button', { name: es.voice_disable }).click();
 	await expect(ana.locator('#voice-status')).toHaveText(es.voice_off);
 	await expect(berto.locator('#voice-status')).toHaveText(es.voice_off);
-	await expect(ana.locator('#voice-toggle')).toHaveAttribute('aria-pressed', 'false');
-	await expect(berto.locator('#voice-toggle')).toHaveAttribute('aria-pressed', 'false');
+	await expect(ana.locator('#voice-toggle')).not.toHaveClass(/voice-toggle--connected/);
+	await expect(berto.locator('#voice-toggle')).not.toHaveClass(/voice-toggle--connected/);
+	await expect(ana.locator('#voice-microphone-toggle')).toBeHidden();
+	await expect(berto.locator('#voice-microphone-toggle')).toBeHidden();
 	await expect(ana.locator('.player-tag--voice')).toHaveCount(0);
 	await expect(berto.locator('.player-tag--voice')).toHaveCount(0);
 	await expectAnnouncement(berto, exact(es.voice_disabled));

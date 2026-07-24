@@ -55,6 +55,6 @@ Your hand is the main play surface, and each card is a single focus stop contain
 
 ### Moving between areas and using chat
 
-- **F6** cycles through the available game areas, such as the hand, players and connection; non-modal dialogs and chat join the cycle while open. **Shift+F6** moves through the areas in reverse.
+- **Ctrl+F6** cycles through the available game areas, such as the hand, players and connection; non-modal dialogs and chat join the cycle while open. **Ctrl+Shift+F6** moves through the areas in reverse.
 - **Ctrl+Shift+R** opens chat and moves focus directly to the message box. **Ctrl+Shift+H** opens or closes chat.
 - The guides, active rules and each card's help open as reading documents. Use your screen reader's usual heading and list commands to move through them, then close them with **Escape** to return to where you were.

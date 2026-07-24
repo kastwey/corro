@@ -404,8 +404,9 @@ async function initBoard() {
 
 	// Voice is an optional deployment capability. The public probe contains one boolean only;
 	// the authenticated token call returns the relay URL just in time for an explicit join.
-	if (appControls) {
-		voicePanel.init(appControls, {
+	const voicePanelMount = document.getElementById('voice-panel-mount');
+	if (appControls && voicePanelMount) {
+		voicePanel.init(appControls, voicePanelMount, {
 			t: (key, vars) => tSync(key, vars),
 			gameId,
 			getMyPlayerId: () => playerSession.playerId,
@@ -908,7 +909,7 @@ async function initBoard() {
 	}
   }
 
-  // Mount the action bar and wire up F6/Shift+F6 panel navigation across the
+	// Mount the action bar and wire up Ctrl+F6/Ctrl+Shift+F6 panel navigation across the
   // board's landmark regions (announcing each region's name on entry). The action
   // bar speaks a disabled action's reason (e.g. "roll again first") when activated.
   actionBar.init(activateAction, (text) => globalAnnounce(createAnnouncement('_raw', { text }), { instant: true }));
@@ -938,11 +939,11 @@ async function initBoard() {
 	getElement: () => document.getElementById('connection-panel'),
 	focus: () => connectionPanel.focus(),
   });
-  // An open NON-modal dialog (e.g. the race piece choice) joins the F6 ring as one more
+	// An open NON-modal dialog (e.g. the race piece choice) joins the panel ring as one more
   // panel and is reachable directly with Ctrl+D. Modal dialogs trap focus on their own
   // and never appear here.
   const openNonModalDialog = () =>
-	document.querySelector<HTMLElement>('dialog[open][data-modal="false"]:not(#chat-panel):not(#voice-panel)');
+	document.querySelector<HTMLElement>('dialog[open][data-modal="false"]:not(#chat-panel)');
   panelNavigator.register({
 	id: 'dialog',
 	labelKey: 'game.panels.dialog',
@@ -974,7 +975,7 @@ async function initBoard() {
 	},
 	isAvailable: () => !!openNonModalDialog(),
   });
-  // The chat joins the F6 ring while open (its own floating <dialog>, so it can coexist
+	// The chat joins the panel ring while open (its own floating <dialog>, so it can coexist
   // with a pending choice dialog). Entering lands on the compose box.
   panelNavigator.register({
 	id: 'chat',
@@ -1566,7 +1567,7 @@ async function initBoard() {
 		: tSync('game.race_choose_title', { steps: pending.steps }),
 	  className: 'dialog-race-choice',
 	  // Non-modal: focus starts on the options but the player can leave to explore the
-	  // board (the choice needs the board!) and come back with F6 / Ctrl+D. Escape does
+	  // board (the choice needs the board!) and come back with Ctrl+F6 / Ctrl+D. Escape does
 	  // not dismiss it — the pending move is state-driven and must be resolved.
 	  modal: false,
 	  buttons: pending.options.map((option, i) => ({
@@ -1994,9 +1995,16 @@ async function initBoard() {
 	  // rows and the "0–9 jump to a square" row, and add their own hand/status keys (which
 	  // live outside keymap.json). Board families keep the keymap as their whole story.
 	  const isCard = isToolbarlessFamily(family);
+	  const familyHidden = family === 'property' ? undefined
+		: isCard ? CARD_FAMILY_HIDDEN_COMMANDS : PROPERTY_ONLY_COMMANDS;
+	  const hiddenCommands = new Set(familyHidden ?? []);
+	  if (!voicePanel.isAvailable()) {
+		hiddenCommands.add('ToggleVoicePanel');
+		hiddenCommands.add('ToggleVoiceMute');
+		hiddenCommands.add('AnnounceVoiceSpeakers');
+	  }
 	  showHelpDialog(keyMap, {
-		hiddenCommands: family === 'property' ? undefined
-		  : isCard ? CARD_FAMILY_HIDDEN_COMMANDS : PROPERTY_ONLY_COMMANDS,
+		hiddenCommands: hiddenCommands.size > 0 ? hiddenCommands : undefined,
 		// Bindings tagged with another family (e.g. "s" = route landmarks, family "race")
 		// are inert here — and their letters may be shadowed by package group keys — so
 		// their rows don't belong in this game's help.

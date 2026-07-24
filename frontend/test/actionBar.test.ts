@@ -5,7 +5,7 @@ import { actionBar } from '../src/actions/actionBar.js';
 import { panelNavigator } from '../src/panelNavigator.js';
 import type { ActionDescriptor } from '../src/actions/availableActions.js';
 
-// DOM-bound behaviours of the accessible action toolbar and the F6 panel navigator.
+// DOM-bound behaviours of the accessible action toolbar and the Ctrl+F6 panel navigator.
 // Screen-reader users rely on: a single ARIA toolbar with a roving tabindex (one tab
 // stop), ArrowLeft/Right + Home/End movement, hiding when empty, and the panel
 // navigator announcing the region it moved focus to.

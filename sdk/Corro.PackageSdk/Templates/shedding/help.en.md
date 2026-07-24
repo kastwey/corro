@@ -15,4 +15,4 @@ Press **Enter** to play the focused card. Press **Space** to draw; if that card 
 
 ## Playing with a screen reader
 
-Up and Down move through the hand; Right enters actions, **Shift+F10** opens the menu and **Escape** returns. **C** announces the discard top and colour. **S** announces your hand and score; **Shift+S** rival counts. Colour letters, numbers and **I** jump to matching cards; add Shift to go backward. Plays, draws, effects and turns are announced. **F6** cycles areas and **Ctrl+Shift+R** focuses chat.
+Up and Down move through the hand; Right enters actions, **Shift+F10** opens the menu and **Escape** returns. **C** announces the discard top and colour. **S** announces your hand and score; **Shift+S** rival counts. Colour letters, numbers and **I** jump to matching cards; add Shift to go backward. Plays, draws, effects and turns are announced. **Ctrl+F6** cycles areas and **Ctrl+Shift+R** focuses chat.

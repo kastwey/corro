@@ -15,4 +15,4 @@ Press **Space** to draw, then **Enter** to play the focused card or **Delete** t
 
 ## Playing with a screen reader
 
-Up and Down move through the hand; Home and End reach its edges. Right enters card actions, **Shift+F10** opens the card menu and **Escape** returns to the hand. **S** announces your distance, hazards, shields and score; **Shift+S** reviews rivals. Draws, private card identities, plays and turn changes are announced. **F6** cycles game areas and **Ctrl+Shift+R** focuses chat.
+Up and Down move through the hand; Home and End reach its edges. Right enters card actions, **Shift+F10** opens the card menu and **Escape** returns to the hand. **S** announces your distance, hazards, shields and score; **Shift+S** reviews rivals. Draws, private card identities, plays and turn changes are announced. **Ctrl+F6** cycles game areas and **Ctrl+Shift+R** focuses chat.

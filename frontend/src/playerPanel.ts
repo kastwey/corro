@@ -4,7 +4,7 @@
 // (Information / Propose trade / Go to player) reached with Right arrow and
 // mirrored by the Shift+F10 / Applications context menu — sharing the
 // RovingToolbarList model with the notifications and manage-properties lists.
-// Ctrl+P (and the F6 panel cycle) focuses the row of the player whose turn it is.
+// Ctrl+P (and the Ctrl+F6 panel cycle) focuses the row of the player whose turn it is.
 
 import { tokenIconHtml } from './tokenIcons.js';
 import { tSync, money } from './i18nBinder.js';

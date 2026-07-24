@@ -5,14 +5,25 @@
 // is never covered by a stream of automatic speaker-name announcements.
 
 import { soundEvents } from './soundEvents.js';
+import { popupMenu, type PopupMenuItem } from './popupMenu.js';
 import {
 	createVoiceTransport,
+	getAvailableVoiceDevices,
+	requestVoiceOutputDevice,
+	type VoiceDevice,
+	type VoiceDevicePreferences,
+	type VoiceDeviceSnapshot,
 	type VoiceParticipant,
 	type VoiceTransport,
 	type VoiceTransportCallbacks,
 } from './voiceTransport.js';
 
 const DISCLAIMER_KEY = 'corro.voiceDisclaimerDismissed';
+const DEVICE_PREFERENCES_KEY = 'corro.voiceDevices';
+const DEFAULT_DEVICE_PREFERENCES: VoiceDevicePreferences = {
+	microphoneId: 'default',
+	outputId: 'default',
+};
 
 export interface VoicePanelDeps {
 	t: (key: string, vars?: Record<string, unknown>) => string;
@@ -23,6 +34,11 @@ export interface VoicePanelDeps {
 	setEnabled: (enabled: boolean) => Promise<void>;
 	muteParticipant: (playerId: string) => Promise<void>;
 	announce: (key: string, vars?: Record<string, unknown>, instant?: boolean) => void;
+	/** Platform earcon boundary; injectable so tests pin voice-specific event ids. */
+	playSoundEvent?: (event: string) => void;
+	/** Pre-join device discovery/selection seams; production uses the browser + LiveKit. */
+	getAvailableDevices?: () => Promise<VoiceDeviceSnapshot>;
+	requestOutputDevice?: () => Promise<VoiceDevice | null>;
 	/** Mirror read-only membership/mute/speaking state on the persistent player cards. */
 	onPresenceChanged?: (participants: readonly VoiceVisualPresence[]) => void;
 	/** Close another floating utility (currently text chat) before this panel docks. */
@@ -54,9 +70,11 @@ export function formatVoiceSpeakerNames(names: string[], locale: string): string
 export class VoicePanel {
 	private deps: VoicePanelDeps | null = null;
 	private headerButton: HTMLButtonElement | null = null;
-	private dialog: HTMLDialogElement | null = null;
+	private microphoneButton: HTMLButtonElement | null = null;
+	private panel: HTMLElement | null = null;
 	private status: HTMLElement | null = null;
 	private controls: HTMLElement | null = null;
+	private deviceSettingsButton: HTMLButtonElement | null = null;
 	private list: HTMLUListElement | null = null;
 	private deploymentAvailable = false;
 	private gameEnabled = false;
@@ -70,18 +88,24 @@ export class VoicePanel {
 	private readonly appliedVolumes = new Set<string>();
 	private volumes: Record<string, number> = {};
 	private publishedPresenceSignature = '';
+	private devicePreferences: VoiceDevicePreferences = { ...DEFAULT_DEVICE_PREFERENCES };
+	private deviceSnapshot: VoiceDeviceSnapshot | null = null;
+	private deviceMenuOpen = false;
+	private loadingDevices = false;
 
-	init(mount: HTMLElement, deps: VoicePanelDeps): void {
+	init(controlsMount: HTMLElement, panelMount: HTMLElement, deps: VoicePanelDeps): void {
 		this.deps = deps;
 		this.volumes = readVolumes(deps.gameId);
-		if (this.dialog) return;
-		this.createHeaderButton(mount);
-		this.createDialog();
+		this.devicePreferences = readVoiceDevicePreferences();
+		if (this.panel) return;
+		this.createHeaderButtons(controlsMount);
+		this.createPanel(panelMount);
 		this.render();
 	}
 
-	isOpen(): boolean { return !!this.dialog?.open; }
+	isOpen(): boolean { return !!this.panel && !this.panel.hidden; }
 	isConnected(): boolean { return this.connected; }
+	isAvailable(): boolean { return this.deploymentAvailable; }
 
 	setDeploymentAvailable(available: boolean): void {
 		this.deploymentAvailable = available;
@@ -125,12 +149,12 @@ export class VoicePanel {
 	}
 
 	openPanel(): void {
-		if (!this.dialog || !this.deploymentAvailable) return;
+		if (!this.panel || !this.deploymentAvailable) return;
 		this.deps?.beforeOpen?.();
-		if (!this.dialog.open) this.dialog.show();
+		this.panel.hidden = false;
 		this.syncHeaderButton();
-		const notice = this.dialog.querySelector<HTMLElement>('#voice-disclaimer-text');
-		const banner = this.dialog.querySelector<HTMLElement>('#voice-disclaimer');
+		const notice = this.panel.querySelector<HTMLElement>('#voice-disclaimer-text');
+		const banner = this.panel.querySelector<HTMLElement>('#voice-disclaimer');
 		if (banner && !banner.hidden && notice) {
 			notice.focus();
 			return;
@@ -139,7 +163,8 @@ export class VoicePanel {
 	}
 
 	closePanel(): void {
-		if (this.dialog?.open) this.dialog.close();
+		this.closeDeviceMenu();
+		if (this.panel) this.panel.hidden = true;
 		this.syncHeaderButton();
 		this.headerButton?.focus();
 	}
@@ -149,8 +174,8 @@ export class VoicePanel {
 			this.openPanel();
 			return this.isOpen();
 		}
-		const target = this.dialog?.querySelector<HTMLElement>(
-			'#voice-disclaimer:not([hidden]) #voice-disclaimer-text, .voice-controls button:not([hidden]), .voice-participants input, .voice-panel__close',
+		const target = this.panel?.querySelector<HTMLElement>(
+			'#voice-disclaimer:not([hidden]) #voice-disclaimer-text, .voice-controls button:not([hidden]), .voice-device-settings:not([hidden]), .voice-participants input, .voice-panel__close',
 		);
 		if (!target) return false;
 		target.focus();
@@ -166,6 +191,7 @@ export class VoicePanel {
 			const muted = !this.selfMuted;
 			await this.transport.setMuted(muted);
 			this.selfMuted = muted;
+			this.setStatus(this.connectedStatusKey());
 			this.deps.announce(muted ? 'game.voice_muted_self' : 'game.voice_unmuted_self', {}, true);
 			this.render();
 		} catch {
@@ -192,28 +218,40 @@ export class VoicePanel {
 		return true;
 	}
 
-	private createHeaderButton(mount: HTMLElement): void {
+	private createHeaderButtons(mount: HTMLElement): void {
 		const button = document.createElement('button');
 		button.type = 'button';
 		button.id = 'voice-toggle';
 		button.className = 'icon-btn voice-toggle';
 		button.hidden = true;
-		button.setAttribute('aria-haspopup', 'dialog');
+		button.setAttribute('aria-controls', 'voice-panel');
+		button.setAttribute('aria-keyshortcuts', 'Control+Alt+V');
 		button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg><span class="voice-toggle__dot" aria-hidden="true"></span>';
 		button.addEventListener('click', () => this.togglePanel());
 		mount.appendChild(button);
 		this.headerButton = button;
+
+		const microphone = document.createElement('button');
+		microphone.type = 'button';
+		microphone.id = 'voice-microphone-toggle';
+		microphone.className = 'icon-btn voice-microphone-toggle';
+		microphone.hidden = true;
+		microphone.setAttribute('aria-keyshortcuts', 'Control+Alt+X');
+		microphone.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>';
+		microphone.addEventListener('click', () => void this.toggleSelfMute());
+		mount.appendChild(microphone);
+		this.microphoneButton = microphone;
 	}
 
-	private createDialog(): void {
-		const dialog = document.createElement('dialog');
-		dialog.id = 'voice-panel';
-		dialog.className = 'game-dialog voice-panel';
-		dialog.dataset.modal = 'false';
-		dialog.setAttribute('aria-labelledby', 'voice-panel-title');
-		dialog.innerHTML = `
+	private createPanel(mount: HTMLElement): void {
+		const panel = document.createElement('div');
+		panel.id = 'voice-panel';
+		panel.className = 'voice-panel';
+		panel.hidden = true;
+		panel.setAttribute('aria-labelledby', 'voice-panel-title');
+		panel.innerHTML = `
 			<div class="voice-panel__surface">
-				<div class="dialog-title" id="voice-panel-title"></div>
+				<h2 class="voice-panel__title" id="voice-panel-title"></h2>
 				<button type="button" class="voice-panel__close"></button>
 				<div class="voice-disclaimer" id="voice-disclaimer" hidden>
 					<p id="voice-disclaimer-text" tabindex="0"></p>
@@ -222,27 +260,32 @@ export class VoicePanel {
 				</div>
 				<p class="voice-status" id="voice-status" tabindex="0"></p>
 				<div class="voice-controls" id="voice-controls"></div>
+				<button type="button" id="voice-device-settings" class="btn btn-secondary voice-device-settings" hidden></button>
 				<ul class="voice-participants" id="voice-participants" role="list"></ul>
 			</div>`;
-		document.body.appendChild(dialog);
-		this.dialog = dialog;
-		this.status = dialog.querySelector('#voice-status');
-		this.controls = dialog.querySelector('#voice-controls');
-		this.list = dialog.querySelector('#voice-participants');
+		mount.appendChild(panel);
+		this.panel = panel;
+		this.status = panel.querySelector('#voice-status');
+		this.controls = panel.querySelector('#voice-controls');
+		this.deviceSettingsButton = panel.querySelector('#voice-device-settings');
+		this.list = panel.querySelector('#voice-participants');
+		this.deviceSettingsButton?.setAttribute('aria-haspopup', 'menu');
+		this.deviceSettingsButton?.setAttribute('aria-expanded', 'false');
 
-		dialog.querySelector('.voice-panel__close')!.addEventListener('click', () => this.closePanel());
-		dialog.addEventListener('keydown', event => {
+		panel.querySelector('.voice-panel__close')!.addEventListener('click', () => this.closePanel());
+		this.deviceSettingsButton?.addEventListener('click', () => void this.openDeviceSettings());
+		panel.addEventListener('keydown', event => {
 			if (event.key !== 'Escape') return;
 			event.preventDefault();
 			event.stopPropagation();
 			this.closePanel();
 		});
 
-		const banner = dialog.querySelector<HTMLElement>('#voice-disclaimer')!;
+		const banner = panel.querySelector<HTMLElement>('#voice-disclaimer')!;
 		if (!disclaimerDismissed()) banner.hidden = false;
-		dialog.querySelector('#voice-disclaimer-dismiss')!.addEventListener('click', () => {
+		panel.querySelector('#voice-disclaimer-dismiss')!.addEventListener('click', () => {
 			banner.hidden = true;
-			if ((dialog.querySelector('#voice-disclaimer-dontshow') as HTMLInputElement).checked) {
+			if ((panel.querySelector('#voice-disclaimer-dontshow') as HTMLInputElement).checked) {
 				persistDisclaimerDismissed();
 			}
 			this.focus();
@@ -263,14 +306,15 @@ export class VoicePanel {
 			created = this.deps.createTransport?.(callbacks) ?? createVoiceTransport(callbacks);
 			transport = created;
 			this.transport = created;
-			await created.connect(credentials.url, credentials.token);
+			await created.connect(credentials.url, credentials.token, this.devicePreferences);
 			if (this.transport !== created) return;
 			this.connected = true;
 			this.selfMuted = false;
 			this.syncParticipants(created.getParticipants());
-			this.setStatus('game.voice_connected');
+			void this.refreshDeviceSnapshot(false);
+			this.setStatus(this.connectedStatusKey());
 			this.deps.announce('game.voice_joined_self');
-			soundEvents.playEvent('voice.join');
+			this.playSoundEvent('voice.join');
 		} catch (error) {
 			if (transport && this.transport === transport) this.transport = null;
 			this.connected = false;
@@ -289,6 +333,8 @@ export class VoicePanel {
 		const transport = this.transport;
 		const wasConnected = this.connected;
 		this.transport = null;
+		this.closeDeviceMenu();
+		this.deviceSnapshot = null;
 		this.connected = false;
 		this.joining = false;
 		this.selfMuted = false;
@@ -302,7 +348,7 @@ export class VoicePanel {
 			: this.gameEnabled ? 'game.voice_ready' : 'game.voice_off');
 		if (announce && wasConnected && this.deps) {
 			this.deps.announce('game.voice_left_self');
-			soundEvents.playEvent('voice.leave');
+			this.playSoundEvent('voice.leave');
 		}
 		this.render();
 	}
@@ -313,7 +359,7 @@ export class VoicePanel {
 				if (this.transport !== current()) return;
 				if (this.connected) {
 					this.deps?.announce('game.voice_joined', { player: participant.name });
-					soundEvents.playEvent('voice.join');
+					this.playSoundEvent('voice.join');
 				}
 			},
 			onParticipantLeft: participant => {
@@ -321,7 +367,7 @@ export class VoicePanel {
 				this.appliedVolumes.delete(participant.id);
 				if (this.connected) {
 					this.deps?.announce('game.voice_left', { player: participant.name });
-					soundEvents.playEvent('voice.leave');
+					this.playSoundEvent('voice.leave');
 				}
 			},
 			onParticipantsChanged: participants => {
@@ -335,12 +381,14 @@ export class VoicePanel {
 			},
 			onReconnected: () => {
 				if (this.transport !== current()) return;
-				this.setStatus('game.voice_connected');
+				this.setStatus(this.connectedStatusKey());
 				this.deps?.announce('game.voice_reconnected');
 			},
 			onDisconnected: unexpected => {
 				if (this.transport !== current()) return;
 				this.transport = null;
+				this.closeDeviceMenu();
+				this.deviceSnapshot = null;
 				this.connected = false;
 				this.participants = [];
 				this.publishPresence();
@@ -355,14 +403,23 @@ export class VoicePanel {
 				this.setStatus('game.voice_playback_blocked');
 				this.deps?.announce('game.voice_playback_blocked', {}, true);
 			},
+			onDevicesChanged: () => {
+				if (this.transport !== current() || !this.connected) return;
+				void this.refreshDeviceSnapshot(true);
+			},
+			onDevicePreferenceFallback: kind => {
+				if (this.transport !== current()) return;
+				this.resetDevicePreference(kind, true);
+			},
 		};
 	}
 
 	private syncParticipants(participants: VoiceParticipant[]): void {
 		this.participants = participants;
-		this.publishPresence();
 		const me = participants.find(participant => participant.local);
 		this.selfMuted = me?.muted ?? this.selfMuted;
+		if (this.connected) this.setStatus(this.connectedStatusKey());
+		this.publishPresence();
 		for (const participant of participants) {
 			if (participant.local || this.appliedVolumes.has(participant.id)) continue;
 			this.appliedVolumes.add(participant.id);
@@ -379,10 +436,244 @@ export class VoicePanel {
 			.sort()
 			.join('|');
 		// Volume changes also refresh the LiveKit roster; avoid rebuilding player-card labels
-		// when the only changed value lives exclusively in the settings dialog.
+		// when the only changed value lives exclusively in the expanded settings panel.
 		if (signature === this.publishedPresenceSignature) return;
 		this.publishedPresenceSignature = signature;
 		this.deps?.onPresenceChanged?.(snapshot);
+	}
+
+	private async openDeviceSettings(): Promise<void> {
+		if (!this.gameEnabled || !this.deviceSettingsButton || !this.deps || this.loadingDevices) {
+			return;
+		}
+		this.loadingDevices = true;
+		this.deviceSettingsButton.setAttribute('aria-busy', 'true');
+		try {
+			this.deviceSnapshot = this.connected && this.transport
+				? await this.transport.getDeviceSnapshot()
+				: await (this.deps.getAvailableDevices?.() ?? getAvailableVoiceDevices(true));
+			this.reconcileUnavailablePreferences(false);
+			const microphoneLabel = this.selectedDeviceLabel('audioinput');
+			const outputLabel = this.selectedDeviceLabel('audiooutput');
+			const items: PopupMenuItem[] = [
+				{
+					label: this.deps.t('game.voice_microphone_menu', { device: microphoneLabel }),
+					submenu: {
+						ariaLabel: this.deps.t('game.voice_microphone_group'),
+						items: this.deviceOptions('audioinput'),
+					},
+				},
+			];
+			if (this.deviceSnapshot.outputSelectionSupported) {
+				const outputItems = this.deviceOptions('audiooutput');
+				if (this.deviceSnapshot.outputPromptSupported) {
+					outputItems.push({
+						label: this.deps.t('game.voice_choose_output'),
+						onSelect: () => void this.requestOutputDevice(),
+					});
+				}
+				items.push({
+					label: this.deps.t('game.voice_output_menu', { device: outputLabel }),
+					submenu: {
+						ariaLabel: this.deps.t('game.voice_output_group'),
+						items: outputItems,
+					},
+				});
+			} else {
+				items.push({
+					label: this.deps.t('game.voice_output_system'),
+					disabled: true,
+					reason: this.deps.t('game.voice_output_unsupported'),
+				});
+			}
+
+			this.deviceMenuOpen = true;
+			popupMenu.open({
+				ariaLabel: this.deps.t('game.voice_devices_menu'),
+				items,
+				anchor: this.deviceSettingsButton,
+				announce: text => this.deps?.announce('_raw', { text }, true),
+				onClose: () => {
+					this.deviceMenuOpen = false;
+					if (this.deviceSettingsButton?.isConnected && !this.deviceSettingsButton.hidden) {
+						this.deviceSettingsButton.focus();
+					}
+				},
+			});
+		} catch (error) {
+			const key = voiceJoinErrorKey(error) === 'game.voice_permission_denied'
+				? 'game.voice_permission_denied'
+				: 'game.voice_devices_failed';
+			this.setStatus(key);
+			this.deps.announce(key, {}, true);
+		} finally {
+			this.loadingDevices = false;
+			this.deviceSettingsButton.removeAttribute('aria-busy');
+		}
+	}
+
+	private deviceOptions(kind: 'audioinput' | 'audiooutput'): PopupMenuItem[] {
+		const devices = kind === 'audioinput'
+			? this.deviceSnapshot?.microphones ?? []
+			: this.deviceSnapshot?.outputs ?? [];
+		const selectedId = kind === 'audioinput'
+			? this.devicePreferences.microphoneId
+			: this.devicePreferences.outputId;
+		const options: VoiceDevice[] = [
+			{ deviceId: 'default', label: this.deps!.t('game.voice_device_default') },
+			...devices,
+		];
+		return options.map((device, index) => {
+			const label = device.label || this.deps!.t(
+				kind === 'audioinput' ? 'game.voice_microphone_number' : 'game.voice_output_number',
+				{ number: index },
+			);
+			return {
+				label,
+				checked: device.deviceId === selectedId,
+				onSelect: () => void this.selectDevice(kind, device.deviceId, label),
+			};
+		});
+	}
+
+	private selectedDeviceLabel(kind: 'audioinput' | 'audiooutput'): string {
+		const selectedId = kind === 'audioinput'
+			? this.devicePreferences.microphoneId
+			: this.devicePreferences.outputId;
+		if (selectedId === 'default') return this.deps!.t('game.voice_device_default');
+		const devices = kind === 'audioinput'
+			? this.deviceSnapshot?.microphones ?? []
+			: this.deviceSnapshot?.outputs ?? [];
+		const index = devices.findIndex(device => device.deviceId === selectedId);
+		const selected = index >= 0 ? devices[index] : null;
+		return selected?.label || this.deps!.t(
+			kind === 'audioinput' ? 'game.voice_microphone_number' : 'game.voice_output_number',
+			{ number: Math.max(1, index + 1) },
+		);
+	}
+
+	private async selectDevice(
+		kind: 'audioinput' | 'audiooutput',
+		deviceId: string,
+		label: string,
+	): Promise<void> {
+		if (!this.deps) return;
+		try {
+			if (this.connected && this.transport) {
+				if (kind === 'audioinput') await this.transport.setMicrophoneDevice(deviceId);
+				else await this.transport.setOutputDevice(deviceId);
+			}
+			if (kind === 'audioinput') this.devicePreferences.microphoneId = deviceId;
+			else this.devicePreferences.outputId = deviceId;
+			writeVoiceDevicePreferences(this.devicePreferences);
+			this.deps.announce(
+				kind === 'audioinput' ? 'game.voice_microphone_selected' : 'game.voice_output_selected',
+				{ device: label },
+				true,
+			);
+			if (this.connected) await this.refreshDeviceSnapshot(false);
+			else this.render();
+		} catch {
+			const key = kind === 'audioinput'
+				? 'game.voice_microphone_switch_failed'
+				: 'game.voice_output_switch_failed';
+			this.setStatus(key);
+			this.deps.announce(key, {}, true);
+		}
+	}
+
+	private async requestOutputDevice(): Promise<void> {
+		if (!this.deps) return;
+		// Start the browser prompt synchronously from the menu activation. Awaiting anything
+		// before this call would lose the transient user gesture required by the API.
+		const selectionPromise = this.connected && this.transport
+			? this.transport.requestOutputDevice()
+			: (this.deps.requestOutputDevice?.() ?? requestVoiceOutputDevice());
+		try {
+			const device = await selectionPromise;
+			if (!device) {
+				this.deps.announce('game.voice_output_unsupported', {}, true);
+				return;
+			}
+			this.devicePreferences.outputId = device.deviceId;
+			if (this.deviceSnapshot
+				&& !this.deviceSnapshot.outputs.some(output => output.deviceId === device.deviceId)) {
+				this.deviceSnapshot.outputs.push(device);
+			}
+			writeVoiceDevicePreferences(this.devicePreferences);
+			this.deps.announce('game.voice_output_selected', {
+				device: device.label || this.deps.t('game.voice_output_number', { number: 1 }),
+			}, true);
+			if (this.connected) await this.refreshDeviceSnapshot(false);
+			else this.render();
+		} catch (error) {
+			const name = error && typeof error === 'object' && 'name' in error
+				? String((error as { name?: unknown }).name)
+				: '';
+			this.deps.announce(
+				name === 'NotAllowedError' ? 'game.voice_output_not_changed' : 'game.voice_output_switch_failed',
+				{},
+				true,
+			);
+		}
+	}
+
+	private async refreshDeviceSnapshot(announceChange: boolean): Promise<void> {
+		if (!this.connected || !this.transport) return;
+		try {
+			this.deviceSnapshot = await this.transport.getDeviceSnapshot();
+			const changed = this.reconcileUnavailablePreferences(true);
+			if (this.deviceMenuOpen) {
+				this.closeDeviceMenu();
+				if (announceChange && !changed) this.deps?.announce('game.voice_devices_changed', {}, true);
+			}
+			this.render();
+		} catch {
+			// A transient enumerateDevices failure must not disconnect otherwise healthy audio.
+			if (announceChange) this.deps?.announce('game.voice_devices_failed', {}, true);
+		}
+	}
+
+	private reconcileUnavailablePreferences(switchToDefault: boolean): boolean {
+		if (!this.deviceSnapshot) return false;
+		let changed = false;
+		if (this.devicePreferences.microphoneId !== 'default'
+			&& !this.deviceSnapshot.microphones.some(device => device.deviceId === this.devicePreferences.microphoneId)) {
+			this.resetDevicePreference('audioinput', true);
+			if (switchToDefault) void this.transport?.setMicrophoneDevice('default').catch(() => undefined);
+			changed = true;
+		}
+		if (this.devicePreferences.outputId !== 'default'
+			&& (!this.deviceSnapshot.outputSelectionSupported
+				|| !this.deviceSnapshot.outputs.some(device => device.deviceId === this.devicePreferences.outputId))) {
+			this.resetDevicePreference('audiooutput', true);
+			if (switchToDefault && this.deviceSnapshot.outputSelectionSupported) {
+				void this.transport?.setOutputDevice('default').catch(() => undefined);
+			}
+			changed = true;
+		}
+		return changed;
+	}
+
+	private resetDevicePreference(kind: 'audioinput' | 'audiooutput', announce: boolean): void {
+		if (kind === 'audioinput') this.devicePreferences.microphoneId = 'default';
+		else this.devicePreferences.outputId = 'default';
+		writeVoiceDevicePreferences(this.devicePreferences);
+		if (announce) {
+			this.deps?.announce(
+				kind === 'audioinput'
+					? 'game.voice_microphone_fallback'
+					: 'game.voice_output_fallback',
+				{},
+				true,
+			);
+		}
+	}
+
+	private closeDeviceMenu(): void {
+		if (!this.deviceMenuOpen) return;
+		popupMenu.close();
+		this.deviceMenuOpen = false;
 	}
 
 	private async changeAvailability(enabled: boolean): Promise<void> {
@@ -426,16 +717,23 @@ export class VoicePanel {
 	}
 
 	private render(): void {
-		if (!this.dialog || !this.deps || !this.controls || !this.list) return;
+		if (!this.panel || !this.deps || !this.controls || !this.list) return;
 		const t = this.deps.t;
-		this.dialog.querySelector('#voice-panel-title')!.textContent = t('game.voice_title');
-		const close = this.dialog.querySelector<HTMLButtonElement>('.voice-panel__close')!;
+		this.panel.querySelector('#voice-panel-title')!.textContent = t('game.voice_title');
+		const close = this.panel.querySelector<HTMLButtonElement>('.voice-panel__close')!;
 		close.textContent = t('game.voice_close');
 		close.setAttribute('aria-label', t('game.voice_close'));
-		this.dialog.querySelector('#voice-disclaimer-text')!.textContent = t('game.voice_disclaimer');
-		this.dialog.querySelector('#voice-disclaimer-dontshow-label')!.textContent = t('game.voice_disclaimer_dontshow');
-		this.dialog.querySelector<HTMLButtonElement>('#voice-disclaimer-dismiss')!.textContent = t('game.voice_disclaimer_dismiss');
+		close.setAttribute('aria-keyshortcuts', 'Control+Alt+V');
+		this.panel.querySelector('#voice-disclaimer-text')!.textContent = t('game.voice_disclaimer');
+		this.panel.querySelector('#voice-disclaimer-dontshow-label')!.textContent = t('game.voice_disclaimer_dontshow');
+		this.panel.querySelector<HTMLButtonElement>('#voice-disclaimer-dismiss')!.textContent = t('game.voice_disclaimer_dismiss');
 		this.list.setAttribute('aria-label', t('game.voice_participants'));
+		if (this.deviceSettingsButton) {
+			this.deviceSettingsButton.hidden = !this.deploymentAvailable || !this.gameEnabled || this.joining;
+			this.deviceSettingsButton.textContent = t('game.voice_devices_button');
+			this.deviceSettingsButton.setAttribute('aria-label', t('game.voice_devices_button'));
+			if (this.deviceSettingsButton.hidden) this.closeDeviceMenu();
+		}
 
 		this.controls.replaceChildren();
 		if (this.status) this.status.textContent = t(this.statusKey);
@@ -457,6 +755,8 @@ export class VoicePanel {
 				this.controls.appendChild(this.controlButton(
 					t(this.selfMuted ? 'game.voice_unmute' : 'game.voice_mute'),
 					() => void this.toggleSelfMute(),
+					false,
+					'Control+Alt+X',
 				));
 				this.controls.appendChild(this.controlButton(t('game.voice_leave'), () => void this.leave(true)));
 			}
@@ -541,11 +841,17 @@ export class VoicePanel {
 		mute.onclick = () => void this.hostMute(participant, mute);
 	}
 
-	private controlButton(label: string, action: () => void, unavailable = false): HTMLButtonElement {
+	private controlButton(
+		label: string,
+		action: () => void,
+		unavailable = false,
+		keyShortcut?: string,
+	): HTMLButtonElement {
 		const button = document.createElement('button');
 		button.type = 'button';
 		button.className = 'btn btn-secondary';
 		button.textContent = label;
+		if (keyShortcut) button.setAttribute('aria-keyshortcuts', keyShortcut);
 		if (unavailable) button.setAttribute('aria-disabled', 'true');
 		button.addEventListener('click', () => {
 			if (!unavailable) action();
@@ -558,18 +864,36 @@ export class VoicePanel {
 		if (this.status && this.deps) this.status.textContent = this.deps.t(key);
 	}
 
+	private connectedStatusKey(): string {
+		return this.selfMuted ? 'game.voice_connected_muted' : 'game.voice_connected';
+	}
+
+	private playSoundEvent(event: string): void {
+		(this.deps?.playSoundEvent ?? ((name: string) => soundEvents.playEvent(name)))(event);
+	}
+
 	private syncHeaderButton(): void {
 		if (!this.headerButton || !this.deps) return;
 		this.headerButton.hidden = !this.deploymentAvailable;
 		this.headerButton.classList.toggle('voice-toggle--enabled', this.gameEnabled);
 		this.headerButton.classList.toggle('voice-toggle--connected', this.connected);
 		this.headerButton.setAttribute('aria-expanded', String(this.isOpen()));
-		this.headerButton.setAttribute('aria-pressed', String(this.connected));
 		const label = this.connected ? this.deps.t('game.voice_open_connected')
 			: this.gameEnabled ? this.deps.t('game.voice_open_ready')
 			: this.deps.t('game.voice_open_off');
 		this.headerButton.setAttribute('aria-label', label);
 		this.headerButton.title = label;
+
+		if (this.microphoneButton) {
+			this.microphoneButton.hidden = !this.deploymentAvailable || !this.connected;
+			this.microphoneButton.classList.toggle('voice-microphone-toggle--muted', this.selfMuted);
+			this.microphoneButton.setAttribute('aria-pressed', String(!this.selfMuted));
+			const microphoneLabel = this.deps.t(this.selfMuted
+				? 'game.voice_microphone_button_muted'
+				: 'game.voice_microphone_button_on');
+			this.microphoneButton.setAttribute('aria-label', microphoneLabel);
+			this.microphoneButton.title = microphoneLabel;
+		}
 	}
 }
 
@@ -593,6 +917,24 @@ function readVolumes(gameId: string): Record<string, number> {
 function writeVolumes(gameId: string, volumes: Record<string, number>): void {
 	if (!gameId) return;
 	try { localStorage.setItem(volumeStorageKey(gameId), JSON.stringify(volumes)); } catch { /* session-only */ }
+}
+
+export function readVoiceDevicePreferences(): VoiceDevicePreferences {
+	try {
+		const parsed = JSON.parse(localStorage.getItem(DEVICE_PREFERENCES_KEY) ?? '{}') as Partial<VoiceDevicePreferences>;
+		return {
+			microphoneId: typeof parsed.microphoneId === 'string' && parsed.microphoneId
+				? parsed.microphoneId : 'default',
+			outputId: typeof parsed.outputId === 'string' && parsed.outputId
+				? parsed.outputId : 'default',
+		};
+	} catch {
+		return { ...DEFAULT_DEVICE_PREFERENCES };
+	}
+}
+
+function writeVoiceDevicePreferences(preferences: VoiceDevicePreferences): void {
+	try { localStorage.setItem(DEVICE_PREFERENCES_KEY, JSON.stringify(preferences)); } catch { /* session-only */ }
 }
 
 export const voicePanel = new VoicePanel();

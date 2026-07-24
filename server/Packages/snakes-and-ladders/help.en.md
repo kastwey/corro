@@ -47,6 +47,6 @@ advances, and the board does the rest. First to reach square 100 wins.
 
 ### Moving between areas and using chat
 
-- **F6** cycles through the board, actions, players and connection. **Shift+F6** moves in reverse.
+- **Ctrl+F6** cycles through the board, actions, players and connection. **Ctrl+Shift+F6** moves in reverse.
 - **Ctrl+Shift+R** opens chat and focuses the message box. **Ctrl+Shift+H** opens or closes chat.
 - This guide, the shortcuts and the active rules are reading documents. Use your screen reader's heading and list commands, then close them with **Escape** to return to play.

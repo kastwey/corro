@@ -1,6 +1,7 @@
 import test, { before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { setupDom, installFakeI18next } from './helpers/dom.js';
+import { popupMenu } from '../src/popupMenu.js';
 import {
 	VoicePanel,
 	formatVoiceSpeakerNames,
@@ -8,6 +9,8 @@ import {
 } from '../src/voicePanel.js';
 import type {
 	VoiceParticipant,
+	VoiceDevicePreferences,
+	VoiceDeviceSnapshot,
 	VoiceTransport,
 	VoiceTransportCallbacks,
 } from '../src/voiceTransport.js';
@@ -20,8 +23,26 @@ let announcements: Array<{ key: string; vars: Record<string, unknown>; instant: 
 let availabilityChanges: boolean[];
 let hostMutes: string[];
 let presenceUpdates: Array<Array<{ id: string; muted: boolean; speaking: boolean }>>;
+let soundEvents: string[];
 let host = true;
 let nextConnectError: unknown = null;
+let availableDeviceSnapshot: VoiceDeviceSnapshot;
+let promptedOutputDevice: { deviceId: string; label: string } | null;
+
+function fakeDeviceSnapshot(): VoiceDeviceSnapshot {
+	return {
+		microphones: [
+			{ deviceId: 'mic-1', label: 'Desk microphone' },
+			{ deviceId: 'mic-2', label: 'USB headset' },
+		],
+		outputs: [
+			{ deviceId: 'out-1', label: 'Speakers' },
+			{ deviceId: 'out-2', label: 'Headphones' },
+		],
+		outputSelectionSupported: true,
+		outputPromptSupported: false,
+	};
+}
 
 class FakeVoiceTransport implements VoiceTransport {
 	participants: VoiceParticipant[] = [
@@ -33,12 +54,17 @@ class FakeVoiceTransport implements VoiceTransport {
 	muteChanges: boolean[] = [];
 	volumeChanges: Array<{ id: string; volume: number }> = [];
 	connectError: unknown = null;
+	connectedPreferences: VoiceDevicePreferences | null = null;
+	deviceSnapshot: VoiceDeviceSnapshot = fakeDeviceSnapshot();
+	microphoneDeviceChanges: string[] = [];
+	outputDeviceChanges: string[] = [];
 
 	constructor(readonly callbacks: VoiceTransportCallbacks) { }
 
-	async connect(url: string, token: string): Promise<void> {
+	async connect(url: string, token: string, preferences?: VoiceDevicePreferences): Promise<void> {
 		if (this.connectError) throw this.connectError;
 		this.connectedWith = { url, token };
+		this.connectedPreferences = preferences ? { ...preferences } : null;
 		this.callbacks.onParticipantsChanged(this.participants);
 	}
 
@@ -55,6 +81,11 @@ class FakeVoiceTransport implements VoiceTransport {
 		this.participants = this.participants.map(p => p.id === participantId ? { ...p, volume } : p);
 		this.callbacks.onParticipantsChanged(this.participants);
 	}
+
+	async getDeviceSnapshot(): Promise<VoiceDeviceSnapshot> { return this.deviceSnapshot; }
+	async setMicrophoneDevice(deviceId: string): Promise<void> { this.microphoneDeviceChanges.push(deviceId); }
+	async setOutputDevice(deviceId: string): Promise<void> { this.outputDeviceChanges.push(deviceId); }
+	async requestOutputDevice() { return null; }
 
 	getParticipants(): VoiceParticipant[] { return this.participants; }
 	getActiveSpeakers(): VoiceParticipant[] { return this.activeSpeakers; }
@@ -78,9 +109,10 @@ function translate(key: string, vars?: Record<string, unknown>): string {
 }
 
 function mountPanel(options: { enabled?: boolean; available?: boolean } = {}): void {
-	const mount = document.createElement('div');
-	document.body.appendChild(mount);
-	panel.init(mount, {
+	const controlsMount = document.createElement('div');
+	const panelMount = document.createElement('div');
+	document.body.append(controlsMount, panelMount);
+	panel.init(controlsMount, panelMount, {
 		t: translate,
 		gameId: 'game-1',
 		getMyPlayerId: () => 'me',
@@ -89,6 +121,9 @@ function mountPanel(options: { enabled?: boolean; available?: boolean } = {}): v
 		setEnabled: async enabled => { availabilityChanges.push(enabled); },
 		muteParticipant: async id => { hostMutes.push(id); },
 		announce: (key, vars = {}, instant = false) => announcements.push({ key, vars, instant }),
+		playSoundEvent: event => soundEvents.push(event),
+		getAvailableDevices: async () => availableDeviceSnapshot,
+		requestOutputDevice: async () => promptedOutputDevice,
 		onPresenceChanged: participants => presenceUpdates.push(participants.map(participant => ({ ...participant }))),
 		createTransport: callbacks => {
 			transport = new FakeVoiceTransport(callbacks);
@@ -110,6 +145,7 @@ function openPastDisclaimer(): void {
 }
 
 beforeEach(() => {
+	if (popupMenu.isOpen()) popupMenu.close();
 	document.body.innerHTML = '';
 	localStorage.clear();
 	installFakeI18next('en');
@@ -119,15 +155,21 @@ beforeEach(() => {
 	availabilityChanges = [];
 	hostMutes = [];
 	presenceUpdates = [];
+	soundEvents = [];
 	host = true;
 	nextConnectError = null;
+	availableDeviceSnapshot = fakeDeviceSnapshot();
+	promptedOutputDevice = null;
 });
 
 test('host sees the deployment-gated control and can enable voice for the game', async () => {
 	mountPanel({ enabled: false });
 	const header = document.getElementById('voice-toggle') as HTMLButtonElement;
 	assert.equal(header.hidden, false);
+	assert.equal(header.getAttribute('aria-controls'), 'voice-panel');
+	assert.equal(header.getAttribute('aria-keyshortcuts'), 'Control+Alt+V');
 	panel.openPanel();
+	assert.equal(header.getAttribute('aria-expanded'), 'true');
 	assert.equal(document.activeElement, document.getElementById('voice-disclaimer-text'));
 	(document.getElementById('voice-disclaimer-dismiss') as HTMLButtonElement).click();
 
@@ -139,6 +181,7 @@ test('host sees the deployment-gated control and can enable voice for the game',
 
 	panel.setDeploymentAvailable(false);
 	assert.equal(header.hidden, true, 'an unconfigured deployment exposes no dead control');
+	assert.equal((document.getElementById('voice-microphone-toggle') as HTMLButtonElement).hidden, true);
 });
 
 test('joining is explicit, starts unmuted, renders the roster and announces entry', async () => {
@@ -158,7 +201,80 @@ test('joining is explicit, starts unmuted, renders the roster and announces entr
 	assert.deepEqual(presenceUpdates.at(-1), [{ id: 'me', muted: false, speaking: false }],
 		'the persistent player panel receives local voice presence');
 	assert.ok(announcements.some(a => a.key === 'game.voice_joined_self'));
+	assert.deepEqual(soundEvents, ['voice.join']);
+	const persistentMicrophone = document.getElementById('voice-microphone-toggle') as HTMLButtonElement;
+	assert.equal(persistentMicrophone.hidden, false);
+	assert.equal(persistentMicrophone.getAttribute('aria-keyshortcuts'), 'Control+Alt+X');
+	assert.equal(persistentMicrophone.getAttribute('aria-pressed'), 'true');
+	assert.equal(persistentMicrophone.getAttribute('aria-label'), 'Microphone on; press to mute it.');
 	assert.equal(document.querySelector('[disabled]'), null, 'controls stay focusable; disabled is forbidden');
+});
+
+test('saved voice devices are passed to LiveKit on the next join', async () => {
+	localStorage.setItem('corro.voiceDevices', JSON.stringify({
+		microphoneId: 'mic-2',
+		outputId: 'out-1',
+	}));
+	mountPanel();
+	openPastDisclaimer();
+	(document.querySelector('#voice-controls button') as HTMLButtonElement).click();
+	await settle();
+
+	assert.deepEqual(transport.connectedPreferences, {
+		microphoneId: 'mic-2',
+		outputId: 'out-1',
+	});
+});
+
+test('a microphone can be chosen before joining and is applied to the first publication', async () => {
+	mountPanel();
+	openPastDisclaimer();
+	const settings = document.getElementById('voice-device-settings') as HTMLButtonElement;
+	assert.equal(settings.hidden, false);
+	settings.click();
+	await settle();
+	const microphoneMenu = Array.from(
+		document.querySelectorAll<HTMLButtonElement>('.popup-menu [role="menuitem"]'),
+	)[0];
+	microphoneMenu.click();
+	const radios = Array.from(document.querySelectorAll<HTMLButtonElement>('.popup-menu [role="menuitemradio"]'));
+	radios[2].click();
+	await settle();
+
+	const join = Array.from(document.querySelectorAll<HTMLButtonElement>('#voice-controls button'))
+		.find(button => button.textContent?.includes('Join with microphone'))!;
+	join.click();
+	await settle();
+	assert.deepEqual(transport.connectedPreferences, {
+		microphoneId: 'mic-2',
+		outputId: 'default',
+	});
+});
+
+test('a browser-granted output chosen before joining is named and persisted', async () => {
+	availableDeviceSnapshot = {
+		...fakeDeviceSnapshot(),
+		outputs: [],
+		outputPromptSupported: true,
+	};
+	promptedOutputDevice = { deviceId: 'out-dock', label: 'Dock speakers' };
+	mountPanel();
+	openPastDisclaimer();
+	const settings = document.getElementById('voice-device-settings') as HTMLButtonElement;
+	settings.click();
+	await settle();
+	const rootItems = Array.from(document.querySelectorAll<HTMLButtonElement>('.popup-menu [role="menuitem"]'));
+	rootItems[1].click();
+	const choose = Array.from(document.querySelectorAll<HTMLButtonElement>('.popup-menu button'))
+		.find(button => button.textContent === 'Choose another audio output…')!;
+	choose.click();
+	await settle();
+
+	assert.match(localStorage.getItem('corro.voiceDevices')!, /"outputId":"out-dock"/);
+	settings.click();
+	await settle();
+	const reopened = Array.from(document.querySelectorAll<HTMLButtonElement>('.popup-menu [role="menuitem"]'));
+	assert.equal(reopened[1].textContent, 'Voice output: Dock speakers');
 });
 
 test('remote presence is voiced, speaking stays visual until queried, and volume is local', async () => {
@@ -193,6 +309,8 @@ test('remote presence is voiced, speaking stays visual until queried, and volume
 
 	transport.removeRemote('berto');
 	assert.ok(announcements.some(a => a.key === 'game.voice_left' && a.vars.player === 'Berto'));
+	assert.deepEqual(soundEvents.slice(-2), ['voice.join', 'voice.leave'],
+		'remote presence uses dedicated engine voice events');
 });
 
 test('self mute is reversible and host moderation is a one-shot request', async () => {
@@ -203,7 +321,18 @@ test('self mute is reversible and host moderation is a one-shot request', async 
 	transport.addRemote({ id: 'berto', name: 'Berto', local: false, muted: false, speaking: false, volume: 1 });
 
 	await panel.toggleSelfMute();
+	assert.equal(document.getElementById('voice-status')?.textContent,
+		'You are in voice chat and listening, with your microphone muted.');
+	const persistentMicrophone = document.getElementById('voice-microphone-toggle') as HTMLButtonElement;
+	assert.equal(persistentMicrophone.getAttribute('aria-pressed'), 'false');
+	assert.equal(persistentMicrophone.getAttribute('aria-label'), 'Microphone muted; press to turn it on.');
+	assert.ok(persistentMicrophone.classList.contains('voice-microphone-toggle--muted'));
+	const panelMicrophone = Array.from(document.querySelectorAll<HTMLButtonElement>('#voice-controls button'))
+		.find(button => button.textContent === 'Turn my microphone on')!;
+	assert.equal(panelMicrophone.getAttribute('aria-keyshortcuts'), 'Control+Alt+X');
 	await panel.toggleSelfMute();
+	assert.equal(document.getElementById('voice-status')?.textContent,
+		'You are in voice chat, listening with your microphone on.');
 	assert.deepEqual(transport.muteChanges, [true, false]);
 	assert.ok(announcements.some(a => a.key === 'game.voice_muted_self'));
 	assert.ok(announcements.some(a => a.key === 'game.voice_unmuted_self'));
@@ -219,9 +348,103 @@ test('self mute is reversible and host moderation is a one-shot request', async 
 	assert.ok(announcements.some(a => a.key === 'game.voice_muted_by_host_self'));
 	transport.participants[0] = { ...transport.participants[0], muted: true };
 	transport.callbacks.onParticipantsChanged(transport.participants);
+	assert.equal(document.getElementById('voice-status')?.textContent,
+		'You are in voice chat and listening, with your microphone muted.',
+		'external LiveKit mute state updates the panel status');
 	await panel.toggleSelfMute();
 	assert.equal(transport.muteChanges.at(-1), false,
 		'the host mute is not sticky: the player still owns their microphone toggle');
+});
+
+test('device settings use radio submenus, switch devices and persist the choices', async () => {
+	mountPanel();
+	openPastDisclaimer();
+	(document.querySelector('#voice-controls button') as HTMLButtonElement).click();
+	await settle();
+
+	assert.deepEqual(transport.connectedPreferences, { microphoneId: 'default', outputId: 'default' });
+	const settings = document.getElementById('voice-device-settings') as HTMLButtonElement;
+	assert.equal(settings.hidden, false);
+	assert.equal(settings.getAttribute('aria-haspopup'), 'menu');
+	settings.click();
+	await settle();
+
+	let rootItems = Array.from(document.querySelectorAll<HTMLElement>('.popup-menu [role="menuitem"]'));
+	assert.deepEqual(rootItems.map(item => item.textContent), [
+		'Microphone: System default',
+		'Voice output: System default',
+	]);
+	rootItems[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+	let radios = Array.from(document.querySelectorAll<HTMLElement>('.popup-menu [role="menuitemradio"]'));
+	assert.deepEqual(radios.map(item => item.getAttribute('aria-checked')), ['true', 'false', 'false']);
+	assert.deepEqual(radios.map(item => item.textContent), ['System default', 'Desk microphone', 'USB headset']);
+	(radios[2] as HTMLButtonElement).click();
+	await settle();
+	assert.deepEqual(transport.microphoneDeviceChanges, ['mic-2']);
+	assert.match(localStorage.getItem('corro.voiceDevices')!, /"microphoneId":"mic-2"/);
+	assert.ok(announcements.some(a => a.key === 'game.voice_microphone_selected' && a.vars.device === 'USB headset'));
+
+	settings.click();
+	await settle();
+	rootItems = Array.from(document.querySelectorAll<HTMLElement>('.popup-menu [role="menuitem"]'));
+	assert.equal(rootItems[0].textContent, 'Microphone: USB headset');
+	(rootItems[1] as HTMLButtonElement).click();
+	radios = Array.from(document.querySelectorAll<HTMLElement>('.popup-menu [role="menuitemradio"]'));
+	assert.deepEqual(radios.map(item => item.textContent), ['System default', 'Speakers', 'Headphones']);
+	(radios[1] as HTMLButtonElement).click();
+	await settle();
+	assert.deepEqual(transport.outputDeviceChanges, ['out-1']);
+	assert.match(localStorage.getItem('corro.voiceDevices')!, /"outputId":"out-1"/);
+});
+
+test('unsupported output selection stays focusable and explains the system fallback', async () => {
+	mountPanel();
+	openPastDisclaimer();
+	(document.querySelector('#voice-controls button') as HTMLButtonElement).click();
+	await settle();
+	transport.deviceSnapshot = {
+		...transport.deviceSnapshot,
+		outputs: [],
+		outputSelectionSupported: false,
+	};
+
+	(document.getElementById('voice-device-settings') as HTMLButtonElement).click();
+	await settle();
+	const output = Array.from(document.querySelectorAll<HTMLElement>('.popup-menu [role="menuitem"]'))[1];
+	assert.equal(output.getAttribute('aria-disabled'), 'true');
+	assert.equal(output.hasAttribute('disabled'), false);
+	const hint = document.getElementById(output.getAttribute('aria-describedby')!);
+	assert.equal(hint?.textContent, 'This browser uses the audio output selected by the operating system.');
+	(output as HTMLButtonElement).click();
+	assert.ok(announcements.some(a => a.key === '_raw'
+		&& a.vars.text === 'This browser uses the audio output selected by the operating system.'));
+});
+
+test('removing the selected microphone closes the menu and falls back to system default', async () => {
+	localStorage.setItem('corro.voiceDevices', JSON.stringify({
+		microphoneId: 'mic-2',
+		outputId: 'default',
+	}));
+	mountPanel();
+	openPastDisclaimer();
+	(document.querySelector('#voice-controls button') as HTMLButtonElement).click();
+	await settle();
+	const settings = document.getElementById('voice-device-settings') as HTMLButtonElement;
+	settings.click();
+	await settle();
+	assert.equal(popupMenu.isOpen(), true);
+
+	transport.deviceSnapshot = {
+		...transport.deviceSnapshot,
+		microphones: [{ deviceId: 'mic-1', label: 'Desk microphone' }],
+	};
+	transport.callbacks.onDevicesChanged();
+	await settle();
+
+	assert.equal(popupMenu.isOpen(), false);
+	assert.match(localStorage.getItem('corro.voiceDevices')!, /"microphoneId":"default"/);
+	assert.deepEqual(transport.microphoneDeviceChanges, ['default']);
+	assert.ok(announcements.some(a => a.key === 'game.voice_microphone_fallback'));
 });
 
 test('turning voice off disconnects joined players and reports the authoritative change', async () => {
@@ -235,6 +458,7 @@ test('turning voice off disconnects joined players and reports the authoritative
 	assert.equal(panel.isConnected(), false);
 	assert.equal(transport.disconnects, 1);
 	assert.deepEqual(presenceUpdates.at(-1), [], 'turning voice off clears persistent player-card state');
+	assert.equal((document.getElementById('voice-microphone-toggle') as HTMLButtonElement).hidden, true);
 	assert.ok(announcements.some(a => a.key === 'game.voice_disabled'));
 	assert.ok(announcements.some(a => a.key === 'game.voice_left_self'));
 });
@@ -252,12 +476,16 @@ test('permission failure remains visible and actionable instead of reverting to 
 	assert.ok(announcements.some(a => a.key === 'game.voice_permission_denied' && a.instant));
 });
 
-test('dialog semantics stay native and speaker lists form spoken-language lists', () => {
+test('voice controls are an integrated disclosure and speaker lists form spoken-language lists', () => {
 	mountPanel();
 	openPastDisclaimer();
-	const dialog = document.getElementById('voice-panel')!;
-	assert.equal(dialog.getAttribute('role'), null);
-	assert.equal(dialog.getAttribute('aria-labelledby'), 'voice-panel-title');
+	const disclosure = document.getElementById('voice-panel')!;
+	assert.equal(disclosure.tagName, 'DIV');
+	assert.equal(disclosure.getAttribute('role'), null);
+	assert.equal(disclosure.getAttribute('aria-labelledby'), 'voice-panel-title');
+	panel.closePanel();
+	assert.equal(disclosure.hasAttribute('hidden'), true);
+	assert.equal(document.getElementById('voice-toggle')?.getAttribute('aria-expanded'), 'false');
 	assert.equal(formatVoiceSpeakerNames(['Ana', 'Berto'], 'es'), 'Ana y Berto');
 	assert.equal(voiceJoinErrorKey(Object.assign(new Error(), { name: 'NotFoundError' })),
 		'game.voice_microphone_missing');

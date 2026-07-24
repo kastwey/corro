@@ -4,7 +4,7 @@ import { setupDom } from './helpers/dom.js';
 import { panelNavigator, type PanelRegion } from '../src/panelNavigator.js';
 
 /**
- * Regression tests for the F6 / Shift+F6 landmark cycling. The cycle must be
+ * Regression tests for the Ctrl+F6 / Ctrl+Shift+F6 landmark cycling. The cycle must be
  * cyclic (last → first forward, first → last backward) and skip regions that are
  * currently unavailable (e.g. the action bar when empty). The connection panel is
  * one more region in this ring.

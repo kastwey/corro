@@ -16,11 +16,11 @@ before(() => {
 
 interface Harness {
 	detach: () => void;
-	calls: { auction: number; players: number; money: number; holding: number; parking: number; dialog: number; nextPanel: number };
+	calls: { auction: number; players: number; money: number; holding: number; parking: number; dialog: number; nextPanel: number; prevPanel: number };
 }
 
 function attach(): Harness {
-	const calls = { auction: 0, players: 0, money: 0, holding: 0, parking: 0, dialog: 0, nextPanel: 0 };
+	const calls = { auction: 0, players: 0, money: 0, holding: 0, parking: 0, dialog: 0, nextPanel: 0, prevPanel: 0 };
 	const gameBoard: any = {
 		getActiveIndex: () => -1,
 		setActiveIndex: () => {},
@@ -43,7 +43,8 @@ function attach(): Harness {
 			j: 'AnnounceCurrentPlayerReleasePasses',
 			f: 'AnnounceFreeParkingPot',
 			'ctrl+d': 'FocusDialog',
-			f6: 'NextPanel',
+			'ctrl+f6': 'NextPanel',
+			'ctrl+shift+f6': 'PrevPanel',
 		},
 		gameBoard,
 		gameCommands,
@@ -51,7 +52,7 @@ function attach(): Harness {
 		focusPlayersPanel: () => { calls.players++; },
 		panelNav: {
 			next: () => { calls.nextPanel++; return true; },
-			prev: () => true,
+			prev: () => { calls.prevPanel++; return true; },
 			focusActions: () => true,
 			focusDialog: () => { calls.dialog++; return true; },
 		},
@@ -126,8 +127,9 @@ test('"a" in a non-auction modal now reads the auction status too (read-only que
 });
 
 // A NON-modal dialog (data-modal="false", e.g. the race piece choice) does not trap focus:
-// it behaves like one more panel, so global shortcuts keep working from inside it.
-test('inside a non-modal dialog, global shortcuts are NOT suppressed', () => {
+// it behaves like one more panel, so global shortcuts keep working from inside it. Plain F6
+// must remain available to browser chrome (notably a microphone permission prompt).
+test('inside a non-modal dialog, modified panel shortcuts work while plain F6 stays browser-owned', () => {
 	const h = attach();
 	try {
 		const dialog = document.createElement('dialog');
@@ -140,8 +142,14 @@ test('inside a non-modal dialog, global shortcuts are NOT suppressed', () => {
 		pressKey(button, 'p');
 		assert.equal(h.calls.players, 1, 'FocusPlayers works from inside a non-modal dialog');
 
-		pressKey(button, 'f6');
-		assert.equal(h.calls.nextPanel, 1, 'F6 panel cycling works from inside a non-modal dialog');
+		const browserF6Prevented = pressKey(button, 'F6');
+		assert.equal(browserF6Prevented, false, 'plain F6 reaches browser chrome and permission prompts');
+		assert.equal(h.calls.nextPanel, 0, 'plain F6 no longer cycles application panels');
+
+		assert.equal(pressKey(button, 'F6', { ctrlKey: true }), true);
+		assert.equal(h.calls.nextPanel, 1, 'Ctrl+F6 cycles forward from a non-modal dialog');
+		assert.equal(pressKey(button, 'F6', { ctrlKey: true, shiftKey: true }), true);
+		assert.equal(h.calls.prevPanel, 1, 'Ctrl+Shift+F6 cycles backward');
 		dialog.remove();
 	} finally {
 		h.detach();
@@ -160,7 +168,7 @@ test('Ctrl+D focuses the open dialog from anywhere', () => {
 	}
 });
 
-test('F6 is still suppressed inside a MODAL dialog (focus is trapped there)', () => {
+test('Ctrl+F6 is suppressed inside a MODAL dialog (focus is trapped there)', () => {
 	const h = attach();
 	try {
 		const dialog = document.createElement('dialog');
@@ -170,7 +178,7 @@ test('F6 is still suppressed inside a MODAL dialog (focus is trapped there)', ()
 		dialog.appendChild(button);
 		document.body.appendChild(dialog);
 
-		pressKey(button, 'f6');
+		pressKey(button, 'F6', { ctrlKey: true });
 
 		assert.equal(h.calls.nextPanel, 0, 'panel cycling must not run under a modal');
 		dialog.remove();

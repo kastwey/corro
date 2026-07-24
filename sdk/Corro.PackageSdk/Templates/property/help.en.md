@@ -14,4 +14,4 @@ Press **Space** to roll. Movement and landing consequences are automatic. Use th
 
 ## Playing with a screen reader
 
-**Escape** returns to the board. Arrow keys explore without moving your token; **M** jumps to your token, **Home** to Start, **N** cycles occupied spaces, **H** your spaces and **U** unowned spaces. **I** announces occupants and **Shift+I** opens square information. **C** announces your money, **T** the turn, **W** the owner and **E** the price. **F6** and **Shift+F6** cycle the board, actions, players and connection. **Ctrl+Shift+R** opens chat and focuses its message box.
+**Escape** returns to the board. Arrow keys explore without moving your token; **M** jumps to your token, **Home** to Start, **N** cycles occupied spaces, **H** your spaces and **U** unowned spaces. **I** announces occupants and **Shift+I** opens square information. **C** announces your money, **T** the turn, **W** the owner and **E** the price. **Ctrl+F6** and **Ctrl+Shift+F6** cycle the board, actions, players and connection. **Ctrl+Shift+R** opens chat and focuses its message box.

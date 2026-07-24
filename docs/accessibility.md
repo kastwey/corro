@@ -139,9 +139,16 @@ opts in, joins with the microphone on, can mute themselves and can set each remo
 Host mute is announced and reversible. There is deliberately no automatic ducking;
 screen-reader and operating-system audio preferences remain under user control.
 
-The detailed roster and controls live in a native non-modal `<dialog>`, join/leave have
-earcons, and permission failures remain visible and spoken. See [voice-chat.md](voice-chat.md)
-for the complete transport and threat model.
+The detailed roster and controls live in an in-page disclosure with a persistent microphone
+button while connected. Join/leave have dedicated engine earcons, and permission failures
+remain visible and spoken. See [voice-chat.md](voice-chat.md) for the complete transport and
+threat model.
+
+Voice-device settings reuse the established ARIA menu pattern: one level of sibling
+Microphone and Voice output submenus, with mutually exclusive choices exposed as
+`menuitemradio`. The selected microphone can be set before joining, so entering unmuted never
+briefly publishes an unintended input. Unsupported output selection remains focusable and
+explains that the operating-system default is used instead of silently presenting a dead list.
 
 ## i18n parity
 

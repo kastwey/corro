@@ -158,6 +158,74 @@ test('Escape closes the menu and restores focus via onClose', () => {
 	assert.equal(document.activeElement, anchor);
 });
 
+test('a submenu opens with Right and exposes mutually exclusive options as menuitemradio', () => {
+	const anchor = document.createElement('button');
+	document.body.appendChild(anchor);
+	let selected = '';
+	popupMenu.open({
+		ariaLabel: 'Voice settings',
+		anchor,
+		onClose: () => anchor.focus(),
+		items: [
+			{
+				label: 'Microphone: USB headset',
+				submenu: {
+					ariaLabel: 'Microphone',
+					items: [
+						{ label: 'System default', checked: false, onSelect: () => { selected = 'default'; } },
+						{ label: 'USB headset', checked: true, onSelect: () => { selected = 'usb'; } },
+					],
+				},
+			},
+			{ label: 'Voice output: system default', submenu: { items: [{ label: 'System default', checked: true, onSelect: () => {} }] } },
+		],
+	});
+
+	const root = document.activeElement as HTMLElement;
+	assert.equal(root.getAttribute('aria-haspopup'), 'menu');
+	press('ArrowRight');
+	const menu = document.querySelector('[role="menu"]')!;
+	assert.equal(menu.getAttribute('aria-label'), 'Microphone');
+	const radios = Array.from(menu.querySelectorAll('[role="menuitemradio"]')) as HTMLElement[];
+	assert.equal(radios.length, 2);
+	assert.deepEqual(radios.map(item => item.getAttribute('aria-checked')), ['false', 'true']);
+	assert.equal(document.activeElement, radios[0]);
+
+	press('ArrowDown');
+	press('Enter');
+	assert.equal(selected, 'usb');
+	assert.equal(popupMenu.isOpen(), false);
+	assert.equal(document.activeElement, anchor);
+});
+
+test('Left and Escape return from a submenu to its parent before closing the menu', () => {
+	const anchor = document.createElement('button');
+	document.body.appendChild(anchor);
+	popupMenu.open({
+		ariaLabel: 'Voice settings',
+		anchor,
+		onClose: () => anchor.focus(),
+		items: [{
+			label: 'Microphone: default',
+			submenu: { items: [{ label: 'System default', checked: true, onSelect: () => {} }] },
+		}],
+	});
+
+	press('Enter');
+	assert.equal(document.activeElement?.getAttribute('role'), 'menuitemradio');
+	press('ArrowLeft');
+	assert.equal((document.activeElement as HTMLElement).textContent, 'Microphone: default');
+	assert.equal(popupMenu.isOpen(), true);
+
+	press('Enter');
+	press('Escape');
+	assert.equal((document.activeElement as HTMLElement).textContent, 'Microphone: default');
+	assert.equal(popupMenu.isOpen(), true);
+	press('Escape');
+	assert.equal(popupMenu.isOpen(), false);
+	assert.equal(document.activeElement, anchor);
+});
+
 // Live-play report: pressing Tab made the menu disappear. Closing without choosing silently
 // ABORTS a pending multi-step play — onCancel lets the opener say so. A real selection
 // must never fire it.
