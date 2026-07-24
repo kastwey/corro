@@ -57,6 +57,8 @@ import type { AnnouncementEvent } from './gameClient.js';
 import { gameManager } from './gameManager.js';
 import { gameClient } from './gameClient.js';
 import { chatPanel } from './chatPanel.js';
+import { voicePanel } from './voicePanel.js';
+import { loadLiveKitClient } from './liveKitLoader.js';
 import { GameSessionStore } from './sessionUtils.js';
 import { actionBar } from './actions/actionBar.js';
 import { computeAvailableActions, deriveActionContext, rollForfeitGuard, endTurnForfeitGuard } from './actions/availableActions.js';
@@ -399,6 +401,33 @@ async function initBoard() {
   globalAnnounce = announce;
 	auctionDialog.setUnavailableAnnouncer(text =>
 		announce(createAnnouncement('_raw', { text }), { instant: true }));
+
+	// Voice is an optional deployment capability. The public probe contains one boolean only;
+	// the authenticated token call returns the relay URL just in time for an explicit join.
+	const voicePanelMount = document.getElementById('voice-panel-mount');
+	if (appControls && voicePanelMount) {
+		voicePanel.init(appControls, voicePanelMount, {
+			t: (key, vars) => tSync(key, vars),
+			gameId,
+			getMyPlayerId: () => playerSession.playerId,
+			isHost: () => playerSession.isHost,
+			requestToken: () => gameClient.requestVoiceToken(),
+			setEnabled: enabled => gameClient.setVoiceChatEnabled(enabled),
+			muteParticipant: playerId => gameClient.muteVoiceParticipant(playerId),
+			announce: (key, vars = {}, instant = false) =>
+				announce(createAnnouncement(key, vars), { instant }),
+			onPresenceChanged: participants => playerPanel.setVoiceParticipants(participants),
+			beforeOpen: () => { if (chatPanel.isOpen()) chatPanel.closePanel(); },
+		});
+		try {
+			const response = await fetch('/api/config/voice');
+			const config = response.ok ? await response.json() as { available?: boolean } : null;
+			const available = !!config?.available && await loadLiveKitClient();
+			voicePanel.setDeploymentAvailable(available);
+		} catch {
+			voicePanel.setDeploymentAvailable(false);
+		}
+	}
 
   announce(createAnnouncement('game.loading_board', {}));
 
@@ -880,7 +909,7 @@ async function initBoard() {
 	}
   }
 
-  // Mount the action bar and wire up F6/Shift+F6 panel navigation across the
+	// Mount the action bar and wire up Ctrl+F6/Ctrl+Shift+F6 panel navigation across the
   // board's landmark regions (announcing each region's name on entry). The action
   // bar speaks a disabled action's reason (e.g. "roll again first") when activated.
   actionBar.init(activateAction, (text) => globalAnnounce(createAnnouncement('_raw', { text }), { instant: true }));
@@ -910,11 +939,11 @@ async function initBoard() {
 	getElement: () => document.getElementById('connection-panel'),
 	focus: () => connectionPanel.focus(),
   });
-  // An open NON-modal dialog (e.g. the race piece choice) joins the F6 ring as one more
+	// An open NON-modal dialog (e.g. the race piece choice) joins the panel ring as one more
   // panel and is reachable directly with Ctrl+D. Modal dialogs trap focus on their own
   // and never appear here.
   const openNonModalDialog = () =>
-	document.querySelector<HTMLElement>('dialog[open][data-modal="false"]');
+	document.querySelector<HTMLElement>('dialog[open][data-modal="false"]:not(#chat-panel)');
   panelNavigator.register({
 	id: 'dialog',
 	labelKey: 'game.panels.dialog',
@@ -946,7 +975,7 @@ async function initBoard() {
 	},
 	isAvailable: () => !!openNonModalDialog(),
   });
-  // The chat joins the F6 ring while open (its own floating <dialog>, so it can coexist
+	// The chat joins the panel ring while open (its own floating <dialog>, so it can coexist
   // with a pending choice dialog). Entering lands on the compose box.
   panelNavigator.register({
 	id: 'chat',
@@ -954,6 +983,13 @@ async function initBoard() {
 	getElement: () => (chatPanel.isOpen() ? document.getElementById('chat-panel') : null),
 	focus: () => chatPanel.focusInput(),
 	isAvailable: () => chatPanel.isOpen(),
+  });
+	panelNavigator.register({
+	id: 'voice',
+	labelKey: 'game.panels.voice',
+	getElement: () => (voicePanel.isOpen() ? document.getElementById('voice-panel') : null),
+	focus: () => voicePanel.focus(),
+	isAvailable: () => voicePanel.isOpen(),
   });
 
   // Subscribe to server updates
@@ -968,6 +1004,7 @@ async function initBoard() {
 
   gameManager.on('gameStateUpdated', (gs) => {
 	if (!gs) return;
+	voicePanel.setGameEnabled(!!gs.voiceChatEnabled);
 
 	// The page starts with a truthful loading message. Once the authoritative state tells us
 	// the family, explain the surface focus actually enters: a spatial board or a card hand.
@@ -1530,7 +1567,7 @@ async function initBoard() {
 		: tSync('game.race_choose_title', { steps: pending.steps }),
 	  className: 'dialog-race-choice',
 	  // Non-modal: focus starts on the options but the player can leave to explore the
-	  // board (the choice needs the board!) and come back with F6 / Ctrl+D. Escape does
+	  // board (the choice needs the board!) and come back with Ctrl+F6 / Ctrl+D. Escape does
 	  // not dismiss it — the pending move is state-driven and must be resolved.
 	  modal: false,
 	  buttons: pending.options.map((option, i) => ({
@@ -1866,6 +1903,8 @@ async function initBoard() {
   });
   gameClient.on('chatMessage', m => chatPanel.addMessage(m));
   gameClient.on('chatHistory', ms => chatPanel.setHistory(ms));
+	gameClient.on('voiceChatEnabledChanged', data => voicePanel.setGameEnabled(data.enabled, true));
+	gameClient.on('voiceParticipantMutedByHost', data => voicePanel.handleHostMute(data));
 
   // Try to connect automatically and join the game
   try {
@@ -1956,9 +1995,16 @@ async function initBoard() {
 	  // rows and the "0–9 jump to a square" row, and add their own hand/status keys (which
 	  // live outside keymap.json). Board families keep the keymap as their whole story.
 	  const isCard = isToolbarlessFamily(family);
+	  const familyHidden = family === 'property' ? undefined
+		: isCard ? CARD_FAMILY_HIDDEN_COMMANDS : PROPERTY_ONLY_COMMANDS;
+	  const hiddenCommands = new Set(familyHidden ?? []);
+	  if (!voicePanel.isAvailable()) {
+		hiddenCommands.add('ToggleVoicePanel');
+		hiddenCommands.add('ToggleVoiceMute');
+		hiddenCommands.add('AnnounceVoiceSpeakers');
+	  }
 	  showHelpDialog(keyMap, {
-		hiddenCommands: family === 'property' ? undefined
-		  : isCard ? CARD_FAMILY_HIDDEN_COMMANDS : PROPERTY_ONLY_COMMANDS,
+		hiddenCommands: hiddenCommands.size > 0 ? hiddenCommands : undefined,
 		// Bindings tagged with another family (e.g. "s" = route landmarks, family "race")
 		// are inert here — and their letters may be shadowed by package group keys — so
 		// their rows don't belong in this game's help.
@@ -2011,8 +2057,11 @@ async function initBoard() {
 	  first: announceHistoryFirst,
 	  last: announceHistoryLast,
 	},
-	onToggleChat: () => chatPanel.toggle(),
-	onFocusChatInput: () => chatPanel.focusInput(),
+	onToggleChat: () => { if (voicePanel.isOpen()) voicePanel.closePanel(); chatPanel.toggle(); },
+	onFocusChatInput: () => { if (voicePanel.isOpen()) voicePanel.closePanel(); chatPanel.focusInput(); },
+	onToggleVoicePanel: () => voicePanel.togglePanel(),
+	onToggleVoiceMute: () => { void voicePanel.toggleSelfMute(); },
+	onAnnounceVoiceSpeakers: () => voicePanel.announceActiveSpeakers(),
 	// C off the property board: "how am I doing?" is your board identity there —
 	// the race squadron, or the track piece and its colour. The family owns the phrasing.
 	onAnnounceIdentity: () => {

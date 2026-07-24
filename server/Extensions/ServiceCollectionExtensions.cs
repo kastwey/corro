@@ -5,6 +5,7 @@ using CorroServer.Services.Corro;
 using CorroServer.Services.Corro.Validation;
 using CorroServer.Services.Rules;
 using CorroServer.Services.Sounds;
+using CorroServer.Services.Voice;
 using Microsoft.Azure.Cosmos;
 
 namespace CorroServer.Extensions;
@@ -37,6 +38,16 @@ public static class ServiceCollectionExtensions
 			.Validate(options => options.InactivityDays > 0, "GameRetention:InactivityDays must be greater than zero.")
 			.Validate(options => options.RunAtUtcHour is >= 0 and <= 23, "GameRetention:RunAtUtcHour must be between 0 and 23.")
 			.Validate(options => options.MaxGamesPerRun > 0, "GameRetention:MaxGamesPerRun must be greater than zero.")
+			.ValidateOnStart();
+
+		// Voice is an optional deployment capability. An entirely empty section keeps it off;
+		// a partially configured section fails startup instead of exposing a broken host control.
+		services.AddOptions<LiveKitOptions>()
+			.Bind(configuration.GetSection(LiveKitOptions.SectionName))
+			.Validate(options => options.IsEmpty || options.IsConfigured,
+				"LiveKit must provide a secure browser URL, API key and API secret; ApiUrl is optional.")
+			.Validate(options => options.TokenLifetimeMinutes is >= 1 and <= 60,
+				"LiveKit:TokenLifetimeMinutes must be between 1 and 60.")
 			.ValidateOnStart();
 
 		// Persistence: CosmosDB when a connection string is configured (production / local emulator),
@@ -114,6 +125,7 @@ public static class ServiceCollectionExtensions
 		services.AddSingleton<PackageRestorer>();
 		services.AddSingleton<IAuctionTimerService, AuctionTimerService>();
 		services.AddSingleton<INopeWindowService, NopeWindowService>();
+		services.AddSingleton<ILiveKitVoiceService, LiveKitVoiceService>();
 		// The process-wide live-session registry (in-memory games, connection maps, persisters). A
 		// single injected singleton replacing GameHub's former static state.
 		services.AddSingleton<CorroServer.Hubs.GameSessionRegistry>();

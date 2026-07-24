@@ -14,4 +14,4 @@ Pulsa **Espacio** para tirar. El movimiento y las consecuencias de la llegada so
 
 ## Cómo jugar con lector de pantalla
 
-**Escape** vuelve al tablero. Las flechas exploran sin mover tu ficha; **M** salta a tu ficha, **Inicio** a Salida, **N** recorre casillas ocupadas, **H** tus casillas y **U** las libres. **I** anuncia ocupantes y **Shift+I** abre la información. **C** anuncia tu dinero, **T** el turno, **W** el propietario y **E** el precio. **F6** y **Shift+F6** recorren tablero, acciones, jugadores y conexión. **Ctrl+Shift+R** abre el chat y enfoca su cuadro de mensaje.
+**Escape** vuelve al tablero. Las flechas exploran sin mover tu ficha; **M** salta a tu ficha, **Inicio** a Salida, **N** recorre casillas ocupadas, **H** tus casillas y **U** las libres. **I** anuncia ocupantes y **Shift+I** abre la información. **C** anuncia tu dinero, **T** el turno, **W** el propietario y **E** el precio. **Ctrl+F6** y **Ctrl+Shift+F6** recorren tablero, acciones, jugadores y conexión. **Ctrl+Shift+R** abre el chat y enfoca su cuadro de mensaje.

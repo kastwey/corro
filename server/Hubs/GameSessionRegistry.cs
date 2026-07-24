@@ -3,6 +3,7 @@ using CorroServer.Models;
 using CorroServer.Services;
 using CorroServer.Services.Corro;
 using CorroServer.Services.Corro.Families;
+using CorroServer.Services.Voice;
 using Microsoft.AspNetCore.SignalR;
 
 namespace CorroServer.Hubs;
@@ -37,6 +38,7 @@ public sealed class GameSessionRegistry
 	private readonly INopeWindowService? _nopeWindow;
 	private readonly PackageRestorer _restorer;
 	private readonly ILogger<GameSessionRegistry>? _logger;
+	private readonly ILiveKitVoiceService? _voiceService;
 
 	public GameSessionRegistry(
 		IHubContext<GameHub> hub,
@@ -46,7 +48,9 @@ public sealed class GameSessionRegistry
 		ILogger<GameSessionRegistry>? logger = null,
 		// The exploding family's real-time Nope window. Optional so the slim test constructions
 		// keep working; DI injects the registered singleton in the running app.
-		INopeWindowService? nopeWindow = null)
+		INopeWindowService? nopeWindow = null,
+		// The voice relay is optional for deployments and for slim tests.
+		ILiveKitVoiceService? voiceService = null)
 	{
 		_hub = hub;
 		_repository = repository;
@@ -54,6 +58,7 @@ public sealed class GameSessionRegistry
 		_nopeWindow = nopeWindow;
 		_restorer = restorer;
 		_logger = logger;
+		_voiceService = voiceService;
 		SubscribeToAuctionTimerEvents();
 		SubscribeToNopeWindowEvents();
 	}
@@ -182,6 +187,24 @@ public sealed class GameSessionRegistry
 		return saved;
 	}
 
+	/// <summary>Persist the host's platform-level voice switch through the same document cache
+	/// used by state/chat writes, so a concurrent game snapshot cannot restore an older value.</summary>
+	public async Task<GameDocument?> SetVoiceChatEnabledAsync(string gameId, bool enabled)
+	{
+		if (!_persistedDocuments.TryGetValue(gameId, out var doc) || doc == null)
+		{
+			doc = await _repository.LoadGameAsync(gameId);
+			if (doc == null)
+			{
+				return null;
+			}
+		}
+
+		var saved = await _repository.UpdateGameAsync(doc with { VoiceChatEnabled = enabled });
+		_persistedDocuments[gameId] = saved;
+		return saved;
+	}
+
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
 	/// <summary>
@@ -192,6 +215,11 @@ public sealed class GameSessionRegistry
 	{
 		_timers.StopTimers(gameId);
 		_nopeWindow?.Cancel(gameId);
+		if (_voiceService?.IsConfigured == true)
+		{
+			try { await _voiceService.DeleteRoomAsync(gameId); }
+			catch (Exception ex) { _logger?.LogWarning(ex, "Could not delete voice room for game {GameId}", gameId); }
+		}
 		if (_gameServices.TryRemove(gameId, out var service))
 		{
 			try { await service.EndGameAsync(); }

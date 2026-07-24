@@ -62,6 +62,6 @@ rivales de un tirón. Pulsa **Ctrl+F1** para ver la lista completa de atajos de 
 
 ### Moverte entre zonas y usar el chat
 
-- **F6** recorre mano, jugadores y conexión; los diálogos no modales y el chat se incorporan cuando están abiertos. **Shift+F6** recorre en sentido contrario.
+- **Ctrl+F6** recorre mano, jugadores y conexión; los diálogos no modales y el chat se incorporan cuando están abiertos. **Ctrl+Shift+F6** recorre en sentido contrario.
 - **Ctrl+Shift+R** abre el chat y lleva el foco al cuadro de mensaje. **Ctrl+Shift+H** abre o cierra el chat.
 - Las ayudas y reglas son documentos de lectura. Recorre sus encabezados y listas con tu lector y ciérralos con **Escape** para volver al juego.

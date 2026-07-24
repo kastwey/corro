@@ -111,6 +111,9 @@ export function describeCommand(cmd: string, args: any, family?: string): string
 		case 'AnnounceCurrentBid': return tSync('game.help_cmd_current_bid');
 		case 'ToggleChat': return tSync('game.help_cmd_toggle_chat');
 		case 'FocusChatInput': return tSync('game.help_cmd_focus_chat');
+		case 'ToggleVoicePanel': return tSync('game.help_cmd_toggle_voice');
+		case 'ToggleVoiceMute': return tSync('game.help_cmd_voice_mute');
+		case 'AnnounceVoiceSpeakers': return tSync('game.help_cmd_voice_speakers');
 		case 'ShowHelp': return tSync('game.help_cmd_help');
 		case 'ShowBoardHelp': return tSync('game.help_cmd_board_help');
 		case 'ShowGameRules': return tSync('game.help_cmd_game_rules');

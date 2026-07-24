@@ -207,7 +207,7 @@ it so it describes your actual game:
 - what the arrow keys explore;
 - how a player performs the turn;
 - what `S`, `Shift+S` or other family status keys announce;
-- that `F6`/`Shift+F6` cycle game areas;
+- that `Ctrl+F6`/`Ctrl+Shift+F6` cycle game areas;
 - that `Ctrl+Shift+R` opens chat and focuses the message box;
 - which events are announced automatically.
 

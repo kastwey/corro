@@ -15,4 +15,4 @@ Pulsa **Enter** para jugar la carta enfocada o **Suprimir** para descartarla. La
 
 ## Cómo jugar con lector de pantalla
 
-Arriba y Abajo recorren la mano; Derecha entra en las acciones, **Shift+F10** abre su menú y **Escape** vuelve a la mano. **S** anuncia tus dos huecos y **Shift+S** los montajes rivales. Se anuncian instalaciones, daños, reparaciones, blindajes, certificaciones y reposiciones privadas. **F6** recorre las zonas y **Ctrl+Shift+R** enfoca el chat.
+Arriba y Abajo recorren la mano; Derecha entra en las acciones, **Shift+F10** abre su menú y **Escape** vuelve a la mano. **S** anuncia tus dos huecos y **Shift+S** los montajes rivales. Se anuncian instalaciones, daños, reparaciones, blindajes, certificaciones y reposiciones privadas. **Ctrl+F6** recorre las zonas y **Ctrl+Shift+R** enfoca el chat.

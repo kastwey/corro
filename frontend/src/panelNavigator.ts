@@ -1,4 +1,4 @@
-// panelNavigator.ts — F6 / Shift+F6 cycling across the board's landmark regions
+// panelNavigator.ts — Ctrl+F6 / Ctrl+Shift+F6 cycling across the board's landmark regions
 // for screen-reader users. Each registered region exposes a way to grab focus
 // and (optionally) declare whether it is currently available (e.g. the action
 // bar hides when empty). When focus moves to a region, its name is announced so

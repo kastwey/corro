@@ -32,7 +32,7 @@ export interface DialogOptions {
 	onClose?: () => void;    // Callback when closing (Escape or close())
 	className?: string;      // Additional CSS class for the dialog
 	/** false renders a NON-modal dialog: focus starts on it but is not trapped, so the
-	 *  player can leave to explore the board and return (F6 / Ctrl+D). Default: modal. */
+	 *  player can leave to explore the board and return (Ctrl+F6 / Ctrl+D). Default: modal. */
 	modal?: boolean;
 	/** true marks a READING dialog (the shortcuts help, the board guide): its content is a
 	 *  document to browse, not controls to operate. The buttons row drops the

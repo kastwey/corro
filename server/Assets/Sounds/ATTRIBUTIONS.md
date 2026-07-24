@@ -1,7 +1,7 @@
 # Sound attributions — engine platform pack
 
 The engine ships **only platform sounds**: cues that exist regardless of which game is being
-played (chat, invalid-action feedback). Every GAME earcon (dice, money, holding, card draw/shuffle,
+played (text chat, voice presence and invalid-action feedback). Every GAME earcon (dice, money, holding, card draw/shuffle,
 win/lose, …) lives in the PACKAGES now, not here — a package's `assets/sounds/` folder overlays this
 platform pack. Shared cross-family earcons have a canonical source in
 [`sound-commons/`](../../../sound-commons/ATTRIBUTIONS.md); each package ships its own copy.
@@ -18,6 +18,8 @@ are accepted (CC-BY-NC is not compatible with this repository).
 | `connect` (a player returns) | connect.ogg | "malexmedia_lazymanphone_hangupbeep.wav" | [malexmedia](https://freesound.org/people/malexmedia/) | [freesound.org/s/31801](https://freesound.org/people/malexmedia/sounds/31801/) | CC BY 4.0 |
 | `message.send` (chat) | message-sent.ogg | "UIMvmt_Game User Interface Sound Set.Freesound Selection_EM" (trimmed: one cue from the 70-second set) | [newlocknew](https://freesound.org/people/newlocknew/) | [freesound.org/s/842498](https://freesound.org/people/newlocknew/sounds/842498/) | CC BY 4.0 |
 | `message.receive` (chat) | message-received.ogg | "Message Receive" | [Froey_](https://freesound.org/people/Froey_/) | [freesound.org/s/760369](https://freesound.org/people/Froey_/sounds/760369/) | CC0 |
+| `voice.join` (voice participant enters) | voice-join.wav | Original ascending synthesized cue | Corro contributors | Generated for Corro | AGPL-3.0-only |
+| `voice.leave` (voice participant exits) | voice-leave.wav | Original descending synthesized cue | Corro contributors | Generated for Corro | AGPL-3.0-only |
 
 ## Token hop (`frontend/assets/sounds`)
 

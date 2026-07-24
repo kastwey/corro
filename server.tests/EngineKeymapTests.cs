@@ -21,6 +21,10 @@ public class EngineKeymapTests
 		Assert.Equal("RollDice", doc.RootElement.GetProperty("space").GetString());
 		// C is the per-family "how am I doing?" key (money / squadron / piece colour).
 		Assert.Equal("AnnounceMyStatus", doc.RootElement.GetProperty("c").GetString());
+		// Plain F6 belongs to browser chrome and permission prompts; modified F6 cycles panels.
+		Assert.False(doc.RootElement.TryGetProperty("f6", out _));
+		Assert.Equal("NextPanel", doc.RootElement.GetProperty("ctrl+f6").GetString());
+		Assert.Equal("PrevPanel", doc.RootElement.GetProperty("ctrl+shift+f6").GetString());
 	}
 
 	[Fact]

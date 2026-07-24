@@ -51,7 +51,7 @@ export interface KeyHandlersOptions {
 	reenterAuction?: () => void; // Reopens the auction modal I'm still part of (after dismissing it)
 	history?: { prev: () => void; next: () => void; first: () => void; last: () => void }; // Announcement history navigation
 	onInvalidSquareNumber?: (n: number) => void; // Typed a square number out of range
-	// Panel navigation (F6 / Shift+F6 across landmark regions, Ctrl+Shift+A to the action
+	// Panel navigation (Ctrl+F6 / Ctrl+Shift+F6 across landmark regions, Ctrl+Shift+A to the action
 	// bar, Ctrl+D to the open non-modal dialog)
 	panelNav?: { next: () => boolean; prev: () => boolean; focusActions: () => boolean; focusDialog: () => boolean };
 	// Direct action shortcuts surfaced on the action bar
@@ -68,6 +68,9 @@ export interface KeyHandlersOptions {
 	onLeaveGame?: () => void; // Opens the confirm dialog to abandon the game (bankruptcy)
 	onToggleChat?: () => void; // Opens/collapses the chat panel (Ctrl+Shift+H)
 	onFocusChatInput?: () => void; // Jumps to the chat compose box, opening the panel if needed (Ctrl+Shift+R)
+	onToggleVoicePanel?: () => void; // Opens/collapses the optional voice controls
+	onToggleVoiceMute?: () => void; // Mutes/unmutes my published microphone
+	onAnnounceVoiceSpeakers?: () => boolean; // Voices a current-speaker snapshot on demand
 	/** C off the property board: announce my board identity (squadron / piece colour). */
 	onAnnounceIdentity?: () => boolean;
 	/** The generic real-time REACTION key (exploding: play a Nope). Global — it fires off-turn
@@ -157,6 +160,7 @@ const DIALOG_READONLY_COMMANDS = new Set([
 	'AnnounceTurn',
 	'HistoryPrev', 'HistoryNext', 'HistoryFirst', 'HistoryLast',
 	'ToggleSound',
+	'AnnounceVoiceSpeakers',
 ]);
 
 /** The active family, defaulting to "property" (lobby, tests, property boards). */
@@ -290,6 +294,14 @@ function createCommandExecutor(opts: KeyHandlersOptions) {
 					// browser's own Ctrl+Shift+R (hard reload) would fire.
 					if (opts.onFocusChatInput) { opts.onFocusChatInput(); return true; }
 					return false;
+				case 'ToggleVoicePanel':
+					if (opts.onToggleVoicePanel) { opts.onToggleVoicePanel(); return true; }
+					return false;
+				case 'ToggleVoiceMute':
+					if (opts.onToggleVoiceMute) { opts.onToggleVoiceMute(); return true; }
+					return false;
+				case 'AnnounceVoiceSpeakers':
+					return opts.onAnnounceVoiceSpeakers?.() ?? false;
 				case 'ShowHelp':
 					if (opts.showHelp) {
 						opts.showHelp();
@@ -432,7 +444,7 @@ export function attachKeyHandlers(opts: KeyHandlersOptions) {
 		// check if focus is inside a dialog (every dialog is a native <dialog>; div-based
 		// role="dialog" surfaces are forbidden — see copilot-instructions Accessibility).
 		// A NON-modal dialog (data-modal="false") does not trap focus: it behaves like one
-		// more panel, so global shortcuts (F6 cycling, Escape back to the board, Ctrl+D)
+		// more panel, so global shortcuts (Ctrl+F6 cycling, Escape back to the board, Ctrl+D)
 		// keep working from inside it and it is skipped here.
 		const openDialog = target?.closest('dialog[open]') as HTMLElement | null;
 		const isInDialog = !!openDialog && openDialog.dataset.modal !== 'false';
@@ -488,11 +500,12 @@ export function attachKeyHandlers(opts: KeyHandlersOptions) {
 		// The action bar (role="toolbar") governs its own keyboard model: arrows,
 		// Home/End move the roving focus and Enter/Space activate the focused
 		// button. While focus is inside it, suppress the board's single-key
-		// shortcuts so they don't fight the toolbar — but still let F6/Shift+F6
-		// (panel cycling) and any modifier combo (e.g. Ctrl+Shift+A) through so
-		// the user can leave the toolbar.
+		// shortcuts so they don't fight the toolbar. Modifier combos (including
+		// Ctrl+F6 / Ctrl+Shift+F6 panel cycling) still pass through so the user can
+		// leave the toolbar. Plain F6 remains untouched for browser chrome and
+		// permission prompts.
 		const isInToolbar = !!(target && target.closest('[role="toolbar"]'));
-		if (isInToolbar && !ev.ctrlKey && !ev.altKey && !ev.metaKey && key !== 'f6') {
+		if (isInToolbar && !ev.ctrlKey && !ev.altKey && !ev.metaKey) {
 			return;
 		}
 

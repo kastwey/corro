@@ -14,4 +14,4 @@ Press **Space** to roll. The piece walks automatically, including any landing ef
 
 ## Playing with a screen reader
 
-**Escape** returns to the track. Left and Right explore one space; Up and Down jump one visual row. Number keys jump directly to a space, **M** to your piece, **N** through occupied spaces and **Home** to the start tray. Exploration never moves the real piece. Rolls, visible steps, effects and placements are announced. **F6** cycles game areas and **Ctrl+Shift+R** focuses chat.
+**Escape** returns to the track. Left and Right explore one space; Up and Down jump one visual row. Number keys jump directly to a space, **M** to your piece, **N** through occupied spaces and **Home** to the start tray. Exploration never moves the real piece. Rolls, visible steps, effects and placements are announced. **Ctrl+F6** cycles game areas and **Ctrl+Shift+R** focuses chat.

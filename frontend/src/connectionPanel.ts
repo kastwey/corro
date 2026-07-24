@@ -3,7 +3,7 @@
 //   - "Leave game": abandon permanently (declares bankruptcy, freeing every owned
 //     property back to the bank) after a confirmation.
 //   - "Disconnect": drop the SignalR connection, leaving the other players waiting.
-// It is one of the F6 landmark regions and an ARIA toolbar: focusing it lands on the
+// It is one of the Ctrl+F6 landmark regions and an ARIA toolbar: focusing it lands on the
 // first action (roving tabindex, ArrowLeft/Right move between the actions) while the
 // live status is exposed via the toolbar's description so it is read on entry.
 

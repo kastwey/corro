@@ -206,7 +206,7 @@ Reescríbela para describir tu juego real:
 - qué exploran las flechas;
 - cómo se realiza el turno;
 - qué anuncian `S`, `Shift+S` u otras teclas de estado de la familia;
-- que `F6`/`Shift+F6` recorren las zonas del juego;
+- que `Ctrl+F6`/`Ctrl+Shift+F6` recorren las zonas del juego;
 - que `Ctrl+Shift+R` abre el chat y enfoca el cuadro de mensaje;
 - qué sucesos se anuncian automáticamente.
 

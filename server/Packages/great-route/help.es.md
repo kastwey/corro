@@ -55,6 +55,6 @@ La mano es la superficie principal de juego y cada carta es una sola parada de f
 
 ### Moverte entre zonas y usar el chat
 
-- **F6** recorre las zonas disponibles de la partida, como la mano, jugadores y conexión; los diálogos no modales y el chat se incorporan al recorrido cuando están abiertos. **Shift+F6** recorre las zonas en sentido contrario.
+- **Ctrl+F6** recorre las zonas disponibles de la partida, como la mano, jugadores y conexión; los diálogos no modales y el chat se incorporan al recorrido cuando están abiertos. **Ctrl+Shift+F6** recorre las zonas en sentido contrario.
 - **Ctrl+Shift+R** abre el chat y lleva el foco directamente al cuadro de mensaje. **Ctrl+Shift+H** abre o cierra el chat.
 - Las guías, las reglas activas y la ayuda de cada carta se abren como documentos de lectura. Puedes recorrer sus encabezados y listas con los comandos habituales de tu lector y cerrarlos con **Escape** para volver al punto anterior.

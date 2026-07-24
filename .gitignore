@@ -215,6 +215,10 @@ project.lock.json
 project.fragment.lock.json
 artifacts/
 
+# LiveKit VPS runtime configuration contains the API secret and TLS private key.
+infra/livekit/livekit.yaml
+infra/livekit/certs/
+
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt
 

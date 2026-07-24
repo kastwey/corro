@@ -164,5 +164,20 @@ if (fs.existsSync(signalRSrc)) {
 	console.log('   SignalR not found in node_modules; skipping.');
 }
 
+// Copy LiveKit. The frontend intentionally has no bundler; its browser build exposes the
+// `LivekitClient` global consumed by voiceTransport.ts, while TypeScript imports only types.
+const liveKitSrc = path.join('node_modules', 'livekit-client', 'dist', 'livekit-client.umd.js');
+const liveKitDest = path.join(libsDir, 'livekit-client.umd.js');
+if (fs.existsSync(liveKitSrc)) {
+	try {
+		fs.copyFileSync(liveKitSrc, liveKitDest);
+		console.log(`   LiveKit -> dist/libs/livekit-client.umd.js`);
+	} catch (error) {
+		console.log(`   Failed to copy LiveKit:`, error.message);
+	}
+} else {
+	console.log('   LiveKit not found in node_modules; skipping.');
+}
+
 console.log('Build completed successfully.');
 console.log('Run "node serve.js" to try the application.');

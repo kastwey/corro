@@ -51,7 +51,7 @@ The guide should explain the four help layers when they apply: **F1** for the pa
 **Ctrl+F1** for the live shortcut list, **Ctrl+Shift+F1** for the effective rules and
 **Shift+F1** for focused-card help. It must also include a localized `## Playing with a screen
 reader` section (or equivalent) describing the package family's real focus surface, navigation,
-status queries, the **F6** panel cycle and direct chat access.
+status queries, the **Ctrl+F6** panel cycle and direct chat access.
 
 ## Game families
 

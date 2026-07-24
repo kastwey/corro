@@ -15,4 +15,4 @@ Press **Enter** to play a focused action and **Space** to draw. Extinguishing a 
 
 ## Playing with a screen reader
 
-Up and Down move through the hand; Right enters actions, **Shift+F10** opens the menu and **Escape** returns. **C** announces pile count and discard top; **S** your state and **Shift+S** rivals. During a reaction window, **N** focuses Cancel and Enter plays it. Actions, reactions, draws and eliminations are announced. **F6** cycles areas and **Ctrl+Shift+R** focuses chat.
+Up and Down move through the hand; Right enters actions, **Shift+F10** opens the menu and **Escape** returns. **C** announces pile count and discard top; **S** your state and **Shift+S** rivals. During a reaction window, **N** focuses Cancel and Enter plays it. Actions, reactions, draws and eliminations are announced. **Ctrl+F6** cycles areas and **Ctrl+Shift+R** focuses chat.

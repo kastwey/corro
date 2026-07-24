@@ -15,4 +15,4 @@ Press **Enter** to play the focused card or **Delete** to discard it. The hand r
 
 ## Playing with a screen reader
 
-Up and Down move through the hand; Right enters card actions, **Shift+F10** opens its menu and **Escape** returns to the hand. **S** announces both of your unit slots and **Shift+S** rival assemblies. Installations, damage, repairs, shields, locks and private refills are announced. **F6** cycles game areas and **Ctrl+Shift+R** focuses chat.
+Up and Down move through the hand; Right enters card actions, **Shift+F10** opens its menu and **Escape** returns to the hand. **S** announces both of your unit slots and **Shift+S** rival assemblies. Installations, damage, repairs, shields, locks and private refills are announced. **Ctrl+F6** cycles game areas and **Ctrl+Shift+R** focuses chat.

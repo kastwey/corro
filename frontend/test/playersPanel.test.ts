@@ -114,6 +114,39 @@ test('the Disconnected tag disappears when the player reconnects (in-place updat
 	assert.doesNotMatch(row.getAttribute('aria-label')!, /Disconnected/);
 });
 
+test('voice presence stays visible on player cards without adding focus stops or speaking chatter', () => {
+	const { panel } = makePanel();
+	const bob = document.querySelector('.player-card[data-player-id="B"]') as HTMLElement;
+	bob.focus();
+	const labelBeforeVoice = bob.getAttribute('aria-label');
+
+	panel.setVoiceParticipants([{ id: 'B', muted: false, speaking: false }]);
+	const tag = bob.querySelector('.player-tag--voice') as HTMLElement;
+	assert.equal(document.activeElement, bob, 'presence updates preserve the focused player row');
+	assert.equal(tag.textContent, 'In voice');
+	assert.equal(tag.getAttribute('aria-hidden'), 'true');
+	assert.equal(bob.getAttribute('aria-label'),
+		'Bob. In voice chat with the microphone on. Money: 800 euros. Position: Pink 1. In holding');
+
+	panel.setVoiceParticipants([{ id: 'B', muted: false, speaking: true }]);
+	assert.equal(tag.textContent, 'Speaking');
+	assert.ok(bob.classList.contains('is-voice-speaking'));
+	assert.equal(bob.getAttribute('aria-label'),
+		'Bob. In voice chat with the microphone on. Money: 800 euros. Position: Pink 1. In holding',
+		'speaking changes are visual and do not rewrite the accessible row label');
+
+	panel.setVoiceParticipants([{ id: 'B', muted: true, speaking: false }]);
+	assert.equal(tag.textContent, 'Muted');
+	assert.ok(!bob.classList.contains('is-voice-speaking'));
+	assert.equal(bob.getAttribute('aria-label'),
+		'Bob. In voice chat with the microphone muted. Money: 800 euros. Position: Pink 1. In holding');
+
+	panel.setVoiceParticipants([]);
+	assert.equal(bob.querySelector('.player-tag--voice'), null);
+	assert.equal(bob.getAttribute('aria-label'), labelBeforeVoice);
+	assert.equal(bob.querySelectorAll('button').length, 3, 'voice state adds no duplicate controls');
+});
+
 test('the "go to player" action hides in the race family (several pieces, no single target)', () => {
 	makePanel({ showGoToPlayer: () => false });
 	const buttons = Array.from(document.querySelectorAll('.player-card__btn'))

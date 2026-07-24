@@ -98,11 +98,18 @@ Accessibility is not an accommodation added at the edge; it is part of the circl
 
 - **Lobby:** SignalR creates and joins games; REST serves packages and configuration.
 - **Game:** SignalR for real-time state synchronisation.
+- **Optional voice:** authenticated audio-only LiveKit rooms on a self-hosted SFU/TURN relay;
+  games and text chat continue normally when the relay is not configured or unavailable.
 - **State:** authoritative server. The client sends *commands* and receives *responses*
   and *announcements*; it never computes rules.
 - **Persistence:** Azure Cosmos DB in production; locally, the Cosmos emulator **or** an
   **in-memory** repository when nothing is configured (everything sits behind
   `IGameRepository`). See [Getting started (local)](#getting-started-local).
+
+Voice chat is opt-in per game and per player, includes local per-person volume and a
+reversible one-shot host mute, and exposes active speakers visually plus through an
+on-demand keyboard query. See [the voice architecture and accessibility guide](docs/voice-chat.md)
+and [the VPS deployment template](infra/livekit/README.md).
 
 ## Repository layout
 

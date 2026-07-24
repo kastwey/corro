@@ -54,6 +54,6 @@ shortcut list.
 
 ### Moving between areas and using chat
 
-- **F6** cycles through the hand, players and connection; non-modal dialogs and chat join while open. **Shift+F6** moves in reverse. **Ctrl+P** goes to players.
+- **Ctrl+F6** cycles through the hand, players and connection; non-modal dialogs and chat join while open. **Ctrl+Shift+F6** moves in reverse. **Ctrl+P** goes to players.
 - **Ctrl+Shift+R** opens chat and focuses the message box. **Ctrl+Shift+H** opens or closes chat.
 - Help and rules are reading documents. Use your screen reader's heading and list commands, then close them with **Escape** to return to play.

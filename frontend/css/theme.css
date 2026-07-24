@@ -148,7 +148,20 @@ body {
   background-clip: text;
   color: transparent;
 }
-.app-header__controls { display: flex; align-items: center; gap: 12px; }
+.app-header__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  max-width: 100%;
+}
+@media (max-width: 620px) {
+  .app-header__controls {
+    width: 100%;
+    gap: 8px;
+  }
+}
 .app-intro { color: var(--text-muted); margin: 0 0 20px; max-width: 70ch; }
 
 /* ---------- Buttons (shared) ---------- */

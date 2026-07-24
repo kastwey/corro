@@ -375,7 +375,7 @@ public class CorroPackageSdkTests
 		Assert.DoesNotContain("Customize this guide", helpEn);
 		var helpEs = await File.ReadAllTextAsync(Path.Combine(destination, "help.es.md"));
 		Assert.StartsWith($"# Prueba {family}", helpEs);
-		foreach (var shortcut in new[] { "**F1**", "**Ctrl+F1**", "**Ctrl+Shift+F1**", "**F6**", "**Ctrl+Shift+R**" })
+			foreach (var shortcut in new[] { "**F1**", "**Ctrl+F1**", "**Ctrl+Shift+F1**", "**Ctrl+F6**", "**Ctrl+Shift+R**" })
 		{
 			Assert.Contains(shortcut, helpEn);
 			Assert.Contains(shortcut, helpEs);

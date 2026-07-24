@@ -15,4 +15,4 @@ Press **Enter** to choose the focused card. You may change the secret pick until
 
 ## Playing with a screen reader
 
-Up and Down move through your private hand; Right enters actions, **Shift+F10** opens the menu and **Escape** returns to the hand. **S** announces your public table and score; **Shift+S** reviews rivals. Picks are private, while commits, reveals, hand rotation and scoring are announced. **F6** cycles game areas and **Ctrl+Shift+R** focuses chat.
+Up and Down move through your private hand; Right enters actions, **Shift+F10** opens the menu and **Escape** returns to the hand. **S** announces your public table and score; **Shift+S** reviews rivals. Picks are private, while commits, reveals, hand rotation and scoring are announced. **Ctrl+F6** cycles game areas and **Ctrl+Shift+R** focuses chat.

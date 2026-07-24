@@ -58,6 +58,10 @@ public record CreateGameRequest
 	/// least two members each). Null/0 = individual play. Team mode makes MaxPlayers EXACT:
 	/// the game only starts full, everyone placed in a team by the host.</summary>
 	public int? TeamCount { get; init; }
+
+	/// <summary>Initial host choice for the optional voice room. The server accepts true only
+	/// when a LiveKit deployment is configured; players still join the room individually.</summary>
+	public bool VoiceChatEnabled { get; init; }
 }
 
 /// <summary>Host request: place a player in a journey team (or back in the pool with null).</summary>

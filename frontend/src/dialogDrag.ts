@@ -2,7 +2,7 @@
  * Makes a native <dialog> draggable by its title bar, so a floating (non-modal) dialog can
  * be moved off whatever board area the player wants to see. Pointer-based and additive:
  * keyboard users never need it (a non-modal dialog is left with Escape and re-entered with
- * F6 / Ctrl+D), so dragging is purely a convenience for mouse and touch.
+ * Ctrl+F6 / Ctrl+D), so dragging is purely a convenience for mouse and touch.
  *
  * Implementation notes:
  * - Handlers are DELEGATED from the dialog element, because several dialogs rewrite their

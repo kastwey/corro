@@ -1,4 +1,5 @@
 using CorroServer.Services;
+using CorroServer.Services.Voice;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
@@ -12,10 +13,14 @@ namespace CorroServer.Controllers;
 public class ConfigController : ControllerBase
 {
 	private readonly SiteBrandingOptions _siteBranding;
+	private readonly bool _voiceAvailable;
 
-	public ConfigController(IOptions<SiteBrandingOptions> siteBranding)
+	public ConfigController(
+		IOptions<SiteBrandingOptions> siteBranding,
+		ILiveKitVoiceService? voiceService = null)
 	{
 		_siteBranding = siteBranding.Value;
+		_voiceAvailable = voiceService?.IsConfigured ?? false;
 	}
 
 	/// <summary>Get the public identity selected by this deployment.</summary>
@@ -28,6 +33,11 @@ public class ConfigController : ControllerBase
 	/// </summary>
 	[HttpGet("keymap")]
 	public ContentResult GetKeymap() => Content(EngineKeymap.Json, "application/json");
+
+	/// <summary>Whether this deployment offers voice chat. URLs and credentials are deliberately
+	/// absent; an authenticated player receives the public URL only with a short-lived token.</summary>
+	[HttpGet("voice")]
+	public ActionResult<object> GetVoice() => new { Available = _voiceAvailable };
 
 	/// <summary>
 	/// Get available languages

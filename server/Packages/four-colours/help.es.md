@@ -50,6 +50,6 @@ juego. Pulsa **Ctrl+F1** para ver todos los atajos.
 
 ### Moverte entre zonas y usar el chat
 
-- **F6** recorre mano, jugadores y conexión; los diálogos no modales y el chat se incorporan cuando están abiertos. **Shift+F6** recorre las zonas en sentido contrario. **Ctrl+P** lleva a jugadores.
+- **Ctrl+F6** recorre mano, jugadores y conexión; los diálogos no modales y el chat se incorporan cuando están abiertos. **Ctrl+Shift+F6** recorre las zonas en sentido contrario. **Ctrl+P** lleva a jugadores.
 - **Ctrl+Shift+R** abre el chat y lleva el foco al cuadro de mensaje. **Ctrl+Shift+H** abre o cierra el chat.
 - Jugadas, robos, penalizaciones, cambios de color y turnos se anuncian automáticamente. Las ayudas y reglas son documentos de lectura; ciérralos con **Escape** para volver al juego.

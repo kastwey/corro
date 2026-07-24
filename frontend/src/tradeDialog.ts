@@ -770,7 +770,7 @@ class TradeDialogClass {
 	private trapFocus(e: KeyboardEvent): void {
 		if (e.key !== 'Tab' || !this.dialog) return;
 		// A non-modal (floating) state is one more panel, not a trap: Tab may walk out of
-		// it, and Escape / F6 / Ctrl+D move between it and the board.
+		// it, and Escape / Ctrl+F6 / Ctrl+D move between it and the board.
 		if (this.dialog.dataset.modal === 'false') return;
 		const focusables = Array.from(
 			this.dialog.querySelectorAll<HTMLElement>(

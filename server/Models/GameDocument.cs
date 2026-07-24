@@ -56,6 +56,11 @@ public record GameDocument
 	[JsonPropertyName("teamCount")]
 	public int? TeamCount { get; init; }
 
+	/// <summary>Whether the host has made the deployment's optional voice room available to
+	/// this game. Joining remains opt-in for every player; media never enters the game state.</summary>
+	[JsonPropertyName("voiceChatEnabled")]
+	public bool VoiceChatEnabled { get; init; }
+
 	/// <summary>In-game chat history (capped; oldest dropped first). Persisted with the game so a
 	/// reconnecting player gets the conversation back. Stored OUTSIDE GameState on purpose: state
 	/// broadcasts must not re-send the whole chat on every move. NOT encrypted at rest beyond

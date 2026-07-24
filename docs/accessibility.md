@@ -125,6 +125,31 @@ canonical source in `sound-commons/`, copied into each package that needs them. 
 travelling-token hop is a client animation sound (`finger.ogg`) a package may override with a
 `token.hop` event.
 
+## Live human voice
+
+Optional LiveKit voice is a parallel social channel, not a game-announcement channel. It
+does not weaken the server-owned voice rule: game events still originate in the rulebook;
+client-side voice presence may announce only local transport/UI facts such as joining,
+leaving, microphone state and relay errors.
+
+The existing player cards show who is in voice, who is muted and who is actively speaking,
+even while voice settings are closed. Screen readers receive speaker names only through the
+Ctrl+Alt+A on-demand query, never as automatic chatter over the conversation. Every player
+opts in, joins with the microphone on, can mute themselves and can set each remote volume.
+Host mute is announced and reversible. There is deliberately no automatic ducking;
+screen-reader and operating-system audio preferences remain under user control.
+
+The detailed roster and controls live in an in-page disclosure with a persistent microphone
+button while connected. Join/leave have dedicated engine earcons, and permission failures
+remain visible and spoken. See [voice-chat.md](voice-chat.md) for the complete transport and
+threat model.
+
+Voice-device settings reuse the established ARIA menu pattern: one level of sibling
+Microphone and Voice output submenus, with mutually exclusive choices exposed as
+`menuitemradio`. The selected microphone can be set before joining, so entering unmuted never
+briefly publishes an unintended input. Unsupported output selection remains focusable and
+explains that the operating-system default is used instead of silently presenting a dead list.
+
 ## i18n parity
 
 Every user-facing string exists in **both** `en.json` and `es.json` (base **and** `_self`

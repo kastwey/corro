@@ -14,4 +14,4 @@ Pulsa **Espacio** para tirar. Un movimiento obligatorio o único se resuelve aut
 
 ## Cómo jugar con lector de pantalla
 
-**Escape** pasa de la elección al tablero sin cancelarla; **Ctrl+D** vuelve a la elección. Las flechas exploran el circuito y las zonas de asiento. **M** recorre tus fichas, **N** todas las posiciones ocupadas, **S** los hitos de ruta e **Inicio** el principio del carril actual. Se anuncian movimientos, capturas, barreras y bonus. **F6** recorre las zonas y **Ctrl+Shift+R** enfoca el chat.
+**Escape** pasa de la elección al tablero sin cancelarla; **Ctrl+D** vuelve a la elección. Las flechas exploran el circuito y las zonas de asiento. **M** recorre tus fichas, **N** todas las posiciones ocupadas, **S** los hitos de ruta e **Inicio** el principio del carril actual. Se anuncian movimientos, capturas, barreras y bonus. **Ctrl+F6** recorre las zonas y **Ctrl+Shift+R** enfoca el chat.

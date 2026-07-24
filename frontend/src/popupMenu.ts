@@ -7,6 +7,8 @@
 //     character jumps to the next item starting with it (typeahead).
 //   • Enter/Space activate the focused item; Escape or Tab close the menu and return focus
 //     to the opener; a click outside also closes it.
+//   • An item may open a submenu in place with Right/Enter/Space; Left/Escape returns to
+//     the parent. Mutually exclusive options use menuitemradio + aria-checked.
 //   • Unaffordable options stay focusable but are marked aria-disabled with an
 //     aria-describedby hint; activating one voices the reason instead of acting, per the
 //     project's accessibility rules (never use the `disabled` attribute).
@@ -20,8 +22,18 @@ export interface PopupMenuItem {
 	disabled?: boolean;
 	/** Spoken when a disabled item is activated (why it is unavailable). */
 	reason?: string;
-	/** Runs when an enabled item is activated (the menu closes first). */
-	onSelect: () => void;
+	/** Runs when an enabled leaf item is activated (the menu closes first). */
+	onSelect?: () => void;
+	/** Radio/check state for mutually exclusive or toggle menu options. */
+	checked?: boolean;
+	/** Checkable role. Defaults to menuitemradio when `checked` is present. */
+	checkRole?: 'menuitemradio' | 'menuitemcheckbox';
+	/** Child menu opened with Enter/Space/click/Right. It replaces the root in place, just
+	 *  like Corro's existing list context-menu submenus; Left/Escape returns to the parent. */
+	submenu?: {
+		ariaLabel?: string;
+		items: PopupMenuItem[];
+	};
 }
 
 export interface PopupMenuOptions {
@@ -110,6 +122,12 @@ class PopupMenu {
 	/** True while close() runs because an item was ACTIVATED (a real selection, not a cancel). */
 	private selecting = false;
 	private activeIndex = 0;
+	private menuAriaLabel = '';
+	private readonly parentMenus: Array<{
+		items: PopupMenuItem[];
+		ariaLabel: string;
+		returnIndex: number;
+	}> = [];
 	private readonly outsideHandler = (e: Event) => this.onOutsidePointer(e);
 
 	open(opts: PopupMenuOptions): void {
@@ -118,6 +136,8 @@ class PopupMenu {
 		if (opts.items.length === 0) return;
 
 		this.items = opts.items;
+		this.menuAriaLabel = opts.ariaLabel;
+		this.parentMenus.length = 0;
 		this.anchor = opts.anchor ?? null;
 		this.onClose = opts.onClose;
 		this.onCancel = opts.onCancel;
@@ -129,7 +149,8 @@ class PopupMenu {
 		menu.setAttribute('role', 'menu');
 		menu.setAttribute('aria-label', opts.ariaLabel);
 
-		this.buttons = opts.items.map((item, idx) => this.buildItem(menu, item, idx));
+		this.menu = menu;
+		this.renderItems();
 
 		menu.addEventListener('keydown', (e) => this.onKeydown(e));
 		// The keyboard Applications / Shift+F10 key fires a follow-up `contextmenu` event;
@@ -143,7 +164,6 @@ class PopupMenu {
 			?? document.querySelector<HTMLElement>('main, [role="main"]')
 			?? document.body;
 		host.appendChild(menu);
-		this.menu = menu;
 		this.position(menu, this.anchor);
 
 		if (this.anchor) this.anchor.setAttribute('aria-expanded', 'true');
@@ -166,6 +186,7 @@ class PopupMenu {
 		this.menu = null;
 		this.buttons = [];
 		this.items = [];
+		this.parentMenus.length = 0;
 		if (this.anchor) this.anchor.setAttribute('aria-expanded', 'false');
 		this.anchor = null;
 		const onClose = this.onClose;
@@ -181,7 +202,15 @@ class PopupMenu {
 		const btn = document.createElement('button');
 		btn.type = 'button';
 		btn.className = 'popup-menu__item';
-		btn.setAttribute('role', 'menuitem');
+		if (item.submenu) {
+			btn.setAttribute('role', 'menuitem');
+			btn.setAttribute('aria-haspopup', 'menu');
+		} else if (item.checked !== undefined) {
+			btn.setAttribute('role', item.checkRole ?? 'menuitemradio');
+			btn.setAttribute('aria-checked', String(item.checked));
+		} else {
+			btn.setAttribute('role', 'menuitem');
+		}
 		btn.tabIndex = idx === 0 ? 0 : -1;
 		btn.textContent = item.label;
 		btn.addEventListener('click', () => this.activate(idx));
@@ -202,12 +231,62 @@ class PopupMenu {
 		return btn;
 	}
 
+	private renderItems(): void {
+		if (!this.menu) return;
+		this.menu.replaceChildren();
+		this.menu.setAttribute('aria-label', this.menuAriaLabel);
+		this.buttons = this.items.map((item, idx) => this.buildItem(this.menu!, item, idx));
+		this.activeIndex = 0;
+	}
+
+	private openSubmenu(idx: number): void {
+		const item = this.items[idx];
+		if (!item?.submenu || item.submenu.items.length === 0) return;
+		this.parentMenus.push({
+			items: this.items,
+			ariaLabel: this.menuAriaLabel,
+			returnIndex: idx,
+		});
+		this.items = item.submenu.items;
+		this.menuAriaLabel = item.submenu.ariaLabel ?? item.label;
+		this.renderItems();
+		if (this.menu) this.position(this.menu, this.anchor);
+		this.focusItem(0);
+	}
+
+	private returnToParentMenu(): boolean {
+		const parent = this.parentMenus.pop();
+		if (!parent) return false;
+		this.items = parent.items;
+		this.menuAriaLabel = parent.ariaLabel;
+		this.renderItems();
+		if (this.menu) this.position(this.menu, this.anchor);
+		this.focusItem(parent.returnIndex);
+		return true;
+	}
+
 	private onKeydown(e: KeyboardEvent): void {
 		// While the menu is open it owns the keyboard: stop every key from reaching the
 		// board's global shortcut handler (keys.ts) so e.g. a letter doesn't both typeahead
 		// here AND trigger a board command. (The page focus trap runs in the capture phase
 		// and still sees Tab, so wrap-around is unaffected.)
 		e.stopPropagation();
+
+		if (e.key === 'ArrowRight' && this.items[this.activeIndex]?.submenu) {
+			e.preventDefault();
+			this.openSubmenu(this.activeIndex);
+			return;
+		}
+		if (e.key === 'ArrowLeft' && this.parentMenus.length > 0) {
+			e.preventDefault();
+			this.returnToParentMenu();
+			return;
+		}
+		if (e.key === 'Escape' && this.parentMenus.length > 0) {
+			e.preventDefault();
+			this.returnToParentMenu();
+			return;
+		}
 
 		const count = this.buttons.length;
 		const result = nextMenuIndex(e.key, this.activeIndex, count);
@@ -250,6 +329,11 @@ class PopupMenu {
 			if (item.reason) this.announce?.(item.reason);
 			return;
 		}
+		if (item.submenu) {
+			this.openSubmenu(idx);
+			return;
+		}
+		if (!item.onSelect) return;
 		const onSelect = item.onSelect;
 		this.selecting = true;
 		try {

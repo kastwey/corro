@@ -68,6 +68,7 @@ Playwright, while root-level files accumulate stale visual states.
 | `connection.spec.ts` | Mid-game disconnect: announcement + tag in the players list and turn indicator, the `t` key voices the absence, and the rejoin is announced (first-person for the returning player). |
 | `axe-monitor.spec.ts` | Mutation-driven Axe auditing retains a barrier from a transient UI state after that element disappears. |
 | `lobby-accessibility.spec.ts` | Lobby-only Axe states: both themes, runtime language switch, create/join validation, invalid and successful `.corro` uploads, upload removal, unlock prompt/feedback, saved-game actions, and the complete hidden-package lifecycle (reveal → persist → delayed stage → create → code-free guest → browser board). |
+| `voice.spec.ts` | Optional voice lifecycle with two players: deployment-gated lobby choice, host enable/disable, opt-in unmuted join, presence, active-speaker query, local volume, reversible host mute and every settled Axe state. |
 
 ## Writing a scenario
 

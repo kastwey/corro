@@ -3,6 +3,7 @@ using CorroServer.Models;
 using CorroServer.Services;
 using CorroServer.Services.Corro;
 using CorroServer.Services.Corro.Families;
+using CorroServer.Services.Voice;
 using Microsoft.AspNetCore.SignalR;
 
 namespace CorroServer.Hubs;
@@ -32,6 +33,7 @@ public partial class GameHub : Hub
 	private readonly ILogger<GameHub>? _logger;
 	private readonly Services.Rules.IRandomSource _random;
 	private readonly Services.Bots.BotDriver? _botDriver;
+	private readonly ILiveKitVoiceService? _voiceService;
 
 	public GameHub(
 		IGameRepository gameRepository,
@@ -46,7 +48,9 @@ public partial class GameHub : Hub
 		// makes the whole game deterministic. Optional so tests keep their slim constructions.
 		Services.Rules.IRandomSource? randomSource = null,
 		// Drives bot seats from outside the engine. Optional for the same slim-tests reason.
-		Services.Bots.BotDriver? botDriver = null)
+		Services.Bots.BotDriver? botDriver = null,
+		// Optional for slim Hub tests; the running app always registers the singleton.
+		ILiveKitVoiceService? voiceService = null)
 	{
 		_gameRepository = gameRepository;
 		_gameServiceFactory = gameServiceFactory;
@@ -57,6 +61,7 @@ public partial class GameHub : Hub
 		_logger = logger;
 		_random = randomSource ?? new Services.Rules.SystemRandomSource();
 		_botDriver = botDriver;
+		_voiceService = voiceService;
 	}
 
 	// ============================================
@@ -272,6 +277,12 @@ public partial class GameHub : Hub
 			// Send current game state
 			if (_registry.TryGetService(gameId, out var gs))
 			{
+				if (gs.GameState is { } liveState)
+				{
+					// The document is authoritative for this platform switch. Keeping the restored
+					// snapshot in step also repairs games saved before voice chat existed.
+					liveState.VoiceChatEnabled = game.VoiceChatEnabled;
+				}
 				// An authenticated rejoin means this player is back online: flip the flag and
 				// announce it (no-op on the initial join, where the flag is already true).
 				// Done BEFORE sending the state so the caller's own snapshot shows them connected.

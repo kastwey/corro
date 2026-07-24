@@ -15,4 +15,4 @@ Pulsa **Enter** para jugar la carta enfocada. Pulsa **Espacio** para robar; si e
 
 ## Cómo jugar con lector de pantalla
 
-Arriba y Abajo recorren la mano; Derecha entra en acciones, **Shift+F10** abre el menú y **Escape** vuelve. **C** anuncia el descarte y el color. **S** anuncia tu mano y puntos; **Shift+S** los recuentos rivales. Las letras de color, los números e **I** saltan a cartas coincidentes; añade Shift para ir atrás. Se anuncian jugadas, robos, efectos y turnos. **F6** recorre zonas y **Ctrl+Shift+R** enfoca el chat.
+Arriba y Abajo recorren la mano; Derecha entra en acciones, **Shift+F10** abre el menú y **Escape** vuelve. **C** anuncia el descarte y el color. **S** anuncia tu mano y puntos; **Shift+S** los recuentos rivales. Las letras de color, los números e **I** saltan a cartas coincidentes; añade Shift para ir atrás. Se anuncian jugadas, robos, efectos y turnos. **Ctrl+F6** recorre zonas y **Ctrl+Shift+R** enfoca el chat.

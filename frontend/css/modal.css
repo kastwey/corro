@@ -255,7 +255,7 @@
 
 /* A NON-modal dialog (the race piece choice) must not hide the board it asks about:
    it docks at the bottom-right corner instead of centering over the page, and the
-   player can move freely between it and the board (F6 / Ctrl+D). */
+	player can move freely between it and the board (Ctrl+F6 / Ctrl+D). */
 .game-dialog[data-modal="false"][open] {
 	position: fixed;
 	inset: auto 16px 16px auto;
