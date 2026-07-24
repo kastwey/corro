@@ -7,6 +7,7 @@
 // stay hidden from the help.
 
 import { test, expect } from '../helpers/test';
+import { flushAxeAudit } from '../helpers/axeAudit';
 import {
 	actionButton,
 	createGame,
@@ -96,6 +97,7 @@ test('track: entry walk, a themed ladder climb, roll-again on 6, and board explo
 	await ana.keyboard.press('1');
 	await ana.keyboard.press('7'); // composes 17: a snake's mouth
 	await expectAnnouncement(ana, /Casilla 17 de 100.*Serpiente: baja a la casilla 7/);
+	await flushAxeAudit(ana);
 	await ana.keyboard.press('ArrowRight');
 	await expectAnnouncement(ana, /Casilla 18 de 100/);
 	await ana.keyboard.press('ArrowUp'); // +10, one visual row up
