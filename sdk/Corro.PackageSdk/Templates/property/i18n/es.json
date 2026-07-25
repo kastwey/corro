@@ -1,6 +1,7 @@
 {
   "currency": { "name": "unidades" },
-  "terminology": { "start": "Salida", "holding": "Pausa", "freeparking": "Descanso", "sendtoholding": "Ve a Pausa" },
+  "terminology": { "start": "Salida", "holding": "Pausa", "freeparking": "Descanso", "sendtoholding": "Ve a Pausa", "bus": "transbordador", "express": "avance exprés" },
+  "rules": { "group": { "advanced": "Avanzado" }, "bonusDie": "Dado adicional" },
   "groups": { "amber": "Grupo ámbar", "blue": "Grupo azul", "green": "Grupo verde", "violet": "Grupo violeta" },
   "decks": { "event": "Suceso" },
   "cards": { "eventBonus": "Un suceso favorable te concede 50 unidades." },

@@ -17,6 +17,8 @@ const TERM_FALLBACK: Record<string, string> = {
 	building: 'game.term_building',
 	buildings: 'game.term_buildings',
 	bigBuilding: 'game.term_big_building',
+	bus: 'game.term_bus',
+	express: 'game.term_express',
 };
 
 /** The package corners exposed as i18n variables, keyed by the manifest `terminology` field name. */
@@ -69,6 +71,8 @@ export function setBoardVocabulary(gs: GameState | null | undefined, lang: strin
 	vars.building = resolveKey(b?.smallKey, lang) || tSync(TERM_FALLBACK.building, { lng: lang });
 	vars.buildings = resolveKey(b?.smallPluralKey, lang) || tSync(TERM_FALLBACK.buildings, { lng: lang });
 	vars.bigBuilding = resolveKey(b?.bigKey, lang) || tSync(TERM_FALLBACK.bigBuilding, { lng: lang });
+	vars.bus = resolveKey(terminology.bus, lang) || tSync(TERM_FALLBACK.bus, { lng: lang });
+	vars.express = resolveKey(terminology.express, lang) || tSync(TERM_FALLBACK.express, { lng: lang });
 
 	i18nBinder.setBoardContext(symbol, vars);
 }

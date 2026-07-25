@@ -199,7 +199,7 @@
 
 .voice-participant {
 	display: grid;
-	grid-template-columns: minmax(9rem, 1fr) minmax(10rem, 1.25fr) auto;
+	grid-template-columns: minmax(9rem, 1fr) minmax(12rem, 1.5fr);
 	align-items: center;
 	gap: 0.75rem;
 	padding: 0.75rem;
@@ -209,6 +209,12 @@
 
 .voice-participant:last-child {
 	border-bottom: 0;
+}
+
+.voice-participant:focus,
+.voice-participant:focus-visible {
+	outline: 3px solid var(--focus, #ffd24d);
+	outline-offset: -3px;
 }
 
 .voice-participant--speaking {
@@ -251,14 +257,26 @@
 	color: var(--on-good);
 }
 
+.voice-participant__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: end;
+	justify-content: flex-end;
+	gap: 0.55rem;
+	min-width: 0;
+}
+
 .voice-participant__volume {
 	display: grid;
 	gap: 0.3rem;
+	min-width: min(100%, 15rem);
 	color: var(--text);
 	font-size: 0.8rem;
 }
 
-.voice-participant__volume[hidden] {
+.voice-participant__volume[hidden],
+.voice-participant__self-mute[hidden],
+.voice-participant__host-mute[hidden] {
 	display: none;
 }
 
@@ -267,16 +285,41 @@
 	accent-color: var(--accent);
 }
 
+.voice-participant__volume input:focus-visible,
+.voice-participant__volume-action:focus-visible,
+.voice-participant__self-mute:focus-visible,
+.voice-participant__host-mute:focus-visible {
+	outline: 3px solid var(--focus, #ffd24d);
+	outline-offset: 2px;
+}
+
+.voice-participant__volume-action,
+.voice-participant__self-mute,
 .voice-participant__host-mute {
 	padding: 0.45rem 0.65rem;
-	border: 1px solid var(--danger);
 	border-radius: var(--radius-sm);
 	background: var(--surface);
-	color: var(--danger);
 	font: inherit;
 	font-size: 0.8rem;
 	font-weight: 700;
 	cursor: pointer;
+}
+
+.voice-participant__volume-action,
+.voice-participant__self-mute {
+	border: 1px solid var(--accent);
+	color: var(--accent);
+}
+
+.voice-participant__volume-action:hover,
+.voice-participant__self-mute:hover {
+	background: var(--accent);
+	color: var(--on-accent);
+}
+
+.voice-participant__host-mute {
+	border: 1px solid var(--danger);
+	color: var(--danger);
 }
 
 .voice-participant__host-mute:hover:not([aria-disabled="true"]) {
@@ -290,12 +333,45 @@
 	cursor: not-allowed;
 }
 
+/* Shift+F10 / Applications opens the same actions exposed by ArrowRight. The menu
+   remains inside main so it never becomes visible orphan content under body. */
+.voice-participant-context-menu {
+	position: fixed;
+	z-index: 1300;
+	min-width: min(20rem, calc(100vw - 1rem));
+	display: flex;
+	flex-direction: column;
+	padding: 4px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--surface-elevated, var(--surface));
+	box-shadow: var(--shadow-md);
+}
+
+.voice-participant-context-menu-item {
+	padding: 0.5rem 0.75rem;
+	border: 0;
+	border-radius: 6px;
+	background: none;
+	color: var(--text);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.voice-participant-context-menu-item:hover,
+.voice-participant-context-menu-item:focus-visible {
+	background: var(--accent);
+	color: var(--on-accent);
+	outline: none;
+}
+
 @media (max-width: 620px) {
 	.voice-participant {
 		grid-template-columns: 1fr;
 	}
 
-	.voice-participant__host-mute {
-		justify-self: start;
+	.voice-participant__actions {
+		justify-content: flex-start;
 	}
 }

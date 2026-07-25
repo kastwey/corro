@@ -124,7 +124,8 @@
     "collectRentWhileHeld": "Cobrar alquiler desde el Agujero Negro",
     "auctionOnDecline": "Subastar si rechazas comprar",
     "auctionTimeoutSeconds": "Segundos por puja",
-    "mortgageInterestRate": "Interés de la hipoteca (%)"
+    "mortgageInterestRate": "Interés de la hipoteca (%)",
+    "bonusDie": "Dado de hipervelocidad"
   },
   "tokens": {
     "ufo": "OVNI",
@@ -140,7 +141,8 @@
     "holding": "Agujero Negro",
     "freeparking": "Astillero Orbital",
     "sendtoholding": "Rayo Tractor",
-    "bus": "Transbordador Cuántico"
+    "bus": "Transbordador Cuántico",
+    "express": "salto hiperespacial"
   },
   "building": {
     "small": "cúpula",

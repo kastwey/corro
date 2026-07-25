@@ -170,6 +170,24 @@ public sealed class CorroPackageStore
 		return File.Exists(file) ? File.ReadAllText(file) : null;
 	}
 
+	/// <summary>Read one already-validated PNG card illustration from a staged package.</summary>
+	public byte[]? ReadCardPng(string key, string cardId)
+	{
+		if (!_dirs.TryGetValue(key, out var dir)
+			|| !System.Text.RegularExpressions.Regex.IsMatch(cardId, "^[A-Za-z0-9_-]+$"))
+		{
+			return null;
+		}
+		var cardsDir = Path.GetFullPath(PackageLayout.CardArtDirectory(dir));
+		var file = Path.GetFullPath(Path.Combine(cardsDir, cardId + ".png"));
+		if (!file.StartsWith(cardsDir + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+			|| !File.Exists(file))
+		{
+			return null;
+		}
+		return File.ReadAllBytes(file);
+	}
+
 	/// <summary>Release a staged package: unregister its sound pack and delete its temp folder.</summary>
 	public void Release(string key)
 	{

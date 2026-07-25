@@ -12,6 +12,7 @@ and sounds. Different packages can therefore share mechanics without sharing nam
 | `race` | Roll and choose one of several pieces | no | shared circuit and final lanes | — |
 | `track` | Roll and advance along a path with square effects | no | linear track | — |
 | `trivia` | Roll, choose a destination and answer by category | question-dependent | hub-and-spoke wheel | — |
+| `forbidden` | Rotate team roles, give spoken clues and resolve cards against a clock | target + forbidden words by role | role table and private text card | — |
 | `journey` | Draw and play distance, hazard and remedy cards | yes | hand and shared journey state | yes |
 | `assembly` | Build a rack while repairing or disrupting rivals | yes | hand and racks | yes |
 | `draft` | Everyone picks secretly, then hands rotate | yes | hand and public table | yes |

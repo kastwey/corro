@@ -41,7 +41,8 @@ internal sealed class GameHarness
 			rentRules: rentRules,
 			// Mirror GameService: card effects that move a player ("go back 3 spaces",
 			// "advance to nearest railroad") re-enter the landing pipeline through this.
-			processLanding: (p, idx, ctx) => Rulebook.ProcessLandingEffectsAsync(p, idx, ctx));
+			processLanding: (p, idx, ctx) => Rulebook.ProcessLandingEffectsAsync(p, idx, ctx),
+			resolveDeferredExpressMove: ctx => Rulebook.ResolveDeferredExpressMoveAsync(ctx));
 	}
 
 	public Player Player(string id) => State.Players.First(p => p.Id == id);
@@ -54,6 +55,27 @@ internal sealed class GameHarness
 	{
 		Random.Enqueue(die1, die2);
 		return Rulebook.ProcessDiceRollAsync(Player(playerId), Context);
+	}
+
+	/// <summary>Roll the two white dice plus a deterministic bonus-die face (0..5).</summary>
+	public Task<DiceRollOutcome> RollWithBonusDieAsync(
+		string playerId,
+		int die1,
+		int die2,
+		BonusDie bonusDie)
+	{
+		Random.Enqueue(die1, die2, (int)bonusDie);
+		return Rulebook.ProcessDiceRollAsync(Player(playerId), Context);
+	}
+
+	public enum BonusDie
+	{
+		One = 0,
+		Two = 1,
+		Three = 2,
+		Express = 3,
+		ExpressSecondFace = 4,
+		Bus = 5,
 	}
 
 	/// <summary>Stack the Chance deck so the given card IDs are drawn from the top, in order. Cards are

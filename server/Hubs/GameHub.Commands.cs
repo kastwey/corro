@@ -198,6 +198,22 @@ public partial class GameHub
 	public async Task TriviaJudge(string playerId, bool correct)
 		=> await ExecuteCommand(new TriviaJudgeCommand { PlayerId = playerId, Correct = correct });
 
+	/// <summary>Forbidden family: the clue-giver starts the authoritative timed turn.</summary>
+	public async Task ForbiddenStart(string playerId)
+		=> await ExecuteCommand(new ForbiddenStartCommand { PlayerId = playerId });
+
+	/// <summary>Forbidden family: the clue-giver marks the current card correct.</summary>
+	public async Task ForbiddenCorrect(string playerId, int cardSequence)
+		=> await ExecuteCommand(new ForbiddenCorrectCommand { PlayerId = playerId, CardSequence = cardSequence });
+
+	/// <summary>Forbidden family: the clue-giver skips the current card.</summary>
+	public async Task ForbiddenPass(string playerId, int cardSequence)
+		=> await ExecuteCommand(new ForbiddenPassCommand { PlayerId = playerId, CardSequence = cardSequence });
+
+	/// <summary>Forbidden family: the opposing monitor reports a forbidden word.</summary>
+	public async Task ForbiddenViolation(string playerId, int cardSequence)
+		=> await ExecuteCommand(new ForbiddenViolationCommand { PlayerId = playerId, CardSequence = cardSequence });
+
 	public async Task RollDice(string playerId)
 	{
 		// Delegates to ExecuteCommand like every other command hub method: it already does the
@@ -330,6 +346,11 @@ public partial class GameHub
 				_auctionTimerService.StopTimers(gameId!);
 			}
 		}
+	}
+
+	public async Task BusChoice(string playerId, string choice)
+	{
+		await ExecuteCommand(new BusChoiceCommand { PlayerId = playerId, Choice = choice });
 	}
 
 	// ============================================

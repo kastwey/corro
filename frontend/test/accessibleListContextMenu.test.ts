@@ -97,6 +97,23 @@ test('the opened menu swallows its own native contextmenu (keyboard Shift+F10 fo
 	assert.equal(notCancelled, false, 'native menu over our menu should be prevented');
 });
 
+test('the mirrored menu preserves an unavailable action and its explanation', () => {
+	const { controller, list } = buildList();
+	const row = list.querySelector('.row') as HTMLElement;
+	const action = row.querySelector('button') as HTMLButtonElement;
+	const reason = document.createElement('span');
+	reason.id = 'unavailable-reason';
+	reason.textContent = 'This action is already complete.';
+	document.body.appendChild(reason);
+	action.setAttribute('aria-disabled', 'true');
+	action.setAttribute('aria-describedby', reason.id);
+
+	controller.openContextMenu(row);
+	const item = document.querySelector('.ctx-menu-item') as HTMLElement;
+	assert.equal(item.getAttribute('aria-disabled'), 'true');
+	assert.equal(item.getAttribute('aria-describedby'), reason.id);
+});
+
 test('destroy detaches the contextmenu handler so the native menu is no longer suppressed', () => {
 	const { controller, list } = buildList();
 	const row = list.querySelector('.row') as HTMLElement;

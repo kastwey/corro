@@ -49,12 +49,12 @@
   --in-force-ink: #000;
 }
 .shedding-piles .gcard {
-  width: 84px;
-  height: 117px;
-  border-radius: 9px;
+  width: 112px;
+  height: 156px;
+  border-radius: 14px;
 }
-.shedding-piles .gcard__svg { width: 56px; height: 56px; }
-.shedding-piles .gcard__name { font-size: 0.54rem; }
+.shedding-piles .gcard__svg { width: 72px; height: 72px; }
+.shedding-piles .gcard__name { font-size: 0.62rem; }
 .shedding-discard .gcard {
   --gcard-accent: var(--in-force);
   --gcard-soft: color-mix(in srgb, var(--in-force) 18%, #fffdf5);
@@ -128,6 +128,11 @@
 .shedding-toolbar {
   display: flex;
   justify-content: flex-end;
+}
+
+@media (max-width: 620px) {
+  .shedding-piles .gcard { width: 92px; height: 128px; border-radius: 10px; }
+  .shedding-piles .gcard__svg { width: 64px; height: 64px; }
 }
 
 /* The active-rules reading dialog (Ctrl+Shift+F1): a plain, browseable list of the rules

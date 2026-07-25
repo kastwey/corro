@@ -36,11 +36,30 @@ export interface TradeWaitingModalData {
 	targetName: string;
 }
 
+export interface BusDestination {
+	name?: string;
+	colorKey?: string;
+}
+
+export interface BusChoiceModalData {
+	die1: number;
+	die2: number;
+	both: number;
+	fromPosition: number;
+	dest1: BusDestination;
+	dest2: BusDestination;
+	destBoth: BusDestination;
+	rent1?: number;
+	rent2?: number;
+	rentBoth?: number;
+}
+
 export type DesiredModal =
 	| { kind: 'none' }
 	| { kind: 'auction'; data: AuctionModalData }
 	| { kind: 'tradeReview'; data: TradeReviewModalData }
 	| { kind: 'tradeWaiting'; data: TradeWaitingModalData }
+	| { kind: 'busChoice'; data: BusChoiceModalData }
 	| { kind: 'raceChoice'; data: PendingRaceMove };
 
 /** Default bid window (seconds) when the state carries no parseable timeout. */
@@ -87,6 +106,12 @@ function sideFromOffer(offer: TradeOfferDto, squares: Square[]): TradeSideDto {
 	};
 }
 
+function busDestination(squares: Square[], from: number, spaces: number): BusDestination {
+	if (squares.length === 0) return {};
+	const square = squares[((from + spaces) % squares.length + squares.length) % squares.length];
+	return { name: square?.name, colorKey: square?.groupNameKey };
+}
+
 /**
  * Decide the single blocking modal the local player should see for the given state. At most
  * one blocking operation is ever active (each freezes the game), but if several were present
@@ -104,6 +129,27 @@ export function desiredModal(
 	const racePending = state.race?.pendingMove;
 	if (racePending && racePending.playerId === myPlayerId) {
 		return { kind: 'raceChoice', data: racePending };
+	}
+
+	const bus = state.pendingBusChoice;
+	if (bus && bus.playerId === myPlayerId) {
+		const squares = state.squares ?? [];
+		const both = bus.die1 + bus.die2;
+		return {
+			kind: 'busChoice',
+			data: {
+				die1: bus.die1,
+				die2: bus.die2,
+				both,
+				fromPosition: bus.fromPosition,
+				dest1: busDestination(squares, bus.fromPosition, bus.die1),
+				dest2: busDestination(squares, bus.fromPosition, bus.die2),
+				destBoth: busDestination(squares, bus.fromPosition, both),
+				rent1: bus.rentDie1 ?? undefined,
+				rent2: bus.rentDie2 ?? undefined,
+				rentBoth: bus.rentBoth ?? undefined,
+			},
+		};
 	}
 
 	const auction = state.activeAuction;

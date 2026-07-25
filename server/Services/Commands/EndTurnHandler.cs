@@ -56,7 +56,7 @@ public class EndTurnHandler : ICommandHandler<EndTurnCommand>
 
 		// A still-pending purchase counts as "do not buy". Resolve it; if that starts an
 		// auction, the turn does not advance yet because the auction completes the handover.
-		if (context.GameState.PendingPurchase is { } pending && pending.PlayerId == player.Id)
+		while (context.GameState.PendingPurchase is { } pending && pending.PlayerId == player.Id)
 		{
 			var decline = await _rulebook.DeclinePropertyAsync(player, pending.SquareIndex, context);
 			if (decline.AsError() is { } declineError)

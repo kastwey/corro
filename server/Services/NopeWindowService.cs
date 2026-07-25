@@ -47,11 +47,11 @@ public sealed class NopeWindowService : INopeWindowService, IDisposable
 	/// <summary>Has the window (started at <paramref name="startedAt"/>) elapsed by <paramref name="now"/>?
 	/// Pure and side-effect free so the countdown can be unit-tested without real timers.</summary>
 	internal static bool Expired(DateTime startedAt, int windowMillis, DateTime now)
-		=> (now - startedAt).TotalMilliseconds >= windowMillis;
+		=> AuthoritativeCountdown.Evaluate(startedAt, windowMillis, now).Expired;
 
 	/// <summary>Milliseconds still shown on the countdown (never negative) — for a client tick.</summary>
 	internal static int RemainingMillis(DateTime startedAt, int windowMillis, DateTime now)
-		=> Math.Max(0, windowMillis - (int)(now - startedAt).TotalMilliseconds);
+		=> AuthoritativeCountdown.Evaluate(startedAt, windowMillis, now).RemainingMilliseconds;
 
 	public void Arm(string gameId, Func<DateTime?> windowStartedAtUtc, int windowMillis)
 	{

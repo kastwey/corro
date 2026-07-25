@@ -23,7 +23,9 @@
     "start": "terminology.start",
     "holding": "terminology.holding",
     "freeparking": "terminology.freeparking",
-    "sendtoholding": "terminology.sendtoholding"
+    "sendtoholding": "terminology.sendtoholding",
+    "bus": "terminology.bus",
+    "express": "terminology.express"
   },
   "groups": [
     {
@@ -273,6 +275,14 @@
       "step": 5,
       "editableByHost": true,
       "nameKey": "rules.mortgageInterestRate"
+    },
+    {
+      "id": "bonusDie",
+      "group": "advanced",
+      "type": "toggle",
+      "default": false,
+      "editableByHost": true,
+      "nameKey": "rules.bonusDie"
     }
   ],
   "tokens": [

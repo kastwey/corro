@@ -137,6 +137,8 @@ public sealed record Manifest
 	public ExplodingRulesConfig? ExplodingRules { get; init; }
 	/// <summary>Rules of the "trivia" family (manifest "triviaRules"). Null for other families.</summary>
 	public TriviaRulesConfig? TriviaRules { get; init; }
+	/// <summary>Rules of the "forbidden" family (manifest "forbiddenRules"). Null for other families.</summary>
+	public ForbiddenRulesConfig? ForbiddenRules { get; init; }
 	/// <summary>The host-customizable rules this board exposes (each a generic catalog code with its
 	/// default, type, bounds, group and i18n name key). The lobby renders the editable ones.</summary>
 	public List<HouseRuleDef> HouseRules { get; init; } = new();
@@ -281,6 +283,8 @@ public sealed record CardDef
 	/// <summary>Sanitized path-data loaded from optional assets/cards/&lt;id&gt;.svg. Package content
 	/// overrides the client's neutral face; null lets the engine render its fallback.</summary>
 	public string? Svg { get; init; }
+	/// <summary>True when validated 256×256 PNG art exists in assets/cards/&lt;id&gt;.png.</summary>
+	public bool HasPngArt { get; init; }
 	/// <summary>Optional package-owned #RRGGBB accent for this card's frame and silhouette.</summary>
 	public string? ArtColor { get; init; }
 	/// <summary>i18n key for the card's text (e.g. "cards.f1"), resolved client-side against the
@@ -304,6 +308,9 @@ public sealed record GameDefinition
 	/// <summary>The trivia question decks, keyed by locale ("en"/"es") — real content per language,
 	/// not a translation. The runtime resolves one language at game start. Null for other families.</summary>
 	public Dictionary<string, List<TriviaQuestionDef>>? TriviaQuestions { get; init; }
+	/// <summary>The forbidden-word decks, keyed by locale. The host's game language resolves one
+	/// deck at start; target and forbidden words then remain in that language for every player.</summary>
+	public Dictionary<string, List<ForbiddenWordDef>>? ForbiddenWords { get; init; }
 	/// <summary>The journey deck catalog (cards.json as card definitions with copy counts).
 	/// Null for other families — the journey family has no board at all.</summary>
 	public List<JourneyCardDef>? JourneyDeck { get; init; }

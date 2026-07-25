@@ -7,6 +7,7 @@ import type {
 	GameSettings, RaceRulesConfig, RaceBoardDef, TrackRulesConfig, TrackBoardDef,
 	JourneyRulesConfig, AssemblyRulesConfig, DraftRulesConfig, SheddingRulesConfig,
 	TriviaRulesConfig,
+	ForbiddenRulesConfig,
 } from './models.js';
 
 type T = (key: string, vars?: Record<string, unknown>) => string;
@@ -22,6 +23,7 @@ export function buildPropertyRulesLines(settings: GameSettings | null | undefine
 		t('game.property_rules_starting_money', { amount: s.startingMoney ?? 1500 }),
 		t('game.property_rules_go_bonus', { amount: s.goBonus ?? 200 }),
 		t('game.property_rules_double_go', { state: onOff(t, !!s.doubleGoSalary) }),
+		t('game.property_rules_bonus_die', { state: onOff(t, !!s.useBonusDie) }),
 		t('game.property_rules_auction', { state: onOff(t, s.auctionOnDecline ?? true) }),
 		t('game.property_rules_shortage', { state: onOff(t, !!s.buildingShortage) }),
 		t('game.property_rules_even_build', { state: onOff(t, s.evenBuildRule ?? true) }),
@@ -93,6 +95,25 @@ export function buildTriviaRulesLines(rules: TriviaRulesConfig | null | undefine
 	lines.push(t('game.trivia_rules_exact_finish', { state: onOff(t, r.exactFinish) }));
 	lines.push(t('game.trivia_rules_center_wild', { state: onOff(t, r.centerWild) }));
 	return lines;
+}
+
+// ── Forbidden Words ──────────────────────────────────────────────────────────
+
+export function buildForbiddenRulesLines(rules: ForbiddenRulesConfig | null | undefined, t: T): string[] {
+	const r = rules ?? {
+		turnSeconds: 60,
+		passesPerTurn: 3,
+		correctPoints: 1,
+		violationPenalty: 1,
+		cycles: 1,
+	};
+	return [
+		t('game.forbidden_rules_time', { seconds: r.turnSeconds }),
+		t('game.forbidden_rules_passes', { count: r.passesPerTurn }),
+		t('game.forbidden_rules_correct', { points: r.correctPoints }),
+		t('game.forbidden_rules_violation', { points: r.violationPenalty }),
+		t('game.forbidden_rules_cycles', { count: r.cycles }),
+	];
 }
 
 // ── Journey (mille-bornes-style) ───────────────────────────────────────────────

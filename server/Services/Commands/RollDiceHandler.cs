@@ -71,7 +71,7 @@ public class RollDiceHandler : ICommandHandler<RollDiceCommand>
 		// Rolling again after doubles while a purchase is still pending counts as declining
 		// that property. If that starts an auction, the player waits for it to finish before
 		// taking the owed roll.
-		if (context.GameState.PendingPurchase is { } pending && pending.PlayerId == player.Id)
+		while (context.GameState.PendingPurchase is { } pending && pending.PlayerId == player.Id)
 		{
 			var decline = await _rulebook.DeclinePropertyAsync(player, pending.SquareIndex, context);
 			if (decline.AsError() is { } outcomeError)

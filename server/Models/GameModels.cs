@@ -90,6 +90,19 @@ public enum PlayerStatus
 	Eliminated,
 }
 
+/// <summary>The optional bonus die's six faces: 1, 2, 3, Express, Express and Bus.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum BonusDieFace
+{
+	One = 1,
+	Two = 2,
+	Three = 3,
+	/// <summary>After the normal landing, advance to the next eligible ownable square.</summary>
+	Express = 10,
+	/// <summary>Choose either white die or their sum as the movement.</summary>
+	Bus = 20,
+}
+
 public record Square
 {
 	public int Id { get; init; }
@@ -325,6 +338,15 @@ public record GameState
 	/// <summary>The trivia rules in effect (answer mode, judge mode, exact finish…) — public config
 	/// the client needs for playability and the active-rules dialog. Null outside trivia.</summary>
 	public Corro.TriviaRulesConfig? TriviaRules { get; set; }
+	/// <summary>Forbidden-family team, role, score and current-card state. The current word is
+	/// projected only to the clue-giver and opposing monitor.</summary>
+	public ForbiddenState? Forbidden { get; set; }
+	/// <summary>The resolved host-language word deck. Server-only: it carries every answer and is
+	/// removed by ForbiddenFamily.ProjectFor before any state reaches a client.</summary>
+	public List<Corro.ForbiddenWordDef>? ForbiddenDeck { get; set; }
+	/// <summary>The forbidden-family rules in effect, persisted for restore and shown in the
+	/// active-rules dialog.</summary>
+	public Corro.ForbiddenRulesConfig? ForbiddenRules { get; set; }
 	/// <summary>The property rules in effect (economy, holding, buildings) — public config the
 	/// client shows in the active-rules dialog. Null outside the property family.</summary>
 	public GameSettings? Settings { get; set; }
@@ -371,6 +393,12 @@ public record GameState
 	/// until the target responds or the initiator cancels.
 	/// </summary>
 	public TradeState? ActiveTrade { get; set; }
+
+	/// <summary>A bonus-die Bus face waiting for the roller to choose one die or their sum.</summary>
+	public PendingBusChoice? PendingBusChoice { get; set; }
+
+	/// <summary>An Express advance waiting for the normal landing's purchase/auction to settle.</summary>
+	public PendingExpressMove? PendingExpressMove { get; set; }
 
 	/// <summary>
 	/// Active debts that must be resolved before game can continue
@@ -464,6 +492,24 @@ public record GameState
 	/// <summary>The winning player's id / name, populated alongside <see cref="IsGameOver"/>.</summary>
 	public string? WinnerId { get; set; }
 	public string? WinnerName { get; set; }
+}
+
+/// <summary>Persisted Bus choice, including authoritative rent previews for reconnect.</summary>
+public record PendingBusChoice
+{
+	public required string PlayerId { get; init; }
+	public required int Die1 { get; init; }
+	public required int Die2 { get; init; }
+	public required int FromPosition { get; init; }
+	public int? RentDie1 { get; init; }
+	public int? RentDie2 { get; init; }
+	public int? RentBoth { get; init; }
+}
+
+/// <summary>Deferred Express move for the player whose first landing still needs a decision.</summary>
+public record PendingExpressMove
+{
+	public required string PlayerId { get; init; }
 }
 
 // ============================================
@@ -578,6 +624,8 @@ public record CardDrawnNotification
 	public required string DeckType { get; init; } // "chance" | "community" | a package deck id
 		/// <summary>Sanitized path-data from assets/cards/&lt;id&gt;.svg; null uses the neutral client drawing.</summary>
 	public string? Svg { get; init; }
+	/// <summary>Whether the package exposes validated raster art for this card.</summary>
+	public bool HasPngArt { get; init; }
 	/// <summary>Optional package-owned #RRGGBB accent for the revealed face.</summary>
 	public string? ArtColor { get; init; }
 	/// <summary>The generic effect id, used only to choose a neutral fallback drawing.</summary>

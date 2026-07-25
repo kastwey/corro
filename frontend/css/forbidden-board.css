@@ -1,0 +1,333 @@
+/* Forbidden Words — a responsive team-game table. The private card remains real selectable
+   text; decorative emphasis never carries information on its own. */
+
+#board.forbidden-board {
+  display: block;
+  width: 100%;
+  min-height: min(72vh, 780px);
+  padding: clamp(12px, 2.2vw, 28px);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 8% 0%, var(--accent-soft), transparent 34%),
+    radial-gradient(circle at 100% 86%, var(--good-soft), transparent 38%),
+    var(--surface-2);
+  color: var(--text);
+  box-shadow: var(--shadow-md);
+  box-sizing: border-box;
+}
+
+.forbidden-shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 1.5fr);
+  grid-template-areas:
+    "hero title"
+    "scores turn";
+  gap: clamp(14px, 2vw, 24px);
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.forbidden-hero {
+  grid-area: hero;
+  align-self: center;
+  justify-self: center;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(92px, 13vw, 150px);
+  aspect-ratio: 1;
+}
+
+.forbidden-hero__halo {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--accent);
+  border-radius: 32% 68% 58% 42% / 48% 38% 62% 52%;
+  background: var(--accent-soft);
+  transform: rotate(9deg);
+  box-shadow: var(--shadow-glow);
+}
+
+.forbidden-hero__mark {
+  position: relative;
+  font-size: clamp(3rem, 8vw, 6rem);
+  font-weight: 950;
+  line-height: 1;
+  color: var(--accent);
+  text-shadow: 0 3px 0 var(--surface);
+}
+
+.forbidden-title {
+  grid-area: title;
+  align-self: center;
+  margin: 0;
+  font-size: clamp(1.65rem, 4vw, 3.25rem);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+}
+
+.forbidden-subtitle {
+  grid-area: title;
+  align-self: end;
+  margin: 0 0 -0.6rem;
+  color: var(--text-muted);
+  font-size: clamp(0.95rem, 1.6vw, 1.1rem);
+}
+
+.forbidden-scoreboard,
+.forbidden-turn-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.forbidden-scoreboard {
+  grid-area: scores;
+  align-self: start;
+  padding: clamp(14px, 2vw, 20px);
+}
+
+.forbidden-scoreboard h3,
+.forbidden-turn-card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+}
+
+.forbidden-score-list {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 14px 0 0;
+  list-style: none;
+}
+
+.forbidden-score {
+  position: relative;
+  padding: 14px 14px 14px 20px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 800;
+}
+
+.forbidden-score::before {
+  content: "";
+  position: absolute;
+  inset: 8px auto 8px 8px;
+  width: 5px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.forbidden-score--1::before {
+  background: var(--good);
+}
+
+.forbidden-turn-card {
+  grid-area: turn;
+  min-width: 0;
+  padding: clamp(16px, 2.7vw, 30px);
+}
+
+.forbidden-turn-card__heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 18px;
+}
+
+.forbidden-role-line,
+.forbidden-role-detail,
+.forbidden-turn-summary,
+.forbidden-hint,
+.forbidden-control-hint {
+  color: var(--text-muted);
+}
+
+.forbidden-role-line {
+  margin: 6px 0 0;
+  font-weight: 650;
+}
+
+.forbidden-role-detail {
+  margin: 14px 0;
+  line-height: 1.55;
+}
+
+.forbidden-secret {
+  position: relative;
+  padding: clamp(14px, 2vw, 22px);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-glow);
+}
+
+.forbidden-secret__eyebrow {
+  margin-bottom: 8px;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.forbidden-secret__label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text);
+  font-weight: 800;
+}
+
+.forbidden-secret__text {
+  display: block;
+  width: 100%;
+  min-height: 9.5rem;
+  resize: none;
+  box-sizing: border-box;
+  padding: clamp(13px, 2vw, 20px);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  caret-color: var(--accent);
+  font: 700 clamp(1rem, 2.2vw, 1.35rem)/1.55 var(--font);
+  cursor: text;
+  user-select: text;
+}
+
+.forbidden-secret__text:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+.forbidden-hint {
+  margin: 10px 0 0;
+  font-size: 0.88rem;
+}
+
+.forbidden-timer {
+  flex: 0 0 auto;
+  display: grid;
+  width: clamp(84px, 12vw, 126px);
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  text-align: center;
+}
+
+.forbidden-timer[data-urgent="true"] {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.forbidden-timer__value {
+  color: var(--text);
+  font-size: clamp(1.3rem, 3vw, 2rem);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.forbidden-timer__progress {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--accent);
+}
+
+.forbidden-turn-summary {
+  margin: 16px 0 0;
+  font-weight: 650;
+}
+
+.forbidden-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.forbidden-controls .btn {
+  min-height: 46px;
+}
+
+.forbidden-correct {
+  border-color: var(--good);
+  background: var(--good-soft);
+  color: var(--text);
+}
+
+.forbidden-violation {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--text);
+}
+
+.forbidden-control-hint {
+  margin: 8px 0 0;
+  padding: 9px 11px;
+  border-left: 4px solid var(--warning);
+  background: var(--surface-3);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 760px) {
+  #board.forbidden-board {
+    min-height: 0;
+    padding: 12px;
+  }
+
+  .forbidden-shell {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "hero"
+      "title"
+      "scores"
+      "turn";
+  }
+
+  .forbidden-hero {
+    width: 88px;
+  }
+
+  .forbidden-title,
+  .forbidden-subtitle {
+    text-align: center;
+  }
+
+  .forbidden-subtitle {
+    margin: 8px 0 2px;
+  }
+
+  .forbidden-score-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 430px) {
+  .forbidden-turn-card__heading {
+    flex-direction: column;
+  }
+
+  .forbidden-timer {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .forbidden-score-list {
+    grid-template-columns: 1fr;
+  }
+
+  .forbidden-controls,
+  .forbidden-controls .btn {
+    width: 100%;
+  }
+}

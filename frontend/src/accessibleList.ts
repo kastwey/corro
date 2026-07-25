@@ -389,6 +389,13 @@ export class RovingToolbarList {
 			open.owner.focus();
 			(action as HTMLButtonElement).click();
 		});
+		const mirrorsAvailability = (mi: HTMLElement, action: HTMLElement) => {
+			if (action.getAttribute('aria-disabled') === 'true') {
+				mi.setAttribute('aria-disabled', 'true');
+				const describedBy = action.getAttribute('aria-describedby');
+				if (describedBy) mi.setAttribute('aria-describedby', describedBy);
+			}
+		};
 
 		if (group !== null) {
 			// One group's options: a radio set (which ordering/filter applies), checked from
@@ -397,6 +404,7 @@ export class RovingToolbarList {
 				const mi = newEntry(labelOf(action));
 				mi.setAttribute('role', 'menuitemradio');
 				mi.setAttribute('aria-checked', action.getAttribute('aria-pressed') ?? 'false');
+				mirrorsAvailability(mi, action);
 				activates(mi, action);
 			}
 			return;
@@ -428,6 +436,7 @@ export class RovingToolbarList {
 			} else {
 				mi.setAttribute('role', 'menuitem');
 			}
+			mirrorsAvailability(mi, action);
 			activates(mi, action);
 		}
 	}

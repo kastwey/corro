@@ -50,7 +50,7 @@ test('assembly: install, auto-targeted breakdown, refusal, face-down discard, re
 		const style = getComputedStyle(element);
 		return { width: style.width, height: style.height };
 	});
-	expect(pileSize).toEqual({ width: '92px', height: '128px' });
+	expect(pileSize).toEqual({ width: '112px', height: '156px' });
 	// No draw button: the refill is automatic in this family.
 	await expect(ana.locator('.hand-panel__draw')).toHaveCount(0);
 	await expect(ana.locator('.dice-control')).toBeHidden();

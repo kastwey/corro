@@ -158,8 +158,8 @@
   justify-content: center;
 }
 .exploding-reveal {
-  width: 92px;
-  height: 128px;
+  width: 112px;
+  height: 156px;
   isolation: isolate;
 }
 .exploding-reveal__bomb,
@@ -195,12 +195,12 @@
   box-shadow: 0 3px 9px rgba(0, 0, 0, 0.28);
 }
 .exploding-piles .xcard {
-  width: 92px;
-  height: 128px;
-  border-radius: 11px;
+  width: 112px;
+  height: 156px;
+  border-radius: 14px;
 }
-.exploding-piles .xcard__svg { width: 64px; height: 64px; }
-.exploding-piles .xcard__name { font-size: 0.6rem; min-height: 2.5em; }
+.exploding-piles .xcard__svg { width: 82px; height: 82px; }
+.exploding-piles .xcard__name { font-size: 0.7rem; min-height: 2.8em; }
 
 .exploding-reveal__bomb > .xcard {
   transform: rotate(2deg) scale(1.08);
@@ -350,9 +350,10 @@
 @media (max-width: 620px) {
   .xcard { width: 100px; height: 140px; }
   .xcard__svg { width: 72px; height: 72px; }
-  .exploding-reveal { width: 82px; height: 114px; }
-  .exploding-piles .xcard { width: 82px; height: 114px; }
-  .exploding-piles .xcard__svg { width: 56px; height: 56px; }
+  .exploding-reveal { width: 92px; height: 128px; }
+  .exploding-piles .xcard { width: 92px; height: 128px; border-radius: 11px; }
+  .exploding-piles .xcard__svg { width: 64px; height: 64px; }
+  .exploding-piles .xcard__name { font-size: 0.6rem; min-height: 2.5em; }
 }
 
 @media (max-width: 480px) {

@@ -33,6 +33,23 @@
   background: var(--text);
 }
 
+/* The optional third die is visually distinct but uses semantic theme tokens in both modes. */
+.die--bonus {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.die--bonus .pip { background: var(--accent); }
+.die--bonus .die-glyph {
+  grid-column: 1 / span 3;
+  grid-row: 1 / span 3;
+  align-self: center;
+  justify-self: center;
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .die--rolling { animation: dice-tumble 0.6s ease; }
 @keyframes dice-tumble {
   0%   { transform: rotate(0deg)   scale(1); }

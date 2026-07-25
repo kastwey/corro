@@ -72,6 +72,12 @@ public class GameContext
 	public Func<Player, int, GameContext, Task>? ProcessLanding { get; init; }
 
 	/// <summary>
+	/// Completes a deferred Express move after a purchase or auction resolves. Wired by
+	/// <c>GameService</c> so the auction rulebook need not depend on the property rulebook.
+	/// </summary>
+	public Func<GameContext, Task>? ResolveDeferredExpressMove { get; init; }
+
+	/// <summary>
 	/// Transient rent adjustment for the landing currently being resolved. Set by
 	/// movement cards (railway double, utility 10× dice) and cleared by them right
 	/// after the landing resolves. Null for ordinary landings.

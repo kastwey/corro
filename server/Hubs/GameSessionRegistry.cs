@@ -36,6 +36,7 @@ public sealed class GameSessionRegistry
 	private readonly IGameRepository _repository;
 	private readonly IAuctionTimerService _timers;
 	private readonly INopeWindowService? _nopeWindow;
+	private readonly IForbiddenTurnTimerService? _forbiddenTimer;
 	private readonly PackageRestorer _restorer;
 	private readonly ILogger<GameSessionRegistry>? _logger;
 	private readonly ILiveKitVoiceService? _voiceService;
@@ -50,17 +51,21 @@ public sealed class GameSessionRegistry
 		// keep working; DI injects the registered singleton in the running app.
 		INopeWindowService? nopeWindow = null,
 		// The voice relay is optional for deployments and for slim tests.
-		ILiveKitVoiceService? voiceService = null)
+		ILiveKitVoiceService? voiceService = null,
+		// The forbidden family's authoritative clue-turn clock. Optional for slim tests.
+		IForbiddenTurnTimerService? forbiddenTimer = null)
 	{
 		_hub = hub;
 		_repository = repository;
 		_timers = timers;
 		_nopeWindow = nopeWindow;
+		_forbiddenTimer = forbiddenTimer;
 		_restorer = restorer;
 		_logger = logger;
 		_voiceService = voiceService;
 		SubscribeToAuctionTimerEvents();
 		SubscribeToNopeWindowEvents();
+		SubscribeToForbiddenTimerEvents();
 	}
 
 	// ── Live services ─────────────────────────────────────────────────────────
@@ -81,6 +86,10 @@ public sealed class GameSessionRegistry
 	{
 		SubscribeToGameEvents(service, gameId);
 		_gameServices[gameId] = service;
+		// A restored game may already be inside a timed clue turn. Re-arm from the persisted
+		// authoritative timestamp immediately; a newly-created game is still preparing, so this
+		// is a no-op there.
+		ArmOrCancelForbiddenTimer(gameId, service);
 	}
 
 	// ── Connection maps ───────────────────────────────────────────────────────
@@ -215,6 +224,7 @@ public sealed class GameSessionRegistry
 	{
 		_timers.StopTimers(gameId);
 		_nopeWindow?.Cancel(gameId);
+		_forbiddenTimer?.Cancel(gameId);
 		if (_voiceService?.IsConfigured == true)
 		{
 			try { await _voiceService.DeleteRoomAsync(gameId); }
@@ -356,6 +366,22 @@ public sealed class GameSessionRegistry
 		_nopeWindow.OnWindowExpired += async (gameId) => await ResolveExplodingWindowViaCommand(gameId);
 	}
 
+	private void SubscribeToForbiddenTimerEvents()
+	{
+		if (_forbiddenTimer == null)
+		{
+			return;
+		}
+		// Visual countdown only: this event never writes to a live region. The authoritative
+		// timeout itself goes through a command and the normal server-owned announcement voice.
+		_forbiddenTimer.OnTimerTick += async (gameId, args) =>
+			await _hub.Clients.Group(gameId).SendAsync("ForbiddenTimerTick", new
+			{
+				secondsRemaining = args.SecondsRemaining,
+			});
+		_forbiddenTimer.OnTurnExpired += async gameId => await ExpireForbiddenTurnViaCommand(gameId);
+	}
+
 	/// <summary>Arm the Nope window while an exploding action is pending, cancel it otherwise.
 	/// Called on every state change; the timer reads the live authoritative window start, so a
 	/// Nope (which advances that stamp) restarts the countdown with no extra bookkeeping here.</summary>
@@ -376,6 +402,30 @@ public sealed class GameSessionRegistry
 		else
 		{
 			_nopeWindow.Cancel(gameId);
+		}
+	}
+
+	/// <summary>Keep the forbidden turn clock aligned with the live projected state. Card
+	/// changes do not reset it: every re-arm samples the same StartedAt value.</summary>
+	private void ArmOrCancelForbiddenTimer(string gameId, IGameService gameService)
+	{
+		if (_forbiddenTimer == null)
+		{
+			return;
+		}
+		if (gameService.GameState?.Forbidden?.Turn is { Phase: ForbiddenTurnPhase.Active } turn
+			&& !gameService.GameState.IsGameOver)
+		{
+			_forbiddenTimer.Arm(
+				gameId,
+				() => gameService.GameState?.Forbidden?.Turn is { Phase: ForbiddenTurnPhase.Active } live
+					? live.StartedAt
+					: null,
+				() => gameService.GameState?.Forbidden?.Turn.DurationSeconds ?? turn.DurationSeconds);
+		}
+		else
+		{
+			_forbiddenTimer.Cancel(gameId);
 		}
 	}
 
@@ -410,6 +460,36 @@ public sealed class GameSessionRegistry
 		catch (Exception ex)
 		{
 			_logger?.LogError(ex, "ResolveExplodingWindowViaCommand: error for {GameId}", gameId);
+		}
+	}
+
+	private async Task ExpireForbiddenTurnViaCommand(string gameId)
+	{
+		try
+		{
+			if (!_gameServices.TryGetValue(gameId, out var gameService)
+				|| gameService.GameState?.Forbidden?.Turn is not { Phase: ForbiddenTurnPhase.Active } turn)
+			{
+				return;
+			}
+
+			var response = await gameService.ExecuteCommandAsync(
+				new ForbiddenExpireTurnCommand { PlayerId = turn.ClueGiverId });
+			// A human card action may have crossed the same deadline and resolved it first. Its
+			// serialized command leaves this callback with a harmless NOT_ACTIVE error; do not
+			// broadcast that internal race as a player error.
+			if (response is not ForbiddenActionResponse)
+			{
+				return;
+			}
+
+			await _hub.Clients.Group(gameId).SendAsync("CommandResponse", response);
+			await gameService.NotifyStateChangedAsync();
+			await CleanupIfGameOverAsync(gameId, gameService);
+		}
+		catch (Exception exception)
+		{
+			_logger?.LogError(exception, "ExpireForbiddenTurnViaCommand: error for {GameId}", gameId);
 		}
 	}
 
@@ -509,6 +589,7 @@ public sealed class GameSessionRegistry
 			// (and cancel it once it resolves). The timer reads the live PendingAction.WindowStartedAt,
 			// so a Nope — which moves that stamp and re-fires this event — restarts the countdown.
 			ArmOrCancelNopeWindow(gameId, gameService);
+			ArmOrCancelForbiddenTimer(gameId, gameService);
 
 			// Persist OFF the awaited command path: a per-game background writer coalesces (latest-wins)
 			// and reuses the cached GameDocument (no per-command Cosmos read).

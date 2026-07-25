@@ -31,6 +31,7 @@
   "ctrl+shift+m": "ManageProperties",
   "ctrl+alt+m": "ToggleSound",
   "f": "AnnounceFreeParkingPot",
+  "v": "AnnounceBankBuildingInventory",
   "a": "AnnounceAuction",
   "shift+a": "AnnounceCurrentBid",
   "q": "LeaveGame",

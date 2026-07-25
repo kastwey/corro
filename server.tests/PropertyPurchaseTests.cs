@@ -117,4 +117,28 @@ public class PropertyPurchaseTests
 		Assert.True(announcer.Has(AnnouncementAudience.Player, "a", "game.group_completed_self"));
 		Assert.True(announcer.Has(AnnouncementAudience.AllExcept, "a", "game.group_completed"));
 	}
+
+	[Fact]
+	public async Task Buy_AnnouncesThePropertyNameMapForPerPlayerLocalization()
+	{
+		var square = Buyable(0) with
+		{
+			Name = "Iron Mine",
+			Names = new Dictionary<string, string>
+			{
+				["en"] = "Iron Mine",
+				["es"] = "Mina Ferro"
+			}
+		};
+		var (buyer, context) = Buyer(new List<Square> { square });
+		Pending(context, "a", 0, 100);
+
+		var outcome = await new CorroRulebook().BuyPropertyAsync(buyer, 0, context);
+
+		Assert.True(outcome.Success);
+		var announcement = TestFixtures.Announcer(context).Sent
+			.Single(x => x.Key == "game.property_purchased_self");
+		var names = Assert.IsType<Dictionary<string, string>>(announcement.Vars["property"]);
+		Assert.Equal("Mina Ferro", names["es"]);
+	}
 }

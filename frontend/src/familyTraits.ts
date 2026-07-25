@@ -4,7 +4,7 @@
 // PROPERTY carries the historical defaults explicitly (economy toolbar, "go to player" shown,
 // trades on); an UNKNOWN family still falls back to those same defaults via the helpers below.
 
-export type GameHomeSurface = 'board' | 'hand';
+export type GameHomeSurface = 'board' | 'hand' | 'activity';
 
 export interface FamilyTraits {
   readonly gameType: string;
@@ -42,6 +42,7 @@ export const FAMILY_TRAITS: readonly FamilyTraits[] = [
   { gameType: 'draft', homeSurface: 'hand', rollOnly: false, noToolbar: true, showGoToPlayer: false, hasTrades: false, simultaneous: true, supportsBots: true },
   { gameType: 'shedding', homeSurface: 'hand', rollOnly: false, noToolbar: true, showGoToPlayer: false, hasTrades: false, supportsBots: true },
   { gameType: 'exploding', homeSurface: 'hand', rollOnly: false, noToolbar: true, showGoToPlayer: false, hasTrades: false, supportsBots: true },
+  { gameType: 'forbidden', homeSurface: 'activity', rollOnly: false, noToolbar: true, showGoToPlayer: false, hasTrades: false },
 ];
 
 /** The traits of a registered family — null for property/unknown (default behaviour). */

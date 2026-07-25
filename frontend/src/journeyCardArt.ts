@@ -1,10 +1,10 @@
 // journeyCardArt.ts — neutral engine-rendered faces for journey decks.
 //
-// A package may supply assets/cards/<id>.svg; its sanitized geometry always replaces the picture.
-// Without it, the engine draws only generic mechanics (distance, attack, remedy, immunity).
+// A package may supply one validated SVG or PNG; it always replaces the picture. Without it,
+// the engine draws only generic mechanics (distance, attack, remedy, immunity).
 // Package-defined hazard KIND ids never appear here.
 
-import { cardArtStyle, packageCardArtSvg } from './cardArt.js';
+import { cardArtStyle, packageCardArtHtml } from './cardArt.js';
 import { escapeHtml } from './escapeHtml.js';
 import type { JourneyCardDef } from './models.js';
 
@@ -32,17 +32,17 @@ function shieldIcon(): string {
 }
 
 /** Package art for a hazard card, or the neutral warning used by public state badges. */
-export function journeyHazardIconSvg(pathData?: string | null, artColor?: string | null): string {
-	const packageSvg = packageCardArtSvg(pathData, 'journey-hazard-art');
-	return packageSvg
-		? `<span class="journey-package-icon"${cardArtStyle(artColor, '--journey-art-accent')}>${packageSvg}</span>`
+export function journeyHazardIconHtml(card?: JourneyCardDef | null): string {
+	const packageArt = card ? packageCardArtHtml(card, 'journey-hazard-art') : null;
+	return packageArt
+		? `<span class="journey-package-icon"${cardArtStyle(card?.artColor, '--journey-art-accent')}>${packageArt}</span>`
 		: warningIcon();
 }
 
 /** A card face: package picture first, otherwise generic type/value, then localized name. */
 export function journeyCardArtHtml(def: JourneyCardDef, name: string): string {
 	const type = ['distance', 'attack', 'remedy', 'immunity'].includes(def.type) ? def.type : 'attack';
-	let face = packageCardArtSvg(def.svg, 'journey-package-art');
+	let face = packageCardArtHtml(def, 'journey-package-art');
 	if (!face) {
 		if (type === 'distance') {
 			face = `<span class="jcard__value">${Number(def.value) || 0}</span><span class="jcard__unit">km</span>`;
@@ -58,10 +58,10 @@ export function journeyCardArtHtml(def: JourneyCardDef, name: string): string {
 		+ `</span>`;
 }
 
-export function journeyShieldIconSvg(pathData?: string | null, artColor?: string | null): string {
-	const packageSvg = packageCardArtSvg(pathData, 'journey-immunity-art');
-	return packageSvg
-		? `<span class="journey-package-icon"${cardArtStyle(artColor, '--journey-art-accent')}>${packageSvg}</span>`
+export function journeyShieldIconHtml(card?: JourneyCardDef | null): string {
+	const packageArt = card ? packageCardArtHtml(card, 'journey-immunity-art') : null;
+	return packageArt
+		? `<span class="journey-package-icon"${cardArtStyle(card?.artColor, '--journey-art-accent')}>${packageArt}</span>`
 		: shieldIcon();
 }
 

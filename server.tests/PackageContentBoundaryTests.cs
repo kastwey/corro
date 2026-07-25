@@ -14,7 +14,7 @@ public class PackageContentBoundaryTests
 	private static readonly HashSet<string> GenericEngineLiterals = new(StringComparer.Ordinal)
 	{
 		// Family mechanics / command vocabulary.
-		"attack", "defuse", "favor", "nope", "shuffle", "skip",
+		"attack", "bus", "defuse", "favor", "nope", "shuffle", "skip",
 		// Engine UI / internal routing identifiers that happen to collide with content ids.
 		"f6", "b1", "b2", "circle", "die", "square", "wild",
 	};

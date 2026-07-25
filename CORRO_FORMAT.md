@@ -17,7 +17,7 @@ myboard.corro (zip)
 │   ├── es.json       # every translatable text, resolved by key
 │   └── en.json
 ├── assets/           # package-owned visual and audio media
-│   ├── cards/        # optional card illustrations: <card-id>.svg
+│   ├── cards/        # optional card illustrations: <card-id>.svg OR <card-id>.png
 │   ├── tokens/
 │   │   └── <id>.svg  # one SVG per player token (required)
 │   └── sounds/       # game earcons (engine ships only platform cues)
@@ -103,6 +103,12 @@ is common to all families.
   question deck ships as per-locale `questions.<lang>.json`, and the rules live in the
   manifest's `triviaRules` — see [The trivia family](#the-trivia-family). This family has
   **no bots**.
+- `"gameType": "forbidden"` — two-team spoken clue play: a rotating clue-giver describes
+  a private target without saying its forbidden words, a teammate guesses aloud and an opposing
+  monitor adjudicates violations. **No `board.json` or `cards.json`** — real content ships in
+  `words.<lang>.json`, selected once from the host's game language, and rules live in
+  `forbiddenRules` — see [The forbidden-word family](#the-forbidden-word-family). This family has
+  **no bots**; voice chat is optional because players may share a physical room.
 
 A package declaring a family the engine version doesn't implement is **rejected at
 upload with a clear message** listing the supported families — it is never loaded into
@@ -204,7 +210,7 @@ players may have saved games. `corro/v1` resolves only exact current identifiers
 make an existing saved game impossible to restore.
 
 **House-rule catalog** (the ids the engine understands; anything else is rejected):
-`startingMoney`, `passStartBonus`, `doubleOnExactStart`, `finesToCenterPot`,
+`startingMoney`, `passStartBonus`, `doubleOnExactStart`, `bonusDie`, `finesToCenterPot`,
 `limitedBuildings`, `buildEvenly`, `noBuildBeforeFirstLap`, `holdingReleaseCost`, `maxHoldingTurns`,
 `collectRentWhileHeld`, `auctionOnDecline`, `auctionTimeoutSeconds`,
 `mortgageInterestRate`.
@@ -307,10 +313,11 @@ content, by key (`i18n/{lang}.json` under `cards.<id>`).
 ]
 ```
 
-### Optional card illustrations (`assets/cards/<id>.svg`)
+### Optional card illustrations (`assets/cards/<id>.svg` or `<id>.png`)
 
 Any card declared in `cards.json`, in any card-bearing family, may ship a visual
-illustration at `assets/cards/<card-id>.svg`. Illustration files are **content**, so they live in
+illustration at `assets/cards/<card-id>.svg` **or** `assets/cards/<card-id>.png` (never both for
+the same id). Illustration files are **content**, so they live in
 the package — never in an engine renderer keyed by a shipped card/package/token id. When the
 file exists, its geometry replaces the engine's neutral drawing everywhere that card appears
 (hand, public discard/table/module or property-card reveal). When it is absent, the engine
@@ -331,7 +338,14 @@ per-card/package limits makes the package invalid instead of silently falling ba
 </svg>
 ```
 
-Do not put `svg` or a file path in `cards.json`: the convention is automatic and keeps rules
+PNG art is for richer raster illustration. It must be exactly **256×256 pixels**, non-interlaced,
+8-bit RGB or RGBA, at most **512 KiB per card**, with at most **8 MiB of PNG art per package**.
+The loader validates the PNG signature, chunk order and CRCs, fully inflates the image payload,
+and rejects APNG animation, palettes, text/EXIF/ICC payloads, unknown chunks and trailing bytes.
+Only bounded `sRGB`, `gAMA`, `cHRM` and `pHYs` metadata is accepted. PNG bytes are served from
+the staged package endpoint and are never copied into game state or persisted documents.
+
+Do not put `svg`, `png` or a file path in `cards.json`: the convention is automatic and keeps rules
 data separate from visual assets. Card names/rules remain localized text and the authoritative
 accessible channel; illustrations are always decorative (`aria-hidden`).
 
@@ -480,6 +494,12 @@ simply silent** — declare only what you ship.
 | `trivia.wedges_complete` | trivia: all six wedges are collected |
 | `trivia.final` | trivia: the final question begins |
 | `trivia.win` | trivia: the final question is answered and the game is won |
+| `forbidden.start` | forbidden: the clue-giver starts the authoritative turn clock |
+| `forbidden.correct` | forbidden: the team marks a target correct and receives the next card |
+| `forbidden.pass` | forbidden: the clue-giver uses a pass and receives the next card |
+| `forbidden.violation` | forbidden: the opposing monitor reports a forbidden word |
+| `forbidden.warning` | forbidden: ten seconds remain (client-local, never a spoken countdown) |
+| `forbidden.time_up` | forbidden: the authoritative turn clock expires |
 
 ---
 
@@ -786,7 +806,7 @@ where it applies). Hand flow: `journey_hand_won`, `journey_hand_exhausted`,
 `journey_target_stopped`, `journey_nothing_to_cure`, `journey_deck_empty`,
 `journey_no_coup`, `journey_no_attackable`, `journey_not_your_turn`,
 `journey_already_drew`, `journey_coup_pending`, `journey_unknown_card`,
-`journey_card_not_in_hand`. Status/surfaces: `journey_status_*`, `journey_team`,
+`journey_card_not_in_hand`. Status/surfaces: `journey_status_*`, shared `team_name`,
 `journey_deck_*`, `journey_pile_*`, `journey_discard_top`, `journey_coup_*` (dialog),
 `journey_pick_victim`. Per-card help: `journey_help_*` — or write your own with a
 `<nameKey>_help` key next to the card's name.
@@ -1183,6 +1203,95 @@ keys (each with its `_self` variant where the actor differs): `trivia_rolled`, `
 `trivia_moved_wedge`, `trivia_moved_center`, `trivia_roll_again`, `trivia_question`,
 `trivia_final`, `trivia_answered`, `trivia_reveal`, `trivia_correct`, `trivia_wrong`,
 `trivia_wedge`, `trivia_wedges_complete`, `trivia_won`, plus `trivia_cat_a`…`trivia_cat_f`.
+
+---
+
+## The forbidden-word family
+
+A `"gameType": "forbidden"` package is a spoken team game with a distinct role/state model:
+two equal teams alternate timed turns; the active team's clue-giver and the opposing team's monitor
+receive one private card, while the guesser and every spectator receive no target data. It reuses the
+common package envelope (identity, locales, tokens, sounds and guides) and has **no spatial board,
+hand, `board.json` or `cards.json`**.
+
+Voice chat is deliberately optional. Remote players may opt into Corro's platform voice room; people
+playing together in person can leave it off. Corro never records or transcribes speech. The humans
+adjudicate the conversation through role-authorized actions.
+
+### words.&lt;lang&gt;.json
+
+Each declared locale ships its own real word deck. As with trivia questions, these are content decks,
+not UI translations. The host's language when creating the game selects one deck for the whole match;
+each player's buttons, help and announcements still use that player's own interface language.
+
+```jsonc
+[
+  {
+    "id": "lighthouse",                       // stable, language-neutral id
+    "target": "lighthouse",                  // word or short phrase to guess
+    "forbidden": ["light", "coast", "tower", "sea", "ship"]
+  }
+]
+```
+
+Every locale needs at least eight cards. Within one locale, ids and normalized targets are unique;
+each card has 3–8 nonblank, unique forbidden words, none equal to the target. The engine does not
+match these words against speech: the opposing monitor reports a violation.
+
+### manifest forbiddenRules
+
+```jsonc
+"forbiddenRules": {
+  "turnSeconds": 60,       // 5..300, authoritative server clock
+  "passesPerTurn": 3,     // 0..10
+  "correctPoints": 1,     // 1..10
+  "violationPenalty": 1,  // 0..10; scores may fall below zero
+  "cycles": 1             // 1..5 complete clue-giver rotations before scoring
+}
+```
+
+Packages declare an even player range from 4 through 8 and enough tokens for `players.max`.
+The lobby forces exactly two equal, full teams before starting. Bots and house-rule declarations are
+not supported in this family.
+
+### Forbidden-word rules the engine implements
+
+- Teams alternate turns. Within the active team, the clue-giver rotates in team order and the next
+  teammate is the guesser; the opposing monitor rotates in the rival team's order.
+- Only the clue-giver may start the clock. They coordinate readiness through voice chat or in person;
+  the engine does not require separate confirmations from the guesser or monitor.
+- During the timed phase, only the clue-giver may mark **Correct** or **Pass**; only the monitor may
+  report a **Forbidden word**. Every action carries the current card sequence, so simultaneous or
+  repeated activation cannot accidentally resolve a newly dealt card.
+- Correct adds `correctPoints`, pass changes no score and consumes one of `passesPerTurn`, and a
+  violation subtracts `violationPenalty`. Each accepted action deals the next private card without
+  restarting the clock.
+- The server owns the deadline. At zero it closes the turn, announces the turn result and prepares
+  the opposing team. A late player action resolves as timeout, never as a post-deadline score.
+- After `cycles` complete rotations, the higher team score wins. A tie adds another **complete**
+  rotation for both teams, preserving equal opportunity.
+- If a player permanently leaves, their team forfeits because the equal-role rotation can no longer
+  continue truthfully. A temporary disconnection does not retire the seat.
+
+### Hidden information and accessible card surface
+
+Persistence stores the full host-language deck and current card. Every client state is projected:
+only the clue-giver and monitor receive `target` and `forbiddenWords`; all other players and the public
+view receive null/empty fields, and nobody receives the remaining deck.
+
+The client renders the authorized card as one flowing sentence in a protected multiline text box. It
+uses `aria-readonly="true"` without native `readonly`: cursor movement, screen-reader reading commands,
+selection and copying remain available, while keyboard, `beforeinput`, paste, cut, drop and composition
+mutations are blocked. The countdown is not an ARIA live stream; speech during play remains audible.
+
+### Overridable voice (`game.forbidden_*`)
+
+Turn preparation and start: `forbidden_turn_preparing`, `forbidden_turn_started` (with `_self`
+variants where the listener is the actor). Card outcomes:
+`forbidden_correct`, `forbidden_passed`, `forbidden_violation` (with `_self`). Turn/match outcomes:
+`forbidden_time_up`, `forbidden_tie_breaker`, `forbidden_team_won`, `forbidden_forfeit`.
+Surfaces, roles, status, timer and active-rule text use `forbidden_*`; shared team names use
+`team_name` and the engine colour words.
 
 ---
 

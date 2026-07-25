@@ -36,6 +36,7 @@ public class EngineKeymapTests
 		Assert.Contains("c", reserved); // cash
 		Assert.Contains("m", reserved); // go to me
 		Assert.Contains("i", reserved); // who is on square
+		Assert.Contains("v", reserved); // bank building inventory
 
 		// Colour letters — and s/k, freed when station/utility navigation moved to per-group keys —
 		// are available for package group keys, so they must NOT be reserved.

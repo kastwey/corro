@@ -88,6 +88,14 @@ flood of names from talking over the humans the player is trying to hear. Join/l
 reconnection, permission errors, self mute and host mute are localized announcements;
 join/leave also have dedicated engine earcons distinct from game-connection cues.
 
+The expanded roster uses the same accessible list model as the main players panel. Each
+person is one roving tab stop with a complete stable label; Up/Down and Home/End move between
+people, Right enters that person's visible action toolbar, and Escape returns to the row.
+Shift+F10 or the Applications key opens a menu mirroring those actions. Activating a remote
+volume action focuses its native range control, where the browser's own range keys remain
+available; Escape returns to the person. Focus is preserved across speaking/mute updates and
+rescued to a surviving row if someone leaves.
+
 Device settings use Corro's established ARIA menu keyboard model. The root has sibling
 **Microphone** and **Voice output** submenus; device choices are `menuitemradio` options,
 because exactly one device is active in each group. Right/Enter opens a submenu, arrows and

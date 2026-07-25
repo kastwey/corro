@@ -1,0 +1,10 @@
+[
+  { "id": "lighthouse", "target": "faro", "forbidden": ["luz", "costa", "torre", "mar", "barco"] },
+  { "id": "backpack", "target": "mochila", "forbidden": ["bolsa", "colegio", "llevar", "hombros", "cremallera"] },
+  { "id": "storm", "target": "tormenta", "forbidden": ["lluvia", "nube", "viento", "tiempo", "trueno"] },
+  { "id": "telescope", "target": "telescopio", "forbidden": ["estrellas", "espacio", "mirar", "lente", "astronomía"] },
+  { "id": "popcorn", "target": "palomitas", "forbidden": ["cine", "maíz", "película", "mantequilla", "aperitivo"] },
+  { "id": "elevator", "target": "ascensor", "forbidden": ["subir", "piso", "botón", "edificio", "bajar"] },
+  { "id": "snowman", "target": "muñeco de nieve", "forbidden": ["invierno", "zanahoria", "frío", "blanco", "construir"] },
+  { "id": "compass", "target": "brújula", "forbidden": ["norte", "dirección", "aguja", "mapa", "orientar"] }
+]

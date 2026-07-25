@@ -81,12 +81,13 @@ export interface GameManagerEvents {
 	'connectionStatusChanged': { status: 'connected' | 'reconnecting' | 'disconnected' };
 	'reconnectionAttempt': { state: 'connecting' | 'success' | 'failed'; attempt?: number; error?: string };
 	'turnChanged': { playerId: string };
-	'diceRolled': { playerId: string; die1: number; die2: number; isDoubles?: boolean; isMe?: boolean };
+	'diceRolled': { playerId: string; die1: number; die2: number; isDoubles?: boolean; bonusDie?: string; bonusDieValue?: number; isMe?: boolean };
 	'auctionStarted': AuctionStartedData;
 	'bidPlaced': BidPlacedData;
 	'auctionPassed': AuctionPassedData;
 	'auctionEnded': AuctionEndedData;
 	'auctionTimerTick': { squareIndex: number; secondsRemaining: number; currentBid: number; highestBidderId?: string; highestBidderName?: string };
+	'forbiddenTimerTick': { secondsRemaining: number };
 	// Debt & Bankruptcy events
 	'propertyMortgaged': PropertyMortgagedResponse;
 	'propertyUnmortgaged': any;
@@ -299,6 +300,10 @@ export class GameManager {
 		// Auction timer ticks from server
 		gameClient.on('auctionTimerTick', (data) => {
 			this.emit('auctionTimerTick' as keyof GameManagerEvents, data);
+		});
+
+		gameClient.on('forbiddenTimerTick', data => {
+			this.emit('forbiddenTimerTick', data);
 		});
 
 		// Card drawn (the card decks) - drives the visual reveal
@@ -628,6 +633,23 @@ export class GameManager {
 		await this.runAsMe(id => gameClient.triviaJudge(id, correct));
 	}
 
+	/** Forbidden family: role-authorized timed-turn actions. */
+	async forbiddenStart(): Promise<void> {
+		await this.runAsMe(id => gameClient.forbiddenStart(id));
+	}
+
+	async forbiddenCorrect(cardSequence: number): Promise<void> {
+		await this.runAsMe(id => gameClient.forbiddenCorrect(id, cardSequence));
+	}
+
+	async forbiddenPass(cardSequence: number): Promise<void> {
+		await this.runAsMe(id => gameClient.forbiddenPass(id, cardSequence));
+	}
+
+	async forbiddenViolation(cardSequence: number): Promise<void> {
+		await this.runAsMe(id => gameClient.forbiddenViolation(id, cardSequence));
+	}
+
 	/** Journey family: draw the top card (the start of your turn). */
 	async journeyDraw(): Promise<void> {
 		await this.runAsMe(id => gameClient.journeyDraw(id), { requireTurn: true });
@@ -755,6 +777,10 @@ export class GameManager {
 
 	async passAuction(squareIndex: number): Promise<void> {
 		await this.runAsMe(id => gameClient.passAuction(id, squareIndex));
+	}
+
+	async busChoice(choice: 'die1' | 'die2' | 'both'): Promise<void> {
+		await this.runAsMe(id => gameClient.busChoice(id, choice), { requireTurn: true });
 	}
 
 	// === DEBT & BANKRUPTCY ACTIONS ===

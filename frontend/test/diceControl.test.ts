@@ -51,6 +51,26 @@ test('with motion ON the dice tumble first (faces revealed only after the roll)'
 	assert.notEqual(die1.dataset.face, '6');
 });
 
+const bonusDie = () => document.querySelector('.dice-tray .die--bonus') as HTMLElement;
+
+test('the optional third die appears only on bonus-die rolls', () => {
+	diceControl.animateRoll(2, 5, false);
+	assert.equal(bonusDie().hidden, true);
+
+	diceControl.animateRoll(3, 4, false, { face: 'Two', value: 2 });
+	assert.equal(bonusDie().hidden, false);
+	assert.equal(bonusDie().dataset.face, '2');
+	assert.equal(bonusDie().querySelectorAll('.pip').length, 2);
+
+	diceControl.animateRoll(1, 6, false, { face: 'bus' });
+	assert.equal(bonusDie().dataset.face, 'bus');
+	assert.equal(bonusDie().querySelector('.die-glyph')?.textContent, 'B');
+
+	diceControl.animateRoll(1, 6, false, { face: 'express' });
+	assert.equal(bonusDie().dataset.face, 'express');
+	assert.equal(bonusDie().querySelector('.die-glyph')?.textContent, '»');
+});
+
 test('the unavailable roll button stays focusable and explains why it cannot act', () => {
 	const button = document.getElementById('dice-button') as HTMLButtonElement;
 	diceControl.setEnabled(false);

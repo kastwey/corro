@@ -65,6 +65,13 @@
   overflow: visible;
 }
 
+.card-art__image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
 .gcard__name {
   display: flex;
   align-items: center;
@@ -113,9 +120,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Public piles live on the visual table, never as fake cards appended to a player's hand.
- * Keep them close to a hand card's scale: the former 64×88 thumbnails looked like controls
- * or counters rather than the deck and discard that drive the game. */
+/* Public piles are the visual centre of play, never tiny counters appended to a hand. Match
+ * the largest standard hand-card scale on desktop; narrow screens step down together. */
 .card-table-piles {
   display: flex;
   align-items: flex-end;
@@ -132,9 +138,13 @@
 }
 
 .card-table-piles .gcard {
-  width: 92px;
-  height: 128px;
-  border-radius: 10px;
+  width: 112px;
+  height: 156px;
+  border-radius: 14px;
+}
+
+@media (max-width: 620px) {
+  .card-table-piles .gcard { width: 92px; height: 128px; border-radius: 10px; }
 }
 
 .card-table-pile__label {

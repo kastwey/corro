@@ -167,6 +167,28 @@ public class PackagesControllerTests
 		Assert.IsType<NotFoundResult>(result.Result);
 	}
 
+	[Fact]
+	public async Task GetCardPng_serves_only_the_validated_staged_asset_with_safe_headers()
+	{
+		var source = Path.Combine(Path.GetTempPath(), "corro_png_endpoint_" + Guid.NewGuid().ToString("N"));
+		CopyDir(CorroTestPaths.PackageDir("the-mine"), source);
+		var cardsDir = Path.Combine(source, "assets", "cards");
+		File.Delete(Path.Combine(cardsDir, "firedamp.svg"));
+		CorroPackageLoaderTests.WritePng(Path.Combine(cardsDir, "firedamp.png"), 256, 256, colorType: 6);
+		var store = NewStore();
+		await store.StageFromDirectoryAsync("png-token", source);
+		var controller = NewController(store);
+		controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+
+		var result = Assert.IsType<FileContentResult>(controller.GetCardPng("png-token", "firedamp"));
+		Assert.Equal("image/png", result.ContentType);
+		Assert.Equal("nosniff", controller.Response.Headers.XContentTypeOptions);
+		Assert.IsType<NotFoundResult>(controller.GetCardPng("png-token", "../manifest"));
+
+		store.Release("png-token");
+		CorroPackageLoader.DeleteExtracted(source);
+	}
+
 	// ----- Hidden packages: the unlock-code header gates listing + staging (self-hosting feature) -----
 
 	[Fact]

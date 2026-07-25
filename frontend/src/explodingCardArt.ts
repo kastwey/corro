@@ -1,10 +1,10 @@
 // explodingCardArt.ts — the exploding family's neutral card frame.
 //
-// Card identity and illustration belong to the package. assets/cards/<id>.svg is loaded as safe
-// path-data and wins automatically; an absent SVG gets a mechanics-only fallback selected by
+// Card identity and illustration belong to the package. A validated SVG or PNG wins
+// automatically; absent package art gets a mechanics-only fallback selected by
 // type. This module must never know a shipped package id, card id, character or title.
 
-import { cardArtStyle, cardArtSvg } from './cardArt.js';
+import { cardArtStyle, cardArtHtml } from './cardArt.js';
 import { escapeHtml } from './escapeHtml.js';
 import type { ExplodingCardDef } from './models.js';
 
@@ -24,7 +24,7 @@ const FACE_CLASS: Readonly<Record<string, string>> = {
 export function explodingCardArtHtml(def: ExplodingCardDef, name: string): string {
 	const type = FACE_CLASS[def.type] ?? 'mystery';
 	return `<span class="xcard xcard--${type}"${cardArtStyle(def.artColor, '--xcard-accent', '--xcard-soft')}>`
-		+ `<span class="xcard__picture">${cardArtSvg(def, 'xcard__svg')}</span>`
+		+ `<span class="xcard__picture">${cardArtHtml(def, 'xcard__svg')}</span>`
 		+ `<span class="xcard__name">${escapeHtml(name)}</span>`
 		+ `</span>`;
 }

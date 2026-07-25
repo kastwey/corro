@@ -32,6 +32,10 @@ This board is played in **credits (₡)**, not euros.
 
 Each time you complete a lap and pass the **Launch Pad** you collect your salary.
 
+If the host enables the **Hyperspeed die**, it joins your roll after your first orbit. A number
+adds 1, 2, or 3 spaces; the **Quantum Shuttle** lets you choose either white die or their sum;
+the **Hyperspace jump** resolves your normal landing first, then advances to the next eligible planet.
+
 ## Special squares
 
 - **Launch Pad**: the start square. You collect when you pass it.

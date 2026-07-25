@@ -4,6 +4,7 @@ import type { GameHomeSurface } from './familyTraits.js';
 export const GAME_SURFACE_INTRO_KEYS = {
 	board: 'game.surface_intro.board',
 	hand: 'game.surface_intro.hand',
+	activity: 'game.surface_intro.activity',
 } as const satisfies Record<GameHomeSurface, string>;
 
 /** The visible keyboard introduction that matches the active family's real home surface. */

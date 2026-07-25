@@ -39,6 +39,34 @@ for (const surface of ['light', 'dark']) {
 		assert.equal(document.querySelectorAll('[data-shared-centre]').length, 1);
 		assert.ok(document.querySelector('rect[rx="15"]'), 'the favicon has a distinct rounded tile');
 	});
+
+	test(`the ${surface} All Welcome logo presents an open, equal-participant circle`, () => {
+		const document = readDocument(`${BRAND_DIR}all-welcome-logo-on-${surface}.svg`, 'image/svg+xml');
+
+		assert.equal(document.documentElement.getAttribute('viewBox'), '0 0 420 120');
+		assert.equal(document.documentElement.getAttribute('width'), '420');
+		assert.equal(document.documentElement.getAttribute('height'), '120');
+		assert.equal(document.querySelectorAll('[data-participant]').length, 6);
+		assert.equal(document.querySelectorAll('[data-spoke]').length, 6);
+		assert.equal(document.querySelectorAll('[data-opening]').length, 1);
+		assert.equal(document.querySelectorAll('[data-shared-centre]').length, 1);
+		assert.equal(document.querySelectorAll('[data-wordmark]').length, 1);
+		assert.equal(document.querySelector('title')?.textContent, 'All Welcome');
+	});
+
+	test(`the ${surface} All Welcome favicon keeps the welcoming mark at square size`, () => {
+		const document = readDocument(`${BRAND_DIR}all-welcome-favicon-${surface}.svg`, 'image/svg+xml');
+
+		assert.equal(document.documentElement.getAttribute('viewBox'), '0 0 64 64');
+		assert.equal(document.documentElement.getAttribute('width'), '64');
+		assert.equal(document.documentElement.getAttribute('height'), '64');
+		assert.equal(document.querySelectorAll('[data-participant]').length, 6);
+		assert.equal(document.querySelectorAll('[data-spoke]').length, 6);
+		assert.equal(document.querySelectorAll('[data-opening]').length, 1);
+		assert.equal(document.querySelectorAll('[data-shared-centre]').length, 1);
+		assert.ok(document.querySelector('rect[rx="15"]'), 'the favicon has a distinct rounded tile');
+		assert.equal(document.querySelector('title')?.textContent, 'All Welcome');
+	});
 }
 
 test('the lobby ships an accessible configurable text identity and optional decorative logo mount', () => {
@@ -69,6 +97,10 @@ for (const page of ['index.html', 'board.html']) {
 
 test('all referenced brand files exist in the frontend asset pipeline', () => {
 	for (const file of [
+		'all-welcome-logo-on-light.svg',
+		'all-welcome-logo-on-dark.svg',
+		'all-welcome-favicon-light.svg',
+		'all-welcome-favicon-dark.svg',
 		'corro-logo-on-light.svg',
 		'corro-logo-on-dark.svg',
 		'corro-favicon-light.svg',

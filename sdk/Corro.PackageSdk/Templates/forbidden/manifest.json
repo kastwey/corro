@@ -1,0 +1,24 @@
+{
+  "format": "corro/v1",
+  "gameType": "forbidden",
+  "engineVersion": "^1.0",
+  "id": "starter-forbidden",
+  "name": { "en": "Starter Forbidden Words", "es": "Palabras prohibidas inicial" },
+  "author": "Your name",
+  "version": "0.1.0",
+  "locales": ["en", "es"],
+  "players": { "min": 4, "max": 4 },
+  "forbiddenRules": {
+    "turnSeconds": 60,
+    "passesPerTurn": 3,
+    "correctPoints": 1,
+    "violationPenalty": 1,
+    "cycles": 1
+  },
+  "tokens": [
+    { "id": "circle", "nameKey": "tokens.circle" },
+    { "id": "diamond", "nameKey": "tokens.diamond" },
+    { "id": "triangle", "nameKey": "tokens.triangle" },
+    { "id": "square", "nameKey": "tokens.square" }
+  ]
+}

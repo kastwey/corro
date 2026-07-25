@@ -88,7 +88,7 @@ function isLocalizedMap(value: any): value is Record<string, string> {
 }
 
 /**
- * The team-var convention: a server announcement that names a SHARED journey seat sends
+ * The team-var convention: a server announcement that names an engine-palette team sends
  * `__team:<colorId>` as the var's value ("__team:red"); each client resolves it here into
  * the localized team word ("Red team") before interpolation. Plain values
  * pass through untouched.
@@ -102,7 +102,7 @@ export function resolveTeamVars(
 	for (const [key, value] of Object.entries(vars)) {
 		if (typeof value === 'string' && value.startsWith('__team:')) {
 			out ??= { ...vars };
-			out[key] = tSync('game.journey_team', { color: tSync(`game.color_${value.slice(7)}`) });
+			out[key] = tSync('game.team_name', { color: tSync(`game.color_${value.slice(7)}`) });
 		}
 	}
 	return out ?? vars;
@@ -552,6 +552,12 @@ class AnnouncerQueue {
 		this.historyCursor = adjustHistoryCursorAfterPush(cursorBefore, trimmed);
 	}
 
+	/** Record text produced by another accessible live surface without speaking it twice. */
+	recordHistory(text: string): void {
+		const line = text.trim();
+		if (line) this.pushHistory(line);
+	}
+
 	/** Speak the history entry at index (with a position cue) via the assertive region. */
 	private readHistoryEntry(index: number): void {
 		this.historyCursor = index;
@@ -638,4 +644,13 @@ export function announceHistoryFirst(): void {
 /** Jump to and read the newest announcement in history. */
 export function announceHistoryLast(): void {
 	queue?.historyLast();
+}
+
+/**
+ * Add an already-rendered accessible message (currently text chat) to the same navigable
+ * history as game announcements. It is history-only: the originating role="log" remains
+ * responsible for live delivery, avoiding duplicate speech.
+ */
+export function recordAnnouncementHistory(text: string): void {
+	queue?.recordHistory(text);
 }

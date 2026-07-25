@@ -24,6 +24,7 @@ class DiceControl {
 	private button: HTMLButtonElement | null = null;
 	private die1El: HTMLElement | null = null;
 	private die2El: HTMLElement | null = null;
+	private bonusEl: HTMLElement | null = null;
 	private onRoll: () => void = () => {};
 	private onUnavailable: (reason: string) => void = () => {};
 	private enabled = false;
@@ -41,7 +42,10 @@ class DiceControl {
 		tray.setAttribute('aria-hidden', 'true');
 		this.die1El = this.createDie();
 		this.die2El = this.createDie();
-		tray.append(this.die1El, this.die2El);
+		this.bonusEl = this.createDie();
+		this.bonusEl.classList.add('die--bonus');
+		this.bonusEl.hidden = true;
+		tray.append(this.die1El, this.die2El, this.bonusEl);
 
 		const button = document.createElement('button');
 		button.type = 'button';
@@ -95,15 +99,18 @@ class DiceControl {
 	 * square, so a tumbling die would keep "rolling" while the board already shows where the
 	 * player landed — revealing the destination before the animation ends (bug #14).
 	 */
-	animateRoll(die1: number, die2: number, animate = true): void {
-		if (!this.die1El || !this.die2El) return;
+	animateRoll(die1: number, die2: number, animate = true, bonus?: { face: string; value?: number }): void {
+		if (!this.die1El || !this.die2El || !this.bonusEl) return;
 		const d1 = this.die1El;
 		const d2 = this.die2El;
+		const db = this.bonusEl;
+		db.hidden = !bonus;
 		const settle = () => {
 			this.setFace(d1, die1);
 			this.setFace(d2, die2);
+			if (bonus) this.setBonusFace(db, bonus.face, bonus.value);
 		};
-		const dice = [d1, d2];
+		const dice = bonus ? [d1, d2, db] : [d1, d2];
 		if (!animate) {
 			dice.forEach(d => d.classList.remove('die--rolling'));
 			settle();
@@ -133,6 +140,21 @@ class DiceControl {
 			pip.style.gridColumn = String(col);
 			die.appendChild(pip);
 		}
+	}
+
+	private setBonusFace(die: HTMLElement, face: string, value?: number): void {
+		const normalized = face.toLowerCase();
+		const numeric: Record<string, number> = { one: 1, two: 2, three: 3 };
+		if (normalized in numeric) {
+			this.setFace(die, value ?? numeric[normalized]);
+			return;
+		}
+		die.dataset.face = normalized;
+		die.innerHTML = '';
+		const glyph = document.createElement('span');
+		glyph.className = 'die-glyph';
+		glyph.textContent = normalized === 'bus' ? 'B' : '»';
+		die.appendChild(glyph);
 	}
 }
 

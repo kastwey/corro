@@ -6,8 +6,10 @@ import { JSDOM } from 'jsdom';
 import {
 	applySiteBranding,
 	DEFAULT_SITE_BRANDING,
+	initializeSiteBranding,
 	loadSiteBranding,
 	normalizeSiteBranding,
+	siteTagline,
 } from '../src/siteBranding.js';
 
 function shellDocument(): Document {
@@ -26,6 +28,7 @@ test('the browser fallback matches the deployment defaults in appsettings', () =
 	assert.deepEqual(DEFAULT_SITE_BRANDING, {
 		title: configured.Title,
 		tagline: configured.Tagline,
+		taglines: configured.Taglines,
 		logoUrl: configured.LogoUrl,
 		logoDarkUrl: configured.LogoDarkUrl,
 		faviconUrl: configured.FaviconUrl,
@@ -37,12 +40,15 @@ test('normalization accepts deployment text and safe local or HTTPS assets', () 
 	assert.deepEqual(normalizeSiteBranding({
 		title: '  Community Games  ',
 		tagline: 'Everyone has a place.',
+		taglines: { en: 'Localized place.', es: 'Lugar localizado.' },
 		logoUrl: 'assets/host/logo.svg',
 		logoDarkUrl: 'https://cdn.example.org/logo-dark.svg',
 		faviconUrl: '/assets/host/favicon.svg',
+		faviconDarkUrl: null,
 	}), {
 		title: 'Community Games',
 		tagline: 'Everyone has a place.',
+		taglines: { en: 'Localized place.', es: 'Lugar localizado.' },
 		logoUrl: 'assets/host/logo.svg',
 		logoDarkUrl: 'https://cdn.example.org/logo-dark.svg',
 		faviconUrl: '/assets/host/favicon.svg',
@@ -63,6 +69,10 @@ test('normalization falls back safely and rejects executable or mixed-content UR
 	assert.deepEqual(normalized, {
 		...DEFAULT_SITE_BRANDING,
 		tagline: null,
+		logoUrl: null,
+		logoDarkUrl: null,
+		faviconUrl: null,
+		faviconDarkUrl: null,
 	});
 });
 
@@ -88,6 +98,37 @@ test('loading keeps the site usable when configuration is unavailable', async ()
 	} finally {
 		console.warn = originalWarn;
 	}
+});
+
+test('localized taglines follow exact, base-language, English and first-available fallbacks', () => {
+	const branding = {
+		...DEFAULT_SITE_BRANDING,
+		taglines: { en: 'English line.', es: 'Línea española.' },
+	};
+	assert.equal(siteTagline(branding, 'es'), 'Línea española.');
+	assert.equal(siteTagline(branding, 'es-MX'), 'Línea española.');
+	assert.equal(siteTagline(branding, 'fr'), 'English line.');
+	assert.equal(siteTagline({ ...branding, taglines: { de: 'Deutsche Zeile.' } }, 'fr'), 'Deutsche Zeile.');
+	assert.equal(siteTagline({ ...branding, tagline: 'One line everywhere.' }, 'es'), 'One line everywhere.');
+	assert.equal(siteTagline({ ...branding, tagline: '' }, 'es'), '');
+});
+
+test('initialized branding follows runtime language changes', async () => {
+	const dom = new JSDOM(`<!doctype html><html lang="es"><head><title>Fallback</title></head><body>
+		<p data-site-tagline>Fallback</p>
+	</body></html>`);
+	const request = async () => new Response(JSON.stringify({
+		title: 'All Welcome',
+		tagline: null,
+		taglines: { en: 'English line.', es: 'Línea española.' },
+	}), { status: 200, headers: { 'Content-Type': 'application/json' } });
+	let language = 'es';
+	await initializeSiteBranding(dom.window.document, request as typeof fetch, () => language);
+	assert.equal(dom.window.document.querySelector('[data-site-tagline]')?.textContent, 'Línea española.');
+
+	language = 'en';
+	dom.window.document.dispatchEvent(new dom.window.CustomEvent('languageChanged'));
+	assert.equal(dom.window.document.querySelector('[data-site-tagline]')?.textContent, 'English line.');
 });
 
 test('text branding updates title and tagline when deployment assets are omitted', () => {
@@ -116,7 +157,7 @@ test('one logo remains decorative and becomes the visual replacement for the tex
 		logoDarkUrl: null,
 		faviconUrl: null,
 		faviconDarkUrl: null,
-		tagline: null,
+		tagline: '',
 	}, document);
 
 	const logo = document.querySelector<HTMLElement>('[data-site-logo]')!;

@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-	cardArtStyle, cardArtSvg, genericCardArtHtml, genericCardBackHtml, genericEmptyCardHtml,
+	cardArtStyle, cardArtHtml, genericCardArtHtml, genericCardBackHtml, genericEmptyCardHtml,
 	normalizeCardArtColor,
-	packageCardArtSvg, sanitizeCardPathData,
+	packageCardArtSvg, sanitizeCardPathData, setCardArtPackageToken,
 } from '../src/cardArt.js';
 
 test('package path-data is sanitized again and marked as the winning source', () => {
@@ -15,20 +15,31 @@ test('package path-data is sanitized again and marked as the winning source', ()
 });
 
 test('package art wins and missing or unusable art receives a neutral mechanic drawing', () => {
-	const custom = cardArtSvg({ type: 'attack', svg: 'M2 2h60v60z' });
+	const custom = cardArtHtml({ type: 'attack', svg: 'M2 2h60v60z' });
 	assert.match(custom, /data-card-art="package"/);
 	assert.doesNotMatch(custom, /data-card-art="neutral"/);
 
-	const missing = cardArtSvg({ type: 'attack' });
-	const rejected = cardArtSvg({ type: 'attack', svg: '<script></script>' });
+	const missing = cardArtHtml({ type: 'attack' });
+	const rejected = cardArtHtml({ type: 'attack', svg: '<script></script>' });
 	assert.match(missing, /data-card-art="neutral"/);
 	assert.match(rejected, /data-card-art="neutral"/);
 });
 
 test('numeric neutral cards show their value while other mechanics remain pictorial', () => {
-	assert.match(cardArtSvg({ type: 'number', value: 7 }), />7<\/text>/);
-	assert.match(cardArtSvg({ type: 'distance', value: 100 }), />100<\/text>/);
-	assert.doesNotMatch(cardArtSvg({ type: 'remedy' }), /<text/);
+	assert.match(cardArtHtml({ type: 'number', value: 7 }), />7<\/text>/);
+	assert.match(cardArtHtml({ type: 'distance', value: 100 }), />100<\/text>/);
+	assert.doesNotMatch(cardArtHtml({ type: 'remedy' }), /<text/);
+});
+
+test('validated PNG wins by card id without embedding bytes in state', () => {
+	setCardArtPackageToken('game token');
+	const png = cardArtHtml({ id: 'card/unsafe', type: 'attack', hasPngArt: true, svg: 'M1 1h2v2z' });
+	assert.match(png, /^<img /);
+	assert.match(png, /\/api\/packages\/game%20token\/cards\/card%2Funsafe\.png/);
+	assert.match(png, /data-card-art="package-png"/);
+	assert.match(png, /alt="" aria-hidden="true"/);
+	setCardArtPackageToken(null);
+	assert.match(cardArtHtml({ id: 'x', type: 'attack', hasPngArt: true }), /data-card-art="neutral"/);
 });
 
 test('generic faces escape package names and retain source metadata', () => {

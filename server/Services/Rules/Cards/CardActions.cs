@@ -53,7 +53,9 @@ public class CardActions : ICardActions
 		await context.Announcer.Announce("game.card_move", new Dictionary<string, object>
 		{
 			["player"] = player.Name,
-			["square"] = square?.Name ?? $"{targetPosition}",
+			["square"] = square is null
+				? $"{targetPosition}"
+				: AnnouncementVariables.SquareName(square),
 			["actorId"] = player.Id
 		}, AnnouncementPhase.Move);
 

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/kastwey/corro/main/sdk/Corro.PackageSdk/Schemas/words.schema.json",
+  "title": "Corro forbidden-word deck",
+  "type": "array",
+  "minItems": 8,
+  "items": {
+    "type": "object",
+    "required": ["id", "target", "forbidden"],
+    "properties": {
+      "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+      "target": { "type": "string", "minLength": 1 },
+      "forbidden": {
+        "type": "array",
+        "minItems": 3,
+        "maxItems": 8,
+        "uniqueItems": true,
+        "items": { "type": "string", "minLength": 1 }
+      }
+    },
+    "additionalProperties": false
+  }
+}

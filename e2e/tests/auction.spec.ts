@@ -95,6 +95,12 @@ test('a rival SEES each bid instantly, and the next auction opens at the minimum
 	// Berto's dialog shows the CURRENT bid + bidder without waiting for a timer tick.
 	await expect(bertoDialog.locator('.auction-dlg-bid')).toContainText('25', { timeout: 2000 });
 	await expect(bertoDialog.locator('.auction-dlg-bidder')).toContainText('Ana');
+	// His input already owns focus. The accepted bid reselects its contents, so typing
+	// replaces the old proposal instead of concatenating it.
+	const bertoInput = bertoDialog.locator('#auction-bid-input');
+	await expect(bertoInput).toBeFocused();
+	await berto.keyboard.type('30');
+	await expect(bertoInput).toHaveValue('30');
 	// And his countdown is alive (the per-second tick reaches the group).
 	await expect(bertoDialog.locator('.auction-dlg-timer-value')).not.toHaveText('20', { timeout: 5000 });
 

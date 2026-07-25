@@ -7,7 +7,7 @@
 // line per player, the S key for my own, Shift+S for the rivals.
 
 import { HandPanel, type HandCard } from './handPanel.js';
-import { cardArtSvg, genericCardArtHtml, genericCardBackHtml } from './cardArt.js';
+import { cardArtHtml, genericCardArtHtml, genericCardBackHtml } from './cardArt.js';
 import { escapeHtml } from './escapeHtml.js';
 import { contrastingTextColor } from './colorContrast.js';
 import {
@@ -282,8 +282,8 @@ export class DraftBoard {
 			const colour = DRAFT_TYPE_COLOR[type] ?? '#9e9e9e';
 			const nm = escapeHtml(def ? this.deps.tSync(def.nameKey) : '?');
 			return `<span class="draft-card draft-card--${type}" style="--type-color:${colour};--type-ink:${contrastingTextColor(colour)}">`
-				+ (def ? cardArtSvg(def, 'draft-card__art card-art-thumb') : '')
-				+ (multiplier ? cardArtSvg(multiplier, 'draft-card__multiplier-art') : '')
+				+ (def ? cardArtHtml(def, 'draft-card__art card-art-thumb') : '')
+				+ (multiplier ? cardArtHtml(multiplier, 'draft-card__multiplier-art') : '')
 				+ `<span class="draft-card__name">${nm}</span>`
 				+ (count > 1 ? `<span class="draft-card__count">×${count}</span>` : '')
 				+ (badge ? `<span class="draft-card__badge">${badge}</span>` : '')
@@ -296,7 +296,7 @@ export class DraftBoard {
 	/** The dessert stash: one pudding tile wearing the count, drawn as a little stack. */
 	private dessertTile(n: number, def?: DraftCardDef): string {
 		return `<span class="draft-card draft-card--stack" style="--type-color:${DRAFT_TYPE_COLOR.dessert}">`
-			+ (def ? cardArtSvg(def, 'draft-card__art card-art-thumb') : '')
+			+ (def ? cardArtHtml(def, 'draft-card__art card-art-thumb') : '')
 			+ `<span class="draft-card__count">×${n}</span></span>`;
 	}
 

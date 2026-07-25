@@ -41,6 +41,7 @@
   box-shadow: var(--shadow-md);
   width: max-content;
   max-width: 100%;
+  box-sizing: border-box;
 }
 
 #board {

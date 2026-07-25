@@ -40,6 +40,34 @@ test('returns none for a null or empty state', () => {
 	assert.deepEqual(desiredModal(state({}), 'me'), { kind: 'none' });
 });
 
+// ── Bonus-die Bus choice ───────────────────────────────────────────────────
+
+test('my persisted Bus choice reopens with wrapped destinations and rent previews', () => {
+	const squares = ring();
+	const result = desiredModal(state({
+		squares,
+		pendingBusChoice: {
+			playerId: 'me', die1: 1, die2: 3, fromPosition: 3,
+			rentDie1: null, rentDie2: 40, rentBoth: 75,
+		},
+	}), 'me');
+
+	assert.equal(result.kind, 'busChoice');
+	if (result.kind !== 'busChoice') return;
+	assert.equal(result.data.dest1.name, 'GO'); // 3 + 1 wraps to 0
+	assert.equal(result.data.dest2.name, 'B');  // 3 + 3 wraps to 2
+	assert.equal(result.data.destBoth.name, 'C');
+	assert.equal(result.data.rent1, undefined);
+	assert.equal(result.data.rent2, 40);
+	assert.equal(result.data.rentBoth, 75);
+});
+
+test('another player never sees the Bus picker', () => {
+	assert.equal(desiredModal(state({
+		pendingBusChoice: { playerId: 'rival', die1: 2, die2: 3, fromPosition: 0 },
+	}), 'me').kind, 'none');
+});
+
 // ── Auction ────────────────────────────────────────────────────────────────
 
 test('an active auction opens the auction modal for a bidding player', () => {

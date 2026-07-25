@@ -1,0 +1,10 @@
+[
+  { "id": "lighthouse", "target": "lighthouse", "forbidden": ["light", "coast", "tower", "sea", "ship"] },
+  { "id": "backpack", "target": "backpack", "forbidden": ["bag", "school", "carry", "shoulders", "zip"] },
+  { "id": "storm", "target": "storm", "forbidden": ["rain", "cloud", "wind", "weather", "thunder"] },
+  { "id": "telescope", "target": "telescope", "forbidden": ["stars", "space", "look", "lens", "astronomy"] },
+  { "id": "popcorn", "target": "popcorn", "forbidden": ["cinema", "corn", "movie", "butter", "snack"] },
+  { "id": "elevator", "target": "elevator", "forbidden": ["lift", "floor", "button", "building", "up"] },
+  { "id": "snowman", "target": "snowman", "forbidden": ["winter", "carrot", "cold", "white", "build"] },
+  { "id": "compass", "target": "compass", "forbidden": ["north", "direction", "needle", "map", "navigate"] }
+]

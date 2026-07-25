@@ -37,7 +37,7 @@ export interface LobbyPlayer {
   isReady: boolean;
   /** A machine-driven seat the host added while waiting (server Services/Bots). */
   isBot?: boolean;
-  /** Journey team mode: the team (0-based) the host placed this player in; null = pool. */
+  /** Team mode: the team (0-based) the host placed this player in; null = pool. */
   teamIndex?: number | null;
   joinedAt: string;
 }
@@ -196,6 +196,53 @@ export interface TriviaRulesConfig {
   answerSeconds: number;
 }
 
+// ── Forbidden-word family ────────────────────────────────────────────────────
+
+export interface ForbiddenTeamState {
+  teamIndex: number;
+  memberIds: string[];
+  score: number;
+  turnsTaken: number;
+}
+
+export type ForbiddenTurnPhase = 'preparing' | 'active' | 'finished';
+
+export interface ForbiddenTurnState {
+  turnNumber: number;
+  teamIndex: number;
+  clueGiverId: string;
+  guesserId: string;
+  monitorId: string;
+  phase: ForbiddenTurnPhase;
+  startedAt?: string | null;
+  durationSeconds: number;
+  passesUsed: number;
+  correctCount: number;
+  violationCount: number;
+  cardSequence: number;
+  /** Present only in the clue-giver's and opposing monitor's projection. */
+  cardId?: string | null;
+  target?: string | null;
+  forbiddenWords: string[];
+}
+
+export interface ForbiddenState {
+  teams: ForbiddenTeamState[];
+  activeTeamIndex: number;
+  cycle: number;
+  cardCursor: number;
+  cardSequence: number;
+  turn: ForbiddenTurnState;
+}
+
+export interface ForbiddenRulesConfig {
+  turnSeconds: number;
+  passesPerTurn: number;
+  correctPoints: number;
+  violationPenalty: number;
+  cycles: number;
+}
+
 // ── Journey family (Mil Millas genre) ───────────────────────────────────────
 
 /** One card DEFINITION of the deck catalog (public wire data — only hand/pile CONTENTS are secret). */
@@ -203,6 +250,7 @@ export interface JourneyCardDef {
   id: string;
   /** Sanitized path-data from optional package file assets/cards/<id>.svg. */
   svg?: string | null;
+  hasPngArt?: boolean;
   /** Optional package-owned #RRGGBB accent. */
   artColor?: string | null;
   /** "distance" | "attack" | "remedy" | "immunity". */
@@ -313,6 +361,7 @@ export interface AssemblyCardDef {
   id: string;
   /** Sanitized path-data from optional package file assets/cards/<id>.svg. */
   svg?: string | null;
+  hasPngArt?: boolean;
   /** Optional package-owned #RRGGBB accent. */
   artColor?: string | null;
   /** "piece" | "attack" | "remedy" | "special". */
@@ -375,6 +424,7 @@ export interface DraftCardDef {
   id: string;
   /** Sanitized path-data from optional package file assets/cards/<id>.svg. */
   svg?: string | null;
+  hasPngArt?: boolean;
   /** Optional package-owned #RRGGBB accent. */
   artColor?: string | null;
   /** "points" | "multiplier" | "set" | "scale" | "majority" | "dessert". */
@@ -449,6 +499,7 @@ export interface SheddingCardDef {
   id: string;
   /** Sanitized path-data from optional package file assets/cards/<id>.svg. */
   svg?: string | null;
+  hasPngArt?: boolean;
   /** Optional package-owned #RRGGBB accent. */
   artColor?: string | null;
   /** "number" | "skip" | "reverse" | "drawTwo" | "wild" | "wildDrawFour". */
@@ -534,6 +585,7 @@ export interface ExplodingCardDef {
   id: string;
   /** Sanitized path-data from optional package file assets/cards/<id>.svg. */
   svg?: string | null;
+  hasPngArt?: boolean;
   /** Optional package-owned #RRGGBB accent. */
   artColor?: string | null;
   /** "bomb" | "defuse" | "skip" | "attack" | "seeFuture" | "shuffle" | "favor" | "nope" | "cat". */
@@ -699,6 +751,9 @@ export interface GameState {
   triviaBoard?: TriviaBoardDef | null;
   /** Trivia rules in effect (public config for the active-rules dialog); trivia games only. */
   triviaRules?: TriviaRulesConfig | null;
+  /** Forbidden-word team state (my hidden-information projection) and effective rules. */
+  forbidden?: ForbiddenState | null;
+  forbiddenRules?: ForbiddenRulesConfig | null;
   /** Journey sub-state (my projected view), deck catalog and rules; journey games only. */
   journey?: JourneyState | null;
   journeyDeck?: JourneyCardDef[] | null;
@@ -752,6 +807,9 @@ export interface GameState {
 	bigKey?: string;
   };
   activeAuction?: AuctionState | null;
+  /** Bonus-die Bus choice waiting for the current player; persisted for reconnect. */
+  pendingBusChoice?: PendingBusChoice | null;
+  pendingExpressMove?: { playerId: string } | null;
   /** The pending trade freezing the game, or null. Drives modal restoration on reconnect. */
   activeTrade?: TradeStateDto | null;
   pendingDebts?: DebtState[];
@@ -807,9 +865,12 @@ export interface GameSettings {
   startingMoney?: number;
   goBonus?: number;
   doubleGoSalary?: boolean;
+  useBonusDie?: boolean;
   freeParkingJackpot?: boolean;
   auctionOnDecline?: boolean;
   buildingShortage?: boolean;
+  maxSmallBuildings?: number;
+  maxBigBuildings?: number;
   evenBuildRule?: boolean;
   noBuildingFirstLap?: boolean;
   mortgageInterestRate?: number;
@@ -835,7 +896,7 @@ export interface CreateGameRequest {
   hostSeatId?: string;
   /** Classic pairs mode (4-seat race boards): opposite seats are partners. */
   raceTeams?: boolean;
-  /** Journey team mode: how many equal teams (a divisor of the exact player count). */
+  /** Team mode: how many equal teams (a divisor of the exact player count). */
   teamCount?: number;
   /** Initial host choice for the optional voice room. */
   voiceChatEnabled?: boolean;
@@ -1024,6 +1085,20 @@ export interface DiceRolledResponse {
   canBuySquare: boolean;
   // If can buy, does the player have enough money? (calculated by server)
   canAfford: boolean;
+  bonusDie?: 'one' | 'two' | 'three' | 'express' | 'bus' | 'One' | 'Two' | 'Three' | 'Express' | 'Bus' | null;
+  bonusDieValue?: number | null;
+  requiresBusChoice?: boolean;
+  expressDestination?: number | null;
+  expressSquareName?: string | null;
+  busDestinationDie1Name?: string | null;
+  busDestinationDie2Name?: string | null;
+  busDestinationBothName?: string | null;
+  busDestinationDie1ColorKey?: string | null;
+  busDestinationDie2ColorKey?: string | null;
+  busDestinationBothColorKey?: string | null;
+  busDestinationDie1Rent?: number | null;
+  busDestinationDie2Rent?: number | null;
+  busDestinationBothRent?: number | null;
   timestamp?: string;
   // Holding-related fields
   releasedFromHolding?: boolean;
@@ -1031,6 +1106,16 @@ export interface DiceRolledResponse {
   holdingTurnsRemaining?: number;
   paidReleaseCost?: boolean;
   releaseCostAmount?: number;
+}
+
+export interface PendingBusChoice {
+  playerId: string;
+  die1: number;
+  die2: number;
+  fromPosition: number;
+  rentDie1?: number | null;
+  rentDie2?: number | null;
+  rentBoth?: number | null;
 }
 
 // === AUCTION ===
@@ -1120,6 +1205,8 @@ export interface CardDrawnNotification {
   deckType: string; // 'chance' | 'community' | a package deck id
   /** Sanitized path-data from assets/cards/<id>.svg; absent uses a neutral illustration. */
   svg?: string | null;
+  /** Strictly validated PNG exists at the staged package art endpoint. */
+  hasPngArt?: boolean;
   /** Optional package-owned #RRGGBB accent. */
   artColor?: string | null;
   /** Generic effect id used to choose the neutral illustration. */

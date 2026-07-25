@@ -7,6 +7,7 @@ import {
   announceHistoryNext,
   announceHistoryFirst,
   announceHistoryLast,
+	recordAnnouncementHistory,
 } from './announcer.js';
 import { attachKeyHandlers, PROPERTY_ONLY_COMMANDS, CARD_FAMILY_HIDDEN_COMMANDS } from './keys.js';
 import { buildGroupKeyMap } from './groupKeys.js';
@@ -16,7 +17,7 @@ import { makeSettleGuard } from './settleGuard.js';
 import { holdingTeleports } from './holdingMovement.js';
 import { isTokenMotionDisabled } from './motion.js';
 import { AnnouncementGate } from './announcementGate.js';
-import { GameCommands, ownsWholeColorGroup } from './gameCommands.js';
+import { GameCommands, bankBuildingInventory, ownsWholeColorGroup } from './gameCommands.js';
 import { i18nBinder, tSync, localizeColor, money } from './i18nBinder.js';
 import { soundManager, playSound } from './sound.js';
 import { soundEvents } from './soundEvents.js';
@@ -37,6 +38,7 @@ import { updateGameSurfaceIntro } from './gameSurfaceIntro.js';
 import { setPackageTokens } from './tokenIcons.js';
 import { setBoardVocabulary } from './boardVocabulary.js';
 import { cardFlight } from './cardFlight.js';
+import { setCardArtPackageToken } from './cardArt.js';
 import { auctionDialog } from './auctionDialog.js';
 import { tradeDialog } from './tradeDialog.js';
 import { nextAuctionWarning } from './auctionCountdown.js';
@@ -49,6 +51,7 @@ import { groupStatusMessage } from './groupStatus.js';
 import { desiredModal } from './modalReconcile.js';
 import type {
   AuctionModalData,
+	BusChoiceModalData,
   TradeReviewModalData,
   TradeWaitingModalData,
 } from './modalReconcile.js';
@@ -81,6 +84,7 @@ import { familyFor, type FamilyDeps, type FamilyView, type RaceFamilyView, type 
 import { triviaNodeLabel, triviaPositionSuffix } from './triviaBoard.js';
 import { familyHasTrades, isToolbarlessFamily } from './familyTraits.js';
 import { describeMoveOption, describePieceOrigin, seatDisplayName, type RaceCursor } from './raceGeometry.js';
+import { busDestinationLabel } from './busChoice.js';
 import type { BoardNavigator } from './keys.js';
 import type { PendingRaceMove, TriviaPendingQuestion } from './models.js';
 
@@ -192,10 +196,6 @@ async function initBoard() {
   // Initialize TurnIndicator
   turnIndicator.init();
 
-	// The deployment owns the shell identity around every game; Corro attribution remains in the
-	// footer. Load it before the rest of startup so the heading and browser title agree immediately.
-	const siteBranding = await initializeSiteBranding();
-
   // i18n must be ready BEFORE any dialog/announcement below, otherwise the
   // session-validation dialogs render raw translation keys (e.g. a screen reader
   // reads "session.invalidTitle" instead of the translated text).
@@ -204,6 +204,11 @@ async function initBoard() {
   // own init — do NOT force a language here, or the lobby choice is silently overridden.
   await i18nBinder.init();
   await i18nBinder.applyI18n();
+
+	// The deployment owns the shell identity around every game; Corro attribution remains in the
+	// footer. Load it after locale detection so localized host copy starts in the right language.
+	const siteBranding = await initializeSiteBranding(
+		document, fetch, () => i18nBinder.getCurrentLanguage());
 
   // Get gameId from URL
   const urlParams = new URLSearchParams(window.location.search);
@@ -343,6 +348,15 @@ async function initBoard() {
 	  initialBlocked: audioBlocked(),
 	  onToggle: () => toggleSound(),
 	});
+	chatPanel.init(appControls, {
+	  t: (key, vars) => tSync(key, vars),
+	  getPlayers: () => gameManager.getAllPlayers(),
+	  getMyPlayerId: () => gameManager.getMyPlayerId(),
+	  send: text => gameClient.sendChatMessage(gameId, playerSession.playerId, playerSession.playerSecretId, text),
+	  focusBoard: () => board.focus(),
+	  beforeOpen: () => { if (voicePanel.isOpen()) voicePanel.closePanel(); },
+	  recordHistory: recordAnnouncementHistory,
+	});
 	// Keep the "blocked" hint accurate: when the context finally unlocks after a tap (or
 	// gets suspended in a background tab), repaint the toggle accordingly.
 	soundManager.setOnStateChange(() => refreshSoundToggle());
@@ -432,7 +446,11 @@ async function initBoard() {
   announce(createAnnouncement('game.loading_board', {}));
 
   // board
-  gameBoard = new Board(board, GRID_SIZE, () => gameManager.getAllPlayers(), () => gameManager.getSquares(), gameManager);
+	// Board navigation follows PRESENTATION positions while a token is hopping. Reading the
+	// authoritative destination here would let M reveal where the token will land mid-animation.
+	gameBoard = new Board(board, GRID_SIZE,
+	() => tokenAnimator.visiblePlayers(gameManager.getAllPlayers()),
+	() => gameManager.getSquares(), gameManager);
 
   // Narrate cursor movement through the page announcer. Navigation is user-initiated,
   // so it speaks instantly (assertive), interrupting any in-progress utterance.
@@ -943,7 +961,7 @@ async function initBoard() {
   // panel and is reachable directly with Ctrl+D. Modal dialogs trap focus on their own
   // and never appear here.
   const openNonModalDialog = () =>
-	document.querySelector<HTMLElement>('dialog[open][data-modal="false"]:not(#chat-panel)');
+	document.querySelector<HTMLElement>('dialog[open][data-modal="false"]');
   panelNavigator.register({
 	id: 'dialog',
 	labelKey: 'game.panels.dialog',
@@ -1004,6 +1022,7 @@ async function initBoard() {
 
   gameManager.on('gameStateUpdated', (gs) => {
 	if (!gs) return;
+	setCardArtPackageToken(gs.packageToken);
 	voicePanel.setGameEnabled(!!gs.voiceChatEnabled);
 
 	// The page starts with a truthful loading message. Once the authoritative state tells us
@@ -1257,7 +1276,12 @@ async function initBoard() {
 	  // With motion off the token snaps to its destination the instant the state arrives, so a
 	  // tumbling die would still be "rolling" while the board already shows the landing — leaking
 	  // where the player lands before the roll visibly finishes (bug #14). Skip the tumble then.
-	  diceControl.animateRoll(d.die1, d.die2, !isTokenMotionDisabled());
+	  diceControl.animateRoll(
+		d.die1,
+		d.die2,
+		!isTokenMotionDisabled(),
+		d.bonusDie ? { face: d.bonusDie, value: d.bonusDieValue } : undefined,
+	  );
 	}
 	// The turn phase (have I rolled? do I owe a re-roll?) is server-authoritative;
 	// the action bar recomputes from the game state on every gameStateUpdated, so
@@ -1343,8 +1367,9 @@ async function initBoard() {
 
 	const groupStatusMessage = computeGroupStatusMessage(pp.squareIndex);
 	const board = document.getElementById('board');
+	const localizedSquareName = gameManager.getSquares()[pp.squareIndex]?.name || pp.squareName;
 	dialogManager.showBuyConfirm({
-	  squareName: pp.squareName,
+	  squareName: localizedSquareName,
 	  price: pp.price,
 	  groupStatusMessage,
 	  onConfirm: async () => {
@@ -1384,6 +1409,8 @@ async function initBoard() {
   // the dialog must re-render for it — a boolean guard once left the previous roll's options
   // on screen while the voice asked to move the bonus steps.
   let raceChoiceKey: string | null = null;
+	let busChoiceKey: string | null = null;
+	let busChoiceOpenTimer: number | null = null;
   // Which trivia dialog is showing (judge setup / destination / answer / verdict) — keyed by
   // content so we only reopen (and re-announce) when the pending step actually changes.
   let triviaDialogKey: string | null = null;
@@ -1404,10 +1431,11 @@ async function initBoard() {
 	if (auctionDialog.isOpen() || d.squareIndex === myPassedAuctionSquare) return;
 	lastAuctionWarnSecond = d.secondsRemaining;
 	const squareIndex = d.squareIndex;
+	const localizedSquareName = gameManager.getSquares()[squareIndex]?.name || d.squareName;
 	const myPlayer = gameManager.getMyPlayer();
 	auctionDialog.open({
 	  squareIndex,
-	  squareName: d.squareName,
+	  squareName: localizedSquareName,
 	  currentBid: d.currentBid,
 	  highestBidderName: d.highestBidderName,
 	  secondsRemaining: d.secondsRemaining,
@@ -1470,6 +1498,44 @@ async function initBoard() {
 	tradeModalMode = null;
 	tradeDialog.close();
   }
+
+	function openBusChoiceModal(data: BusChoiceModalData): void {
+		const key = `${data.fromPosition}:${data.die1}:${data.die2}`;
+		if (busChoiceKey === key) return;
+		busChoiceKey = key;
+		if (busChoiceOpenTimer !== null) window.clearTimeout(busChoiceOpenTimer);
+		const context = {
+			fromPosition: data.fromPosition,
+			squares: gameManager.getSquares(),
+			players: gameManager.getAllPlayers(),
+			myId: gameManager.getMyPlayerId(),
+			t: (translationKey: string, vars?: Record<string, any>) => tSync(translationKey, vars),
+		};
+		const show = () => {
+			busChoiceOpenTimer = null;
+			dialogManager.showBusChoice({
+				die1: data.die1,
+				die2: data.die2,
+				both: data.both,
+				square1: busDestinationLabel(data.dest1.name, data.dest1.colorKey, data.die1, context, data.rent1),
+				square2: busDestinationLabel(data.dest2.name, data.dest2.colorKey, data.die2, context, data.rent2),
+				squareBoth: busDestinationLabel(data.destBoth.name, data.destBoth.colorKey, data.both, context, data.rentBoth),
+				onChoice: choice => gameManager.busChoice(choice),
+			});
+		};
+		// Let the server-authored roll and choice sentence begin before focus enters the picker.
+		busChoiceOpenTimer = window.setTimeout(show, RACE_CHOICE_OPEN_DELAY_MS);
+	}
+
+	function closeBusChoiceModal(): void {
+		if (busChoiceOpenTimer !== null) {
+			window.clearTimeout(busChoiceOpenTimer);
+			busChoiceOpenTimer = null;
+		}
+		if (busChoiceKey === null) return;
+		busChoiceKey = null;
+		dialogManager.closeNonModal();
+	}
 
   // Reconcile the open modals against the authoritative state (the reconnect source of truth).
   /** Race family: the "which piece moves?" choice, driven purely by state (reopens on
@@ -1788,8 +1854,16 @@ async function initBoard() {
   function reconcileModals(gs: GameState | null | undefined): void {
 	const desired = desiredModal(gs, gameManager.getMyPlayerId());
 
-	if (desired.kind === 'raceChoice') openRaceChoiceModal(desired.data);
-	else closeRaceChoiceModal();
+	// Race and Bus share the one non-modal choice surface; reconcile them as alternatives
+	// so one closer can never dismiss the picker the other just opened.
+	if (desired.kind === 'busChoice') {
+	  closeRaceChoiceModal();
+	  openBusChoiceModal(desired.data);
+	} else {
+	  closeBusChoiceModal();
+	  if (desired.kind === 'raceChoice') openRaceChoiceModal(desired.data);
+	  else closeRaceChoiceModal();
+	}
 
 	if (desired.kind === 'auction') openAuctionModal(desired.data);
 	else closeAuctionModal();
@@ -1892,15 +1966,8 @@ async function initBoard() {
 	});
   });
 
-  // In-game chat: floating accessible panel + persistent role="log" voicing. Sends are
-  // authenticated with the same session secret the rejoin uses.
-  chatPanel.init({
-	t: (key, vars) => tSync(key, vars),
-	getPlayers: () => gameManager.getAllPlayers(),
-	getMyPlayerId: () => gameManager.getMyPlayerId(),
-	send: text => gameClient.sendChatMessage(gameId, playerSession.playerId, playerSession.playerSecretId, text),
-	focusBoard: () => board.focus(),
-  });
+	// In-game chat: the floating panel was mounted with the visual header controls above;
+	// these subscriptions populate its persistent history and role="log" spoken channel.
   gameClient.on('chatMessage', m => chatPanel.addMessage(m));
   gameClient.on('chatHistory', ms => chatPanel.setHistory(ms));
 	gameClient.on('voiceChatEnabledChanged', data => voicePanel.setGameEnabled(data.enabled, true));
@@ -1966,6 +2033,10 @@ async function initBoard() {
 	getPlayerReleasePasses: (id: string) => gameManager.getPlayer(id)?.releasePasses || 0,
 	getPendingDebts: () => gameManager.getCurrentGameState()?.pendingDebts || [],
 	getFreeParkingPot: () => gameManager.getFreeParkingPot(),
+	getBankBuildingInventory: () => {
+	  const state = gameManager.getCurrentGameState();
+	  return bankBuildingInventory(state?.squares ?? [], state?.settings);
+	},
 	formatNumber: (value) => i18nBinder.formatNumber(value),
 	getActiveAuction: () => {
 	  const a = auctionDialog.getStatus();
@@ -2057,8 +2128,8 @@ async function initBoard() {
 	  first: announceHistoryFirst,
 	  last: announceHistoryLast,
 	},
-	onToggleChat: () => { if (voicePanel.isOpen()) voicePanel.closePanel(); chatPanel.toggle(); },
-	onFocusChatInput: () => { if (voicePanel.isOpen()) voicePanel.closePanel(); chatPanel.focusInput(); },
+	onToggleChat: () => chatPanel.toggle(),
+	onFocusChatInput: () => chatPanel.focusInput(),
 	onToggleVoicePanel: () => voicePanel.togglePanel(),
 	onToggleVoiceMute: () => { void voicePanel.toggleSelfMute(); },
 	onAnnounceVoiceSpeakers: () => voicePanel.announceActiveSpeakers(),

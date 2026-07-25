@@ -20,6 +20,7 @@ public class CommandDispatcher
 		RegisterHandler(new GetMoneyHandler());
 		RegisterHandler(new GetReleasePassesHandler());
 		RegisterHandler(new AnnounceTurnHandler());
+		RegisterHandler(new BusChoiceHandler(rulebook));
 
 		RegisterHandler(new MoveRacePieceHandler());
 
@@ -61,6 +62,14 @@ public class CommandDispatcher
 		RegisterHandler(new TriviaMoveHandler());
 		RegisterHandler(new TriviaAnswerHandler());
 		RegisterHandler(new TriviaJudgeHandler());
+
+		// Forbidden family: the clue-giver starts and resolves cards, the opposing monitor may
+		// flag a violation, and the server clock ends the turn.
+		RegisterHandler(new ForbiddenStartHandler());
+		RegisterHandler(new ForbiddenCorrectHandler());
+		RegisterHandler(new ForbiddenPassHandler());
+		RegisterHandler(new ForbiddenViolationHandler());
+		RegisterHandler(new ForbiddenExpireTurnHandler());
 
 		// Holding handlers
 		RegisterHandler(new PayReleaseCostHandler(rulebook));
@@ -154,6 +163,17 @@ public class CommandDispatcher
 		return command.MutatesState ? "AUCTION_IN_PROGRESS" : null;
 	}
 
+	/// <summary>While a Bus choice is pending, only that answer and read-only queries may mutate.</summary>
+	public static string? CheckBusChoiceFreeze(GameCommand command, GameState state)
+	{
+		if (state.PendingBusChoice is null || command is BusChoiceCommand)
+		{
+			return null;
+		}
+
+		return command.MutatesState ? "BUS_CHOICE_REQUIRED" : null;
+	}
+
 	/// <summary>
 	/// Dispatches a command to its handler and returns the response.
 	/// </summary>
@@ -193,6 +213,16 @@ public class CommandDispatcher
 			{
 				Message = "An auction is in progress",
 				Code = auctionError
+			});
+		}
+
+		var busError = CheckBusChoiceFreeze(command, context.GameState);
+		if (busError != null)
+		{
+			return Task.FromResult<ServerResponse>(new ErrorResponse
+			{
+				Message = "A bonus-die movement choice is required",
+				Code = busError
 			});
 		}
 

@@ -20,7 +20,9 @@
     "start": "terminology.start",
     "holding": "terminology.holding",
     "freeparking": "terminology.freeparking",
-    "sendtoholding": "terminology.sendtoholding"
+    "sendtoholding": "terminology.sendtoholding",
+    "bus": "terminology.bus",
+    "express": "terminology.express"
   },
   "groups": [
     { "id": "amber", "color": "#a66b2b", "colorName": "groups.amber" },
@@ -45,6 +47,12 @@
     "freeParkingJackpot": false
   },
   "players": { "min": 2, "max": 2 },
+  "ruleGroups": [
+    { "id": "advanced", "nameKey": "rules.group.advanced" }
+  ],
+  "houseRules": [
+    { "id": "bonusDie", "group": "advanced", "type": "toggle", "default": false, "editableByHost": true, "nameKey": "rules.bonusDie" }
+  ],
   "building": {
     "levels": 2,
     "smallKey": "building.small",

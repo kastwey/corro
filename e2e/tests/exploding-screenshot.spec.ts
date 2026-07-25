@@ -41,7 +41,20 @@ test('exploding: board and the defuse picker (screenshots)', async ({ browser },
 	expect(cardsPerRow).toEqual([4, 4]);
 	await expect(ana.locator('.hand-panel__draw')).toBeVisible();
 	await expect(ana.locator('.dice-control')).toBeHidden();
+	const desktopPile = await ana.locator('.exploding-draw .xcard').boundingBox();
+	expect(desktopPile?.width).toBe(112);
+	expect(desktopPile?.height).toBe(156);
 	await captureScreenshot(ana, testInfo, 'exploding-01-start.png');
+
+	// Narrow-screen review: piles remain real card-sized, stepping down consistently rather
+	// than reverting to the old thumbnail scale.
+	await ana.setViewportSize({ width: 390, height: 844 });
+	const mobilePile = await ana.locator('.exploding-draw .xcard').boundingBox();
+	expect(mobilePile?.width).toBe(92);
+	expect(mobilePile?.height).toBe(128);
+	await flushAxeAudit(ana);
+	await captureScreenshot(ana, testInfo, 'exploding-02-mobile-start.png');
+	await ana.setViewportSize({ width: 1280, height: 720 });
 
 	// Ana's first draw is the planted bomb. Its package-owned defuse face gets a two-second
 	// visual beat of its own before the focus-taking depth picker opens.
@@ -67,13 +80,19 @@ test('exploding: board and the defuse picker (screenshots)', async ({ browser },
 	]);
 	await expect(ana.locator('.popup-menu[role="menu"]')).toHaveCount(0);
 	await ana.waitForTimeout(800); // capture the package defuse card halfway through its drop
-	await captureScreenshot(ana, testInfo, 'exploding-02-defusing.png');
+	await captureScreenshot(ana, testInfo, 'exploding-03-defusing.png');
 
 	await expect(ana.locator('.popup-menu[role="menu"]')).toBeVisible();
-	await captureScreenshot(ana, testInfo, 'exploding-03-defuse-picker.png');
+	await captureScreenshot(ana, testInfo, 'exploding-04-defuse-picker.png');
 
 	// Dark mode via the app's own toggle (it sets <html data-theme="dark">, not a media query).
-	await ana.locator('#theme-toggle').click();
+	if (await ana.locator('html').getAttribute('data-theme') !== 'dark') {
+		await ana.evaluate(() => {
+			document.documentElement.setAttribute('data-theme', 'dark');
+			localStorage.setItem('corro-theme', 'dark');
+		});
+	}
+	await expect(ana.locator('html')).toHaveAttribute('data-theme', 'dark');
 	await flushAxeAudit(ana);
-	await captureScreenshot(ana, testInfo, 'exploding-04-dark.png');
+	await captureScreenshot(ana, testInfo, 'exploding-05-dark.png');
 });

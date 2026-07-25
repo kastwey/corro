@@ -20,6 +20,15 @@ namespace CorroServer.Services.Rules;
 public partial class CorroRulebook : ICorroRulebook
 {
 	private readonly IRandomSource _random;
+	private static readonly BonusDieFace[] BonusDieFaces =
+	[
+		BonusDieFace.One,
+		BonusDieFace.Two,
+		BonusDieFace.Three,
+		BonusDieFace.Express,
+		BonusDieFace.Express,
+		BonusDieFace.Bus,
+	];
 
 	public CorroRulebook(IRandomSource? randomSource = null)
 	{
@@ -35,7 +44,7 @@ public partial class CorroRulebook : ICorroRulebook
 		context.Logger?.LogDebug("Rulebook: Processing dice roll for {PlayerName}", player.Name);
 
 		// 1. Roll the dice
-		var dice = RollDice();
+		var dice = RollDice(context.Settings, player);
 		LogDiceRoll(dice, context.Logger);
 
 		// The player has now rolled this turn. The turn no longer auto-advances; the
@@ -44,9 +53,15 @@ public partial class CorroRulebook : ICorroRulebook
 		context.GameState.HasRolledThisTurn = true;
 		context.GameState.MustRollAgain = false;
 
-		// Announce the dice result first, before any landing consequences the
-		// move will stream, so screen readers hear the roll before its effects.
-		await AnnounceDiceRollAsync(player, dice, context);
+		// Announce the dice result first, before any landing consequences the move will stream.
+		// A failed holding attempt is the one exception: it does not move, and its complete
+		// roll + outcome is emitted below as ONE sentence. Two back-to-back live-region writes
+		// made NVDA drop the roll and speak only "still in holding".
+		var willRemainHeld = player.IsHeld && !dice.IsDoubles && player.HoldingTurnsRemaining > 1;
+		if (!willRemainHeld)
+		{
+			await AnnounceDiceRollAsync(player, dice, context);
+		}
 
 		// 2. If in holding, apply holding rules
 		if (player.IsHeld)
@@ -54,7 +69,29 @@ public partial class CorroRulebook : ICorroRulebook
 			return await ProcessHoldingRollAsync(player, dice, context);
 		}
 
-		// 3. Normal movement
+		// White-die doubles count regardless of the bonus face. In particular, a Bus
+		// must not bypass the third-consecutive-doubles speeding rule by pausing for a
+		// destination choice first.
+		if (dice.IsDoubles)
+		{
+			context.GameState.ConsecutiveDoubles++;
+			if (context.GameState.ConsecutiveDoubles >= 3)
+			{
+				return await ProcessSpeedingToHoldingAsync(player, dice, player.Position, context);
+			}
+		}
+		else
+		{
+			context.GameState.ConsecutiveDoubles = 0;
+		}
+
+		// 3. A Bus face pauses before movement until the roller chooses one die or both.
+		if (dice.RequiresBusChoice)
+		{
+			return await SetupBusChoiceAsync(player, dice, context);
+		}
+
+		// 4. Normal movement
 		return await ProcessNormalRollAsync(player, dice, context);
 	}
 
@@ -68,6 +105,10 @@ public partial class CorroRulebook : ICorroRulebook
 		public int Die2 { get; init; }
 		public bool IsDoubles { get; init; }
 		public int StandardTotal => Die1 + Die2;
+		public BonusDieFace? BonusDie { get; init; }
+		public int BonusDieValue { get; init; }
+		public int TotalMovement { get; init; }
+		public bool RequiresBusChoice => BonusDie == BonusDieFace.Bus;
 	}
 
 	/// <inheritdoc />
@@ -76,22 +117,44 @@ public partial class CorroRulebook : ICorroRulebook
 	/// <inheritdoc />
 	public IRandomSource RandomSource => _random;
 
-	private DiceResult RollDice()
+	private DiceResult RollDice(GameSettings settings, Player player)
 	{
 		var die1 = _random.Next(1, 7);
 		var die2 = _random.Next(1, 7);
+		// The bonus die starts only after the first lap and is never thrown in holding.
+		var useBonusDie = settings.UseBonusDie && player.LapsCompleted >= 1 && !player.IsHeld;
+		BonusDieFace? bonusDie = null;
+		var bonusValue = 0;
+		if (useBonusDie)
+		{
+			bonusDie = BonusDieFaces[_random.Next(0, BonusDieFaces.Length)];
+			bonusValue = bonusDie switch
+			{
+				BonusDieFace.One => 1,
+				BonusDieFace.Two => 2,
+				BonusDieFace.Three => 3,
+				_ => 0,
+			};
+		}
 
 		return new DiceResult
 		{
 			Die1 = die1,
 			Die2 = die2,
-			IsDoubles = die1 == die2
+			IsDoubles = die1 == die2,
+			BonusDie = bonusDie,
+			BonusDieValue = bonusValue,
+			TotalMovement = die1 + die2 + bonusValue,
 		};
 	}
 
 	private static void LogDiceRoll(DiceResult dice, ILogger? logger)
 	{
 		logger?.LogDebug("Dice: {Die1} + {Die2} = {Total}, doubles={IsDoubles}", dice.Die1, dice.Die2, dice.StandardTotal, dice.IsDoubles);
+		if (dice.BonusDie is not null)
+		{
+			logger?.LogDebug("Bonus die: {Face} (value={Value})", dice.BonusDie, dice.BonusDieValue);
+		}
 	}
 
 	/// <summary>
@@ -100,14 +163,24 @@ public partial class CorroRulebook : ICorroRulebook
 	/// </summary>
 	private static Task AnnounceDiceRollAsync(Player player, DiceResult dice, GameContext context)
 	{
-		var key = dice.IsDoubles ? "game.dice_rolled_doubles" : "game.dice_rolled";
+		var key = dice.BonusDie switch
+		{
+			BonusDieFace.One or BonusDieFace.Two or BonusDieFace.Three => dice.IsDoubles
+				? "game.dice_rolled_bonus_doubles"
+				: "game.dice_rolled_bonus",
+			BonusDieFace.Express => dice.IsDoubles
+				? "game.dice_rolled_express_doubles"
+				: "game.dice_rolled_express",
+			_ => dice.IsDoubles ? "game.dice_rolled_doubles" : "game.dice_rolled",
+		};
 
 		return context.Announcer.Announce(key, new Dictionary<string, object>
 		{
 			["player"] = player.Name,
 			["die1"] = dice.Die1,
 			["die2"] = dice.Die2,
-			["total"] = dice.StandardTotal,
+			["bonus"] = dice.BonusDieValue,
+			["total"] = dice.TotalMovement,
 			["actorId"] = player.Id
 		}, AnnouncementPhase.Move);
 	}
@@ -123,23 +196,8 @@ public partial class CorroRulebook : ICorroRulebook
 	{
 		var oldPosition = player.Position;
 
-		// Official "speeding" rule: a third consecutive double sends the player straight to holding
-		// — they do NOT move and the turn is over (no re-roll). A non-double resets the run.
-		if (dice.IsDoubles)
-		{
-			context.GameState.ConsecutiveDoubles++;
-			if (context.GameState.ConsecutiveDoubles >= 3)
-			{
-				return await ProcessSpeedingToHoldingAsync(player, dice, oldPosition, context);
-			}
-		}
-		else
-		{
-			context.GameState.ConsecutiveDoubles = 0;
-		}
-
 		// Move the player
-		await MovePlayerAsync(player, dice.StandardTotal, context);
+		await MovePlayerAsync(player, dice.TotalMovement, context);
 		var newPosition = player.Position;
 
 		context.Logger?.LogDebug("Movement: {OldPosition} -> {NewPosition}", oldPosition, newPosition);
@@ -149,6 +207,23 @@ public partial class CorroRulebook : ICorroRulebook
 
 		// Resolve the square the player landed on (rent, tax, card, or a purchase offer).
 		await ProcessLandingEffectsAsync(player, newPosition, context);
+
+		// Express takes the first landing as normal, then advances to the next eligible
+		// ownable square. A purchase/auction decision defers that second move.
+		int? expressDestination = null;
+		string? expressSquareName = null;
+		if (dice.BonusDie == BonusDieFace.Express && !player.IsHeld)
+		{
+			if (context.GameState.PendingPurchase is not null || context.GameState.ActiveAuction is not null)
+			{
+				context.GameState.PendingExpressMove = new PendingExpressMove { PlayerId = player.Id };
+			}
+			else if (await ExecuteExpressMoveAsync(player, context) is { } destination)
+			{
+				expressDestination = destination.position;
+				expressSquareName = destination.square.Name;
+			}
+		}
 
 		// Analyze the resolved landing for the response.
 		var landing = AnalyzeLanding(player.Position, player.Id, context);
@@ -163,7 +238,7 @@ public partial class CorroRulebook : ICorroRulebook
 		{
 			Die1 = dice.Die1,
 			Die2 = dice.Die2,
-			Total = dice.StandardTotal,
+			Total = dice.TotalMovement,
 			IsDoubles = dice.IsDoubles,
 			FromPosition = oldPosition,
 			ToPosition = player.Position,
@@ -172,7 +247,11 @@ public partial class CorroRulebook : ICorroRulebook
 			SquareName = buySquareName,
 			SquarePrice = buyPrice,
 			CanBuySquare = canBuy,
-			CanAfford = canAfford
+			CanAfford = canAfford,
+			BonusDie = dice.BonusDie,
+			BonusDieValue = dice.BonusDieValue,
+			ExpressDestination = expressDestination,
+			ExpressSquareName = expressSquareName,
 		};
 	}
 
@@ -245,14 +324,16 @@ public partial class CorroRulebook : ICorroRulebook
 		{
 			Die1 = dice.Die1,
 			Die2 = dice.Die2,
-			Total = dice.StandardTotal,
+			Total = dice.TotalMovement,
 			IsDoubles = dice.IsDoubles,
 			FromPosition = oldPosition,
 			ToPosition = player.Position, // holding
 			NextPlayerId = null,
 			NextPlayerName = null,
 			StillHeld = true,
-			HoldingTurnsRemaining = player.HoldingTurnsRemaining
+			HoldingTurnsRemaining = player.HoldingTurnsRemaining,
+			BonusDie = dice.BonusDie,
+			BonusDieValue = dice.BonusDieValue,
 		};
 	}
 
@@ -283,7 +364,7 @@ public partial class CorroRulebook : ICorroRulebook
 		await context.Announce("game.property_available", new Dictionary<string, object>
 		{
 			["player"] = player.Name,
-			["property"] = landing.Square.Name,
+			["property"] = SquareNameVar(landing.Square),
 			["price"] = price,
 			["actorId"] = player.Id
 		});
@@ -293,7 +374,7 @@ public partial class CorroRulebook : ICorroRulebook
 			await context.Announce("game.cannot_afford_property", new Dictionary<string, object>
 			{
 				["player"] = player.Name,
-				["property"] = landing.Square.Name,
+				["property"] = SquareNameVar(landing.Square),
 				["price"] = price,
 				["actorId"] = player.Id
 			});

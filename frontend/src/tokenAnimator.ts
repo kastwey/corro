@@ -45,7 +45,7 @@ export interface TokenAnimatorOptions {
 	firstStepDelayMs?: number;
 	/**
 	 * Moves longer than this snap instantly (e.g. go-to-holding, long card teleports). A single
-	 * two-dice roll moves at most 12 squares, so the default covers every ordinary roll while
+	 * a bonus-die roll moves at most 15 squares, so the default covers every ordinary roll while
 	 * genuine long-range jumps still snap.
 	 */
 	maxAnimatedSteps?: number;
@@ -104,7 +104,7 @@ export class TokenAnimator {
 		this.render = opts.render;
 		this.stepDelayMs = opts.stepDelayMs ?? 200;
 		this.firstStepDelayMs = opts.firstStepDelayMs ?? this.stepDelayMs;
-		this.maxAnimatedSteps = opts.maxAnimatedSteps ?? 12;
+		this.maxAnimatedSteps = opts.maxAnimatedSteps ?? 15;
 		this.motionDisabled = opts.motionDisabled;
 		this.setTimer = opts.setTimer ?? ((fn, ms) => setTimeout(fn, ms));
 		this.clearTimer = opts.clearTimer ?? (h => clearTimeout(h as ReturnType<typeof setTimeout>));

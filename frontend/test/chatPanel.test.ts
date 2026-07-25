@@ -1,7 +1,7 @@
 import test, { before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { setupDom } from './helpers/dom.js';
-import { chatPanel } from '../src/chatPanel.js';
+import { ChatPanel } from '../src/chatPanel.js';
 import type { ChatMessageDto, Player } from '../src/models.js';
 
 /**
@@ -15,7 +15,9 @@ import type { ChatMessageDto, Player } from '../src/models.js';
 before(() => setupDom());
 
 const sent: string[] = [];
+const recorded: string[] = [];
 let boardFocused = 0;
+let chatPanel: ChatPanel;
 
 function players(): Player[] {
 	return [
@@ -34,20 +36,31 @@ function key(target: EventTarget, keyName: string, opts: Record<string, unknown>
 	target.dispatchEvent(new w.KeyboardEvent('keydown', { key: keyName, bubbles: true, cancelable: true, ...opts }));
 }
 
-beforeEach(() => {
-	try { (globalThis as any).window.localStorage.removeItem('corro.chatDisclaimerDismissed'); } catch {}
-	sent.length = 0;
-	boardFocused = 0;
+function initializePanel(): void {
 	document.getElementById('chat-panel')?.remove();
 	document.getElementById('chat-log')?.remove();
-	(chatPanel as any).dialog = null; // fresh element per test (the singleton caches it)
-	chatPanel.init({
+	document.getElementById('chat-notification')?.remove();
+	document.getElementById('chat-test-controls')?.remove();
+	const controls = document.createElement('div');
+	controls.id = 'chat-test-controls';
+	document.body.appendChild(controls);
+	chatPanel = new ChatPanel();
+	chatPanel.init(controls, {
 		t: (k: string) => k,
 		getPlayers: players,
 		getMyPlayerId: () => 'me',
 		send: async text => { sent.push(text); },
 		focusBoard: () => { boardFocused++; },
+		recordHistory: text => recorded.push(text),
 	});
+}
+
+beforeEach(() => {
+	try { (globalThis as any).window.localStorage.removeItem('corro.chatDisclaimerDismissed'); } catch {}
+	sent.length = 0;
+	recorded.length = 0;
+	boardFocused = 0;
+	initializePanel();
 	chatPanel.openPanel();
 	// Most tests start AT the compose box: acknowledge the first-contact notice (session
 	// only — the persistence key was cleared above). Banner-focused tests rebuild fresh.
@@ -56,16 +69,7 @@ beforeEach(() => {
 
 /** Rebuilds a pristine panel (as a fresh page would) WITHOUT acknowledging the banner. */
 function rebuildFresh(): void {
-	document.getElementById('chat-panel')?.remove();
-	document.getElementById('chat-log')?.remove();
-	(chatPanel as any).dialog = null;
-	chatPanel.init({
-		t: (k: string) => k,
-		getPlayers: players,
-		getMyPlayerId: () => 'me',
-		send: async text => { sent.push(text); },
-		focusBoard: () => { boardFocused++; },
-	});
+	initializePanel();
 	chatPanel.openPanel();
 }
 
@@ -93,6 +97,31 @@ test('opening focuses the compose box; Enter sends and clears; Shift+Enter does 
 	assert.deepEqual(sent, ['hola a todos'], 'Shift+Enter is a line break, not a send');
 });
 
+test('the visual chat button exposes and toggles the panel, then restores focus', () => {
+	chatPanel.closePanel();
+	const button = document.getElementById('chat-toggle') as HTMLButtonElement;
+	assert.ok(button, 'the header control is always rendered');
+	assert.ok(button.querySelector('svg'), 'a visible speech-bubble icon identifies text chat');
+	assert.equal(button.getAttribute('aria-controls'), 'chat-panel');
+	assert.equal(button.getAttribute('aria-haspopup'), null, 'chat is a panel, not a dialog popup');
+	assert.equal(button.getAttribute('aria-keyshortcuts'), 'Control+Shift+H');
+	assert.equal(button.getAttribute('aria-expanded'), 'false');
+	assert.equal(button.getAttribute('aria-label'), 'game.chat_open');
+
+	button.focus();
+	button.click();
+	assert.equal(chatPanel.isOpen(), true);
+	assert.equal(button.getAttribute('aria-expanded'), 'true');
+	assert.equal(button.getAttribute('aria-label'), 'game.chat_close');
+	assert.equal(document.activeElement, input(), 'the acknowledged panel opens ready to type');
+
+	button.focus();
+	button.click();
+	assert.equal(chatPanel.isOpen(), false);
+	assert.equal(button.getAttribute('aria-expanded'), 'false');
+	assert.equal(document.activeElement, button, 'closing returns focus to the visual opener');
+});
+
 test('focusInput with the panel CLOSED opens it (Ctrl+Shift+R needs no Ctrl+Shift+H first)', () => {
 	chatPanel.closePanel();
 	assert.equal(chatPanel.isOpen(), false);
@@ -107,6 +136,40 @@ test('messages land in the list AND the persistent role="log" region', () => {
 	assert.equal(list().querySelector('li')!.textContent, 'Berto: buenas');
 	assert.equal(log().getAttribute('role'), 'log');
 	assert.match(log().textContent!, /Berto: buenas/);
+	assert.deepEqual(recorded, ['Berto: buenas'], 'the same line is reviewable in global history');
+});
+
+test('persisted chat history is added to global review once without live re-announcement', () => {
+	const old = msg({ id: 'old', playerName: 'Ana', text: 'mensaje guardado' });
+	chatPanel.setHistory([old]);
+	chatPanel.setHistory([old]); // reconnect snapshot: must not duplicate global history
+	assert.deepEqual(recorded, ['Ana: mensaje guardado']);
+	assert.equal(log().textContent, '', 'history hydration is not spoken as a burst of new chat');
+});
+
+test('an incoming message while closed shows an actionable unread notification', () => {
+	chatPanel.closePanel();
+	const opener = document.createElement('button');
+	document.body.appendChild(opener);
+	opener.focus();
+
+	chatPanel.addMessage(msg({ playerName: 'Berto', text: 'buenas' }));
+
+	const notification = document.getElementById('chat-notification') as HTMLButtonElement;
+	const toggle = document.getElementById('chat-toggle') as HTMLButtonElement;
+	assert.equal(notification.hidden, false);
+	assert.equal(notification.textContent, 'game.chat_new_message');
+	assert.equal(document.activeElement, opener, 'incoming chat never steals focus');
+	assert.equal(toggle.querySelector('.chat-toggle__badge')!.textContent, '1');
+	assert.equal(toggle.getAttribute('aria-label'), 'game.chat_open_unread');
+
+	notification.click();
+	assert.equal(chatPanel.isOpen(), true);
+	assert.equal(notification.hidden, true);
+	assert.equal(document.activeElement, input(), 'activating the notification opens chat ready to type');
+	chatPanel.closePanel();
+	assert.equal(boardFocused, 1, 'a hidden notification is not used as the return-focus target');
+	opener.remove();
 });
 
 test('end-glue: the roving item follows new messages only while parked at the end', () => {
@@ -208,10 +271,11 @@ test(`"don't show again" persists: the next panel never shows the banner`, () =>
 });
 
 
-test('application-mode semantics live on a named inner surface, not the native dialog', () => {
-	const dialog = document.getElementById('chat-panel')!;
-	assert.equal(dialog.getAttribute('role'), null, 'the native dialog keeps valid implicit semantics');
-	const application = dialog.querySelector('.chat-application')!;
+test('application-mode semantics live on a named inner surface, with no dialog root', () => {
+	const panel = document.getElementById('chat-panel')!;
+	assert.equal(panel.tagName, 'DIV');
+	assert.equal(panel.getAttribute('role'), null, 'ordinary content inside main, never a dialog landmark');
+	const application = panel.querySelector('.chat-application')!;
 	assert.equal(application.getAttribute('role'), 'application', 'NVDA focus mode / JAWS PC cursor inside');
 	assert.equal(application.getAttribute('aria-labelledby'), 'chat-panel-title');
 	assert.equal(list().getAttribute('role'), 'list');

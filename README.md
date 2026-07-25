@@ -295,15 +295,18 @@ including Apple Silicon). Pick the level you want.
 The public site identity is deployment configuration, not an engine fork. Edit the
 `SiteBranding` section in `server/appsettings.json`, or override individual values with
 standard ASP.NET Core environment variables such as `SiteBranding__Title` and
-`SiteBranding__Tagline`. The included defaults are **All Welcome** and
-**Play together, play your way.**
+`SiteBranding__Taglines__en` / `SiteBranding__Taglines__es`. The included defaults are
+**All Welcome**, **Play together, play your way.** and
+**Juega en compañía, juega a tu manera.** `SiteBranding__Tagline` remains an optional
+single value that takes precedence in every language; set it to an empty string to hide the
+line entirely.
 
-`LogoUrl` and `LogoDarkUrl` are optional. With neither set, the lobby renders the title as
-text; with one set, that image is used in both themes; with both set, the active theme chooses
-the appropriate image. `FaviconUrl` and `FaviconDarkUrl` follow the same rule. Asset values may
-be same-site paths or HTTPS URLs. The engine attribution is deliberately separate from host
-branding: every deployment retains **Powered by Corro**, with **Corro** linking directly to the
-source repository.
+The default `LogoUrl` / `LogoDarkUrl` and favicon pair provide All Welcome artwork for both
+themes. A host can replace them with same-site paths or HTTPS URLs. With one logo set, that
+image is used in both themes; with neither set, the lobby renders the configured title as text.
+`FaviconUrl` and `FaviconDarkUrl` follow the same rule. The engine attribution is deliberately
+separate from host branding: every deployment retains **Powered by Corro**, with **Corro**
+linking directly to the source repository.
 
 ### Level 0 — Just run it (no Docker, no Azure)
 
@@ -389,11 +392,12 @@ engine treats both identically.
 
 The format is designed for **game families**: every package declares a `gameType`, and
 each family plugs its own rulebook and board topology under the same package envelope.
-This engine version implements nine: `property` (roll-and-move property trading),
+This engine version implements ten: `property` (roll-and-move property trading),
 `race` (cross-and-circle races), `track` (shared-path race games), `journey`
 (distance-and-hazard card games), `assembly` (set-building card games), `draft`
 (simultaneous card drafting), `shedding` (match-and-discard card games), `exploding`
-(push-your-luck elimination card games), and `trivia` (category quiz games). See
+(push-your-luck elimination card games), `trivia` (category quiz games), and `forbidden`
+(two-team spoken clue games with private role cards and an authoritative clock). See
 [`CORRO_FORMAT.md`](CORRO_FORMAT.md)
 for the package specification and [`CONTRIBUTING.md`](CONTRIBUTING.md) for the rules on
 which games can be bundled into this repository (original or freely licensed content

@@ -20,6 +20,8 @@ export class DiceRolledHandler implements ICommandHandler {
 			die1: data.die1,
 			die2: data.die2,
 			isDoubles: data.isDoubles,
+			bonusDie: data.bonusDie ?? undefined,
+			bonusDieValue: data.bonusDieValue ?? undefined,
 			isMe
 		});
 
@@ -33,6 +35,9 @@ export class DiceRolledHandler implements ICommandHandler {
 			}, 500);
 			return;
 		}
+
+		// The authoritative state opens the reconnect-safe Bus choice. No token moves yet.
+		if (data.requiresBusChoice) return;
 
 		// STEP 2: If it's me, drive the visuals. The server narrates the dice
 		// result and the landing/purchase availability.

@@ -20,7 +20,7 @@ import { teamDisplayName } from './enginePalette.js';
 import { tokenIconHtml } from './tokenIcons.js';
 import { HandPanel, type HandCard } from './handPanel.js';
 import {
-	journeyCardArtHtml, journeyCardBackHtml, journeyHazardIconSvg, journeyShieldIconSvg,
+	journeyCardArtHtml, journeyCardBackHtml, journeyHazardIconHtml, journeyShieldIconHtml,
 } from './journeyCardArt.js';
 import { popupMenu } from './popupMenu.js';
 import { dialogManager } from './dialogManager.js';
@@ -83,7 +83,7 @@ function hazardCardOf(kind: string, catalog: Map<string, JourneyCardDef>): Journ
  * unknown/missing art receives the neutral warning. No package-defined kind is hardcoded. */
 function hazardIconOf(kind: string, catalog: Map<string, JourneyCardDef>): string {
 	const card = hazardCardOf(kind, catalog);
-	return journeyHazardIconSvg(card?.svg, card?.artColor);
+	return journeyHazardIconHtml(card);
 }
 
 /** A SHARED seat's spoken identity ("Red team" — its palette colour word, the same
@@ -539,7 +539,7 @@ export class JourneyBoard {
 			const immunityIcons = seat.immunities
 				.map(id => {
 					const card = catalog.get(id);
-					return `<span class="journey-dash__icon journey-dash__icon--shield">${journeyShieldIconSvg(card?.svg, card?.artColor)}</span>`;
+					return `<span class="journey-dash__icon journey-dash__icon--shield">${journeyShieldIconHtml(card)}</span>`;
 				})
 				.join('');
 			const score = this.deps.tSync('game.journey_status_score', {

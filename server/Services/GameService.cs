@@ -214,7 +214,8 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 				Logger = _logger,
 				// Lets card effects (e.g. "go back 3 spaces") trigger landing effects
 				// without a rulebook ↔ card dependency cycle.
-				ProcessLanding = (p, idx, ctx) => _rulebook.ProcessLandingEffectsAsync(p, idx, ctx)
+				ProcessLanding = (p, idx, ctx) => _rulebook.ProcessLandingEffectsAsync(p, idx, ctx),
+				ResolveDeferredExpressMove = ctx => _rulebook.ResolveDeferredExpressMoveAsync(ctx)
 			};
 
 			// Dispatch command to appropriate handler

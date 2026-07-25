@@ -18,6 +18,7 @@ public class GameFamiliesTests
 	[InlineData("track", typeof(TrackFamily))]
 	[InlineData("journey", typeof(JourneyFamily))]
 	[InlineData("exploding", typeof(ExplodingFamily))]
+	[InlineData("forbidden", typeof(ForbiddenFamily))]
 	[InlineData("Race", typeof(RaceFamily))] // manifest gameType is case-insensitive, like before
 	public void For_resolves_each_family(string gameType, System.Type expected)
 		=> Assert.IsType(expected, GameFamilies.For(gameType));
@@ -34,7 +35,7 @@ public class GameFamiliesTests
 	[Fact]
 	public void Supported_types_list_the_registered_families_in_order()
 		// The validator's "supported: …" message uses this order — keep it stable.
-		=> Assert.Equal(new[] { "property", "race", "track", "journey", "assembly", "draft", "shedding", "exploding", "trivia" }, GameFamilies.SupportedTypes);
+		=> Assert.Equal(new[] { "property", "race", "track", "journey", "assembly", "draft", "shedding", "exploding", "trivia", "forbidden" }, GameFamilies.SupportedTypes);
 
 	[Theory]
 	[InlineData("property", true)]

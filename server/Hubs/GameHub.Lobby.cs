@@ -64,8 +64,17 @@ public partial class GameHub
 				await Clients.Caller.SendAsync("Error", "INVALID_LOBBY_REQUEST");
 				return;
 			}
+			var stagedDefinition = request.PackageToken is { } stagedToken
+				? _packageStore.GetDefinition(stagedToken)
+				: null;
+			if (stagedDefinition?.Manifest.GameType == "forbidden"
+				&& (request.TeamCount != 2 || request.MaxPlayers is < 4 or > 8 || request.MaxPlayers % 2 != 0))
+			{
+				await Clients.Caller.SendAsync("Error", "BAD_TEAM_COUNT");
+				return;
+			}
 
-			// Journey team mode: the count must produce at least two EQUAL teams of at least
+			// Team mode: the count must produce at least two EQUAL teams of at least
 			// two players out of the (now exact) player count.
 			if (request.TeamCount is { } teamCount && teamCount != 0
 				&& (teamCount < 2 || request.MaxPlayers % teamCount != 0 || request.MaxPlayers / teamCount < 2))
@@ -372,7 +381,7 @@ public partial class GameHub
 			maxPlayers = game.MaxPlayers,
 			board = game.Board,
 			packageToken = game.PackageToken,
-			teamCount = game.TeamCount, // journey team mode; null = individual play
+			teamCount = game.TeamCount, // null = individual play
 			tokens = definition?.Manifest.Tokens, // the board's player pieces; null => client uses the 8 built-ins
 												  // A race board's seats (squadron colours) so the joiner can pick one; null otherwise.
 			seats = definition?.RaceBoard?.Seats
@@ -513,7 +522,7 @@ public partial class GameHub
 	}
 
 	/// <summary>
-	/// Journey team mode: the HOST places a player in a team (or back in the pool with a null
+	/// Team mode: the HOST places a player in a team (or back in the pool with a null
 	/// team). The whole room watches: the updated document broadcasts as usual, plus a
 	/// TeamAssigned event so clients announce the move ("Berto joins the Red team").
 	/// </summary>
@@ -655,20 +664,26 @@ public partial class GameHub
 				return;
 			}
 
-			// Journey team mode: the table must be FULL and everyone placed in a team by the
+			// Team mode: the table must be FULL and everyone placed in a team by the
 			// host (equal sizes hold by construction: the count divides the exact player count).
-			List<List<string>>? journeyTeams = null;
+			List<List<string>>? arrangedTeams = null;
 			if (game.TeamCount is { } teamCount && teamCount >= 2)
 			{
 				var teamSize = game.MaxPlayers / teamCount;
-				journeyTeams = Enumerable.Range(0, teamCount)
+				arrangedTeams = Enumerable.Range(0, teamCount)
 					.Select(t => game.Players.Where(p => p.TeamIndex == t).Select(p => p.Id).ToList())
 					.ToList();
-				if (game.Players.Count != game.MaxPlayers || journeyTeams.Any(t => t.Count != teamSize))
+				if (game.Players.Count != game.MaxPlayers || arrangedTeams.Any(t => t.Count != teamSize))
 				{
 					await Clients.Caller.SendAsync("Error", "TEAMS_INCOMPLETE");
 					return;
 				}
+			}
+			if (definition.Manifest.GameType == "forbidden"
+				&& (game.TeamCount != 2 || arrangedTeams is not { Count: 2 }))
+			{
+				await Clients.Caller.SendAsync("Error", "TEAMS_INCOMPLETE");
+				return;
 			}
 
 			// The effective settings: the host's chosen house-rule values (RuleValues) applied over the
@@ -679,7 +694,7 @@ public partial class GameHub
 				raceTeams: game.RaceTeams,
 				// Families whose rules live outside GameSettings (journey) apply these themselves.
 				ruleValues: game.RuleValues,
-				teams: journeyTeams);
+				teams: arrangedTeams);
 			if (gameService.GameState is { } packageState)
 			{
 				packageState.PackageToken = packageToken; // released on game over; the client's sound pack id

@@ -417,6 +417,50 @@ class DialogManagerClass {
 		});
 	}
 
+	/** Floating, reconnect-safe choice after the optional bonus die shows Bus. */
+	showBusChoice(options: {
+		die1: number;
+		die2: number;
+		both: number;
+		square1: string;
+		square2: string;
+		squareBoth: string;
+		onChoice: (choice: 'die1' | 'die2' | 'both') => void | Promise<void>;
+	}): void {
+		const choose = (choice: 'die1' | 'die2' | 'both') => {
+			this.closeNonModal();
+			document.getElementById('board')?.focus();
+			void options.onChoice(choice);
+		};
+		this.show({
+			title: tSync('game.bus_title'),
+			className: 'dialog-bus-choice',
+			modal: false,
+			plainButtons: true,
+			buttons: [
+				{
+					label: String(options.die1),
+					i18nKey: 'game.bus_use_die1',
+					i18nVars: { value: options.die1, square: options.square1 },
+					action: () => choose('die1'),
+				},
+				{
+					label: String(options.die2),
+					i18nKey: 'game.bus_use_die2',
+					i18nVars: { value: options.die2, square: options.square2 },
+					action: () => choose('die2'),
+				},
+				{
+					label: String(options.both),
+					i18nKey: 'game.bus_use_both',
+					i18nVars: { value: options.both, square: options.squareBoth },
+					variant: 'primary',
+					action: () => choose('both'),
+				},
+			],
+		});
+	}
+
 	/**
 	 * Generic confirmation dialog
 	 */

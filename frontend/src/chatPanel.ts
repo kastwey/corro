@@ -8,9 +8,9 @@
 //     when the roving item IS the last one, new messages keep it glued to the end — but a
 //     reader parked mid-history is never yanked away).
 //
-// Voicing goes through a PERSISTENT role="log" region in <body> (not the list): a live
-// region inside a closed <dialog> is not rendered and says nothing, so the log must live
-// outside the panel for messages to be spoken while it is closed or collapsed.
+// Voicing goes through a PERSISTENT role="log" region outside the hidden panel (not the
+// list), so messages are spoken while chat is closed. The panel and log both live inside
+// the page's main landmark; chat is deliberately not a dialog or a Ctrl+D destination.
 //
 // The @mention autocomplete moves REAL focus into a floating option list (as requested —
 // no aria-activedescendant): ↑/↓ walk it, typing keeps inserting into the textarea and
@@ -30,6 +30,10 @@ export interface ChatPanelDeps {
 	send: (text: string) => Promise<void>;
 	/** Hands focus back to the board (Escape from the compose box). */
 	focusBoard: () => void;
+	/** Close another floating utility (currently voice chat) before text chat opens. */
+	beforeOpen?: () => void;
+	/** Store the rendered line in the global announcement history without speaking it twice. */
+	recordHistory?: (text: string) => void;
 }
 
 const DISCLAIMER_KEY = 'corro.chatDisclaimerDismissed';
@@ -45,24 +49,31 @@ function persistDisclaimerDismissed(): void {
 const LOG_CAP = 50;      // spoken-log children kept around (screen readers only need recent)
 const LIST_CAP = 200;    // rendered history (mirrors the server cap)
 
-class ChatPanel {
+export class ChatPanel {
 	private deps: ChatPanelDeps | null = null;
-	private dialog: HTMLDialogElement | null = null;
+	private toggleButton: HTMLButtonElement | null = null;
+	private panel: HTMLElement | null = null;
+	private notificationButton: HTMLButtonElement | null = null;
 	private list: HTMLUListElement | null = null;
 	private input: HTMLTextAreaElement | null = null;
 	private sendBtn: HTMLButtonElement | null = null;
 	private mentionList: HTMLUListElement | null = null;
 	private logRegion: HTMLElement | null = null;
+	private returnFocus: HTMLElement | null = null;
 	private rovingIndex = -1;
 	private mentionOptions: Player[] = [];
 	private mentionActive = 0;
+	private unreadCount = 0;
+	private recordedMessageIds = new Set<string>();
 	/** Start offset of the "@token" being completed in the textarea, or -1 when closed. */
 	private mentionStart = -1;
 
-	init(deps: ChatPanelDeps): void {
+	init(controlsMount: HTMLElement, deps: ChatPanelDeps): void {
 		this.deps = deps;
-		if (this.dialog) return;
+		if (this.panel) return;
 		const t = deps.t;
+		this.createToggleButton(controlsMount);
+		const host = document.querySelector('main') ?? document.body;
 
 		// The spoken channel lives in <body> so it announces with the panel closed too.
 		const log = document.createElement('div');
@@ -70,14 +81,17 @@ class ChatPanel {
 		log.setAttribute('role', 'log');
 		log.setAttribute('aria-label', t('game.chat_title'));
 		log.className = 'visually-hidden';
-		document.body.appendChild(log);
+		host.appendChild(log);
 		this.logRegion = log;
 
-		const dialog = document.createElement('dialog');
-		dialog.id = 'chat-panel';
-		dialog.className = 'game-dialog chat-panel';
-		dialog.dataset.modal = 'false';
-		dialog.innerHTML = `
+		// Chat is a persistent utility PANEL, not a dialog or a board choice. A native
+		// <dialog> made screen readers announce "dialog, Chat" and implied Ctrl+D would
+		// reach it. Keep application semantics on the named INNER surface instead.
+		const panel = document.createElement('div');
+		panel.id = 'chat-panel';
+		panel.className = 'game-dialog chat-panel';
+		panel.hidden = true;
+		panel.innerHTML = `
 			<div class="chat-application" role="application" aria-labelledby="chat-panel-title">
 				<h2 class="dialog-title" id="chat-panel-title"></h2>
 				<div class="chat-disclaimer" id="chat-panel-disclaimer" hidden>
@@ -96,35 +110,34 @@ class ChatPanel {
 				<ul class="chat-mention-list hidden" id="chat-mention-list" role="listbox"></ul>
 			</div>
 		`;
-		dialog.setAttribute('aria-labelledby', 'chat-panel-title');
 		// Deliberately NO aria-describedby: a description is re-announced on EVERY entry,
 		// and the unencrypted-messages notice only needs saying once. It lives below as a
 		// dismissible banner instead ("don't show again" persisted client-side).
-		document.body.appendChild(dialog);
-		makeDialogDraggable(dialog);
-		this.dialog = dialog;
+		host.appendChild(panel);
+		makeDialogDraggable(panel);
+		this.panel = panel;
 
-		dialog.querySelector('#chat-panel-title')!.textContent = t('game.chat_title');
-		const banner = dialog.querySelector<HTMLElement>('#chat-panel-disclaimer')!;
-		dialog.querySelector('#chat-disclaimer-text')!.textContent = t('game.chat_disclaimer');
-		dialog.querySelector('#chat-disclaimer-dontshow-label')!.textContent = t('game.chat_disclaimer_dontshow');
-		const dismissBtn = dialog.querySelector<HTMLButtonElement>('#chat-disclaimer-dismiss')!;
+		panel.querySelector('#chat-panel-title')!.textContent = t('game.chat_title');
+		const banner = panel.querySelector<HTMLElement>('#chat-panel-disclaimer')!;
+		panel.querySelector('#chat-disclaimer-text')!.textContent = t('game.chat_disclaimer');
+		panel.querySelector('#chat-disclaimer-dontshow-label')!.textContent = t('game.chat_disclaimer_dontshow');
+		const dismissBtn = panel.querySelector<HTMLButtonElement>('#chat-disclaimer-dismiss')!;
 		dismissBtn.textContent = t('game.chat_disclaimer_dismiss');
 		if (!disclaimerDismissed()) banner.hidden = false;
 		dismissBtn.addEventListener('click', () => {
 			banner.hidden = true;
-			const dontShow = dialog.querySelector<HTMLInputElement>('#chat-disclaimer-dontshow')!;
+			const dontShow = panel.querySelector<HTMLInputElement>('#chat-disclaimer-dontshow')!;
 			if (dontShow.checked) persistDisclaimerDismissed();
 			this.input?.focus();
 		});
 
-		this.list = dialog.querySelector<HTMLUListElement>('#chat-messages')!;
+		this.list = panel.querySelector<HTMLUListElement>('#chat-messages')!;
 		this.list.setAttribute('aria-label', t('game.chat_messages_label'));
-		this.input = dialog.querySelector<HTMLTextAreaElement>('#chat-input')!;
+		this.input = panel.querySelector<HTMLTextAreaElement>('#chat-input')!;
 		this.input.setAttribute('aria-label', t('game.chat_input_label'));
-		this.sendBtn = dialog.querySelector<HTMLButtonElement>('#chat-send')!;
+		this.sendBtn = panel.querySelector<HTMLButtonElement>('#chat-send')!;
 		this.sendBtn.textContent = t('game.chat_send');
-		this.mentionList = dialog.querySelector<HTMLUListElement>('#chat-mention-list')!;
+		this.mentionList = panel.querySelector<HTMLUListElement>('#chat-mention-list')!;
 		this.mentionList.setAttribute('aria-label', t('game.chat_mention_label'));
 
 		this.sendBtn.addEventListener('click', () => void this.sendCurrent());
@@ -132,22 +145,52 @@ class ChatPanel {
 		this.input.addEventListener('input', () => this.refreshMentions());
 		this.list.addEventListener('keydown', e => this.onListKeydown(e));
 		this.mentionList.addEventListener('keydown', e => this.onMentionKeydown(e));
+
+		const notification = document.createElement('button');
+		notification.type = 'button';
+		notification.id = 'chat-notification';
+		notification.className = 'chat-notification';
+		notification.hidden = true;
+		notification.addEventListener('click', () => this.openPanel());
+		host.appendChild(notification);
+		this.notificationButton = notification;
 	}
 
-	isOpen(): boolean { return !!this.dialog?.open; }
+	private createToggleButton(mount: HTMLElement): void {
+		const button = document.createElement('button');
+		button.type = 'button';
+		button.id = 'chat-toggle';
+		button.className = 'icon-btn chat-toggle';
+		button.setAttribute('aria-controls', 'chat-panel');
+		button.setAttribute('aria-keyshortcuts', 'Control+Shift+H');
+		button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg><span class="chat-toggle__badge" hidden></span>';
+		button.addEventListener('click', () => this.toggle());
+		mount.appendChild(button);
+		this.toggleButton = button;
+		this.syncToggleButton();
+	}
+
+	isOpen(): boolean { return !!this.panel && !this.panel.hidden; }
 
 	toggle(): void {
 		if (this.isOpen()) this.closePanel(); else this.openPanel();
 	}
 
 	openPanel(): void {
-		if (!this.dialog) return;
-		if (!this.dialog.open) this.dialog.show();
+		if (!this.panel) return;
+		if (!this.isOpen()) {
+			const active = document.activeElement;
+			this.returnFocus = active instanceof HTMLElement && active !== document.body ? active : null;
+			this.deps?.beforeOpen?.();
+			this.panel.hidden = false;
+		}
+		this.clearUnread();
+		this.syncToggleButton();
 		// First contact: land ON the unencrypted-messages notice so the player actually
 		// hears it (it is a focusable stop). Once dismissed, opening goes straight to the
 		// compose box, and dismissing itself hands focus there too.
-		const banner = this.dialog.querySelector<HTMLElement>('#chat-panel-disclaimer');
-		const notice = this.dialog.querySelector<HTMLElement>('#chat-disclaimer-text');
+		const banner = this.panel.querySelector<HTMLElement>('#chat-panel-disclaimer');
+		const notice = this.panel.querySelector<HTMLElement>('#chat-disclaimer-text');
 		if (banner && !banner.hidden && notice) {
 			notice.focus();
 			return;
@@ -157,8 +200,34 @@ class ChatPanel {
 
 	closePanel(): void {
 		this.closeMentions();
-		if (this.dialog?.open) this.dialog.close();
-		this.deps?.focusBoard();
+		if (this.panel && !this.panel.hidden) {
+			this.panel.hidden = true;
+			// Reuse the draggable helper's close cleanup without requiring dialog semantics.
+			const EventCtor = this.panel.ownerDocument.defaultView?.Event;
+			if (EventCtor) this.panel.dispatchEvent(new EventCtor('close'));
+		}
+		this.syncToggleButton();
+		const target = this.returnFocus;
+		this.returnFocus = null;
+		if (target?.isConnected && !target.hasAttribute('hidden') && !this.panel?.contains(target)) target.focus();
+		else this.deps?.focusBoard();
+	}
+
+	private syncToggleButton(): void {
+		if (!this.toggleButton || !this.deps) return;
+		const open = this.isOpen();
+		this.toggleButton.setAttribute('aria-expanded', String(open));
+		const label = this.deps.t(open
+			? 'game.chat_close'
+			: this.unreadCount > 0 ? 'game.chat_open_unread' : 'game.chat_open',
+			{ count: this.unreadCount });
+		this.toggleButton.setAttribute('aria-label', label);
+		this.toggleButton.title = label;
+		const badge = this.toggleButton.querySelector<HTMLElement>('.chat-toggle__badge');
+		if (badge) {
+			badge.hidden = this.unreadCount === 0;
+			badge.textContent = this.unreadCount > 9 ? '9+' : String(this.unreadCount);
+		}
 	}
 
 	/** Ctrl+Shift+R: jump straight to the compose box, OPENING the panel first if it is
@@ -180,7 +249,10 @@ class ChatPanel {
 		if (!this.list) return;
 		this.list.innerHTML = '';
 		this.rovingIndex = -1;
-		for (const m of messages.slice(-LIST_CAP)) this.appendItem(m, false);
+		for (const message of messages.slice(-LIST_CAP)) {
+			this.appendItem(message, false);
+			this.recordHistory(message);
+		}
 	}
 
 	addMessage(message: ChatMessageDto): void {
@@ -190,7 +262,34 @@ class ChatPanel {
 		// Spoken channel + earcons. My own send is voiced too (the reader confirms what
 		// went out); distinct cues tell send and receive apart without words.
 		this.speak(message);
+		this.recordHistory(message);
 		soundEvents.playEvent(mine ? 'message.send' : 'message.receive');
+		if (!mine && !this.isOpen()) this.showUnread(message.playerName);
+	}
+
+	private showUnread(playerName: string): void {
+		this.unreadCount++;
+		if (this.notificationButton && this.deps) {
+			const text = this.deps.t('game.chat_new_message', {
+				player: playerName,
+				count: this.unreadCount,
+			});
+			this.notificationButton.textContent = text;
+			this.notificationButton.setAttribute('aria-label', text);
+			this.notificationButton.hidden = false;
+		}
+		this.syncToggleButton();
+	}
+
+	private clearUnread(): void {
+		this.unreadCount = 0;
+		if (this.notificationButton) this.notificationButton.hidden = true;
+	}
+
+	private recordHistory(message: ChatMessageDto): void {
+		if (!this.deps?.recordHistory || this.recordedMessageIds.has(message.id)) return;
+		this.recordedMessageIds.add(message.id);
+		this.deps.recordHistory(`${message.playerName}: ${message.text}`);
 	}
 
 	private appendItem(message: ChatMessageDto, live: boolean): void {

@@ -1,3 +1,5 @@
+using System.Buffers.Binary;
+using System.IO.Compression;
 using CorroServer.Models.Corro;
 using CorroServer.Services.Corro;
 using Xunit;
@@ -173,6 +175,134 @@ public class CorroPackageLoaderTests
 	}
 
 	[Fact]
+	public async Task LoadAsync_rejects_inline_png_and_points_to_the_file_convention()
+	{
+		var dir = CopyPackage("the-mine");
+		try
+		{
+			var cardsPath = Path.Combine(dir, "cards.json");
+			var cards = File.ReadAllText(cardsPath).Replace(
+				"\"nameKey\": \"cards.firedamp\"",
+				"\"png\": \"data:image/png;base64,evil\", \"nameKey\": \"cards.firedamp\"",
+				StringComparison.Ordinal);
+			File.WriteAllText(cardsPath, cards);
+
+			var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+				() => new CorroPackageLoader().LoadAsync(dir));
+			Assert.Contains("remove the png field", ex.Message);
+			Assert.Contains("assets/cards/firedamp.svg or .png", ex.Message);
+		}
+		finally
+		{
+			CorroPackageLoader.DeleteExtracted(dir);
+		}
+	}
+
+	[Fact]
+	public async Task LoadAsync_accepts_a_strict_256_square_rgba_png_without_embedding_it()
+	{
+		var dir = CopyPackage("the-mine");
+		try
+		{
+			var cardsDir = Path.Combine(dir, "assets", "cards");
+			File.Delete(Path.Combine(cardsDir, "firedamp.svg"));
+			WritePng(Path.Combine(cardsDir, "firedamp.png"), 256, 256, colorType: 6);
+
+			var definition = await new CorroPackageLoader().LoadAsync(dir);
+			var card = Assert.Single(definition.ExplodingDeck!, card => card.Id == "firedamp");
+			Assert.True(card.HasPngArt);
+			Assert.Null(card.Svg); // binary bytes stay at the staged endpoint, never in Cosmos/state
+		}
+		finally
+		{
+			CorroPackageLoader.DeleteExtracted(dir);
+		}
+	}
+
+	[Fact]
+	public async Task LoadAsync_rejects_png_with_wrong_dimensions()
+	{
+		var dir = CopyPackage("the-mine");
+		try
+		{
+			var cardsDir = Path.Combine(dir, "assets", "cards");
+			File.Delete(Path.Combine(cardsDir, "firedamp.svg"));
+			WritePng(Path.Combine(cardsDir, "firedamp.png"), 128, 256, colorType: 6);
+
+			var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+				() => new CorroPackageLoader().LoadAsync(dir));
+			Assert.Contains("exactly 256×256", ex.Message);
+		}
+		finally
+		{
+			CorroPackageLoader.DeleteExtracted(dir);
+		}
+	}
+
+	[Fact]
+	public async Task LoadAsync_rejects_animated_or_metadata_bearing_png()
+	{
+		var dir = CopyPackage("the-mine");
+		try
+		{
+			var cardsDir = Path.Combine(dir, "assets", "cards");
+			File.Delete(Path.Combine(cardsDir, "firedamp.svg"));
+			WritePng(Path.Combine(cardsDir, "firedamp.png"), 256, 256, colorType: 6,
+				extraChunk: ("acTL", new byte[8]));
+
+			var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+				() => new CorroPackageLoader().LoadAsync(dir));
+			Assert.Contains("unsupported PNG chunk 'acTL'", ex.Message);
+		}
+		finally
+		{
+			CorroPackageLoader.DeleteExtracted(dir);
+		}
+	}
+
+	[Fact]
+	public async Task LoadAsync_rejects_both_svg_and_png_for_one_card()
+	{
+		var dir = CopyPackage("the-mine");
+		try
+		{
+			WritePng(Path.Combine(dir, "assets", "cards", "firedamp.png"), 256, 256, colorType: 2);
+			var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+				() => new CorroPackageLoader().LoadAsync(dir));
+			Assert.Contains("either .svg or .png, not both", ex.Message);
+		}
+		finally
+		{
+			CorroPackageLoader.DeleteExtracted(dir);
+		}
+	}
+
+	[Fact]
+	public async Task LoadAsync_rejects_png_with_trailing_payload()
+	{
+		var dir = CopyPackage("the-mine");
+		try
+		{
+			var cardsDir = Path.Combine(dir, "assets", "cards");
+			File.Delete(Path.Combine(cardsDir, "firedamp.svg"));
+			var path = Path.Combine(cardsDir, "firedamp.png");
+			WritePng(path, 256, 256, colorType: 6);
+			using (var append = new FileStream(path, FileMode.Append, FileAccess.Write))
+			{
+				append.Write([1, 2, 3]);
+			}
+
+			var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+				() => new CorroPackageLoader().LoadAsync(dir));
+			Assert.Contains("trailing", ex.Message);
+		}
+		finally
+		{
+			CorroPackageLoader.DeleteExtracted(dir);
+		}
+	}
+
+	[Fact]
 	public async Task LoadAsync_rejects_an_unsafe_card_art_color()
 	{
 		var dir = CopyPackage("the-mine");
@@ -211,7 +341,7 @@ public class CorroPackageLoaderTests
 		Assert.Equal(expectedCards, cards.Count);
 		Assert.All(cards, card =>
 		{
-			Assert.False(string.IsNullOrWhiteSpace(card.Svg));
+			Assert.True(!string.IsNullOrWhiteSpace(card.Svg) || card.HasPngArt);
 			Assert.Matches("^#[0-9A-Fa-f]{6}$", card.ArtColor);
 		});
 		Assert.Contains("assets/cards/*.svg", await File.ReadAllTextAsync(Path.Combine(packagePath, "CREDITS.md")));
@@ -442,16 +572,76 @@ public class CorroPackageLoaderTests
 		return dir;
 	}
 
-	private static IEnumerable<(string? Svg, string? ArtColor)> EnumerateCards(GameDefinition definition)
+	private static IEnumerable<(string? Svg, bool HasPngArt, string? ArtColor)> EnumerateCards(GameDefinition definition)
 	{
-		var cards = new List<(string? Svg, string? ArtColor)>();
-		cards.AddRange(definition.Cards.Select(card => (card.Svg, card.ArtColor)));
-		cards.AddRange((definition.JourneyDeck ?? []).Select(card => (card.Svg, card.ArtColor)));
-		cards.AddRange((definition.AssemblyDeck ?? []).Select(card => (card.Svg, card.ArtColor)));
-		cards.AddRange((definition.DraftDeck ?? []).Select(card => (card.Svg, card.ArtColor)));
-		cards.AddRange((definition.SheddingDeck ?? []).Select(card => (card.Svg, card.ArtColor)));
-		cards.AddRange((definition.ExplodingDeck ?? []).Select(card => (card.Svg, card.ArtColor)));
+		var cards = new List<(string? Svg, bool HasPngArt, string? ArtColor)>();
+		cards.AddRange(definition.Cards.Select(card => (card.Svg, card.HasPngArt, card.ArtColor)));
+		cards.AddRange((definition.JourneyDeck ?? []).Select(card => (card.Svg, card.HasPngArt, card.ArtColor)));
+		cards.AddRange((definition.AssemblyDeck ?? []).Select(card => (card.Svg, card.HasPngArt, card.ArtColor)));
+		cards.AddRange((definition.DraftDeck ?? []).Select(card => (card.Svg, card.HasPngArt, card.ArtColor)));
+		cards.AddRange((definition.SheddingDeck ?? []).Select(card => (card.Svg, card.HasPngArt, card.ArtColor)));
+		cards.AddRange((definition.ExplodingDeck ?? []).Select(card => (card.Svg, card.HasPngArt, card.ArtColor)));
 		return cards;
+	}
+
+	internal static void WritePng(
+		string path,
+		int width,
+		int height,
+		byte colorType,
+		(string Type, byte[] Data)? extraChunk = null)
+	{
+		var channels = colorType == 6 ? 4 : 3;
+		var raw = new byte[height * (1 + width * channels)]; // filter byte + black pixels per row
+		using var compressed = new MemoryStream();
+		using (var zlib = new ZLibStream(compressed, CompressionLevel.SmallestSize, leaveOpen: true))
+		{
+			zlib.Write(raw);
+		}
+
+		using var png = new MemoryStream();
+		png.Write([137, 80, 78, 71, 13, 10, 26, 10]);
+		var header = new byte[13];
+		BinaryPrimitives.WriteUInt32BigEndian(header.AsSpan(0, 4), (uint)width);
+		BinaryPrimitives.WriteUInt32BigEndian(header.AsSpan(4, 4), (uint)height);
+		header[8] = 8;
+		header[9] = colorType;
+		WriteChunk(png, "IHDR", header);
+		if (extraChunk is { } chunk)
+		{
+			WriteChunk(png, chunk.Type, chunk.Data);
+		}
+		WriteChunk(png, "IDAT", compressed.ToArray());
+		WriteChunk(png, "IEND", []);
+		Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+		File.WriteAllBytes(path, png.ToArray());
+	}
+
+	private static void WriteChunk(Stream output, string type, byte[] data)
+	{
+		Span<byte> length = stackalloc byte[4];
+		BinaryPrimitives.WriteUInt32BigEndian(length, (uint)data.Length);
+		output.Write(length);
+		var typeBytes = System.Text.Encoding.ASCII.GetBytes(type);
+		output.Write(typeBytes);
+		output.Write(data);
+		Span<byte> crc = stackalloc byte[4];
+		BinaryPrimitives.WriteUInt32BigEndian(crc, PngCrc(typeBytes, data));
+		output.Write(crc);
+	}
+
+	private static uint PngCrc(IEnumerable<byte> type, IEnumerable<byte> data)
+	{
+		var crc = 0xffffffffu;
+		foreach (var value in type.Concat(data))
+		{
+			crc ^= value;
+			for (var bit = 0; bit < 8; bit++)
+			{
+				crc = (crc & 1) != 0 ? 0xedb88320u ^ (crc >> 1) : crc >> 1;
+			}
+		}
+		return ~crc;
 	}
 
 	private static string CopyPackage(string id)

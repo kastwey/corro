@@ -101,6 +101,10 @@ public partial class CorroRulebook
 
 		context.Logger?.LogDebug("{PlayerName} bought {SquareName} for {Price}€", player.Name, square.Name, price);
 
+		// Buying completes the normal landing; a waiting Express face may now take its
+		// second move and surface another purchase offer.
+		await ResolveDeferredExpressMoveAsync(context);
+
 		// The turn does NOT advance here. Buying is a turn action; the player keeps
 		// control and ends the turn explicitly (any doubles re-roll obligation is
 		// tracked by GameState.MustRollAgain, set when the dice were rolled).
@@ -193,6 +197,7 @@ public partial class CorroRulebook
 		// which advances the turn once the pending purchase is resolved.
 		if (!context.Settings.AuctionOnDecline)
 		{
+			await ResolveDeferredExpressMoveAsync(context);
 			return new PropertyDeclineOutcome
 			{
 				Success = true,
@@ -378,7 +383,7 @@ public partial class CorroRulebook
 	/// So a bilingual board reads announcements in each player's language, like the board itself.
 	/// </summary>
 	private static object SquareNameVar(Square square)
-		=> square.Names is { Count: > 0 } ? square.Names : square.Name;
+		=> AnnouncementVariables.SquareName(square);
 
 	/// <summary>
 	/// Pure rent calculation for a colour property. A bigBuilding charges the top tier; 1–4 smallBuildings

@@ -100,6 +100,7 @@ public partial class CorroRulebook
 			CardId = cardId,
 			DeckType = deckId,
 			Svg = card.Svg,
+			HasPngArt = card.HasPngArt,
 			ArtColor = card.ArtColor,
 			ArtType = card.Effect.Type,
 			DescriptionKey = card.TextKey ?? string.Empty

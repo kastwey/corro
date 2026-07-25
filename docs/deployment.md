@@ -56,12 +56,14 @@ deployment instead of silently removing private games from production.
   files only and leaves both connection strings untouched.
 - The host identity comes from the `SiteBranding` section in `server/appsettings.json`. App
   Service settings override it with ASP.NET Core's double-underscore convention:
-  `SiteBranding__Title`, `SiteBranding__Tagline`, `SiteBranding__LogoUrl`,
+  `SiteBranding__Title`, `SiteBranding__Taglines__en`, `SiteBranding__Taglines__es`,
+  `SiteBranding__Tagline`, `SiteBranding__LogoUrl`,
   `SiteBranding__LogoDarkUrl`, `SiteBranding__FaviconUrl` and
-  `SiteBranding__FaviconDarkUrl`. Logo and favicon values accept same-site paths or HTTPS URLs;
-  omit both theme variants to render the title as text and use no host favicon. These values are
-  public by design and are returned by `/api/config/branding`; never place secrets in this
-  section. Branding does not alter the mandatory **Powered by Corro** source attribution.
+  `SiteBranding__FaviconDarkUrl`. The localized map follows the active UI language; the singular
+  `Tagline`, when set, overrides every locale. Logo and favicon values accept same-site paths or
+  HTTPS URLs; omit both theme variants to render the title as text and use no host favicon. These
+  values are public by design and are returned by `/api/config/branding`; never place secrets in
+  this section. Branding does not alter the mandatory **Powered by Corro** source attribution.
 - Voice chat is optional and uses a separately operated LiveKit VPS; its deployment template
   is documented in [the LiveKit infrastructure guide](../infra/livekit/README.md). Configure
   App Service settings `LiveKit__Url`, `LiveKit__ApiUrl`, `LiveKit__ApiKey`,

@@ -90,10 +90,15 @@ test('home, dark theme, runtime language and create/join validation states are A
 	await gotoLobbyHome(host);
 	const brand = host.locator('.brand-heading');
 	await expect(brand).toHaveAccessibleName('All Welcome');
-	await expect(host.locator('[data-site-tagline]')).toHaveText('Play together, play your way.');
+	await expect(host.locator('[data-site-tagline]')).toHaveText('Juega en compañía, juega a tu manera.');
 	await expect(host).toHaveTitle('All Welcome');
 	await expect(brand.locator('.brand-logo__image--light')).toBeVisible();
 	await expect(brand.locator('.brand-logo__image--dark')).toBeHidden();
+	await expect(brand.locator('.brand-logo__image--light')).toHaveAttribute(
+		'src', 'assets/brand/all-welcome-logo-on-light.svg');
+	await expect(brand.locator('.brand-logo__image--dark')).toHaveAttribute(
+		'src', 'assets/brand/all-welcome-logo-on-dark.svg');
+	await expect(host.locator('link[data-site-favicon]')).toHaveCount(2);
 	const preferences = host.locator('.language-selector');
 	const corro = host.locator('.app-footer a[data-footer-link="corro"]');
 	const license = host.locator('.app-footer a[data-footer-link="license"]');
@@ -122,6 +127,7 @@ test('home, dark theme, runtime language and create/join validation states are A
 	await host.locator('#language-selector').selectOption('en');
 	await host.locator('#language-apply-btn').click();
 	await expect(host.locator('#home-heading')).toHaveText('Your games');
+	await expect(host.locator('[data-site-tagline]')).toHaveText('Play together, play your way.');
 	await expect(corro).toHaveAttribute('aria-label', appI18n('en').footer.corroNewWindowLabel as string);
 	await expect(license).toHaveAttribute('aria-label', appI18n('en').footer.licenseNewWindowLabel as string);
 

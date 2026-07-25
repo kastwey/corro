@@ -241,6 +241,10 @@ public sealed partial class PackageTemplateService
 		{
 			AddSchema(schemas, "/questions.*.json", "./.vscode/schemas/questions.schema.json");
 		}
+		if (family == "forbidden")
+		{
+			AddSchema(schemas, "/words.*.json", "./.vscode/schemas/words.schema.json");
+		}
 		AddSchema(schemas, "/i18n/*.json", "./.vscode/schemas/i18n.schema.json");
 
 		var settings = new JsonObject { ["json.schemas"] = schemas };

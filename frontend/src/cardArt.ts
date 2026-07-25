@@ -1,19 +1,22 @@
 // cardArt.ts — package-owned card illustrations plus neutral engine fallbacks.
 //
-// The package contract is deliberately the same safe subset as player tokens: an optional
-// assets/cards/<id>.svg is flattened by the server to path-data on a 64×64 canvas. The client still
-// sanitizes that data before putting it in an attribute. Package geometry always wins; when it
-// is absent, these helpers draw only generic MECHANICS (attack, remedy, number, etc.) and never
-// branch on a shipped package id, card id, token id or title.
+// A package may provide one path-only 64×64 SVG or one strictly validated 256×256 PNG.
+// SVG geometry rides in state and is sanitized again here; PNG bytes stay at a staged,
+// nosniff endpoint and state carries only a boolean marker. Package art always wins; when
+// absent, these helpers draw generic MECHANICS and never branch on shipped content ids.
 //
 // ACCESSIBILITY: every SVG is aria-hidden decoration. The hand row / reveal text remains the
 // accessible source of the card's localized name and rules.
 
 import { escapeHtml } from './escapeHtml.js';
+import { packageCardPngUrl } from './packageCardAssets.js';
+export { setCardArtPackageToken } from './packageCardAssets.js';
 
 export interface CardArtSource {
+	id?: string;
 	type: string;
 	svg?: string | null;
+	hasPngArt?: boolean;
 	value?: number | null;
 	artColor?: string | null;
 }
@@ -65,6 +68,22 @@ export function packageCardArtSvg(
 		+ `<path d="${safe}" fill-rule="evenodd"/></svg>`;
 }
 
+/** A safe URL to one prevalidated staged PNG, or null when the card has no raster art. */
+export function packageCardArtPng(
+	source: Pick<CardArtSource, 'id' | 'hasPngArt'>,
+	className = 'card-art__image',
+): string | null {
+	const url = packageCardPngUrl(source);
+	if (!url) return null;
+	return `<img class="${className} card-art__image" src="${url}" alt="" aria-hidden="true" draggable="false" data-card-art="package-png">`;
+}
+
+/** PNG wins for this card; otherwise use its sanitized path-only SVG. */
+export function packageCardArtHtml(source: CardArtSource, className = 'card-art__svg'): string | null {
+	return packageCardArtPng(source, className)
+		?? packageCardArtSvg(source.svg, className, source.artColor);
+}
+
 function svg(inner: string, className: string, artColor?: string | null): string {
 	return `<svg class="${className}" viewBox="0 0 64 64" fill="currentColor"${svgColorStyle(artColor)}`
 		+ ` aria-hidden="true" focusable="false" data-card-art="neutral">${inner}</svg>`;
@@ -108,8 +127,8 @@ export function neutralCardArtSvg(
 }
 
 /** Package art wins; the neutral type drawing is the backwards-compatible fallback. */
-export function cardArtSvg(source: CardArtSource, className = 'card-art__svg'): string {
-	return packageCardArtSvg(source.svg, className, source.artColor)
+export function cardArtHtml(source: CardArtSource, className = 'card-art__svg'): string {
+	return packageCardArtHtml(source, className)
 		?? neutralCardArtSvg(source.type, source.value, className, source.artColor);
 }
 
@@ -117,7 +136,7 @@ export function cardArtSvg(source: CardArtSource, className = 'card-art__svg'): 
 export function genericCardArtHtml(source: CardArtSource, name: string): string {
 	const type = safeClass(source.type);
 	return `<span class="gcard gcard--${type}"${cardArtStyle(source.artColor, '--gcard-accent', '--gcard-soft')}>`
-		+ `<span class="gcard__picture">${cardArtSvg(source, 'gcard__svg')}</span>`
+		+ `<span class="gcard__picture">${cardArtHtml(source, 'gcard__svg')}</span>`
 		+ `<span class="gcard__name">${escapeHtml(name)}</span>`
 		+ `</span>`;
 }

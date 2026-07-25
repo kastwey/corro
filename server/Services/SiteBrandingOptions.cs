@@ -12,19 +12,26 @@ public sealed class SiteBrandingOptions
 	public string Title { get; init; } = "All Welcome";
 
 	/// <summary>An optional sentence shown below the lobby heading.</summary>
-	public string? Tagline { get; init; } = "Play together, play your way.";
+	public string? Tagline { get; init; }
+
+	/// <summary>Localized lobby taglines, used when <see cref="Tagline"/> is not set.</summary>
+	public Dictionary<string, string> Taglines { get; init; } = new()
+	{
+		["en"] = "Play together, play your way.",
+		["es"] = "Juega en compañía, juega a tu manera."
+	};
 
 	/// <summary>An optional same-site path or HTTPS URL for the lobby logo.</summary>
-	public string? LogoUrl { get; init; }
+	public string? LogoUrl { get; init; } = "assets/brand/all-welcome-logo-on-light.svg";
 
 	/// <summary>An optional dark-theme logo; <see cref="LogoUrl"/> is reused when omitted.</summary>
-	public string? LogoDarkUrl { get; init; }
+	public string? LogoDarkUrl { get; init; } = "assets/brand/all-welcome-logo-on-dark.svg";
 
 	/// <summary>An optional same-site path or HTTPS URL for the browser icon.</summary>
-	public string? FaviconUrl { get; init; }
+	public string? FaviconUrl { get; init; } = "assets/brand/all-welcome-favicon-light.svg";
 
 	/// <summary>An optional dark-theme browser icon; <see cref="FaviconUrl"/> is reused when omitted.</summary>
-	public string? FaviconDarkUrl { get; init; }
+	public string? FaviconDarkUrl { get; init; } = "assets/brand/all-welcome-favicon-dark.svg";
 
 	/// <summary>
 	/// Asset URLs come from the trusted deployment configuration, but restricting absolute URLs to

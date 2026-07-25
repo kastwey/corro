@@ -1,4 +1,4 @@
-import type { Player, Square, DebtState } from './models.js';
+import type { Player, Square, DebtState, GameSettings } from './models.js';
 import { isOwnableSquare } from './squareBehavior.js';
 
 export interface AuctionStatus {
@@ -7,6 +7,26 @@ export interface AuctionStatus {
 	highestBidderName: string | null;
 	secondsRemaining: number;
 	playerMoney: number;
+}
+
+export interface BankBuildingInventory {
+	limited: boolean;
+	smallRemaining: number;
+	bigRemaining: number;
+}
+
+/** Compute the bank's physical construction stock from authoritative square state. */
+export function bankBuildingInventory(
+	squares: readonly Square[],
+	settings: GameSettings | null | undefined,
+): BankBuildingInventory {
+	const maxSmall = settings?.maxSmallBuildings ?? 32;
+	const maxBig = settings?.maxBigBuildings ?? 12;
+	return {
+		limited: settings?.buildingShortage ?? true,
+		smallRemaining: Math.max(0, maxSmall - squares.reduce((sum, square) => sum + (square.smallBuildings ?? 0), 0)),
+		bigRemaining: Math.max(0, maxBig - squares.reduce((sum, square) => sum + (square.bigBuildings ?? 0), 0)),
+	};
 }
 
 /**
@@ -43,6 +63,7 @@ export interface GameCommandsOptions {
 	getPlayerReleasePasses: (playerId: string) => number; // release passes
 	getPendingDebts?: () => DebtState[]; // pending debts in the game
 	getFreeParkingPot: () => number; // accumulated Free Parking pot
+	getBankBuildingInventory?: () => BankBuildingInventory;
 	formatNumber?: (value: number) => string; // localized grouping supplied by the app
 	getActiveAuction?: () => AuctionStatus | null; // currently active auction, if any
 }
@@ -348,6 +369,19 @@ export class GameCommands {
 		} else {
 			this.opts.announce(this.opts.t('announce_free_parking_pot_empty'));
 		}
+		return true;
+	}
+
+	announceBankBuildingInventory(): boolean {
+		const inventory = this.opts.getBankBuildingInventory?.();
+		if (!inventory || !inventory.limited) {
+			this.opts.announce(this.opts.t('announce_bank_buildings_unlimited'));
+			return true;
+		}
+		this.opts.announce(this.opts.t('announce_bank_buildings', {
+			small: this.opts.formatNumber?.(inventory.smallRemaining) ?? String(inventory.smallRemaining),
+			big: this.opts.formatNumber?.(inventory.bigRemaining) ?? String(inventory.bigRemaining),
+		}));
 		return true;
 	}
 

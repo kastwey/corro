@@ -3,11 +3,12 @@ import assert from 'node:assert/strict';
 import {
 	buildPropertyRulesLines, buildRaceRulesLines, buildTrackRulesLines,
 	buildJourneyRulesLines, buildAssemblyRulesLines, buildDraftRulesLines,
-	buildSheddingRulesLines,
+	buildSheddingRulesLines, buildForbiddenRulesLines,
 } from '../src/rulesSummaries.js';
 import type {
 	GameSettings, RaceRulesConfig, RaceBoardDef, TrackRulesConfig, TrackBoardDef,
 	JourneyRulesConfig, AssemblyRulesConfig, DraftRulesConfig, SheddingRulesConfig,
+	ForbiddenRulesConfig,
 } from '../src/models.js';
 
 // The in-game "active rules" dialog content (Ctrl+Shift+F1): each family's effective config
@@ -80,6 +81,26 @@ test('track: board size and the exact-finish behaviour', () => {
 	assert.equal(lines[0], 'game.track_rules_size(100)');
 	assert.equal(lines[1], 'game.track_rules_exact_finish(game.track_rules_finish_stay)');
 	assert.equal(lines[2], 'game.track_rules_roll_again(game.rules_on)');
+});
+
+// ── Forbidden Words ───────────────────────────────────────────────────────────
+
+test('forbidden: reads the authoritative clock, pass, score and cycle rules', () => {
+	const rules: ForbiddenRulesConfig = {
+		turnSeconds: 75,
+		passesPerTurn: 2,
+		correctPoints: 3,
+		violationPenalty: 2,
+		cycles: 4,
+	};
+	assert.deepEqual(buildForbiddenRulesLines(rules, t), [
+		'game.forbidden_rules_time(75)',
+		'game.forbidden_rules_passes(2)',
+		'game.forbidden_rules_correct(3)',
+		'game.forbidden_rules_violation(2)',
+		'game.forbidden_rules_cycles(4)',
+	]);
+	assert.equal(buildForbiddenRulesLines(null, t)[0], 'game.forbidden_rules_time(60)');
 });
 
 // ── Journey / Assembly / Draft ─────────────────────────────────────────────────

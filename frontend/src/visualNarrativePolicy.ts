@@ -32,6 +32,7 @@ const PROPERTY_NARRATIVE_TONES: Readonly<Record<string, VisualNarrativeTone>> = 
 	'game.property_purchased': 'neutral',
 	'game.auction_won': 'neutral',
 	'game.building_built': 'neutral',
+	'game.big_building_built': 'neutral',
 	'game.buildings_sold': 'neutral',
 	'game.property_mortgaged': 'neutral',
 	'game.property_unmortgaged': 'neutral',

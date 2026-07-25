@@ -18,6 +18,7 @@ public static class GameFamilies
 		new SheddingFamily(),
 		new ExplodingFamily(),
 		new TriviaFamily(),
+		new ForbiddenFamily(),
 	};
 
 	private static readonly Dictionary<string, IGameFamily> ByType =

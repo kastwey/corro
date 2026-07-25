@@ -1,6 +1,6 @@
 /**
- * Makes a native <dialog> draggable by its title bar, so a floating (non-modal) dialog can
- * be moved off whatever board area the player wants to see. Pointer-based and additive:
+ * Makes a floating panel draggable by its title bar, so it can be moved off whatever board
+ * area the player wants to see. Pointer-based and additive:
  * keyboard users never need it (a non-modal dialog is left with Escape and re-entered with
  * Ctrl+F6 / Ctrl+D), so dragging is purely a convenience for mouse and touch.
  *
@@ -13,7 +13,7 @@
  *   pointer, clamped so the title bar can never leave the viewport entirely.
  * - Closing clears the inline position, so the next open re-centers as always.
  */
-export function makeDialogDraggable(dialog: HTMLDialogElement): void {
+export function makeDialogDraggable(dialog: HTMLElement): void {
 	dialog.classList.add('dialog--draggable');
 
 	dialog.addEventListener('pointerdown', ev => {

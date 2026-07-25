@@ -147,6 +147,29 @@ test('update() refreshes the current bid and bidder on screen', () => {
 	auctionDialog.end();
 });
 
+test('an accepted bid reselects the amount only when the bid field already has focus', () => {
+	installFakeI18next('en');
+	auctionDialog.open({
+		squareIndex: 1, squareName: 'Main Square', currentBid: 10, highestBidderName: 'Ana',
+		secondsRemaining: 20, playerMoney: 1500, onBid: () => {}, onPass: () => {},
+	});
+	const input = document.getElementById('auction-bid-input') as HTMLInputElement;
+	let selectCalls = 0;
+	input.select = () => { selectCalls++; };
+	input.focus();
+	auctionDialog.update({ currentBid: 25, highestBidderName: 'Berto' });
+	assert.equal(selectCalls, 1, 'the next typed bid replaces the accepted amount');
+
+	const board = document.createElement('button');
+	document.body.appendChild(board);
+	board.focus();
+	auctionDialog.update({ currentBid: 40, highestBidderName: 'Ana' });
+	assert.equal(document.activeElement, board, 'a rival bid never steals focus from the board');
+	assert.equal(selectCalls, 1, 'selection is unnecessary while another surface owns focus');
+	board.remove();
+	auctionDialog.end();
+});
+
 // Prosody (live-play): the reader hears each row as one line, so every row must flow as a
 // sentence. The countdown's big visible "20 s" says nothing when read bare — it ships an
 // aria-hidden visual plus a screen-reader sentence.

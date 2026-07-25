@@ -139,6 +139,11 @@ async function settle(): Promise<void> {
 	for (let i = 0; i < 8; i++) await Promise.resolve();
 }
 
+function dispatchKey(target: Element, key: string, init: KeyboardEventInit = {}): Element {
+	target.dispatchEvent(new window.KeyboardEvent('keydown', { key, bubbles: true, ...init }));
+	return document.activeElement as Element;
+}
+
 function openPastDisclaimer(): void {
 	panel.openPanel();
 	(document.getElementById('voice-disclaimer-dismiss') as HTMLButtonElement).click();
@@ -198,6 +203,17 @@ test('joining is explicit, starts unmuted, renders the roster and announces entr
 	assert.equal(document.querySelector('.voice-participant__visual-state')?.textContent, 'Listening');
 	assert.equal(document.querySelector('.voice-participant__volume')?.hasAttribute('hidden'), true,
 		'there is no meaningless self-volume slider');
+	const selfRow = document.querySelector('.voice-participant') as HTMLElement;
+	assert.equal(selfRow.tabIndex, 0, 'the roster exposes one roving tab stop');
+	assert.equal(selfRow.getAttribute('aria-label'),
+		'Ana (you) is in voice chat with the microphone on.');
+	assert.equal(selfRow.querySelector('[role="toolbar"]')?.getAttribute('aria-label'), 'Actions for Ana (you)');
+	const selfMute = selfRow.querySelector('.voice-participant__self-mute') as HTMLButtonElement;
+	assert.equal(selfMute.textContent, 'Mute my microphone');
+	selfRow.focus();
+	assert.equal(dispatchKey(selfRow, 'ArrowRight'), selfMute,
+		'Right enters the local participant actions');
+	assert.equal(dispatchKey(selfMute, 'Escape'), selfRow, 'Escape returns from actions to the row');
 	assert.deepEqual(presenceUpdates.at(-1), [{ id: 'me', muted: false, speaking: false }],
 		'the persistent player panel receives local voice presence');
 	assert.ok(announcements.some(a => a.key === 'game.voice_joined_self'));
@@ -289,7 +305,12 @@ test('remote presence is voiced, speaking stays visual until queried, and volume
 	};
 	transport.addRemote(berto);
 	assert.ok(announcements.some(a => a.key === 'game.voice_joined' && a.vars.player === 'Berto'));
-	assert.equal(document.querySelector('[data-player-id="berto"]')?.classList.contains('voice-participant--speaking'), true);
+	const selfRow = document.querySelector('[data-player-id="me"]') as HTMLElement;
+	const bertoRow = document.querySelector('[data-player-id="berto"]') as HTMLElement;
+	assert.equal(bertoRow.classList.contains('voice-participant--speaking'), true);
+	assert.equal(bertoRow.getAttribute('aria-label'),
+		'Berto is in voice chat with the microphone on.',
+		'speaking stays visual and does not chatter in the stable row name');
 	assert.equal(announcements.some(a => a.key === 'game.voice_speakers'), false,
 		'active-speaker changes do not chatter at screen readers');
 	assert.deepEqual(presenceUpdates.at(-1), [
@@ -301,13 +322,39 @@ test('remote presence is voiced, speaking stays visual until queried, and volume
 	panel.announceActiveSpeakers();
 	assert.ok(announcements.some(a => a.key === 'game.voice_speakers' && a.vars.names === 'Berto'));
 
-	const slider = document.querySelector<HTMLInputElement>('[data-player-id="berto"] input[type="range"]')!;
+	selfRow.focus();
+	assert.equal(dispatchKey(selfRow, 'ArrowDown'), bertoRow, 'Down moves to the next person');
+	assert.equal(selfRow.tabIndex, -1);
+	assert.equal(bertoRow.tabIndex, 0);
+	const volumeAction = bertoRow.querySelector('.voice-participant__volume-action') as HTMLButtonElement;
+	const hostMute = bertoRow.querySelector('.voice-participant__host-mute') as HTMLButtonElement;
+	assert.equal(dispatchKey(bertoRow, 'ArrowRight'), volumeAction, 'Right enters the first row action');
+	assert.equal(dispatchKey(volumeAction, 'ArrowRight'), hostMute, 'Right moves through the toolbar actions');
+	assert.equal(dispatchKey(hostMute, 'Escape'), bertoRow, 'Escape returns from the toolbar to its person');
+
+	dispatchKey(bertoRow, 'F10', { shiftKey: true });
+	const menu = document.querySelector('.voice-participant-context-menu') as HTMLElement;
+	assert.ok(menu, 'Shift+F10 opens the mirrored actions menu');
+	assert.equal(menu.getAttribute('aria-label'), 'Voice participant actions');
+	assert.ok(document.getElementById('voice-panel')?.contains(menu),
+		'the menu stays inside the active voice panel when no main landmark exists');
+	assert.deepEqual(
+		Array.from(menu.querySelectorAll('[role="menuitem"]')).map(item => item.textContent),
+		['Volume for Berto: 100 percent.', 'Mute Berto once'],
+	);
+	(menu.querySelector('[role="menuitem"]') as HTMLButtonElement).click();
+	const slider = bertoRow.querySelector<HTMLInputElement>('input[type="range"]')!;
+	assert.equal(document.activeElement, slider, 'the volume menu action enters the native slider');
+	assert.equal(dispatchKey(slider, 'Escape'), bertoRow, 'Escape leaves slider adjustment on its row');
 	slider.value = '35';
 	slider.dispatchEvent(new window.Event('input', { bubbles: true }));
 	assert.deepEqual(transport.volumeChanges.at(-1), { id: 'berto', volume: 0.35 });
 	assert.match(localStorage.getItem('corro.voiceVolumes.game-1')!, /0\.35/);
 
+	bertoRow.focus();
 	transport.removeRemote('berto');
+	assert.equal(document.activeElement, selfRow,
+		'when a focused participant leaves, focus moves to the surviving row');
 	assert.ok(announcements.some(a => a.key === 'game.voice_left' && a.vars.player === 'Berto'));
 	assert.deepEqual(soundEvents.slice(-2), ['voice.join', 'voice.leave'],
 		'remote presence uses dedicated engine voice events');

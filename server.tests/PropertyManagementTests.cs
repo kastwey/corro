@@ -290,6 +290,10 @@ public class PropertyManagementTests
 		var sq = context.Helper.GetSquare(0)!;
 		Assert.Equal(0, sq.SmallBuildings); // the 5 small ones convert…
 		Assert.Equal(1, sq.BigBuildings); // …into one big construction
+		Assert.True(TestFixtures.Announcer(context)
+			.Has(AnnouncementAudience.AllExcept, "a", "game.big_building_built"));
+		Assert.DoesNotContain(TestFixtures.Announcer(context).Sent,
+			x => x.Key == "game.building_built" || x.Key == "game.building_built_self");
 	}
 
 	[Fact]

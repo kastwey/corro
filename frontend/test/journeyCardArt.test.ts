@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { journeyCardArtHtml, journeyCardBackHtml, journeyHazardIconSvg, journeyShieldIconSvg } from '../src/journeyCardArt.js';
+import { journeyCardArtHtml, journeyCardBackHtml, journeyHazardIconHtml, journeyShieldIconHtml } from '../src/journeyCardArt.js';
 import type { JourneyCardDef } from '../src/models.js';
 
 function def(over: Partial<JourneyCardDef>): JourneyCardDef {
@@ -42,9 +42,9 @@ test('package SVG geometry replaces the neutral journey picture', () => {
 });
 
 test('public hazard badges also prefer package geometry and otherwise stay neutral', () => {
-	assert.match(journeyHazardIconSvg('M5 5h54v54z'), /data-card-art="package"/);
-	assert.match(journeyShieldIconSvg('M6 6h52v52z'), /data-card-art="package"/);
-	const fallback = journeyHazardIconSvg();
+	assert.match(journeyHazardIconHtml({ id: 'h', type: 'attack', svg: 'M5 5h54v54z' } as any), /data-card-art="package"/);
+	assert.match(journeyShieldIconHtml({ id: 's', type: 'immunity', svg: 'M6 6h52v52z' } as any), /data-card-art="package"/);
+	const fallback = journeyHazardIconHtml();
 	assert.match(fallback, /<svg/);
 	assert.doesNotMatch(fallback, /data-card-art="package"/);
 });

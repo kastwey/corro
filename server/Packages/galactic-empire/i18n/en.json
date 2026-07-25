@@ -119,7 +119,8 @@
     "collectRentWhileHeld": "Collect rent while in the Black Hole",
     "auctionOnDecline": "Auction a declined property",
     "auctionTimeoutSeconds": "Seconds per bid",
-    "mortgageInterestRate": "Mortgage interest (%)"
+    "mortgageInterestRate": "Mortgage interest (%)",
+    "bonusDie": "Hyperspeed die"
   },
   "tokens": {
     "ufo": "UFO",
@@ -135,7 +136,8 @@
     "holding": "Black Hole",
     "freeparking": "Orbital Shipyard",
     "sendtoholding": "Tractor Beam",
-    "bus": "Quantum Shuttle"
+    "bus": "Quantum Shuttle",
+    "express": "Hyperspace jump"
   },
   "building": {
     "small": "dome",

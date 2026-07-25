@@ -345,7 +345,7 @@ public partial class CorroRulebook
 		}
 
 		await context.Presenter.NotifySquareChangedAsync(square);
-		await context.Announce("game.building_built", new Dictionary<string, object>
+		await context.Announce(buildingBig ? "game.big_building_built" : "game.building_built", new Dictionary<string, object>
 		{
 			["actorId"] = player.Id,
 			["player"] = player.Name,

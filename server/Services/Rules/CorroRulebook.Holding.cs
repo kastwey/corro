@@ -191,6 +191,9 @@ public partial class CorroRulebook
 		await context.Announce("game.holding_still_in", new Dictionary<string, object>
 		{
 			{ "player", player.Name },
+			{ "die1", dice.Die1 },
+			{ "die2", dice.Die2 },
+			{ "total", dice.StandardTotal },
 			{ "turns", turnsRemaining },
 			{ "actorId", player.Id }
 		});

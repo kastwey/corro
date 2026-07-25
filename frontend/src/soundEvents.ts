@@ -105,6 +105,10 @@ const LANDING_SOUND_BY_SQUARE_TYPE: Readonly<Record<string, string>> = {
 const ANNOUNCEMENT_SOUND_MAP: Readonly<Record<string, string>> = {
 	'game.dice_rolled': 'dice.roll',
 	'game.dice_rolled_doubles': 'dice.roll',
+	'game.dice_rolled_bonus': 'dice.roll',
+	'game.dice_rolled_bonus_doubles': 'dice.roll',
+	'game.dice_rolled_express': 'dice.roll',
+	'game.dice_rolled_express_doubles': 'dice.roll',
 	// Race family uses its own roll announcement key (with optional _self suffix for actor-specific)
 	'game.race_rolled': 'dice.roll',
 	'game.race_rolled_self': 'dice.roll',
@@ -130,6 +134,15 @@ const ANNOUNCEMENT_SOUND_MAP: Readonly<Record<string, string>> = {
 	'game.trivia_wedge': 'trivia.wedge',
 	'game.trivia_wedges_complete': 'trivia.wedges_complete',
 	'game.trivia_won': 'trivia.win',
+
+	// Forbidden Words: role preparation stays spoken; the timed start, card outcomes and
+	// deadline get concise package-owned cues that never replace the human conversation.
+	'game.forbidden_turn_started': 'forbidden.start',
+	'game.forbidden_correct': 'forbidden.correct',
+	'game.forbidden_passed': 'forbidden.pass',
+	'game.forbidden_violation': 'forbidden.violation',
+	'game.forbidden_time_up': 'forbidden.time_up',
+	'game.forbidden_team_won': 'game.over',
 	// Race family: losing a piece stings — the VICTIM's targeted line carries an earcon
 	// so the loss registers even before the sentence is spoken.
 	'game.race_captured_victim': 'piece.captured',
@@ -208,6 +221,7 @@ const ANNOUNCEMENT_SOUND_MAP: Readonly<Record<string, string>> = {
 	'game.auction_won': 'property.buy',
 
 	'game.building_built': 'property.build',
+	'game.big_building_built': 'property.build',
 	'game.buildings_sold': 'property.sell',
 
 	// Landing on a developed property (houses/hotel) plays a cheeky "oh no, this is going
@@ -244,6 +258,8 @@ const ANNOUNCEMENT_SOUND_MAP: Readonly<Record<string, string>> = {
 	'game.holding_speeding': 'holding.enter',
 	'game.sent_to_holding_by_card': 'holding.enter',
 	'game.escaped_holding_doubles': 'holding.leave',
+	'game.holding_still_in': 'dice.roll',
+	'game.used_release_pass': 'holding.leave',
 
 	'game.auction_started': 'auction.start',
 

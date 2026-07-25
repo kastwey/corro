@@ -5,6 +5,8 @@
 // is never covered by a stream of automatic speaker-name announcements.
 
 import { soundEvents } from './soundEvents.js';
+import { RovingToolbarList } from './accessibleList.js';
+import { reconcileChildren } from './domReconcile.js';
 import { popupMenu, type PopupMenuItem } from './popupMenu.js';
 import {
 	createVoiceTransport,
@@ -76,6 +78,7 @@ export class VoicePanel {
 	private controls: HTMLElement | null = null;
 	private deviceSettingsButton: HTMLButtonElement | null = null;
 	private list: HTMLUListElement | null = null;
+	private participantNav: RovingToolbarList | null = null;
 	private deploymentAvailable = false;
 	private gameEnabled = false;
 	private connected = false;
@@ -164,6 +167,7 @@ export class VoicePanel {
 
 	closePanel(): void {
 		this.closeDeviceMenu();
+		this.participantNav?.closeContextMenu();
 		if (this.panel) this.panel.hidden = true;
 		this.syncHeaderButton();
 		this.headerButton?.focus();
@@ -175,7 +179,7 @@ export class VoicePanel {
 			return this.isOpen();
 		}
 		const target = this.panel?.querySelector<HTMLElement>(
-			'#voice-disclaimer:not([hidden]) #voice-disclaimer-text, .voice-controls button:not([hidden]), .voice-device-settings:not([hidden]), .voice-participants input, .voice-panel__close',
+			'#voice-disclaimer:not([hidden]) #voice-disclaimer-text, .voice-controls button:not([hidden]), .voice-device-settings:not([hidden]), .voice-participant, .voice-panel__close',
 		);
 		if (!target) return false;
 		target.focus();
@@ -269,6 +273,19 @@ export class VoicePanel {
 		this.controls = panel.querySelector('#voice-controls');
 		this.deviceSettingsButton = panel.querySelector('#voice-device-settings');
 		this.list = panel.querySelector('#voice-participants');
+		this.participantNav = new RovingToolbarList({
+			list: this.list!,
+			itemSelector: '.voice-participant',
+			toolbarButtonSelector: '.voice-participant__volume:not([hidden]) .voice-participant__volume-action, .voice-participant__actions > button:not([hidden])',
+			menuLabel: () => this.deps?.t('game.voice_participant_menu') ?? '',
+			menuClass: 'voice-participant-context-menu',
+			menuItemClass: 'voice-participant-context-menu-item',
+			// Keep the popup inside the active page landmark, never orphaned under body.
+			menuHost: () => this.panel?.closest('main') ?? this.panel,
+			fallbackFocus: () => this.panel?.querySelector<HTMLElement>(
+				'.voice-controls button:not([hidden]), .voice-device-settings:not([hidden]), .voice-panel__close',
+			) ?? null,
+		});
 		this.deviceSettingsButton?.setAttribute('aria-haspopup', 'menu');
 		this.deviceSettingsButton?.setAttribute('aria-expanded', 'false');
 
@@ -775,70 +792,118 @@ export class VoicePanel {
 
 	private renderParticipants(): void {
 		if (!this.list || !this.deps) return;
-		const ids = new Set(this.participants.map(participant => participant.id));
-		for (const existing of Array.from(this.list.children) as HTMLElement[]) {
-			if (!ids.has(existing.dataset.playerId ?? '')) existing.remove();
-		}
-		for (const participant of this.participants) {
-			let row = Array.from(this.list.children)
-				.find(child => (child as HTMLElement).dataset.playerId === participant.id) as HTMLElement | undefined;
-			if (!row) {
-				row = this.createParticipantRow(participant.id);
-				this.list.appendChild(row);
-			}
-			this.updateParticipantRow(row, participant);
-		}
+		reconcileChildren(this.list, {
+			items: this.participants,
+			key: participant => participant.id,
+			keyOf: element => (element as HTMLElement).dataset.playerId,
+			create: participant => {
+				const row = this.createParticipantRow(participant.id);
+				this.updateParticipantRow(row, participant);
+				return row;
+			},
+			update: (row, participant) => this.updateParticipantRow(row, participant),
+			onRemoved: () => this.participantNav?.closeContextMenu(),
+			rescueFocus: () => this.list?.querySelector<HTMLElement>('.voice-participant')
+				?? this.panel?.querySelector<HTMLElement>(
+					'.voice-controls button:not([hidden]), .voice-device-settings:not([hidden]), .voice-panel__close',
+				) ?? null,
+		});
 		this.list.hidden = this.participants.length === 0;
+		this.participantNav?.refreshRovingTabindex();
 	}
 
 	private createParticipantRow(playerId: string): HTMLLIElement {
 		const row = document.createElement('li');
 		row.className = 'voice-participant';
 		row.dataset.playerId = playerId;
+		row.tabIndex = -1;
 		row.innerHTML = `
 			<div class="voice-participant__identity">
 				<span class="voice-participant__name"></span>
 				<span class="voice-participant__visual-state" aria-hidden="true"></span>
-				<span class="sr-only voice-participant__reader-state"></span>
 			</div>
-			<label class="voice-participant__volume">
-				<span></span>
-				<input type="range" min="0" max="100" step="5">
-			</label>
-			<button type="button" class="voice-participant__host-mute"></button>`;
+			<div class="voice-participant__actions" role="toolbar">
+				<div class="voice-participant__volume">
+					<button type="button" class="voice-participant__volume-action" tabindex="-1"></button>
+					<input type="range" min="0" max="100" step="5" tabindex="-1">
+				</div>
+				<button type="button" class="voice-participant__self-mute" tabindex="-1"></button>
+				<button type="button" class="voice-participant__host-mute" tabindex="-1"></button>
+				<span class="sr-only voice-participant__host-mute-reason"></span>
+			</div>`;
 		const slider = row.querySelector<HTMLInputElement>('input[type="range"]')!;
 		slider.addEventListener('input', () => this.setVolume(row.dataset.playerId!, Number(slider.value) / 100));
+		slider.addEventListener('keydown', event => {
+			if (event.key !== 'Escape') return;
+			event.preventDefault();
+			event.stopPropagation();
+			row.focus();
+		});
+		row.querySelector<HTMLButtonElement>('.voice-participant__volume-action')!
+			.addEventListener('click', () => slider.focus());
 		return row;
 	}
 
 	private updateParticipantRow(row: HTMLElement, participant: VoiceParticipant): void {
 		const t = this.deps!.t;
-		row.classList.toggle('voice-participant--speaking', participant.speaking && !participant.muted);
-		row.classList.toggle('voice-participant--muted', participant.muted);
-		row.querySelector('.voice-participant__name')!.textContent = participant.local
+		const displayName = participant.local
 			? t('game.voice_participant_self', { player: participant.name })
 			: participant.name;
+		row.classList.toggle('voice-participant--speaking', participant.speaking && !participant.muted);
+		row.classList.toggle('voice-participant--muted', participant.muted);
+		row.setAttribute('aria-label', t(
+			participant.muted
+				? 'game.voice_participant_label_muted'
+				: 'game.voice_participant_label_listening',
+			{ player: displayName },
+		));
+		row.querySelector('.voice-participant__name')!.textContent = displayName;
 		row.querySelector('.voice-participant__visual-state')!.textContent = participant.muted
 			? t('game.voice_muted_visual')
 			: participant.speaking ? t('game.voice_speaking_visual') : t('game.voice_listening_visual');
-		row.querySelector('.voice-participant__reader-state')!.textContent = participant.muted
-			? t('game.voice_muted_visual') : t('game.voice_microphone_on');
+
+		const actions = row.querySelector<HTMLElement>('.voice-participant__actions')!;
+		actions.setAttribute('aria-label', t('game.actions_for', { name: displayName }));
 
 		const volumeLabel = row.querySelector<HTMLElement>('.voice-participant__volume')!;
-		volumeLabel.hidden = participant.local;
+		this.hideParticipantAction(volumeLabel, participant.local, row);
 		const slider = row.querySelector<HTMLInputElement>('input[type="range"]')!;
 		if (document.activeElement !== slider) slider.value = String(Math.round(participant.volume * 100));
 		const sliderLabel = t('game.voice_volume', { player: participant.name, volume: slider.value });
-		volumeLabel.querySelector('span')!.textContent = sliderLabel;
+		const volumeAction = row.querySelector<HTMLButtonElement>('.voice-participant__volume-action')!;
+		volumeAction.textContent = sliderLabel;
+		volumeAction.setAttribute('aria-label', sliderLabel);
 		slider.setAttribute('aria-label', sliderLabel);
 
+		const selfMute = row.querySelector<HTMLButtonElement>('.voice-participant__self-mute')!;
+		this.hideParticipantAction(selfMute, !participant.local, row);
+		selfMute.textContent = t(participant.muted ? 'game.voice_unmute' : 'game.voice_mute');
+		selfMute.setAttribute('aria-label', selfMute.textContent);
+		selfMute.onclick = () => void this.toggleSelfMute();
+
 		const mute = row.querySelector<HTMLButtonElement>('.voice-participant__host-mute')!;
-		mute.hidden = participant.local || !this.deps!.isHost();
+		this.hideParticipantAction(mute, participant.local || !this.deps!.isHost(), row);
 		mute.textContent = t('game.voice_host_mute', { player: participant.name });
 		mute.setAttribute('aria-label', t('game.voice_host_mute', { player: participant.name }));
-		if (participant.muted) mute.setAttribute('aria-disabled', 'true');
-		else mute.removeAttribute('aria-disabled');
+		const muteReason = row.querySelector<HTMLElement>('.voice-participant__host-mute-reason')!;
+		if (participant.muted) {
+			mute.setAttribute('aria-disabled', 'true');
+			muteReason.textContent = t('game.voice_already_muted', { player: participant.name });
+			if (!muteReason.id) muteReason.id = `voice-mute-reason-${participant.id}`;
+			mute.setAttribute('aria-describedby', muteReason.id);
+		} else {
+			mute.removeAttribute('aria-disabled');
+			mute.removeAttribute('aria-describedby');
+			muteReason.textContent = '';
+		}
 		mute.onclick = () => void this.hostMute(participant, mute);
+	}
+
+	private hideParticipantAction(element: HTMLElement, hidden: boolean, row: HTMLElement): void {
+		if (hidden && (document.activeElement === element || element.contains(document.activeElement))) {
+			row.focus();
+		}
+		element.hidden = hidden;
 	}
 
 	private controlButton(

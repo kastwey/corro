@@ -54,8 +54,10 @@
 }
 
 .journey-package-icon { display: inline-flex; color: var(--journey-art-accent, currentColor); }
+.journey-package-icon .card-art__image { width: 32px; height: 32px; }
 
-.jcard__face svg {
+.jcard__face svg,
+.jcard__face .card-art__image {
   width: 52px;
   height: 52px;
 }
@@ -343,6 +345,14 @@
   gap: 0.3rem;
 }
 
+.journey-centre__pile .jcard {
+  width: 112px;
+  height: 156px;
+  border-radius: 14px;
+}
+.journey-centre__pile .jcard__face svg,
+.journey-centre__pile .jcard__face .card-art__image { width: 72px; height: 72px; }
+
 .journey-centre__stack .jcard {
   box-shadow:
 	3px 3px 0 0 #0d2a52,
@@ -365,6 +375,12 @@
   background: var(--square-bg, #f4f1e8);
   color: #263238; /* light chip in both themes: pin its ink dark */
   font-size: 0.85rem;
+}
+
+@media (max-width: 620px) {
+  .journey-centre__pile .jcard { width: 92px; height: 128px; border-radius: 10px; }
+  .journey-centre__pile .jcard__face svg,
+  .journey-centre__pile .jcard__face .card-art__image { width: 52px; height: 52px; }
 }
 
 /* ── The ROAD (0 → goal), one car per seat ─────────────────────────────────── */
@@ -574,6 +590,19 @@
 }
 
 .journey-dash__cards { font-variant-numeric: tabular-nums; }
+
+@media (max-width: 620px) {
+  .journey-dash {
+    flex-wrap: wrap;
+    gap: 0.35rem 0.5rem;
+  }
+  .journey-dash__name {
+    flex: 1 1 5rem;
+    min-width: 0;
+  }
+  .journey-dash__state { min-width: 0; }
+  .journey-dash__score { margin-left: 0; }
+}
 
 /* ── Juice (all of it skipped under reduced motion — see motionDisabled too) ── */
 .jcard-flight {

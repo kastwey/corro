@@ -61,8 +61,15 @@ public class HoldingRollTests
 		Assert.True(player.IsHeld);
 		Assert.Equal(HoldingPosition, player.Position); // did not move
 		Assert.Equal(2, outcome.HoldingTurnsRemaining); // 3 - 1
-		Assert.True(TestFixtures.Announcer(context)
-			.Has(AnnouncementAudience.AllExcept, "a", "game.holding_still_in"));
+		var announcer = TestFixtures.Announcer(context);
+		Assert.True(announcer.Has(AnnouncementAudience.AllExcept, "a", "game.holding_still_in"));
+		var line = announcer.Sent.Single(x => x.Key == "game.holding_still_in_self");
+		Assert.Equal(2, line.Vars["die1"]);
+		Assert.Equal(3, line.Vars["die2"]);
+		Assert.Equal(5, line.Vars["total"]);
+		// The complete failed-attempt sentence replaces the standalone dice line, so NVDA
+		// cannot lose the first of two immediate live-region writes.
+		Assert.DoesNotContain(announcer.Sent, x => x.Key.StartsWith("game.dice_rolled"));
 	}
 
 	[Fact]

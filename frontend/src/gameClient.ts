@@ -70,6 +70,7 @@ export interface GameClientEvents {
 	'gameEvents': AnnouncementEvent[];
 	'cardDrawn': CardDrawnNotification;
 	'auctionTimerTick': AuctionTimerTick;
+	'forbiddenTimerTick': { secondsRemaining: number };
 	'gameDeleted': { gameId: string };
 	'chatMessage': ChatMessageDto;
 	'chatHistory': ChatMessageDto[];
@@ -230,6 +231,10 @@ export class UnifiedGameClient {
 		this.connection.on('AuctionTimerTick', (data: AuctionTimerTick) => {
 			console.debug('Received AuctionTimerTick:', data);
 			this.emit('auctionTimerTick', data);
+		});
+
+		this.connection.on('ForbiddenTimerTick', (data: { secondsRemaining: number }) => {
+			this.emit('forbiddenTimerTick', data);
 		});
 
 		// A game was permanently deleted by its host.
@@ -521,6 +526,22 @@ export class UnifiedGameClient {
 		await this.invoke("TriviaJudge", playerId, correct);
 	}
 
+	async forbiddenStart(playerId: string): Promise<void> {
+		await this.invoke('ForbiddenStart', playerId);
+	}
+
+	async forbiddenCorrect(playerId: string, cardSequence: number): Promise<void> {
+		await this.invoke('ForbiddenCorrect', playerId, cardSequence);
+	}
+
+	async forbiddenPass(playerId: string, cardSequence: number): Promise<void> {
+		await this.invoke('ForbiddenPass', playerId, cardSequence);
+	}
+
+	async forbiddenViolation(playerId: string, cardSequence: number): Promise<void> {
+		await this.invoke('ForbiddenViolation', playerId, cardSequence);
+	}
+
 	/** Journey family: draw the top card (the start of your turn). */
 	async journeyDraw(playerId: string): Promise<void> {
 		await this.invoke("JourneyDraw", playerId);
@@ -622,6 +643,10 @@ export class UnifiedGameClient {
 
 	async placeBid(playerId: string, squareIndex: number, amount: number): Promise<void> {
 		await this.invoke("PlaceBid", playerId, squareIndex, amount);
+	}
+
+	async busChoice(playerId: string, choice: 'die1' | 'die2' | 'both'): Promise<void> {
+		await this.invoke('BusChoice', playerId, choice);
 	}
 
 	async passAuction(playerId: string, squareIndex: number): Promise<void> {

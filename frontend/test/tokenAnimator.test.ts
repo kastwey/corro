@@ -105,19 +105,19 @@ test('a per-move snap teleports even a SHORT move (e.g. going to holding from ne
 	assert.equal(h.animator.isPlayerMoving('b'), true);
 });
 
-test('the default cap animates a full two-dice roll (up to 12 squares)', () => {
+test('the default cap animates a full bonus-die roll (up to 15 squares)', () => {
 	const h = harness(); // no maxAnimatedSteps override → the production default
 	h.animator.sync(new Map([['a', 0]]));
-	h.animator.sync(new Map([['a', 12]]));
-	assert.equal(h.animator.isAnimating, true, 'a 12-square roll walks square by square');
+	h.animator.sync(new Map([['a', 15]]));
+	assert.equal(h.animator.isAnimating, true, 'a 15-square roll walks square by square');
 	assert.equal(h.animator.isPlayerMoving('a'), true);
 });
 
 test('the default cap snaps a move beyond an ordinary roll', () => {
 	const h = harness();
 	h.animator.sync(new Map([['a', 0]]));
-	h.animator.sync(new Map([['a', 13]]));
-	assert.equal(h.animator.displayPosition('a', 13), 13);
+	h.animator.sync(new Map([['a', 16]]));
+	assert.equal(h.animator.displayPosition('a', 16), 16);
 	assert.equal(h.animator.isAnimating, false);
 });
 

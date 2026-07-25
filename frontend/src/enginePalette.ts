@@ -15,5 +15,5 @@ export function teamDisplayName(
 	index: number,
 	tSync: (key: string, vars?: Record<string, unknown>) => string,
 ): string {
-	return tSync('game.journey_team', { color: tSync(`game.color_${teamColorId(index)}`) });
+	return tSync('game.team_name', { color: tSync(`game.color_${teamColorId(index)}`) });
 }

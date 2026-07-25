@@ -34,7 +34,7 @@ public sealed record PackageSummary
 			case "property":
 				content["squares"] = definition.Board.Count;
 				content["cardDefinitions"] = definition.Cards.Count;
-				content["cardIllustrations"] = definition.Cards.Count(card => !string.IsNullOrWhiteSpace(card.Svg));
+				content["cardIllustrations"] = definition.Cards.Count(HasArt);
 				content["groups"] = manifest.Groups.Count;
 				content["decks"] = manifest.Decks.Count;
 				break;
@@ -56,20 +56,26 @@ public sealed record PackageSummary
 					content[$"questions.{locale}"] = questions.Count;
 				}
 				break;
+			case "forbidden":
+				foreach (var (locale, words) in definition.ForbiddenWords ?? [])
+				{
+					content[$"words.{locale}"] = words.Count;
+				}
+				break;
 			case "journey":
-				AddDeck(content, definition.JourneyDeck, card => card.Count, card => card.Svg);
+				AddDeck(content, definition.JourneyDeck, card => card.Count, card => !string.IsNullOrWhiteSpace(card.Svg) || card.HasPngArt);
 				break;
 			case "assembly":
-				AddDeck(content, definition.AssemblyDeck, card => card.Count, card => card.Svg);
+				AddDeck(content, definition.AssemblyDeck, card => card.Count, card => !string.IsNullOrWhiteSpace(card.Svg) || card.HasPngArt);
 				break;
 			case "draft":
-				AddDeck(content, definition.DraftDeck, card => card.Count, card => card.Svg);
+				AddDeck(content, definition.DraftDeck, card => card.Count, card => !string.IsNullOrWhiteSpace(card.Svg) || card.HasPngArt);
 				break;
 			case "shedding":
-				AddDeck(content, definition.SheddingDeck, card => card.Count, card => card.Svg);
+				AddDeck(content, definition.SheddingDeck, card => card.Count, card => !string.IsNullOrWhiteSpace(card.Svg) || card.HasPngArt);
 				break;
 			case "exploding":
-				AddDeck(content, definition.ExplodingDeck, card => card.Count, card => card.Svg);
+				AddDeck(content, definition.ExplodingDeck, card => card.Count, card => !string.IsNullOrWhiteSpace(card.Svg) || card.HasPngArt);
 				break;
 		}
 
@@ -97,10 +103,13 @@ public sealed record PackageSummary
 		IDictionary<string, int> content,
 		IReadOnlyCollection<T>? deck,
 		Func<T, int> copies,
-		Func<T, string?> art)
+		Func<T, bool> hasArt)
 	{
 		content["cardDefinitions"] = deck?.Count ?? 0;
 		content["cardCopies"] = deck?.Sum(card => Math.Max(0, copies(card))) ?? 0;
-		content["cardIllustrations"] = deck?.Count(card => !string.IsNullOrWhiteSpace(art(card))) ?? 0;
+		content["cardIllustrations"] = deck?.Count(hasArt) ?? 0;
 	}
+
+	private static bool HasArt(CardDef card)
+		=> !string.IsNullOrWhiteSpace(card.Svg) || card.HasPngArt;
 }

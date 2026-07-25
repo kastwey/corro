@@ -123,6 +123,7 @@ const BOARD_SCOPED_COMMANDS = new Set([
 export const PROPERTY_ONLY_COMMANDS = new Set([
 	'WhoIsOnSquare', 'ShowPropertyInfo', 'AnnounceOwner', 'AnnounceGroup', 'AnnouncePrice',
 	'AnnounceCurrentPlayerMoney', 'AnnounceCurrentPlayerReleasePasses', 'AnnounceFreeParkingPot',
+	'AnnounceBankBuildingInventory',
 	'AnnounceAuction', 'AnnounceCurrentBid', 'ReenterAuction', 'OpenTradeBuilder',
 	'PayReleaseCost', 'UseReleasePass', 'BuyProperty', 'ManageProperties', 'EndTurn',
 	'OwnedNext', 'UnownedNext', 'GroupNext',
@@ -157,6 +158,7 @@ const DIALOG_READONLY_COMMANDS = new Set([
 	'AnnounceMyStatus',
 	'AnnounceCurrentPlayerReleasePasses',
 	'AnnounceFreeParkingPot',
+	'AnnounceBankBuildingInventory',
 	'AnnounceTurn',
 	'HistoryPrev', 'HistoryNext', 'HistoryFirst', 'HistoryLast',
 	'ToggleSound',
@@ -282,6 +284,8 @@ function createCommandExecutor(opts: KeyHandlersOptions) {
 					return false;
 				case 'AnnounceFreeParkingPot':
 					return opts.gameCommands.announceFreeParkingPot();
+				case 'AnnounceBankBuildingInventory':
+					return opts.gameCommands.announceBankBuildingInventory();
 				case 'AnnounceAuction':
 					return opts.gameCommands.announceAuctionStatus();
 				case 'AnnounceCurrentBid':

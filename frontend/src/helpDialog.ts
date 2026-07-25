@@ -107,6 +107,7 @@ export function describeCommand(cmd: string, args: any, family?: string): string
 				: tSync('game.help_cmd_group_next', { group: groupName });
 		}
 		case 'AnnounceFreeParkingPot': return tSync('game.help_cmd_free_parking');
+		case 'AnnounceBankBuildingInventory': return tSync('game.help_cmd_bank_buildings');
 		case 'AnnounceAuction': return tSync('game.help_cmd_auction');
 		case 'AnnounceCurrentBid': return tSync('game.help_cmd_current_bid');
 		case 'ToggleChat': return tSync('game.help_cmd_toggle_chat');

@@ -15,11 +15,13 @@ public class SiteBrandingOptionsTests
 		var options = ResolveOptions(new Dictionary<string, string?>());
 
 		Assert.Equal("All Welcome", options.Title);
-		Assert.Equal("Play together, play your way.", options.Tagline);
-		Assert.Null(options.LogoUrl);
-		Assert.Null(options.LogoDarkUrl);
-		Assert.Null(options.FaviconUrl);
-		Assert.Null(options.FaviconDarkUrl);
+		Assert.Null(options.Tagline);
+		Assert.Equal("Play together, play your way.", options.Taglines["en"]);
+		Assert.Equal("Juega en compañía, juega a tu manera.", options.Taglines["es"]);
+		Assert.Equal("assets/brand/all-welcome-logo-on-light.svg", options.LogoUrl);
+		Assert.Equal("assets/brand/all-welcome-logo-on-dark.svg", options.LogoDarkUrl);
+		Assert.Equal("assets/brand/all-welcome-favicon-light.svg", options.FaviconUrl);
+		Assert.Equal("assets/brand/all-welcome-favicon-dark.svg", options.FaviconDarkUrl);
 	}
 
 	[Fact]
@@ -28,14 +30,16 @@ public class SiteBrandingOptionsTests
 		var options = ResolveOptions(new Dictionary<string, string?>
 		{
 			["SiteBranding:Title"] = "Community Games",
-			["SiteBranding:Tagline"] = "A place where everyone plays.",
+			["SiteBranding:Taglines:en"] = "A place where everyone plays.",
+			["SiteBranding:Taglines:es"] = "Un lugar donde juega todo el mundo.",
 			["SiteBranding:LogoUrl"] = "assets/host/logo.svg",
 			["SiteBranding:LogoDarkUrl"] = "https://cdn.example.org/logo-dark.svg",
 			["SiteBranding:FaviconUrl"] = "/assets/host/favicon.svg",
 		});
 
 		Assert.Equal("Community Games", options.Title);
-		Assert.Equal("A place where everyone plays.", options.Tagline);
+		Assert.Equal("A place where everyone plays.", options.Taglines["en"]);
+		Assert.Equal("Un lugar donde juega todo el mundo.", options.Taglines["es"]);
 		Assert.Equal("assets/host/logo.svg", options.LogoUrl);
 		Assert.Equal("https://cdn.example.org/logo-dark.svg", options.LogoDarkUrl);
 		Assert.Equal("/assets/host/favicon.svg", options.FaviconUrl);
@@ -53,6 +57,9 @@ public class SiteBrandingOptionsTests
 	[Theory]
 	[InlineData("SiteBranding:Title", " ")]
 	[InlineData("SiteBranding:Title", " Padded title ")]
+	[InlineData("SiteBranding:Tagline", " Padded tagline ")]
+	[InlineData("SiteBranding:Taglines:es", " ")]
+	[InlineData("SiteBranding:Taglines: padded ", "Tagline")]
 	[InlineData("SiteBranding:LogoUrl", "http://cdn.example.org/logo.svg")]
 	[InlineData("SiteBranding:FaviconUrl", "//cdn.example.org/favicon.svg")]
 	[InlineData("SiteBranding:LogoDarkUrl", "assets\\logo.svg")]

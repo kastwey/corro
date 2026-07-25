@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { GameCommands, ownsWholeColorGroup, type GameCommandsOptions } from '../src/gameCommands.js';
+import { GameCommands, bankBuildingInventory, ownsWholeColorGroup, type GameCommandsOptions } from '../src/gameCommands.js';
 import { squareGroupLabel } from '../src/localizeSquare.js';
 import type { Player, Square } from '../src/models.js';
 
@@ -38,6 +38,7 @@ function build(opts: Partial<GameCommandsOptions> & {
 		getPlayerReleasePasses: () => 0,
 		getPendingDebts: opts.getPendingDebts,
 		getFreeParkingPot: () => 0,
+		getBankBuildingInventory: opts.getBankBuildingInventory,
 	};
 	return { cmds: new GameCommands(full), announced };
 }
@@ -129,6 +130,52 @@ test('announceCurrentPlayerMoney omits the debt line when I owe nothing', () => 
 
 	assert.equal(announced.length, 1);
 	assert.match(announced[0], /^announce_player_money\|/);
+});
+
+// ── Bank building inventory (V) ─────────────────────────────────────────────
+
+test('bankBuildingInventory subtracts loose small and converted big pieces from finite stock', () => {
+	const squares = [
+		{ smallBuildings: 3, bigBuildings: 0 },
+		{ smallBuildings: 0, bigBuildings: 2 },
+		{ smallBuildings: 4, bigBuildings: 0 },
+	] as Square[];
+
+	assert.deepEqual(bankBuildingInventory(squares, {
+		buildingShortage: true,
+		maxSmallBuildings: 40,
+		maxBigBuildings: 15,
+	}), {
+		limited: true,
+		smallRemaining: 33,
+		bigRemaining: 13,
+	});
+});
+
+test('announceBankBuildingInventory reports both themed piece counts when stock is finite', () => {
+	const { cmds, announced } = build({
+		players: [],
+		t: (key: string, vars?: Record<string, any>) => `${key}|${JSON.stringify(vars ?? {})}`,
+		getBankBuildingInventory: () => ({ limited: true, smallRemaining: 27, bigRemaining: 9 }),
+	} as any);
+
+	cmds.announceBankBuildingInventory();
+
+	assert.equal(announced.length, 1);
+	assert.match(announced[0], /^announce_bank_buildings\|/);
+	assert.deepEqual(JSON.parse(announced[0].split('|')[1]), { small: '27', big: '9' });
+});
+
+test('announceBankBuildingInventory says the supply is unlimited when shortage rules are off', () => {
+	const { cmds, announced } = build({
+		players: [],
+		t: (key: string) => key,
+		getBankBuildingInventory: () => ({ limited: false, smallRemaining: 0, bigRemaining: 0 }),
+	} as any);
+
+	cmds.announceBankBuildingInventory();
+
+	assert.deepEqual(announced, ['announce_bank_buildings_unlimited']);
 });
 
 // ── Navigate to occupied squares (bug 8) ─────────────────────────────────────

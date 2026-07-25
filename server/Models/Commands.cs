@@ -92,6 +92,39 @@ public record TriviaJudgeCommand : GameCommand
 	public required bool Correct { get; init; }
 }
 
+/// <summary>Forbidden family: the clue-giver starts the authoritative timed turn.</summary>
+public record ForbiddenStartCommand : GameCommand
+{
+	public override string Type => "FORBIDDEN_START";
+}
+
+/// <summary>Forbidden family: the clue-giver marks the spoken guess correct and deals the next card.</summary>
+public record ForbiddenCorrectCommand : GameCommand
+{
+	public override string Type => "FORBIDDEN_CORRECT";
+	public int CardSequence { get; init; }
+}
+
+/// <summary>Forbidden family: the clue-giver skips the current card.</summary>
+public record ForbiddenPassCommand : GameCommand
+{
+	public override string Type => "FORBIDDEN_PASS";
+	public int CardSequence { get; init; }
+}
+
+/// <summary>Forbidden family: the opposing monitor reports a forbidden word.</summary>
+public record ForbiddenViolationCommand : GameCommand
+{
+	public override string Type => "FORBIDDEN_VIOLATION";
+	public int CardSequence { get; init; }
+}
+
+/// <summary>Forbidden family: server-only resolution when the authoritative turn clock expires.</summary>
+public record ForbiddenExpireTurnCommand : GameCommand
+{
+	public override string Type => "FORBIDDEN_EXPIRE_TURN";
+}
+
 /// <summary>Journey family: draw the top card (the start of your turn).</summary>
 public record JourneyDrawCommand : GameCommand
 {
@@ -259,6 +292,14 @@ public record ExplodingResolveWindowCommand : GameCommand
 {
 	public override string Type => "EXPLODING_RESOLVE_WINDOW";
 	public override bool RequiresTurn => false;
+}
+
+/// <summary>Choose movement after the bonus die shows Bus.</summary>
+public record BusChoiceCommand : GameCommand
+{
+	public override string Type => "BUS_CHOICE";
+	public override bool RequiresTurn => true;
+	public required string Choice { get; init; }
 }
 
 public record PlaceBidCommand : GameCommand
@@ -465,6 +506,16 @@ public record TriviaActionResponse : ServerResponse
 	public bool GameEnded { get; init; }
 }
 
+/// <summary>Forbidden family: outcome of readiness, start, card resolution or timeout.</summary>
+public record ForbiddenActionResponse : ServerResponse
+{
+	public override string Type => "FORBIDDEN_ACTION";
+	/// <summary>"ready" | "start" | "correct" | "pass" | "violation" | "timeout".</summary>
+	public required string Action { get; init; }
+	public bool TurnEnded { get; init; }
+	public bool GameEnded { get; init; }
+}
+
 /// <summary>Journey family: outcome of a draw/play/discard/coup action.</summary>
 public record JourneyActionResponse : ServerResponse
 {
@@ -634,6 +685,22 @@ public record DiceRolledResponse : ServerResponse
 
 	// Can player afford to buy?
 	public bool CanAfford { get; init; }
+
+	// Bonus-die fields (populated only when the optional rule throws it)
+	public BonusDieFace? BonusDie { get; init; }
+	public int? BonusDieValue { get; init; }
+	public bool RequiresBusChoice { get; init; }
+	public int? ExpressDestination { get; init; }
+	public string? ExpressSquareName { get; init; }
+	public string? BusDestinationDie1Name { get; init; }
+	public string? BusDestinationDie2Name { get; init; }
+	public string? BusDestinationBothName { get; init; }
+	public string? BusDestinationDie1ColorKey { get; init; }
+	public string? BusDestinationDie2ColorKey { get; init; }
+	public string? BusDestinationBothColorKey { get; init; }
+	public int? BusDestinationDie1Rent { get; init; }
+	public int? BusDestinationDie2Rent { get; init; }
+	public int? BusDestinationBothRent { get; init; }
 
 	// Holding-related fields
 	public bool ReleasedFromHolding { get; init; } = false;

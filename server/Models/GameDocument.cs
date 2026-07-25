@@ -179,6 +179,12 @@ public record GameSettings
 	[JsonPropertyName("doubleGoSalary")]
 	public bool DoubleGoSalary { get; init; } = false;
 
+	// ── Dice ──────────────────────────────────────────────────────────────────
+
+	/// <summary>Use the bonus die after each player completes their first lap.</summary>
+	[JsonPropertyName("useBonusDie")]
+	public bool UseBonusDie { get; init; } = false;
+
 	// ── Free Parking ────────────────────────────────────────────────────────────
 
 	/// <summary>

@@ -316,7 +316,7 @@ test('team mode: Shift+S skips my WHOLE shared seat, partner included', () => {
 
 	assert.equal(announced.length, 1);
 	// The rival team's line leads with its colour word (seat 1 → blue)…
-	assert.match(announced[0], /game\.journey_team\(game\.color_blue\)/);
+	assert.match(announced[0], /game\.team_name\(game\.color_blue\)/);
 	// …and my shared seat (red, my partner included) is not read back.
 	assert.ok(!announced[0].includes('game.color_red'), 'my team is not repeated');
 });
@@ -343,7 +343,7 @@ test('team mode: my hand is MINE alone, any member id targets the seat, one shar
 
 	// Both partners share ONE status line, led by the team's colour word (seat 0 → red).
 	const status = journeyStatusText(gs, 'me', t)!;
-	assert.match(status, /^game\.journey_team\(game\.color_red\)/);
+	assert.match(status, /^game\.team_name\(game\.color_red\)/);
 	assert.equal(status, journeyStatusText(gs, 'p2', t));
 
 	// The dashboard shows the seat as its members together.
@@ -368,8 +368,8 @@ test('team mode: with several rival TEAMS the picker offers their colour words',
 	assert.ok(menu, 'victim picker opened');
 	const options = Array.from(menu!.querySelectorAll<HTMLElement>('[role="menuitem"]'));
 	assert.deepEqual(options.map(o => o.textContent), [
-		'game.journey_team(game.color_blue)',
-		'game.journey_team(game.color_yellow)',
+		'game.team_name(game.color_blue)',
+		'game.team_name(game.color_yellow)',
 	]);
 	options[1].click();
 	assert.deepEqual(played, [['stop#0', 'r3']]);

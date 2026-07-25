@@ -28,6 +28,8 @@ import { initializeSiteBranding } from '../siteBranding.js';
 import { applyRuleSettings, readRuleSettings } from './ruleFields.js';
 import { buildBotNameForm } from './botNameForm.js';
 import { createPlayerIdentity } from './playerListItem.js';
+import { RovingToolbarList } from '../accessibleList.js';
+import { nextTeamAddFocus, teamRosterStatus } from './teamRoster.js';
 import {
 	t, translateServerError, showLoading, showError,
 	showSection, hideSection, showView, focusFirstField, getElement, getInputValue, getSelectedRadio,
@@ -48,16 +50,23 @@ class UnifiedLobbyUI {
 	/** The package operation Create must wait for. A user can select a board and submit before its
 	 *  POST+i18n chain settles; reading uploadedPackage earlier created the PREVIOUS game instead. */
 	private pendingPackageStage: Promise<void> = Promise.resolve();
+	/** Team member lists are rebuilt from authoritative lobby state; detach their delegated
+	 *  keyboard handlers before each rebuild. */
+	private teamListNavigators: RovingToolbarList[] = [];
+	/** Focus destination requested by an in-flight team move. The LobbyUpdated repaint consumes it. */
+	private pendingTeamFocus: {
+		preferredTeamIndex: number;
+		playerId: string;
+		expectedTeamIndex: number | null;
+	} | null = null;
 
 	constructor() {
 		this.init();
 	}
 
 	private async init(): Promise<void> {
-		await Promise.all([
-			this.initializeI18n(),
-			initializeSiteBranding(),
-		]);
+		await this.initializeI18n();
+		await initializeSiteBranding(document, fetch, () => i18nBinder.getCurrentLanguage());
 		this.setupThemeToggle();
 		dialogManager.init(); // Initialize DialogManager
 		// Keep keyboard focus inside the lobby: Tab / Shift+Tab wrap instead of
@@ -421,8 +430,7 @@ class UnifiedLobbyUI {
 		if (teamsBox) teamsBox.checked = false;
 		// Fill the player-count selector from this board's supported range (min..max).
 		this.renderPlayerCount(pkg);
-		// Journey boards can split the table into equal teams: offer the valid team counts
-		// for the chosen player count (the group hides when nothing divides).
+		// Team families offer their legal equal-team layouts for the chosen player count.
 		this.renderTeamCountOptions(pkg);
 		// Reset any previous board's dynamic rules, then render this board's.
 		const pkgRules = getElement('package-rules');
@@ -530,10 +538,8 @@ class UnifiedLobbyUI {
 	}
 
 	/**
-	 * Journey boards only: fills the team-count combo with the divisors of the CHOSEN player
-	 * count that give at least two equal teams of at least two players («2 equipos de 2»…).
-	 * Hidden for other families, and when no count divides (e.g. 5 players). Rebuilt when the
-	 * board is staged and whenever the player count changes.
+	 * Journey offers optional equal teams. Forbidden Words always requires exactly two equal
+	 * teams. Hidden for other families and rebuilt with the chosen player count.
 	 */
 	private renderTeamCountOptions(pkg: PackageUploadResponse): void {
 		const group = getElement('team-count-group');
@@ -542,18 +548,23 @@ class UnifiedLobbyUI {
 
 		const chosen = select.value;
 		const players = Number(getElement<HTMLSelectElement>('max-players')?.value) || pkg.maxPlayers || 0;
+		const family = pkg.gameType ?? 'property';
 		const counts: number[] = [];
-		if ((pkg.gameType ?? 'property') === 'journey') {
+		if (family === 'journey') {
 			for (let teams = 2; teams <= players / 2; teams++) {
 				if (players % teams === 0) counts.push(teams);
 			}
+		} else if (family === 'forbidden' && players >= 4 && players % 2 === 0) {
+			counts.push(2);
 		}
 
 		select.innerHTML = '';
-		const none = document.createElement('option');
-		none.value = '0';
-		none.textContent = t('lobby.teamsNone');
-		select.appendChild(none);
+		if (family !== 'forbidden') {
+			const none = document.createElement('option');
+			none.value = '0';
+			none.textContent = t('lobby.teamsNone');
+			select.appendChild(none);
+		}
 		for (const n of counts) {
 			const option = document.createElement('option');
 			option.value = String(n);
@@ -563,7 +574,7 @@ class UnifiedLobbyUI {
 			select.appendChild(option);
 		}
 		// Keep the host's pick when it survives the new player count; else back to "none".
-		select.value = counts.includes(Number(chosen)) ? chosen : '0';
+		select.value = counts.includes(Number(chosen)) ? chosen : (family === 'forbidden' ? '2' : '0');
 		group.classList.toggle('hidden', counts.length === 0);
 	}
 
@@ -576,8 +587,10 @@ class UnifiedLobbyUI {
 		if (!select) return;
 		const min = pkg.minPlayers || 2;
 		const max = Math.max(pkg.maxPlayers || 8, min);
+		const forbidden = pkg.gameType === 'forbidden';
 		select.innerHTML = '';
 		for (let n = min; n <= max; n++) {
+			if (forbidden && n % 2 !== 0) continue;
 			const option = document.createElement('option');
 			option.value = String(n);
 			option.textContent = t('lobby.playersOption', '{{count}} players').replace('{{count}}', String(n));
@@ -1430,7 +1443,7 @@ class UnifiedLobbyUI {
 		}
 	}
 
-	// === Journey team mode (waiting room) ─ the host arranges, the room watches ===
+	// === Team mode (waiting room) ─ the host arranges, the room watches ===
 
 	/** The team's spoken identity ("Red team") — palette colour word by team index. */
 	private teamName(index: number): string {
@@ -1442,12 +1455,15 @@ class UnifiedLobbyUI {
 		const teamCount = game?.teamCount ?? 0;
 		const hostPanel = getElement('host-team-panel');
 		const guestPanel = getElement('joined-team-panel');
+		const preservedFocus = this.captureTeamPanelFocus();
+		this.destroyTeamListNavigators();
 		hostPanel?.classList.toggle('hidden', teamCount < 2);
 		guestPanel?.classList.toggle('hidden', teamCount < 2);
 		if (!game || teamCount < 2) return;
 		// The host's panel carries the controls; the guests' is the same picture, read-only.
 		if (hostPanel) this.renderTeamPanel(hostPanel, game, this.isHost);
 		if (guestPanel) this.renderTeamPanel(guestPanel, game, false);
+		this.restoreTeamPanelFocus(game, preservedFocus);
 	}
 
 	private renderTeamPanel(panel: HTMLElement, game: GameInfo, interactive: boolean): void {
@@ -1462,51 +1478,94 @@ class UnifiedLobbyUI {
 
 		for (let index = 0; index < teamCount; index++) {
 			const members = game.players.filter(p => p.teamIndex === index);
+			const teamName = this.teamName(index);
 			const box = document.createElement('fieldset');
 			box.className = 'team-box';
+			box.dataset.teamIndex = String(index);
 			const legend = document.createElement('legend');
-			legend.textContent = `${this.teamName(index)} (${members.length}/${teamSize})`;
+			legend.textContent = `${teamName} (${members.length}/${teamSize})`;
 			box.appendChild(legend);
 
 			const list = document.createElement('ul');
+			list.className = 'team-member-list';
+			list.setAttribute('aria-label', teamName);
 			for (const member of members) {
 				const item = document.createElement('li');
+				item.className = 'team-member';
+				item.dataset.playerId = member.id;
+				item.tabIndex = -1;
+				item.setAttribute('aria-label', t('lobby.teamMemberLabel')
+					.replace('{{name}}', member.name)
+					.replace('{{team}}', teamName));
 				const name = document.createElement('span');
+				name.className = 'team-member__name';
 				name.textContent = member.name;
 				item.appendChild(name);
 				if (interactive) {
+					const toolbar = document.createElement('div');
+					toolbar.className = 'team-member__actions';
+					toolbar.setAttribute('role', 'toolbar');
+					toolbar.setAttribute('aria-label', t('actions_for').replace('{{name}}', member.name));
 					const remove = document.createElement('button');
 					remove.type = 'button';
 					remove.className = 'secondary-button team-box__remove';
+					remove.tabIndex = -1;
 					remove.textContent = t('lobby.teamRemove');
 					remove.setAttribute('aria-label',
 						t('lobby.teamRemoveOf').replace('{{name}}', member.name));
-					remove.addEventListener('click', () => void this.assignTeam(member.id, null));
-					item.appendChild(remove);
+					remove.addEventListener('click', () => void this.assignTeam(member.id, null, index));
+					toolbar.appendChild(remove);
+					item.appendChild(toolbar);
 				}
 				list.appendChild(item);
 			}
 			box.appendChild(list);
+			const navigator = new RovingToolbarList({
+				list,
+				itemSelector: '.team-member',
+				toolbarButtonSelector: '.team-member__actions button',
+				menuLabel: () => t('lobby.teamMemberActionsMenu'),
+				menuClass: 'team-context-menu',
+				menuItemClass: 'team-context-menu__item',
+				// Keep visible popup content in the active main landmark.
+				menuHost: () => panel.closest<HTMLElement>('main') ?? panel,
+			});
+			navigator.refreshRovingTabindex();
+			this.teamListNavigators.push(navigator);
 
 			if (interactive && members.length < teamSize && pool.length > 0) {
 				const add = document.createElement('button');
 				add.type = 'button';
 				add.className = 'secondary-button team-box__add';
+				add.dataset.teamIndex = String(index);
 				add.textContent = t('lobby.teamAdd');
 				add.setAttribute('aria-label',
-					t('lobby.teamAddTo').replace('{{team}}', this.teamName(index)));
+					t('lobby.teamAddTo').replace('{{team}}', teamName));
 				add.addEventListener('click', () => this.openTeamPickMenu(add, index, pool));
 				box.appendChild(add);
 			}
 			panel.appendChild(box);
 		}
 
-		// The shrinking pool of unassigned players, spelled out (the start guard needs it empty).
+		// Distinguish the current unassigned pool from seats whose players have not joined yet.
+		// An empty pool is not a complete roster until every configured team place is filled.
 		const poolLine = document.createElement('p');
 		poolLine.className = 'team-pool';
-		poolLine.textContent = pool.length > 0
-			? t('lobby.teamPool').replace('{{names}}', pool.map(p => p.name).join(', '))
-			: t('lobby.teamPoolEmpty');
+		const roster = teamRosterStatus(game.players, game.maxPlayers);
+		if (roster.kind === 'unassigned') {
+			poolLine.textContent = t('lobby.teamPool')
+				.replace('{{names}}', roster.names.join(', '));
+		} else if (roster.kind === 'waiting') {
+			const key = roster.missing === 1
+				? 'lobby.teamRosterWaitingOne'
+				: 'lobby.teamRosterWaitingMany';
+			poolLine.textContent = t(key)
+				.replace('{{assigned}}', String(roster.assigned))
+				.replace('{{capacity}}', String(roster.capacity))
+				.replace('{{missing}}', String(roster.missing));
+		} else {
+			poolLine.textContent = t('lobby.teamPoolEmpty');
+		}
 		panel.appendChild(poolLine);
 	}
 
@@ -1517,15 +1576,20 @@ class UnifiedLobbyUI {
 			anchor,
 			items: pool.map(player => ({
 				label: player.name,
-				onSelect: () => void this.assignTeam(player.id, teamIndex),
+				onSelect: () => void this.assignTeam(player.id, teamIndex, teamIndex),
 			})),
 			announce: text => this.announceInLobby(text),
 			onClose: () => anchor.focus(),
 		});
 	}
 
-	private async assignTeam(playerId: string, teamIndex: number | null): Promise<void> {
+	private async assignTeam(
+		playerId: string,
+		teamIndex: number | null,
+		preferredTeamIndex: number,
+	): Promise<void> {
 		if (!this.currentGame || !this.isHost) return;
+		this.pendingTeamFocus = { preferredTeamIndex, playerId, expectedTeamIndex: teamIndex };
 		try {
 			await gameClient.assignTeam({
 				gameId: this.currentGame.gameId,
@@ -1534,9 +1598,73 @@ class UnifiedLobbyUI {
 				teamIndex,
 			});
 		} catch (error) {
+			this.pendingTeamFocus = null;
 			console.error('Error assigning team:', error);
 			showError(t('lobby.errors.assignTeam'));
 		}
+	}
+
+	private destroyTeamListNavigators(): void {
+		for (const navigator of this.teamListNavigators) navigator.destroy();
+		this.teamListNavigators = [];
+	}
+
+	/** Capture a stable identity before authoritative state replaces the team DOM. */
+	private captureTeamPanelFocus(): {
+		kind: 'add' | 'member' | 'action';
+		teamIndex: number;
+		playerId?: string;
+	} | null {
+		const active = document.activeElement as HTMLElement | null;
+		if (!active?.closest('#host-team-panel, #joined-team-panel')) return null;
+		const box = active.closest<HTMLElement>('.team-box');
+		const teamIndex = Number(box?.dataset.teamIndex);
+		if (!Number.isInteger(teamIndex)) return null;
+		if (active.matches('.team-box__add')) return { kind: 'add', teamIndex };
+		const member = active.closest<HTMLElement>('.team-member');
+		const playerId = member?.dataset.playerId;
+		if (!playerId) return null;
+		return {
+			kind: active.matches('.team-member__actions button') ? 'action' : 'member',
+			teamIndex,
+			playerId,
+		};
+	}
+
+	private restoreTeamPanelFocus(
+		game: GameInfo,
+		preserved: { kind: 'add' | 'member' | 'action'; teamIndex: number; playerId?: string } | null,
+	): void {
+		const hostPanel = getElement('host-team-panel');
+		if (!hostPanel || !this.isHost) return;
+
+		const pending = this.pendingTeamFocus;
+		if (pending) {
+			const addButtons = Array.from(hostPanel.querySelectorAll<HTMLButtonElement>('.team-box__add'));
+			const addable = addButtons.map(button => Number(button.dataset.teamIndex));
+			const targetIndex = nextTeamAddFocus(pending.preferredTeamIndex, addable, game.teamCount ?? 0);
+			const target = targetIndex === null
+				? hostPanel.querySelector<HTMLElement>(`.team-member[data-player-id="${CSS.escape(pending.playerId)}"]`)
+				: addButtons.find(button => Number(button.dataset.teamIndex) === targetIndex) ?? null;
+			target?.focus();
+			const updated = game.players.find(player => player.id === pending.playerId);
+			if ((updated?.teamIndex ?? null) === pending.expectedTeamIndex) this.pendingTeamFocus = null;
+			return;
+		}
+
+		if (!preserved) return;
+		if (preserved.kind === 'add') {
+			const addButtons = Array.from(hostPanel.querySelectorAll<HTMLButtonElement>('.team-box__add'));
+			const addable = addButtons.map(button => Number(button.dataset.teamIndex));
+			const targetIndex = nextTeamAddFocus(preserved.teamIndex, addable, game.teamCount ?? 0);
+			addButtons.find(button => Number(button.dataset.teamIndex) === targetIndex)?.focus();
+			return;
+		}
+		const row = preserved.playerId
+			? hostPanel.querySelector<HTMLElement>(`.team-member[data-player-id="${CSS.escape(preserved.playerId)}"]`)
+			: null;
+		if (preserved.kind === 'action') row?.querySelector<HTMLElement>('.team-member__actions button')?.focus();
+		else row?.focus();
 	}
 
 	/** The whole room hears every team move (the LobbyUpdated repaint is silent). */

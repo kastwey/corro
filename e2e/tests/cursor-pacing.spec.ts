@@ -51,6 +51,17 @@ test('the cursor reaches the landing square only after the token hop, never befo
 	});
 
 	await roll(ana, 4, 6); // 0 → 10
+	await expect(ana.locator('#board .player-token--moving')).toHaveCount(1, { timeout: 5_000 });
+	// M follows the presentation-safe token position while the hop is in progress, never
+	// the already-authoritative destination from GameState.
+	await ana.locator('#board').focus();
+	await ana.keyboard.press('m');
+	const midHop = await ana.evaluate(() => ({
+		focused: Number(document.querySelector('#board .square.focused')?.getAttribute('data-index')),
+		visible: Number(document.querySelector('#board .player-token--moving')?.closest('.square')?.getAttribute('data-index')),
+	}));
+	expect(midHop.focused).toBe(midHop.visible);
+	expect(midHop.focused, 'M exposed the authoritative destination before the token arrived').not.toBe(10);
 	await expect(ana.locator('#board .square[data-index="10"] .player-token')).toHaveCount(1, { timeout: 20_000 });
 	await ana.waitForTimeout(300); // let the settle-time mutations drain into the log
 

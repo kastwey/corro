@@ -58,6 +58,7 @@ player decisions already resemble your idea; names and theme do not matter.
 | `shedding` | matches the discard by colour, number or action and tries to empty a hand | `cards.json` | Easy |
 | `exploding` | plays actions, then draws against elimination and reaction cards | `cards.json` | Medium |
 | `trivia` | moves around a six-category wheel and answers questions | `questions.en.json` and `questions.es.json` | Medium |
+| `forbidden` | alternates two teams giving spoken clues without listed words | `words.en.json` and `words.es.json` | Medium |
 
 For a first experiment, `track` or `shedding` is the shortest route. Use `property` only if the
 economy, auctions, sets and construction are genuinely part of your game.
@@ -105,8 +106,9 @@ are authoring aids and are automatically left out of the packed `.corro` file.
 | `manifest.json` | Identity, family, player count, rules and token list | Yes |
 | `board.json` | Spatial layout for `property`, `race`, `track` and `trivia` | Depends on family |
 | `cards.json` | Cards for `property` and the five card families | Depends on family |
-| `assets/cards/*.svg` | Optional illustration for a card with the matching id | Later |
+| `assets/cards/*.{svg,png}` | Optional illustration for a card with the matching id | Later |
 | `questions.en.json`, `questions.es.json` | Real question banks for `trivia` | Trivia only |
+| `words.en.json`, `words.es.json` | Real target and forbidden-word decks for `forbidden` | Forbidden only |
 | `i18n/en.json`, `i18n/es.json` | Names and text referenced by keys | Yes |
 | `assets/tokens/*.svg` | Player-piece geometry | Later |
 | `CREDITS.md` | Sources and redistribution licences for art and sounds | Before sharing |
@@ -117,8 +119,8 @@ are authoring aids and are automatically left out of the packed `.corro` file.
 Card families do not have a `board.json`. That is expected. `race` and `track` do not need a
 `cards.json`. Do not create files merely because another family has them.
 
-Every starter supports exactly two players so it stays small and easy to understand. To support
-more players, increase `players.max`, add enough distinct tokens or seats, and expand card decks when
+Most starters support exactly two players so they stay small and easy to understand; `forbidden`
+starts with the four players its two teams require. To support more players, increase `players.max`, add enough distinct tokens or seats, and expand card decks when
 necessary. Run `validate`: it reports the exact capacity requirement for that family.
 
 ## Step 5: make the first safe edits
@@ -171,8 +173,10 @@ when you need a realistic example.
 ### Optional card drawings
 
 Every card works without an image: Corro shows a neutral drawing based on its generic mechanic.
-To replace it, add `assets/cards/<card-id>.svg`; for example, card id `step25` uses
-`assets/cards/step25.svg`. Do not add an `svg` field to `cards.json`.
+To replace it, add either `assets/cards/<card-id>.svg` or `assets/cards/<card-id>.png`; for
+example, card id `step25` uses `assets/cards/step25.svg`. SVG uses a 64×64 path-only canvas.
+PNG must be a static, non-interlaced 256×256 8-bit RGB/RGBA image, at most 512 KiB. Never
+provide both formats for one card, and do not add an art field or path to `cards.json`.
 
 Use a `viewBox="0 0 64 64"` and flatten the drawing to `<path>` geometry. The package loader
 discards colours and all other SVG markup for security; the card frame supplies a readable colour.
@@ -246,7 +250,7 @@ hidden package it says `Hidden: yes` but never prints the unlock code.
 | `Invalid JSON (line …)` | The file has broken JSON syntax | Quotes, commas and matching braces near that line |
 | `resolves in no locale` | A `nameKey`/`textKey` has no text | Add the same dotted key under `i18n/en.json` and `i18n/es.json` |
 | `token … has no icon` | A listed token has no usable SVG path | Check the id and corresponding `assets/tokens/<id>.svg` file |
-| `card illustration …` | An optional card SVG is malformed, oversized or names no card | Match `assets/cards/<id>.svg` to a `cards.json` id and flatten it to paths |
+| `card illustration …` | Optional SVG/PNG art is malformed, oversized, ambiguous or names no card | Match one `assets/cards/<id>.svg` or `.png` to a `cards.json` id; flatten SVG to paths or export strict 256×256 PNG |
 | `unknown type` or `unknown effect` | The package names a mechanic the family does not implement | Use an option suggested by the schema or format reference |
 | `deck … is too small` | The largest supported table cannot be dealt | Add card copies, reduce hand size or lower `players.max` |
 | `players.max … tokens/seats` | More players are allowed than distinct pieces/seats exist | Add tokens/seats or lower `players.max` |

@@ -20,11 +20,12 @@ const raceState = () => ({
 	raceBoard: { seats: [{ id: 's-red', nameKey: 'seats.red' }] },
 }) as any;
 
-test('familyFor resolves race, track and journey; property and unknown fall back to null', () => {
+test('familyFor resolves registered families; property and unknown fall back to null', () => {
 	assert.equal(familyFor('race')?.gameType, 'race');
 	assert.equal(familyFor('track')?.gameType, 'track');
 	assert.equal(familyFor('journey')?.gameType, 'journey');
 	assert.equal(familyFor('shedding')?.gameType, 'shedding'); // "someday" arrived 2026-07-05
+	assert.equal(familyFor('forbidden')?.gameType, 'forbidden');
 	assert.equal(familyFor('property'), null);
 	assert.equal(familyFor(undefined), null);
 	assert.equal(familyFor('deckbuilder'), null); // an unknown genre still falls back
@@ -46,6 +47,7 @@ test('traits distinguish spatial boards from card hands', () => {
 	for (const gameType of ['journey', 'assembly', 'draft', 'shedding', 'exploding']) {
 		assert.equal(familyHomeSurface(gameType), 'hand', gameType);
 	}
+	assert.equal(familyHomeSurface('forbidden'), 'activity');
 	assert.equal(familyHomeSurface('unknown'), 'board');
 });
 

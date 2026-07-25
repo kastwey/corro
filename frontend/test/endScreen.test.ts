@@ -72,6 +72,32 @@ test('journey pairs: BOTH partners of the winning seat are winners, ranks tie 1-
 	assert.deepEqual(rows.map(r => r.place), [1, 1, 2, 2]);
 });
 
+test('forbidden teams: every member of the winning team shares first place', () => {
+	const players = [
+		player({ id: 'a', name: 'Ana', finishPlace: 1 }),
+		player({ id: 'b', name: 'Berto', finishPlace: 1 }),
+		player({ id: 'c', name: 'Carla', finishPlace: 2 }),
+		player({ id: 'd', name: 'David', finishPlace: 2 }),
+	];
+	const gs = state({
+		players,
+		winnerId: 'a',
+		forbidden: {
+			teams: [
+				{ teamIndex: 0, memberIds: ['a', 'b'], score: 5, turnsTaken: 2 },
+				{ teamIndex: 1, memberIds: ['c', 'd'], score: 3, turnsTaken: 2 },
+			],
+		} as any,
+	});
+
+	const side = winningSide(gs);
+	assert.deepEqual([...side.ids].sort(), ['a', 'b']);
+	assert.ok(side.teamName);
+	const rows = computeStandings(gs);
+	assert.deepEqual(rows.map(row => row.isWinner), [true, true, false, false]);
+	assert.deepEqual(rows.map(row => row.place), [1, 1, 2, 2]);
+});
+
 test('winningSide is the lone winner outside team play (no team name)', () => {
 	const gs = state({ players: [player({ id: 'a', name: 'Ana' })], winnerId: 'a' });
 	const side = winningSide(gs);

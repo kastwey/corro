@@ -110,9 +110,19 @@ test('voice chat: host enables it, players join unmuted, query speakers, adjust 
 	// and creates an unmuted local participant row.
 	await ana.getByRole('button', { name: es.voice_join }).click();
 	await expect(ana.locator('#voice-toggle')).toHaveClass(/voice-toggle--connected/);
-	await expect(ana.locator('.voice-participant').first()).toContainText('Ana');
-	await expect(ana.locator('.voice-participant').first()).toContainText(es.voice_listening_visual);
-	await expect(ana.locator('.voice-participant').first().locator('.voice-participant__volume')).toBeHidden();
+	const anaVoiceRow = ana.locator('.voice-participant').first();
+	await expect(anaVoiceRow).toContainText('Ana');
+	await expect(anaVoiceRow).toContainText(es.voice_listening_visual);
+	await expect(anaVoiceRow.locator('.voice-participant__volume')).toBeHidden();
+	await expect(anaVoiceRow).toHaveAttribute('tabindex', '0');
+	await expect(anaVoiceRow).toHaveAttribute('aria-label', interpolate(
+		es.voice_participant_label_listening,
+		{ player: interpolate(es.voice_participant_self, { player: 'Ana' }) },
+	));
+	await expect(anaVoiceRow.getByRole('toolbar')).toHaveAttribute('aria-label', interpolate(
+		es.actions_for,
+		{ name: interpolate(es.voice_participant_self, { player: 'Ana' }) },
+	));
 	await expect(ana.locator('.player-card.is-me .player-tag--voice')).toHaveText(es.voice_in_chat_visual);
 	const anaMicrophone = ana.locator('#voice-microphone-toggle');
 	await expect(anaMicrophone).toBeVisible();
@@ -238,8 +248,9 @@ test('voice chat: host enables it, players join unmuted, query speakers, adjust 
 	await expect(bertoPlayerCard.locator('.player-tag--voice')).toHaveText(es.voice_in_chat_visual);
 	await expectAnnouncement(ana, exact(interpolate(es.voice_joined, { player: 'Berto' })));
 
-	// Speaking is visual continuously. The focused volume slider can invoke the global
-	// on-demand query; only that keypress sends the speaker name to a screen reader.
+	// Speaking is visual continuously. The roster itself is a roving accessible list:
+	// arrows move between people, Right enters their visible actions, and Shift+F10
+	// exposes those same actions without adding tab stops.
 	await ana.evaluate(({ id }) => (window as any).__voiceTest.setSpeaking(id, true), { id: bertoId });
 	await expect(bertoRow).toHaveClass(/voice-participant--speaking/);
 	await expect(bertoRow).toContainText(es.voice_speaking_visual);
@@ -255,20 +266,61 @@ test('voice chat: host enables it, players join unmuted, query speakers, adjust 
 	await expect(bertoPlayerCard.locator('.player-tag--voice')).toHaveText(es.voice_speaking_visual);
 	await flushAxeAudit(ana);
 	await ana.keyboard.press('Control+Alt+V');
+	await anaVoiceRow.focus();
+	await ana.keyboard.press('ArrowDown');
+	await expect(bertoRow).toBeFocused();
+	await expect(anaVoiceRow).toHaveAttribute('tabindex', '-1');
+	await expect(bertoRow).toHaveAttribute('tabindex', '0');
+	await ana.keyboard.press('ArrowRight');
+	const volumeAction = bertoRow.locator('.voice-participant__volume-action');
+	await expect(volumeAction).toBeFocused();
+	await ana.keyboard.press('ArrowRight');
+	const hostMuteAction = bertoRow.getByRole('button', {
+		name: interpolate(es.voice_host_mute, { player: 'Berto' }),
+	});
+	await expect(hostMuteAction).toBeFocused();
+	await ana.keyboard.press('Escape');
+	await expect(bertoRow).toBeFocused();
+	await ana.keyboard.press('Shift+F10');
+	const participantMenu = ana.locator('.voice-participant-context-menu');
+	await expect(participantMenu).toHaveAttribute('role', 'menu');
+	await expect(ana.locator('main > .voice-participant-context-menu')).toHaveCount(1);
+	await expect(participantMenu.getByRole('menuitem')).toHaveText([
+		interpolate(es.voice_volume, { player: 'Berto', volume: '100' }),
+		interpolate(es.voice_host_mute, { player: 'Berto' }),
+	]);
+	await flushAxeAudit(ana);
+	await ana.locator('#theme-toggle').click();
+	await expect(ana.locator('html')).toHaveAttribute('data-theme', 'dark');
+	await flushAxeAudit(ana);
+	await ana.locator('#theme-toggle').click();
+	await expect(ana.locator('html')).toHaveAttribute('data-theme', 'light');
+	await flushAxeAudit(ana);
+
+	// Choosing the volume action enters the existing native range. Its own arrows remain
+	// native; Escape returns to the owning person, and global read-only shortcuts still work.
+	await participantMenu.getByRole('menuitem').first().click();
 	const volume = bertoRow.locator('input[type="range"]');
-	await volume.focus();
+	await expect(volume).toBeFocused();
 	await ana.keyboard.press('Control+Alt+A');
 	await expectAnnouncement(ana, exact(interpolate(es.voice_speakers, { names: 'Berto' })));
 	await volume.fill('35');
 	await expect(volume).toHaveValue('35');
+	await ana.keyboard.press('Escape');
+	await expect(bertoRow).toBeFocused();
 	// The modified panel cycle is global from a focused voice control and wraps back to board.
+	await volume.focus();
 	await ana.keyboard.press('Control+F6');
 	await expect(board).toBeFocused();
 
 	// Moderation is a server-authorized one-shot mute, not a sticky permission. The target
 	// hears who acted, then LiveKit's simulated TrackMuted state still permits self-unmute.
 	await berto.evaluate(() => (window as any).__voiceTest.setLocalMuted(false));
-	await bertoRow.getByRole('button', { name: interpolate(es.voice_host_mute, { player: 'Berto' }) }).click();
+	await bertoRow.focus();
+	await ana.keyboard.press('Shift+F10');
+	await ana.locator('.voice-participant-context-menu').getByRole('menuitem', {
+		name: interpolate(es.voice_host_mute, { player: 'Berto' }),
+	}).click();
 	await expectAnnouncement(berto, exact(interpolate(es.voice_muted_by_host_self, { host: 'Ana', player: 'Berto' })));
 	await Promise.all([
 		ana.evaluate(({ id }) => (window as any).__voiceTest.setMuted(id, true), { id: bertoId }),
@@ -277,12 +329,23 @@ test('voice chat: host enables it, players join unmuted, query speakers, adjust 
 	await expect(berto.locator('.voice-participant').first()).toHaveClass(/voice-participant--muted/);
 	await expect(bertoRow).not.toHaveClass(/voice-participant--speaking/);
 	await expect(bertoRow).toContainText(es.voice_muted_visual);
+	await expect(bertoRow).toHaveAttribute('aria-label', interpolate(
+		es.voice_participant_label_muted,
+		{ player: 'Berto' },
+	));
 	await expect(bertoPlayerCard).not.toHaveClass(/is-voice-speaking/);
 	await expect(bertoPlayerCard.locator('.player-tag--voice')).toHaveText(es.voice_muted_visual);
 	await flushAxeAudit(ana);
 	await flushAxeAudit(berto);
-	await berto.getByRole('button', { name: es.voice_unmute }).click();
-	await expect(berto.locator('.voice-participant').first()).not.toHaveClass(/voice-participant--muted/);
+	const bertoSelfRow = berto.locator('.voice-participant').first();
+	const selfUnmute = bertoSelfRow.getByRole('button', { name: es.voice_unmute });
+	await expect(selfUnmute).toBeVisible();
+	await bertoSelfRow.focus();
+	await expect(bertoSelfRow).toBeFocused();
+	await berto.keyboard.press('ArrowRight');
+	await expect(selfUnmute).toBeFocused();
+	await selfUnmute.click();
+	await expect(bertoSelfRow).not.toHaveClass(/voice-participant--muted/);
 
 	// Turning voice off is authoritative: both transports disconnect, panels remain operable,
 	// and both the host change and each player's departure are spoken.

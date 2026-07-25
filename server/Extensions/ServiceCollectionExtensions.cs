@@ -21,8 +21,18 @@ public static class ServiceCollectionExtensions
 				&& options.Title == options.Title.Trim()
 				&& options.Title.Length <= SiteBrandingOptions.MaxTitleLength,
 				$"{SiteBrandingOptions.SectionName}:Title must contain between 1 and {SiteBrandingOptions.MaxTitleLength} characters.")
-			.Validate(options => options.Tagline is null || options.Tagline.Length <= SiteBrandingOptions.MaxTaglineLength,
+			.Validate(options => options.Tagline is null
+				|| (options.Tagline == options.Tagline.Trim()
+					&& options.Tagline.Length <= SiteBrandingOptions.MaxTaglineLength),
 				$"{SiteBrandingOptions.SectionName}:Tagline must not exceed {SiteBrandingOptions.MaxTaglineLength} characters.")
+			.Validate(options => options.Taglines.All(pair =>
+				!string.IsNullOrWhiteSpace(pair.Key)
+				&& pair.Key == pair.Key.Trim()
+				&& pair.Key.Length <= 35
+				&& !string.IsNullOrWhiteSpace(pair.Value)
+				&& pair.Value == pair.Value.Trim()
+				&& pair.Value.Length <= SiteBrandingOptions.MaxTaglineLength),
+				$"{SiteBrandingOptions.SectionName}:Taglines must use non-empty locale keys and values no longer than {SiteBrandingOptions.MaxTaglineLength} characters.")
 			.Validate(options => SiteBrandingOptions.IsSupportedAssetUrl(options.LogoUrl),
 				$"{SiteBrandingOptions.SectionName}:LogoUrl must be a relative path or an HTTPS URL.")
 			.Validate(options => SiteBrandingOptions.IsSupportedAssetUrl(options.LogoDarkUrl),
@@ -125,6 +135,7 @@ public static class ServiceCollectionExtensions
 		services.AddSingleton<PackageRestorer>();
 		services.AddSingleton<IAuctionTimerService, AuctionTimerService>();
 		services.AddSingleton<INopeWindowService, NopeWindowService>();
+		services.AddSingleton<IForbiddenTurnTimerService, ForbiddenTurnTimerService>();
 		services.AddSingleton<ILiveKitVoiceService, LiveKitVoiceService>();
 		// The process-wide live-session registry (in-memory games, connection maps, persisters). A
 		// single injected singleton replacing GameHub's former static state.

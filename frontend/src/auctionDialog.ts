@@ -195,8 +195,14 @@ class AuctionDialogClass {
 	/** Apply a partial update (new bid, timer tick, money change) without re-opening. */
 	update(partial: Partial<AuctionDialogData>): void {
 		if (!this.data) return;
+		const acceptedBidChanged = partial.currentBid !== undefined
+			&& partial.currentBid !== this.data.currentBid;
 		this.data = { ...this.data, ...partial };
 		this.render();
+		// An accepted bid proposes a new minimum. If the player is already typing here,
+		// select the whole amount so their next digits replace it; never focus the field
+		// from elsewhere in the floating panel or steal focus from the board.
+		if (acceptedBidChanged && document.activeElement === this.input) this.input.select();
 	}
 
 	/** Close because the auction ended (server-driven). Restores focus to the board. */

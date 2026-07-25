@@ -108,10 +108,13 @@ public class AuctionTimerService : IAuctionTimerService, IDisposable
 	/// </summary>
 	internal static BidTickDecision EvaluateBidTick(int bidTimeoutSeconds, DateTime phaseStartedAt, DateTime now)
 	{
-		var elapsedSeconds = (now - phaseStartedAt).TotalSeconds;
+		var countdown = AuthoritativeCountdown.Evaluate(
+			phaseStartedAt,
+			checked(bidTimeoutSeconds * 1000),
+			now);
 		return new BidTickDecision(
-			ComputeRemainingSeconds(bidTimeoutSeconds, elapsedSeconds),
-			elapsedSeconds >= bidTimeoutSeconds);
+			countdown.RemainingSeconds,
+			countdown.Expired);
 	}
 
 	private async Task OnBidTimerElapsed(string gameId)

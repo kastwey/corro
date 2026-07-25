@@ -19,6 +19,7 @@ public static class HouseRuleCatalog
 		["startingMoney"] = (s, v) => s with { StartingMoney = v.GetInt32() },
 		["passStartBonus"] = (s, v) => s with { GoBonus = v.GetInt32() },
 		["doubleOnExactStart"] = (s, v) => s with { DoubleGoSalary = v.GetBoolean() },
+		["bonusDie"] = (s, v) => s with { UseBonusDie = v.GetBoolean() },
 		["auctionOnDecline"] = (s, v) => s with { AuctionOnDecline = v.GetBoolean() },
 		["limitedBuildings"] = (s, v) => s with { BuildingShortage = v.GetBoolean() },
 		["buildEvenly"] = (s, v) => s with { EvenBuildRule = v.GetBoolean() },

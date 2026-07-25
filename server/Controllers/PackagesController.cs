@@ -198,4 +198,18 @@ public class PackagesController : ControllerBase
 		var md = _store.ReadHelp(token, lang);
 		return md is null ? NotFound() : Content(md, "text/markdown; charset=utf-8");
 	}
+
+	/// <summary>Serves one strictly validated package PNG; arbitrary package files are never exposed.</summary>
+	[HttpGet("{token}/cards/{cardId}.png")]
+	public IActionResult GetCardPng(string token, string cardId)
+	{
+		var png = _store.ReadCardPng(token, cardId);
+		if (png is null)
+		{
+			return NotFound();
+		}
+		Response.Headers.XContentTypeOptions = "nosniff";
+		Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+		return File(png, "image/png");
+	}
 }

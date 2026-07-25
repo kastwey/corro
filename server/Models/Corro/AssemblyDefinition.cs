@@ -14,6 +14,7 @@ public sealed record AssemblyCardDef
 	public string Id { get; init; } = string.Empty;
 	/// <summary>Sanitized path-data loaded from optional assets/cards/&lt;id&gt;.svg.</summary>
 	public string? Svg { get; init; }
+	public bool HasPngArt { get; init; }
 	/// <summary>Optional package-owned #RRGGBB accent for the card face.</summary>
 	public string? ArtColor { get; init; }
 

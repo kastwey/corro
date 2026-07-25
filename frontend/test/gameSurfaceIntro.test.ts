@@ -21,6 +21,10 @@ test('gameSurfaceIntroKey selects the hand message for every card family', () =>
 	}
 });
 
+test('gameSurfaceIntroKey selects the non-spatial activity message for Forbidden Words', () => {
+	assert.equal(gameSurfaceIntroKey('forbidden'), GAME_SURFACE_INTRO_KEYS.activity);
+});
+
 test('updateGameSurfaceIntro translates the selected message and keeps later state updates silent', () => {
 	const intro = document.createElement('p');
 	intro.setAttribute('data-i18n', 'game.surface_intro.loading');
@@ -28,7 +32,9 @@ test('updateGameSurfaceIntro translates the selected message and keeps later sta
 	let translations = 0;
 	const translate = (key: string) => {
 		translations++;
-		return key === GAME_SURFACE_INTRO_KEYS.hand ? 'Your hand instructions' : 'Your board instructions';
+		if (key === GAME_SURFACE_INTRO_KEYS.hand) return 'Your hand instructions';
+		if (key === GAME_SURFACE_INTRO_KEYS.activity) return 'Your activity instructions';
+		return 'Your board instructions';
 	};
 
 	assert.equal(updateGameSurfaceIntro(intro, 'journey', translate), true);
@@ -43,6 +49,11 @@ test('updateGameSurfaceIntro translates the selected message and keeps later sta
 	assert.equal(intro.getAttribute('data-i18n'), GAME_SURFACE_INTRO_KEYS.board);
 	assert.equal(intro.textContent, 'Your board instructions');
 	assert.equal(translations, 2);
+
+	assert.equal(updateGameSurfaceIntro(intro, 'forbidden', translate), true);
+	assert.equal(intro.getAttribute('data-i18n'), GAME_SURFACE_INTRO_KEYS.activity);
+	assert.equal(intro.textContent, 'Your activity instructions');
+	assert.equal(translations, 3);
 });
 
 test('updateGameSurfaceIntro preserves readable fallback text when a translation is unavailable', () => {

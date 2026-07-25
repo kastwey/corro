@@ -7,7 +7,7 @@
   "properties": {
     "format": { "const": "corro/v1", "description": "Corro package format version." },
     "gameType": {
-      "enum": ["property", "race", "track", "journey", "assembly", "draft", "shedding", "exploding", "trivia"],
+      "enum": ["property", "race", "track", "journey", "assembly", "draft", "shedding", "exploding", "trivia", "forbidden"],
       "description": "The engine family that owns this package's interaction model."
     },
     "engineVersion": { "type": "string", "minLength": 1 },
@@ -51,6 +51,7 @@
     "sheddingRules": { "$ref": "#/$defs/sheddingRules" },
     "explodingRules": { "$ref": "#/$defs/explodingRules" },
     "triviaRules": { "$ref": "#/$defs/triviaRules" },
+    "forbiddenRules": { "$ref": "#/$defs/forbiddenRules" },
     "ruleGroups": {
       "type": "array",
       "items": {
@@ -106,6 +107,10 @@
     {
       "if": { "properties": { "gameType": { "const": "trivia" } }, "required": ["gameType"] },
       "then": { "required": ["triviaRules"] }
+    },
+    {
+      "if": { "properties": { "gameType": { "const": "forbidden" } }, "required": ["gameType"] },
+      "then": { "required": ["forbiddenRules"] }
     }
   ],
   "additionalProperties": false,
@@ -304,6 +309,17 @@
         "exactFinish": { "type": "boolean" },
         "centerWild": { "type": "boolean" },
         "answerSeconds": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "forbiddenRules": {
+      "type": "object",
+      "properties": {
+        "turnSeconds": { "type": "integer", "minimum": 5, "maximum": 300 },
+        "passesPerTurn": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "correctPoints": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "violationPenalty": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "cycles": { "type": "integer", "minimum": 1, "maximum": 5 }
       },
       "additionalProperties": false
     },

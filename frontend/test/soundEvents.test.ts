@@ -25,6 +25,8 @@ test('maps the dice-roll announcement variants to the dice.roll earcon', () => {
 	assert.equal(soundEventForAnnouncement('game.race_captured_victim'), 'piece.captured');
 	assert.equal(soundEventForAnnouncement('game.race_captured'), null);
 	assert.equal(soundEventForAnnouncement('game.dice_rolled_doubles'), 'dice.roll');
+	assert.equal(soundEventForAnnouncement('game.dice_rolled_bonus_self'), 'dice.roll');
+	assert.equal(soundEventForAnnouncement('game.dice_rolled_express_doubles'), 'dice.roll');
 });
 
 test('the first-person _self variant shares the base key earcon', () => {
@@ -35,6 +37,16 @@ test('the first-person _self variant shares the base key earcon', () => {
 test('my turn (turn_of_self) gets the distinct your-turn cue, others are silent', () => {
 	assert.equal(soundEventForAnnouncement('game.turn_of_self'), 'turn.you');
 	assert.equal(soundEventForAnnouncement('game.turn_of'), null);
+});
+
+test('forbidden turn and adjudication announcements use the package-owned cue slots', () => {
+	assert.equal(soundEventForAnnouncement('game.forbidden_turn_started'), 'forbidden.start');
+	assert.equal(soundEventForAnnouncement('game.forbidden_turn_started_self'), 'forbidden.start');
+	assert.equal(soundEventForAnnouncement('game.forbidden_correct_self'), 'forbidden.correct');
+	assert.equal(soundEventForAnnouncement('game.forbidden_passed'), 'forbidden.pass');
+	assert.equal(soundEventForAnnouncement('game.forbidden_violation_self'), 'forbidden.violation');
+	assert.equal(soundEventForAnnouncement('game.forbidden_time_up'), 'forbidden.time_up');
+	assert.equal(soundEventForAnnouncement('game.forbidden_team_won'), 'game.over');
 });
 
 test('journey distances cue PER VALUE (packs ship one sound per km card)', () => {
@@ -144,6 +156,7 @@ test('maps representative game events to their earcons', () => {
 	assert.equal(soundEventForAnnouncement('game.property_purchased'), 'property.buy');
 	assert.equal(soundEventForAnnouncement('game.auction_won'), 'property.buy');
 	assert.equal(soundEventForAnnouncement('game.building_built'), 'property.build');
+	assert.equal(soundEventForAnnouncement('game.big_building_built_self'), 'property.build');
 	assert.equal(soundEventForAnnouncement('game.buildings_sold'), 'property.sell');
 	// Landing on a developed property quacks (distinct from building one yourself).
 	assert.equal(soundEventForAnnouncement('game.landed_on_building'), 'property.built');
@@ -165,6 +178,9 @@ test('maps representative game events to their earcons', () => {
 	assert.equal(soundEventForAnnouncement('game.free_parking_empty_self'), 'rest.zone.empty');
 	assert.equal(soundEventForAnnouncement('game.send_to_holding'), 'holding.enter');
 	assert.equal(soundEventForAnnouncement('game.escaped_holding_doubles'), 'holding.leave');
+	assert.equal(soundEventForAnnouncement('game.holding_still_in_self'), 'dice.roll');
+	assert.equal(soundEventForAnnouncement('game.used_release_pass'), 'holding.leave');
+	assert.equal(soundEventForAnnouncement('game.used_release_pass_self'), 'holding.leave');
 	assert.equal(soundEventForAnnouncement('game.auction_started'), 'auction.start');
 	assert.equal(soundEventForAnnouncement('game.game_over'), 'game.over');
 	assert.equal(soundEventForAnnouncement('game.player_bankrupt'), 'bankruptcy');

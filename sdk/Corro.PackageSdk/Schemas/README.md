@@ -2,18 +2,20 @@
 
 These JSON Schema 2020-12 documents provide editor completion and catch basic shape/type mistakes:
 
-- `manifest.schema.json` covers common fields and all nine family rule blocks;
+- `manifest.schema.json` covers common fields and all ten family rule blocks;
 - `board.schema.json` contains a definition for each board-based family;
 - `cards.schema.json` contains one deck definition per card family;
 - `questions.schema.json` covers locale-specific trivia decks;
+- `words.schema.json` covers locale-specific forbidden-word decks;
 - `i18n.schema.json` accepts nested translation objects with string leaves.
 
 `corro-package new` copies the schemas locally and writes family-specific VS Code associations using schema fragments such as `#/$defs/journeyDeck`. This avoids applying journey fields to an assembly deck even though both files are named `cards.json`.
 
 For every card object, the `id` completion/hover documents the optional sibling-art convention:
-`assets/cards/<id>.svg`, fixed `viewBox="0 0 64 64"`, path geometry only. Art is intentionally **not** an
-`svg` JSON property, so `additionalProperties: false` flags that mistake in the editor. The actual
-SVG file is checked by the production validator; JSON Schema cannot validate sibling-file contents.
+`assets/cards/<id>.svg` (fixed `viewBox="0 0 64 64"`, path geometry only) or a strict static
+256×256 RGB/RGBA `assets/cards/<id>.png`. Exactly one format may exist per card. Art is intentionally
+**not** a JSON property, so `additionalProperties: false` flags that mistake in the editor. The actual
+asset is checked by the production validator; JSON Schema cannot validate sibling-file contents.
 The optional `artColor` property is the one visual field that does belong in JSON: completion
 requires a safe `#RRGGBB` value used for the frame/silhouette, never as the sole semantic channel.
 

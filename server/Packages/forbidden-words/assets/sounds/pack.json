@@ -1,0 +1,13 @@
+{
+  "packId": "forbidden-words",
+  "events": {
+    "turn.you": "turn-you.ogg",
+    "game.over": "game-over.ogg",
+    "forbidden.start": "turn-you.ogg",
+    "forbidden.correct": "draw.ogg",
+    "forbidden.pass": "discard.ogg",
+    "forbidden.violation": "bankruptcy.ogg",
+    "forbidden.warning": "turn-you.ogg",
+    "forbidden.time_up": "game-over.ogg"
+  }
+}

@@ -8,8 +8,9 @@ the operations that must never drift from the engine:
 - create deterministic, upload-compatible archives and round-trip them through secure extraction;
 - generate a neutral, bilingual and valid starter project for every supported family;
 - provide local JSON schemas and VS Code associations for early authoring feedback.
-- provide one valid `assets/cards/<card-id>.svg` example in every card-bearing starter; deleting it
-  deliberately exercises the neutral engine fallback.
+- provide one valid `assets/cards/<card-id>.svg` example in every card-bearing starter; authors may
+  replace it with a strict 256×256 `assets/cards/<card-id>.png`, and deleting either deliberately
+  exercises the neutral engine fallback.
 - demonstrate the optional validated `artColor: "#RRGGBB"` accent without making colour the only
   way to identify a card.
 - seed `CREDITS.md` so authors have an explicit place to record every replacement art/sound licence.
@@ -41,6 +42,7 @@ remain richer executable examples of each supported interaction model:
 | `shedding` | [Four Colours](../server/Packages/four-colours/) | yes |
 | `exploding` | [The Mine](../server/Packages/the-mine/) | yes; The Mine also ships real examples |
 | `trivia` | [The Wheel of Wits](../server/Packages/wheel-of-wits/) | — (questions, no deck) |
+| `forbidden` | [Forbidden Words](../server/Packages/forbidden-words/) | — (locale word decks, no card art) |
 
 This English document uses each manifest's `name.en`. Package ids and directory names are stable,
 language-neutral identifiers even when they originated in Spanish; the lobby and game UI select

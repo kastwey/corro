@@ -457,9 +457,21 @@ public class AuctionRulebook : IAuctionRulebook
 
 		context.GameState.ActiveAuction = null;
 
-		// Advance the turn now unless the player still owes a roll after doubles.
+		// The auction settled the normal landing. Complete any Express advance now; it
+		// may create a fresh purchase decision that must stay with the same player.
+		if (context.ResolveDeferredExpressMove is not null
+			&& context.GameState.PendingExpressMove?.PlayerId == playerBeforeAdvance?.Id)
+		{
+			await context.ResolveDeferredExpressMove(context);
+		}
+
+		// Advance only when neither a doubles roll nor an obligation created by the Express
+		// destination is waiting. Express can create a purchase OR unaffordable rent debt.
 		var stillOwesRoll = context.GameState.MustRollAgain;
-		if (!stillOwesRoll)
+		var hasNewDecision = context.GameState.PendingPurchase is not null
+			|| (playerBeforeAdvance is not null
+				&& context.GameState.PendingDebts.Any(debt => debt.DebtorId == playerBeforeAdvance.Id));
+		if (!stillOwesRoll && !hasNewDecision)
 		{
 			context.Helper.NextTurn();
 		}
@@ -481,7 +493,7 @@ public class AuctionRulebook : IAuctionRulebook
 				});
 			}
 		}
-		else if (currentPlayer != null)
+		else if (!hasNewDecision && currentPlayer != null)
 		{
 			await context.Announce("game.turn_of", new Dictionary<string, object>
 			{

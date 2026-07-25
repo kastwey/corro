@@ -58,6 +58,7 @@ decisiones ya se parezcan a tu idea; los nombres y la temática no importan.
 | `shedding` | encaja con el descarte y gana quien vacía primero la mano | `cards.json` | Fácil |
 | `exploding` | juega acciones y después roba con riesgo de eliminación y reacciones | `cards.json` | Media |
 | `trivia` | recorre una rueda de seis categorías y responde preguntas | `questions.en.json` y `questions.es.json` | Media |
+| `forbidden` | alterna dos equipos que dan pistas habladas sin usar ciertas palabras | `words.en.json` y `words.es.json` | Media |
 
 Para un primer experimento, `track` o `shedding` ofrecen el recorrido más corto. Usa `property` solo
 si la economía, las subastas, los grupos y la construcción forman parte real de tu juego.
@@ -105,8 +106,9 @@ ayudas de autoría y se excluyen automáticamente del `.corro` final.
 | `manifest.json` | Identidad, familia, jugadores, reglas y lista de fichas | Sí |
 | `board.json` | Disposición espacial de `property`, `race`, `track` y `trivia` | Depende de la familia |
 | `cards.json` | Cartas de `property` y las cinco familias de cartas | Depende de la familia |
-| `assets/cards/*.svg` | Ilustración opcional de la carta cuyo id coincida | Más adelante |
+| `assets/cards/*.{svg,png}` | Ilustración opcional de la carta cuyo id coincida | Más adelante |
 | `questions.en.json`, `questions.es.json` | Bancos reales de preguntas para `trivia` | Solo trivia |
+| `words.en.json`, `words.es.json` | Mazos reales de objetivos y palabras prohibidas para `forbidden` | Solo forbidden |
 | `i18n/en.json`, `i18n/es.json` | Nombres y textos referenciados mediante claves | Sí |
 | `assets/tokens/*.svg` | Geometría de las fichas de jugador | Más adelante |
 | `CREDITS.md` | Fuentes y licencias de redistribución de arte y sonidos | Antes de compartir |
@@ -117,8 +119,8 @@ ayudas de autoría y se excluyen automáticamente del `.corro` final.
 Las familias de cartas no tienen `board.json`, y es correcto. `race` y `track` no necesitan
 `cards.json`. No crees archivos solo porque otra familia los tenga.
 
-Cada plantilla comienza con exactamente dos jugadores para ser pequeña y comprensible. Para admitir
-más, aumenta `players.max`, añade suficientes fichas o asientos distintos y amplía los mazos cuando
+La mayoría de las plantillas comienzan con exactamente dos jugadores para ser pequeñas y comprensibles;
+`forbidden` empieza con los cuatro que necesitan sus dos equipos. Para admitir más, aumenta `players.max`, añade suficientes fichas o asientos distintos y amplía los mazos cuando
 sea necesario. Ejecuta `validate`: indicará la capacidad exacta exigida por la familia.
 
 ## Paso 5: haz los primeros cambios seguros
@@ -170,8 +172,10 @@ compárala con el paquete más completo de la [tabla de referencias del SDK](../
 ### Dibujos opcionales para las cartas
 
 Todas las cartas funcionan sin imagen: Corro muestra un dibujo neutro según su mecánica genérica.
-Para sustituirlo, añade `assets/cards/<id-de-carta>.svg`; por ejemplo, la carta `step25` usa
-`assets/cards/step25.svg`. No añadas un campo `svg` a `cards.json`.
+Para sustituirlo, añade `assets/cards/<id-de-carta>.svg` o `assets/cards/<id-de-carta>.png`; por
+ejemplo, la carta `step25` usa `assets/cards/step25.svg`. SVG usa un lienzo 64×64 formado solo
+por trazados. PNG debe ser una imagen estática no entrelazada de 256×256, RGB/RGBA de 8 bits y
+como máximo 512 KiB. No incluyas ambos formatos para la misma carta ni una ruta en `cards.json`.
 
 Usa `viewBox="0 0 64 64"` y aplana el dibujo a geometría `<path>`. Por seguridad, el cargador
 descarta colores y cualquier otro marcado SVG; el marco de la carta aporta un color legible. El
@@ -246,7 +250,7 @@ paquete oculto muestra `Hidden: yes`, pero nunca imprime el código de desbloque
 | `Invalid JSON (line …)` | El JSON está mal formado | Comillas, comas y cierres cerca de esa línea |
 | `resolves in no locale` | Una clave `nameKey`/`textKey` no tiene texto | Añade la misma clave en `i18n/en.json` e `i18n/es.json` |
 | `token … has no icon` | Una ficha declarada no tiene un SVG utilizable | Revisa el id y `assets/tokens/<id>.svg` |
-| `card illustration …` | Un SVG opcional de carta está mal formado, es demasiado grande o no corresponde a ninguna carta | Haz coincidir `assets/cards/<id>.svg` con un id de `cards.json` y aplánalo a trazados |
+| `card illustration …` | El SVG/PNG opcional está mal formado, es demasiado grande, ambiguo o no corresponde a ninguna carta | Haz coincidir un único `assets/cards/<id>.svg` o `.png` con `cards.json`; aplana SVG a trazados o exporta PNG estricto de 256×256 |
 | `unknown type` o `unknown effect` | Has nombrado una mecánica no implementada por la familia | Usa una opción sugerida por el esquema o la referencia |
 | `deck … is too small` | No se puede repartir a la mesa máxima | Añade copias, reduce la mano o baja `players.max` |
 | `players.max … tokens/seats` | Hay más jugadores permitidos que fichas/asientos | Añade fichas/asientos o reduce `players.max` |

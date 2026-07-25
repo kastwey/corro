@@ -17,14 +17,14 @@ dotnet run --project tools/Corro.PackageCli -p:SkipFrontendBuild=true -- new jou
 ```
 
 `new` supports `property`, `race`, `track`, `journey`, `assembly`, `draft`, `shedding`,
-`exploding` and `trivia`. Every template is neutral, original, bilingual and immediately valid.
+`exploding`, `trivia` and `forbidden`. Every template is neutral, original, bilingual and immediately valid.
 The destination must be absent or empty; the command never overwrites an author's files.
 
 The generated project contains:
 
 - the smallest useful board/deck for its family;
-- one optional `assets/cards/<card-id>.svg` example in every card-bearing starter;
-- two original geometric tokens;
+- one optional `assets/cards/<card-id>.svg` example in every card-bearing starter (replaceable by strict 256×256 PNG);
+- enough original geometric tokens for the starter's smallest valid table;
 - English and Spanish translations and help guides;
 - local JSON schemas plus VS Code associations;
 - a `CREDITS.md` seeded with the licence of the neutral SVG examples;
@@ -48,7 +48,7 @@ Validation includes:
 - known card effects and house rules;
 - player, token, deck and board coherence;
 - translation references;
-- optional card-art filenames, 64×64 canvas, path geometry and size limits;
+- optional SVG/PNG card-art filenames, exact canvas/profile rules and size limits;
 - family-specific playability checks.
 
 The command returns `0` when valid and `1` when package validation fails.
@@ -65,11 +65,12 @@ deliberately never printed or included in JSON.
 
 ## Optional card illustrations
 
-For any card declared in `cards.json`, place optional art at `assets/cards/<card-id>.svg`. Use
-`viewBox="0 0 64 64"` and flatten the drawing to `<path>` elements. Do not add an `svg` property
-to JSON: the schema and validator reject that form and point to the file convention. Packages that
-omit an illustration receive Corro's neutral mechanic-based drawing. `inspect` reports how many
-card definitions have package art, and `pack` preserves those SVG files in the archive.
+For any card declared in `cards.json`, place optional art at `assets/cards/<card-id>.svg` or
+`assets/cards/<card-id>.png`, never both. SVG uses `viewBox="0 0 64 64"` and path geometry only.
+PNG is static 256×256 8-bit RGB/RGBA, non-interlaced and at most 512 KiB; animation and free-form
+metadata are rejected. Do not add an art property to JSON: the schema and validator point to the
+file convention. Packages without an illustration receive Corro's neutral mechanic-based drawing.
+`inspect` counts both formats and `pack` preserves either in the archive.
 
 An optional `"artColor": "#2F7185"` in the card definition supplies the package-owned accent for
 the frame and silhouette. Validation accepts only full `#RRGGBB` values. Colour is supplementary;

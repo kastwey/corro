@@ -1,4 +1,5 @@
 using CorroServer.Services;
+using CorroServer.Hubs;
 using CorroServer.Services.Corro;
 using CorroServer.Services.Rules;
 using CorroServer.Services.Voice;
@@ -83,6 +84,21 @@ public static class E2EExtensions
 			rng.Reset();
 			return Results.Ok(new { pending = rng.PendingCount });
 		});
+
+		// Put the current property player past the first lap so a scenario can reach optional
+		// post-lap mechanics (the bonus die) without burning several unrelated turns. Test-only:
+		// this endpoint is never mapped outside ASPNETCORE_ENVIRONMENT=E2E.
+		app.MapPost("/e2e/games/{gameId}/current-player/laps/{laps:int}",
+			(string gameId, int laps, GameSessionRegistry registry) =>
+			{
+				if (!registry.TryGetService(gameId, out var service)
+					|| service.GameState?.Players.FirstOrDefault(p => p.Id == service.GameState.CurrentTurn) is not { } player)
+				{
+					return Results.NotFound();
+				}
+				player.LapsCompleted = Math.Max(0, laps);
+				return Results.Ok(new { playerId = player.Id, player.LapsCompleted });
+			});
 
 		return app;
 	}

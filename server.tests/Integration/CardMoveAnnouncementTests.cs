@@ -32,4 +32,28 @@ public class CardMoveAnnouncementTests
 		Assert.Equal(AnnouncementPhase.Move, move.Phase);
 		Assert.Equal("a", move.Vars["actorId"]);
 	}
+
+	[Fact]
+	public async Task MoveToSquare_AnnouncesTheLocalizedDestinationMap()
+	{
+		var player = TestFixtures.NewPlayer("a", position: 0);
+		var squares = TestFixtures.StandardBoard();
+		squares[5] = squares[5] with
+		{
+			Name = "Orion Station",
+			Names = new Dictionary<string, string>
+			{
+				["en"] = "Orion Station",
+				["es"] = "Estación Orión"
+			}
+		};
+		var harness = new GameHarness(new[] { player }, squares);
+
+		await new CardActions().MoveToSquareAsync(
+			harness.Player("a"), targetPosition: 5, collectGoIfPassed: false, harness.Context);
+
+		var move = harness.Announcer.Sent.Single(x => x.Key == "game.card_move");
+		var names = Assert.IsType<Dictionary<string, string>>(move.Vars["square"]);
+		Assert.Equal("Estación Orión", names["es"]);
+	}
 }

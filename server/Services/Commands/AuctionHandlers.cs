@@ -34,7 +34,7 @@ public class PlaceBidHandler : ICommandHandler<PlaceBidCommand>
 		{
 			["player"] = outcome.BidderName!,
 			["amount"] = outcome.Amount,
-			["property"] = outcome.SquareName!
+			["property"] = AnnouncementVariables.SquareName(context, outcome.SquareIndex, outcome.SquareName)
 		});
 
 		// The bid may have ended the auction outright (no other bidder could outbid).
@@ -47,7 +47,7 @@ public class PlaceBidHandler : ICommandHandler<PlaceBidCommand>
 				{
 					["actorId"] = final.WinnerId!,
 					["player"] = final.WinnerName!,
-					["property"] = final.SquareName!,
+					["property"] = AnnouncementVariables.SquareName(context, final.SquareIndex, final.SquareName),
 					["amount"] = final.WinningBid!
 				});
 			}
@@ -120,7 +120,7 @@ public class PassAuctionHandler : ICommandHandler<PassAuctionCommand>
 				{
 					["actorId"] = final.WinnerId!,
 					["player"] = final.WinnerName!,
-					["property"] = final.SquareName!,
+					["property"] = AnnouncementVariables.SquareName(context, final.SquareIndex, final.SquareName),
 					["amount"] = final.WinningBid!
 				});
 			}
@@ -128,7 +128,7 @@ public class PassAuctionHandler : ICommandHandler<PassAuctionCommand>
 			{
 				await context.Announce("game.auction_no_bids", new Dictionary<string, object>
 				{
-					["property"] = final.SquareName!
+					["property"] = AnnouncementVariables.SquareName(context, final.SquareIndex, final.SquareName)
 				});
 			}
 
@@ -184,7 +184,7 @@ public class EndAuctionHandler : ICommandHandler<EndAuctionCommand>
 			{
 				["actorId"] = outcome.WinnerId!,
 				["player"] = outcome.WinnerName!,
-				["property"] = outcome.SquareName!,
+				["property"] = AnnouncementVariables.SquareName(context, outcome.SquareIndex, outcome.SquareName),
 				["amount"] = outcome.WinningBid!
 			});
 		}
@@ -192,7 +192,7 @@ public class EndAuctionHandler : ICommandHandler<EndAuctionCommand>
 		{
 			await context.Announce("game.auction_no_bids", new Dictionary<string, object>
 			{
-				["property"] = outcome.SquareName!
+				["property"] = AnnouncementVariables.SquareName(context, outcome.SquareIndex, outcome.SquareName)
 			});
 		}
 

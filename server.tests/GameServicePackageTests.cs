@@ -121,6 +121,7 @@ public class GameServicePackageTests
 			["maxHoldingTurns"] = JsonSerializer.SerializeToElement(2),
 			["auctionTimeoutSeconds"] = JsonSerializer.SerializeToElement(10),
 			["collectRentWhileHeld"] = JsonSerializer.SerializeToElement(true),
+			["bonusDie"] = JsonSerializer.SerializeToElement(true),
 		};
 		// Stored Settings are all different, to prove the recovered values come from RuleValues.
 		var eff = GameDefinitionAdapter.EffectiveSettings(DocWith(chosen, new GameSettings()), def);
@@ -132,6 +133,7 @@ public class GameServicePackageTests
 		Assert.Equal(2, eff.MaxHoldingTurns);
 		Assert.Equal(10, eff.AuctionBidTimeoutSeconds);
 		Assert.True(eff.CollectRentWhileHeld);
+		Assert.True(eff.UseBonusDie);
 	}
 
 	[Fact]

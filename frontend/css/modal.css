@@ -679,11 +679,15 @@
 	max-height: 70vh;
 }
 
-/* Only the OPEN panel lays out as a column — an unconditional display would override the
-   UA's dialog:not([open]) { display: none } and leave the closed panel visible. */
-.chat-panel[open] {
+/* Chat is ordinary content inside <main>, not a native dialog. */
+.chat-panel:not([hidden]) {
 	display: flex;
 	flex-direction: column;
+	position: fixed;
+	inset: auto 16px 16px auto;
+	margin: 0;
+	z-index: 1000;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 }
 
 .chat-application {
@@ -758,9 +762,55 @@
 	color: var(--on-accent);
 }
 
+.chat-toggle {
+	position: relative;
+}
+
+.chat-toggle__badge {
+	position: absolute;
+	top: -0.25rem;
+	right: -0.25rem;
+	min-width: 1.1rem;
+	height: 1.1rem;
+	padding: 0 0.2rem;
+	box-sizing: border-box;
+	border: 2px solid var(--surface);
+	border-radius: 999px;
+	background: var(--danger);
+	color: var(--on-danger);
+	font-size: 0.65rem;
+	font-weight: 900;
+	line-height: 0.9rem;
+	text-align: center;
+}
+
+.chat-notification {
+	position: fixed;
+	right: 1rem;
+	bottom: 1rem;
+	z-index: 999;
+	max-width: min(24rem, calc(100vw - 2rem));
+	padding: 0.75rem 1rem;
+	border: 2px solid var(--accent);
+	border-radius: var(--radius-md);
+	background: var(--surface);
+	color: var(--text);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+	font: inherit;
+	font-weight: 750;
+	cursor: pointer;
+}
+
+.chat-notification:hover,
+.chat-notification:focus-visible {
+	background: var(--accent-soft);
+	box-shadow: var(--focus-ring), 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
 /* Unobtrusive project footer: last in the DOM (reachable, never in the way). */
 .app-footer {
 	width: min(100%, 520px);
+	box-sizing: border-box;
 	text-align: center;
 	padding: 0.75rem 1rem 0.5rem;
 	font-size: 0.75rem;

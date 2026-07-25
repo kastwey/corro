@@ -256,6 +256,7 @@ public class CorroPackageSdkTests
 			["shedding"] = "four-colours",
 			["exploding"] = "the-mine",
 			["trivia"] = "wheel-of-wits",
+			["forbidden"] = "forbidden-words",
 		};
 
 		foreach (var (family, packageId) in references)
@@ -388,7 +389,7 @@ public class CorroPackageSdkTests
 		Assert.True(File.Exists(Path.Combine(destination, "README.md")));
 		var creditsPath = Path.Combine(destination, "CREDITS.md");
 		Assert.True(File.Exists(creditsPath));
-		Assert.Contains("assets/cards/*.svg", await File.ReadAllTextAsync(creditsPath));
+		Assert.Contains("assets/cards/*.{svg,png}", await File.ReadAllTextAsync(creditsPath));
 		var readme = await File.ReadAllTextAsync(Path.Combine(destination, "README.md"));
 		Assert.Contains("assets/cards/<card-id>.svg", readme);
 		Assert.Contains("neutral fallback", readme);
@@ -406,7 +407,7 @@ public class CorroPackageSdkTests
 
 		var schemaDirectory = Path.Combine(destination, ".vscode", "schemas");
 		var schemaFiles = Directory.GetFiles(schemaDirectory, "*.json");
-		Assert.Equal(5, schemaFiles.Length);
+		Assert.Equal(6, schemaFiles.Length);
 		foreach (var schema in schemaFiles)
 		{
 			using var parsed = JsonDocument.Parse(await File.ReadAllTextAsync(schema));
@@ -414,7 +415,7 @@ public class CorroPackageSdkTests
 		}
 		var cardsSchema = await File.ReadAllTextAsync(Path.Combine(schemaDirectory, "cards.schema.json"));
 		Assert.Contains("assets/cards/<this-id>.svg", cardsSchema);
-		Assert.Contains("Do not add an svg property", cardsSchema);
+		Assert.Contains("Do not add an art property", cardsSchema);
 		Assert.Contains("artColor", cardsSchema);
 		Assert.Contains("#RRGGBB", cardsSchema);
 
@@ -434,20 +435,29 @@ public class CorroPackageSdkTests
 		}
 
 		var definition = await new CorroServer.Services.Corro.CorroPackageLoader().LoadAsync(destination);
-		var players = definition.Manifest.Tokens.Take(2).Select((token, index) => new CorroServer.Models.Player
+		var playerCount = family == "forbidden" ? 4 : 2;
+		var players = definition.Manifest.Tokens.Take(playerCount).Select((token, index) => new CorroServer.Models.Player
 		{
 			Id = "player-" + index,
 			Name = "Player " + (index + 1),
 			Token = token.Id,
 		}).ToList();
+		var teams = family == "forbidden"
+			? new List<List<string>>
+			{
+				players.Take(2).Select(player => player.Id).ToList(),
+				players.Skip(2).Take(2).Select(player => player.Id).ToList(),
+			}
+			: null;
 		var started = CorroServer.Services.Corro.Families.GameFamilies.For(family).CreateGame(
 			new CorroServer.Services.Corro.Families.FamilyStartContext
 			{
 				Definition = definition,
 				Players = players,
 				Lang = "en",
+				Teams = teams,
 			});
-		Assert.Equal(2, started.State.Players.Count);
+		Assert.Equal(playerCount, started.State.Players.Count);
 
 		var archivePath = Path.Combine(root.Path, family + ".corro");
 		var packed = await new PackageAuthoringService().PackAsync(destination, archivePath);

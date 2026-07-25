@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.IO.Compression;
 using System.Globalization;
 using System.Text.Json;
@@ -24,6 +25,10 @@ public sealed class CorroPackageLoader
 	/// flattened path and their package total well below Cosmos' document limit.</summary>
 	public const int MaxCardSvgPathChars = 32 * 1024;
 	public const int MaxCardSvgTotalChars = 512 * 1024;
+	public const int CardPngWidth = 256;
+	public const int CardPngHeight = 256;
+	public const int MaxCardPngBytes = 512 * 1024;
+	public const int MaxCardPngTotalBytes = 8 * 1024 * 1024;
 
 	/// <summary>Load and validate the package whose manifest/board/cards live in <paramref name="packageDir"/>.</summary>
 	public async Task<GameDefinition> LoadAsync(string packageDir)
@@ -42,7 +47,7 @@ public sealed class CorroPackageLoader
 		// board.json's shape depends on the game family (an array of squares for "property", a
 		// circuit for "race", a linear track for "track"…): the family reads its own topology.
 		var definition = await GameFamilies.For(manifest.GameType).LoadDefinitionAsync(packageDir, manifest, i18n);
-		definition = ResolveCardSvgs(definition, packageDir);
+		definition = ResolveCardArt(definition, packageDir);
 		ValidateCardArtColors(definition);
 		Validate(definition);
 		return definition;
@@ -184,11 +189,11 @@ public sealed class CorroPackageLoader
 
 	/// <summary>
 	/// Resolve optional card illustrations for EVERY deck shape in one place, so adding a family
-	/// cannot accidentally bypass package content. A package owns assets/cards/&lt;id&gt;.svg; the JSON stays
-	/// rules-only. Missing files are valid and deliberately leave Svg null for the neutral client
-	/// fallback. Existing files must be path-only, bounded and correspond to a real card id.
+	/// cannot accidentally bypass package content. A package owns one assets/cards/&lt;id&gt;.svg or
+	/// .png; JSON stays rules-only. Missing art uses the neutral client fallback. SVG geometry is
+	/// sanitized into state; PNG remains staged on disk and contributes only a marker to state.
 	/// </summary>
-	private static GameDefinition ResolveCardSvgs(GameDefinition definition, string packageDir)
+	private static GameDefinition ResolveCardArt(GameDefinition definition, string packageDir)
 	{
 		var ids = definition.Cards.Select(c => c.Id)
 			.Concat(definition.JourneyDeck?.Select(c => c.Id) ?? [])
@@ -197,37 +202,71 @@ public sealed class CorroPackageLoader
 			.Concat(definition.SheddingDeck?.Select(c => c.Id) ?? [])
 			.Concat(definition.ExplodingDeck?.Select(c => c.Id) ?? [])
 			.ToHashSet(StringComparer.Ordinal);
-		var art = ReadCardSvgFiles(packageDir, ids);
-		string? For(string id) => art.GetValueOrDefault(id);
+		var art = ReadCardArtFiles(packageDir, ids);
+		CardArt For(string id) => art.GetValueOrDefault(id) ?? new CardArt(null, false);
 
 		return definition with
 		{
-			Cards = definition.Cards.Select(c => c with { Svg = For(c.Id) }).ToList(),
-			JourneyDeck = definition.JourneyDeck?.Select(c => c with { Svg = For(c.Id) }).ToList(),
-			AssemblyDeck = definition.AssemblyDeck?.Select(c => c with { Svg = For(c.Id) }).ToList(),
-			DraftDeck = definition.DraftDeck?.Select(c => c with { Svg = For(c.Id) }).ToList(),
-			SheddingDeck = definition.SheddingDeck?.Select(c => c with { Svg = For(c.Id) }).ToList(),
-			ExplodingDeck = definition.ExplodingDeck?.Select(c => c with { Svg = For(c.Id) }).ToList(),
+			Cards = definition.Cards.Select(c => c with { Svg = For(c.Id).Svg, HasPngArt = For(c.Id).HasPng }).ToList(),
+			JourneyDeck = definition.JourneyDeck?.Select(c => c with { Svg = For(c.Id).Svg, HasPngArt = For(c.Id).HasPng }).ToList(),
+			AssemblyDeck = definition.AssemblyDeck?.Select(c => c with { Svg = For(c.Id).Svg, HasPngArt = For(c.Id).HasPng }).ToList(),
+			DraftDeck = definition.DraftDeck?.Select(c => c with { Svg = For(c.Id).Svg, HasPngArt = For(c.Id).HasPng }).ToList(),
+			SheddingDeck = definition.SheddingDeck?.Select(c => c with { Svg = For(c.Id).Svg, HasPngArt = For(c.Id).HasPng }).ToList(),
+			ExplodingDeck = definition.ExplodingDeck?.Select(c => c with { Svg = For(c.Id).Svg, HasPngArt = For(c.Id).HasPng }).ToList(),
 		};
 	}
 
-	private static Dictionary<string, string> ReadCardSvgFiles(string packageDir, HashSet<string> cardIds)
+	private sealed record CardArt(string? Svg, bool HasPng);
+
+	private static Dictionary<string, CardArt> ReadCardArtFiles(string packageDir, HashSet<string> cardIds)
 	{
-		var result = new Dictionary<string, string>(StringComparer.Ordinal);
+		var result = new Dictionary<string, CardArt>(StringComparer.Ordinal);
 		var cardsDir = PackageLayout.CardArtDirectory(packageDir);
 		if (!Directory.Exists(cardsDir))
 		{
 			return result;
 		}
 
-		var total = 0;
-		foreach (var file in Directory.EnumerateFiles(cardsDir, "*.svg", SearchOption.TopDirectoryOnly))
+		var svgTotal = 0;
+		var pngTotal = 0;
+		foreach (var file in Directory.EnumerateFiles(cardsDir, "*", SearchOption.TopDirectoryOnly))
 		{
 			var id = Path.GetFileNameWithoutExtension(file);
+			var extension = Path.GetExtension(file).ToLowerInvariant();
+			if (extension is not (".svg" or ".png"))
+			{
+				throw new InvalidOperationException(
+					$"card asset 'assets/cards/{Path.GetFileName(file)}' must be an .svg or .png file.");
+			}
 			if (!Regex.IsMatch(id, "^[A-Za-z0-9_-]+$") || !cardIds.Contains(id))
 			{
 				throw new InvalidOperationException(
 					$"card illustration '{Path.GetFileName(file)}' has no matching card id in cards.json.");
+			}
+
+			if (result.ContainsKey(id))
+			{
+				throw new InvalidOperationException(
+					$"card '{id}' has more than one illustration; provide either .svg or .png, not both.");
+			}
+
+			if (extension == ".png")
+			{
+				var bytes = checked((int)new FileInfo(file).Length);
+				if (bytes > MaxCardPngBytes)
+				{
+					throw new InvalidOperationException(
+						$"card illustration 'assets/cards/{id}.png' exceeds the {MaxCardPngBytes}-byte limit.");
+				}
+				ValidateCardPng(file);
+				pngTotal = checked(pngTotal + bytes);
+				if (pngTotal > MaxCardPngTotalBytes)
+				{
+					throw new InvalidOperationException(
+						$"PNG card illustrations exceed the {MaxCardPngTotalBytes}-byte package limit.");
+				}
+				result.Add(id, new CardArt(null, true));
+				continue;
 			}
 
 			var pathData = SanitizePathData(ReadSvgPaths(file, expectedViewBox: [0, 0, 64, 64])).Trim();
@@ -241,16 +280,205 @@ public sealed class CorroPackageLoader
 				throw new InvalidOperationException(
 					$"card illustration 'assets/cards/{id}.svg' exceeds the {MaxCardSvgPathChars}-character path limit.");
 			}
-
-			total = checked(total + pathData.Length);
-			if (total > MaxCardSvgTotalChars)
+			svgTotal = checked(svgTotal + pathData.Length);
+			if (svgTotal > MaxCardSvgTotalChars)
 			{
 				throw new InvalidOperationException(
-					$"card illustrations exceed the {MaxCardSvgTotalChars}-character package limit.");
+					$"SVG card illustrations exceed the {MaxCardSvgTotalChars}-character package limit.");
 			}
-			result.Add(id, pathData);
+			result.Add(id, new CardArt(pathData, false));
 		}
 		return result;
+	}
+
+	private static readonly byte[] PngSignature = [137, 80, 78, 71, 13, 10, 26, 10];
+
+	/// <summary>
+	/// Validate a deliberately narrow, static PNG profile: exact 256×256 RGB/RGBA at 8 bits,
+	/// no animation, interlace, palette, text, executable references or trailing payload. Chunk
+	/// CRCs and the complete zlib stream are checked so a renamed/corrupt file cannot pass by
+	/// presenting only a plausible signature and IHDR.
+	/// </summary>
+	private static void ValidateCardPng(string file)
+	{
+		var bytes = File.ReadAllBytes(file);
+		var display = $"assets/cards/{Path.GetFileName(file)}";
+		if (bytes.Length < PngSignature.Length || !bytes.AsSpan(0, PngSignature.Length).SequenceEqual(PngSignature))
+		{
+			throw new InvalidOperationException($"card illustration '{display}' is not a PNG file.");
+		}
+
+		var offset = PngSignature.Length;
+		var sawHeader = false;
+		var sawData = false;
+		var sawEnd = false;
+		var bytesPerPixel = 0;
+		using var compressed = new MemoryStream();
+
+		while (offset < bytes.Length)
+		{
+			if (sawEnd || bytes.Length - offset < 12)
+			{
+				throw new InvalidOperationException($"card illustration '{display}' has trailing or truncated PNG data.");
+			}
+
+			var lengthValue = BinaryPrimitives.ReadUInt32BigEndian(bytes.AsSpan(offset, 4));
+			if (lengthValue > int.MaxValue)
+			{
+				throw new InvalidOperationException($"card illustration '{display}' has an invalid PNG chunk length.");
+			}
+			var length = (int)lengthValue;
+			var typeOffset = offset + 4;
+			var dataOffset = typeOffset + 4;
+			var crcOffset = checked(dataOffset + length);
+			if (crcOffset > bytes.Length - 4)
+			{
+				throw new InvalidOperationException($"card illustration '{display}' has a truncated PNG chunk.");
+			}
+
+			var typeBytes = bytes.AsSpan(typeOffset, 4);
+			var data = bytes.AsSpan(dataOffset, length);
+			var expectedCrc = BinaryPrimitives.ReadUInt32BigEndian(bytes.AsSpan(crcOffset, 4));
+			if (PngCrc(typeBytes, data) != expectedCrc)
+			{
+				throw new InvalidOperationException($"card illustration '{display}' has an invalid PNG chunk checksum.");
+			}
+
+			var type = string.Create(4, typeBytes.ToArray(), static (chars, source) =>
+			{
+				for (var i = 0; i < 4; i++)
+				{
+					chars[i] = (char)source[i];
+				}
+			});
+			if (!sawHeader && type != "IHDR")
+			{
+				throw new InvalidOperationException($"card illustration '{display}' must begin with IHDR.");
+			}
+			if (sawData && type is not ("IDAT" or "IEND"))
+			{
+				throw new InvalidOperationException($"card illustration '{display}' has metadata after its image data.");
+			}
+
+			switch (type)
+			{
+				case "IHDR":
+					if (sawHeader || length != 13)
+					{
+						throw new InvalidOperationException($"card illustration '{display}' has an invalid IHDR chunk.");
+					}
+					var width = BinaryPrimitives.ReadUInt32BigEndian(data[..4]);
+					var height = BinaryPrimitives.ReadUInt32BigEndian(data.Slice(4, 4));
+					if (width != CardPngWidth || height != CardPngHeight)
+					{
+						throw new InvalidOperationException(
+							$"card illustration '{display}' must be exactly {CardPngWidth}×{CardPngHeight} pixels.");
+					}
+					var bitDepth = data[8];
+					var colorType = data[9];
+					if (bitDepth != 8 || colorType is not (2 or 6)
+						|| data[10] != 0 || data[11] != 0 || data[12] != 0)
+					{
+						throw new InvalidOperationException(
+							$"card illustration '{display}' must be non-interlaced 8-bit RGB or RGBA PNG.");
+					}
+					bytesPerPixel = colorType == 6 ? 4 : 3;
+					sawHeader = true;
+					break;
+
+				case "sRGB" when !sawData && length == 1 && data[0] <= 3:
+				case "gAMA" when !sawData && length == 4:
+				case "cHRM" when !sawData && length == 32:
+				case "pHYs" when !sawData && length == 9:
+					break; // bounded colour/size metadata emitted by common image editors
+
+				case "IDAT":
+					if (!sawHeader || sawEnd)
+					{
+						throw new InvalidOperationException($"card illustration '{display}' has IDAT in an invalid position.");
+					}
+					compressed.Write(data);
+					sawData = true;
+					break;
+
+				case "IEND":
+					if (!sawData || length != 0)
+					{
+						throw new InvalidOperationException($"card illustration '{display}' has an invalid IEND chunk.");
+					}
+					sawEnd = true;
+					break;
+
+				default:
+					throw new InvalidOperationException(
+						$"card illustration '{display}' contains unsupported PNG chunk '{type}'.");
+			}
+
+			offset = crcOffset + 4;
+		}
+
+		if (!sawEnd)
+		{
+			throw new InvalidOperationException($"card illustration '{display}' is missing IEND.");
+		}
+
+		var expectedDecoded = checked(CardPngHeight * (1 + CardPngWidth * bytesPerPixel));
+		compressed.Position = 0;
+		var decoded = new byte[expectedDecoded + 1];
+		var decodedLength = 0;
+		try
+		{
+			using var inflater = new ZLibStream(compressed, CompressionMode.Decompress, leaveOpen: true);
+			while (decodedLength < decoded.Length)
+			{
+				var read = inflater.Read(decoded, decodedLength, decoded.Length - decodedLength);
+				if (read == 0)
+				{
+					break;
+				}
+				decodedLength += read;
+			}
+		}
+		catch (InvalidDataException ex)
+		{
+			throw new InvalidOperationException($"card illustration '{display}' has invalid compressed image data.", ex);
+		}
+		if (decodedLength != expectedDecoded)
+		{
+			throw new InvalidOperationException($"card illustration '{display}' has an invalid decoded image size.");
+		}
+		var rowBytes = 1 + CardPngWidth * bytesPerPixel;
+		for (var row = 0; row < CardPngHeight; row++)
+		{
+			if (decoded[row * rowBytes] > 4)
+			{
+				throw new InvalidOperationException($"card illustration '{display}' uses an invalid PNG row filter.");
+			}
+		}
+	}
+
+	private static uint PngCrc(ReadOnlySpan<byte> type, ReadOnlySpan<byte> data)
+	{
+		var crc = 0xffffffffu;
+		foreach (var value in type)
+		{
+			crc = UpdatePngCrc(crc, value);
+		}
+		foreach (var value in data)
+		{
+			crc = UpdatePngCrc(crc, value);
+		}
+		return ~crc;
+	}
+
+	private static uint UpdatePngCrc(uint crc, byte value)
+	{
+		crc ^= value;
+		for (var bit = 0; bit < 8; bit++)
+		{
+			crc = (crc & 1) != 0 ? 0xedb88320u ^ (crc >> 1) : crc >> 1;
+		}
+		return crc;
 	}
 
 	private static bool LooksLikeSvgPath(string pathData)
@@ -318,14 +546,28 @@ public sealed class CorroPackageLoader
 		}
 		foreach (var card in document.RootElement.EnumerateArray())
 		{
-			if (card.ValueKind != JsonValueKind.Object
-				|| !card.EnumerateObject().Any(property => property.Name.Equals("svg", StringComparison.OrdinalIgnoreCase)))
+			if (card.ValueKind != JsonValueKind.Object)
+			{
+				continue;
+			}
+			JsonProperty? inline = null;
+			foreach (var property in card.EnumerateObject())
+			{
+				if (property.Name.Equals("svg", StringComparison.OrdinalIgnoreCase)
+					|| property.Name.Equals("png", StringComparison.OrdinalIgnoreCase))
+				{
+					inline = property;
+					break;
+				}
+			}
+			if (inline is null)
 			{
 				continue;
 			}
 			var id = card.TryGetProperty("id", out var cardId) ? cardId.GetString() : null;
 			throw new InvalidOperationException(
-				$"card '{id ?? "?"}' puts art in cards.json; remove the svg field and add assets/cards/{id ?? "<id>"}.svg instead.");
+				$"card '{id ?? "?"}' puts art in cards.json; remove the {inline.Value.Name} field and add "
+				+ $"assets/cards/{id ?? "<id>"}.svg or .png instead.");
 		}
 	}
 

@@ -27,6 +27,8 @@ import { SheddingBoard } from './sheddingBoard.js';
 import { sheddingStatusText } from './sheddingRules.js';
 import { ExplodingBoard } from './explodingBoard.js';
 import { explodingStatusText } from './explodingRules.js';
+import { ForbiddenBoard } from './forbiddenBoard.js';
+import { forbiddenStatusText } from './forbiddenRules.js';
 import { gameManager } from './gameManager.js';
 import { seatDisplayName } from './raceGeometry.js';
 import { i18nBinder, localizeColor } from './i18nBinder.js';
@@ -447,9 +449,28 @@ const explodingFamily = makeCardFamily('exploding', explodingStatusText, deps =>
 	},
   }));
 
+// The role table IS the home surface. The private protected text area exists only in the
+// clue-giver's and monitor's server projection; everyone else lands on their current action.
+const forbiddenFamily = makeCardFamily('forbidden', forbiddenStatusText, deps => {
+  const board = new ForbiddenBoard(deps.boardElement, {
+	getGameState: deps.getGameState,
+	getMyPlayerId: deps.getMyPlayerId,
+	announce: deps.announce,
+	tSync: deps.tSync,
+	commands: {
+	  start: () => { void gameManager.forbiddenStart(); },
+	  correct: sequence => { void gameManager.forbiddenCorrect(sequence); },
+	  pass: sequence => { void gameManager.forbiddenPass(sequence); },
+	  violation: sequence => { void gameManager.forbiddenViolation(sequence); },
+	},
+  });
+  gameManager.on('forbiddenTimerTick', ({ secondsRemaining }) => board.handleTimerTick(secondsRemaining));
+  return board;
+});
+
 const FAMILIES: readonly GameFamily[] = [
 	raceFamily, trackFamily, triviaFamily, journeyFamily, assemblyFamily, draftFamily, sheddingFamily,
-	explodingFamily,
+	explodingFamily, forbiddenFamily,
 ];
 
 /** The registered family for a state's gameType — null for property/unknown (default surfaces). */

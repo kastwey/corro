@@ -404,10 +404,12 @@ export async function startGame(host: Page, allPages: Page[]): Promise<void> {
 	await host.click('#start-game-btn');
 	for (const page of allPages) {
 		await page.waitForURL(/board\.html/);
-		// Family-agnostic readiness: property boards render .square cells, race boards
-		// .race-cell, track boards .track-cell, trivia the wheel's .trivia-cell, journey
-		// boards the hand's .hand-card rows.
-		await expect(page.locator('#board .square, #board .race-cell, #board .track-cell, #board .trivia-cell, #board .hand-card').first()).toBeVisible();
+		// Family-agnostic readiness: spatial families render their cells, card families
+		// render hand rows, and Forbidden Words renders its role activity surface.
+		await expect(page.locator(
+			'#board .square, #board .race-cell, #board .track-cell, #board .trivia-cell, '
+			+ '#board .hand-card, #board .forbidden-shell',
+		).first()).toBeVisible();
 	}
 }
 

@@ -1,6 +1,7 @@
 {
   "currency": { "name": "units" },
-  "terminology": { "start": "Start", "holding": "Pause", "freeparking": "Rest", "sendtoholding": "Go to Pause" },
+  "terminology": { "start": "Start", "holding": "Pause", "freeparking": "Rest", "sendtoholding": "Go to Pause", "bus": "shuttle", "express": "express advance" },
+  "rules": { "group": { "advanced": "Advanced" }, "bonusDie": "Bonus die" },
   "groups": { "amber": "Amber set", "blue": "Blue set", "green": "Green set", "violet": "Violet set" },
   "decks": { "event": "Event" },
   "cards": { "eventBonus": "A helpful event grants you 50 units." },

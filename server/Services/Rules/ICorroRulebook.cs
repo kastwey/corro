@@ -29,6 +29,22 @@ public record DiceRollOutcome
 	public bool CanBuySquare { get; init; }
 	public bool CanAfford { get; init; }
 
+	// Bonus die
+	public BonusDieFace? BonusDie { get; init; }
+	public int? BonusDieValue { get; init; }
+	public bool RequiresBusChoice { get; init; }
+	public int? ExpressDestination { get; init; }
+	public string? ExpressSquareName { get; init; }
+	public string? BusDestinationDie1Name { get; init; }
+	public string? BusDestinationDie2Name { get; init; }
+	public string? BusDestinationBothName { get; init; }
+	public string? BusDestinationDie1ColorKey { get; init; }
+	public string? BusDestinationDie2ColorKey { get; init; }
+	public string? BusDestinationBothColorKey { get; init; }
+	public int? BusDestinationDie1Rent { get; init; }
+	public int? BusDestinationDie2Rent { get; init; }
+	public int? BusDestinationBothRent { get; init; }
+
 	// Holding
 	public bool ReleasedFromHolding { get; init; }
 	public bool StillHeld { get; init; }
@@ -57,6 +73,20 @@ public record DiceRollOutcome
 			SquarePrice = SquarePrice,
 			CanBuySquare = CanBuySquare,
 			CanAfford = CanAfford,
+			BonusDie = BonusDie,
+			BonusDieValue = BonusDieValue,
+			RequiresBusChoice = RequiresBusChoice,
+			ExpressDestination = ExpressDestination,
+			ExpressSquareName = ExpressSquareName,
+			BusDestinationDie1Name = BusDestinationDie1Name,
+			BusDestinationDie2Name = BusDestinationDie2Name,
+			BusDestinationBothName = BusDestinationBothName,
+			BusDestinationDie1ColorKey = BusDestinationDie1ColorKey,
+			BusDestinationDie2ColorKey = BusDestinationDie2ColorKey,
+			BusDestinationBothColorKey = BusDestinationBothColorKey,
+			BusDestinationDie1Rent = BusDestinationDie1Rent,
+			BusDestinationDie2Rent = BusDestinationDie2Rent,
+			BusDestinationBothRent = BusDestinationBothRent,
 			ReleasedFromHolding = ReleasedFromHolding,
 			StillHeld = StillHeld,
 			HoldingTurnsRemaining = HoldingTurnsRemaining,
@@ -80,6 +110,12 @@ public interface ICorroRulebook
 	/// Process a dice roll for a player, applying all relevant rules.
 	/// </summary>
 	Task<DiceRollOutcome> ProcessDiceRollAsync(Player player, GameContext context);
+
+	/// <summary>Resolve a pending bonus-die Bus movement choice.</summary>
+	Task<DiceRollOutcome> ProcessBusChoiceAsync(Player player, string choice, GameContext context);
+
+	/// <summary>Run an Express move once the normal landing's decision has settled.</summary>
+	Task ResolveDeferredExpressMoveAsync(GameContext context);
 
 	/// <summary>One 1..6 die from the game's randomness source (the race family rolls a single
 	/// die; sharing the source keeps E2E dice scripting working across families).</summary>

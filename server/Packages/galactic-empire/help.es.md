@@ -32,6 +32,11 @@ En este tablero se juega con **créditos (₡)**, no con euros.
 
 Al completar una vuelta y pasar por la **Plataforma de Lanzamiento** cobras tu salario.
 
+Si el anfitrión activa el **dado de hipervelocidad**, se añade a la tirada después de tu primera
+órbita. Un número suma 1, 2 o 3 casillas; el **Transbordador Cuántico** permite elegir un dado
+blanco o su suma; el **salto hiperespacial** resuelve primero la caída normal y luego avanza al
+siguiente planeta válido.
+
 ## Casillas especiales
 
 - **Plataforma de Lanzamiento**: la casilla de inicio. Cobras al pasar por ella.

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="120" viewBox="0 0 420 120" role="img" aria-labelledby="title description">
+  <title id="title">All Welcome</title>
+  <desc id="description">An open circle welcomes an equal participant into a shared centre, followed by the All Welcome wordmark.</desc>
+  <defs>
+    <linearGradient id="mark-gradient" x1="10" y1="57" x2="57" y2="8" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4456d7"/>
+      <stop offset="1" stop-color="#007a9b"/>
+    </linearGradient>
+    <linearGradient id="word-gradient" x1="120" y1="86" x2="408" y2="30" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4456d7"/>
+      <stop offset="1" stop-color="#007a9b"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(12 12) scale(1.5)">
+    <g fill="none" stroke="url(#mark-gradient)" stroke-linecap="round">
+      <path data-opening="true" d="M17 47a21.2 21.2 0 1 1 30 0" stroke-width="4"/>
+      <path data-spoke="true" d="M32 10.5V32" stroke-width="2.25" opacity=".62"/>
+      <path data-spoke="true" d="M50.6 21.25 32 32" stroke-width="2.25" opacity=".62"/>
+      <path data-spoke="true" d="M50.6 42.75 32 32" stroke-width="2.25" opacity=".62"/>
+      <path data-spoke="true" d="M32 56.5V32" stroke-width="2.25" opacity=".62"/>
+      <path data-spoke="true" d="M13.4 42.75 32 32" stroke-width="2.25" opacity=".62"/>
+      <path data-spoke="true" d="M13.4 21.25 32 32" stroke-width="2.25" opacity=".62"/>
+    </g>
+    <g fill="url(#mark-gradient)">
+      <circle data-participant="true" cx="32" cy="10.5" r="4.75"/>
+      <circle data-participant="true" cx="50.6" cy="21.25" r="4.75"/>
+      <circle data-participant="true" cx="50.6" cy="42.75" r="4.75"/>
+      <circle data-participant="true" cx="32" cy="56.5" r="4.75"/>
+      <circle data-participant="true" cx="13.4" cy="42.75" r="4.75"/>
+      <circle data-participant="true" cx="13.4" cy="21.25" r="4.75"/>
+      <circle data-shared-centre="true" cx="32" cy="32" r="5.25"/>
+    </g>
+  </g>
+
+  <text data-wordmark="true" x="120" y="77" fill="url(#word-gradient)" font-family="system-ui, 'Segoe UI', sans-serif" font-size="48" letter-spacing="-1.8">
+    <tspan font-weight="800">all</tspan><tspan font-weight="650"> welcome</tspan>
+  </text>
+</svg>

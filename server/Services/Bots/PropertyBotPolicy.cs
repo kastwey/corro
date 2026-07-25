@@ -70,7 +70,14 @@ public sealed class PropertyBotPolicy : IBotPolicy
 			return null;
 		}
 
-		// 4. In holding, before rolling: spend a free card if held, else roll for doubles — the engine
+		// 4. Resolve the bonus-die Bus choice before any other turn action. Prefer the
+		// lowest rent preview; ties choose the longest move.
+		if (view.PendingBusChoice is { } bus && bus.PlayerId == botId)
+		{
+			return new BusChoiceCommand { PlayerId = botId, Choice = ChooseBus(bus) };
+		}
+
+		// 5. In holding, before rolling: spend a free card if held, else roll for doubles — the engine
 		//    handles the three-strikes forced payment, so rolling is always a legal move.
 		if (me.IsHeld && !view.HasRolledThisTurn)
 		{
@@ -191,6 +198,15 @@ public sealed class PropertyBotPolicy : IBotPolicy
 		return next <= ceiling
 			? new PlaceBidCommand { PlayerId = me.Id, SquareIndex = auction.SquareIndex, Amount = next }
 			: new PassAuctionCommand { PlayerId = me.Id, SquareIndex = auction.SquareIndex };
+	}
+
+	private static string ChooseBus(PendingBusChoice bus)
+	{
+		var die1 = bus.RentDie1 ?? 0;
+		var die2 = bus.RentDie2 ?? 0;
+		var both = bus.RentBoth ?? 0;
+		var minimum = Math.Min(both, Math.Min(die1, die2));
+		return both == minimum ? "both" : die1 <= die2 ? "die1" : "die2";
 	}
 
 	// ── Building (houses only, evenly, within the cushion and the bank's stock) ─────────────────

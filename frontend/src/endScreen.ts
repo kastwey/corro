@@ -22,12 +22,22 @@ import type { GameState } from './models.js';
 const t = (key: string, vars?: Record<string, any>): string => tSync(`game.${key}`, vars);
 
 /**
- * Who actually WON: the winnerId alone, or — journey pairs — every member of the winning
- * SEAT (partners win together), plus the seat's team name for the banner.
+ * Who actually WON: the winnerId alone, every member of a winning Journey seat, or every
+ * member of the winning Forbidden Words team, plus the team name for the banner.
  */
 export function winningSide(state: GameState): { ids: Set<string>; teamName: string | null } {
 	const ids = new Set<string>();
 	if (state.winnerId) ids.add(state.winnerId);
+	const forbiddenTeam = state.winnerId
+		? state.forbidden?.teams.find(team => team.memberIds.includes(state.winnerId!)) ?? null
+		: null;
+	if (forbiddenTeam) {
+		for (const memberId of forbiddenTeam.memberIds) ids.add(memberId);
+		return {
+			ids,
+			teamName: teamDisplayName(forbiddenTeam.teamIndex, (k, v) => tSync(k, v)),
+		};
+	}
 	const seats = state.journey?.seats ?? [];
 	const seat = state.winnerId
 		? seats.find(s => s.members?.some(m => m.playerId === state.winnerId)) ?? null
@@ -95,7 +105,7 @@ export function showEndScreen(state: GameState, myPlayerId: string | null): void
 	const iWon = !!myPlayerId && side.ids.has(myPlayerId);
 	const winnerName = side.teamName ?? state.winnerName ?? standings[0]?.name ?? '';
 
-	// Journey pairs: the banner names the TEAM and celebrates BOTH partners.
+	// Team games: the banner names the team and celebrates every member.
 	const bannerText = iWon
 		? (side.teamName ? t('end_winner_team_you', { team: side.teamName }) : t('end_winner_you'))
 		: (side.teamName ? t('end_winner_team_other', { team: side.teamName }) : t('end_winner_other', { player: winnerName }));
