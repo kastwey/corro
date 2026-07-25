@@ -53,13 +53,29 @@ test('the cursor reaches the landing square only after the token hop, never befo
 	await roll(ana, 4, 6); // 0 → 10
 	await expect(ana.locator('#board .player-token--moving')).toHaveCount(1, { timeout: 5_000 });
 	// M follows the presentation-safe token position while the hop is in progress, never
-	// the already-authoritative destination from GameState.
+	// the already-authoritative destination from GameState. Capture cursor + token in a
+	// listener that runs later in the SAME real keydown dispatch as the app handler. Reading
+	// them in a separate Playwright evaluate races the animator's next timer tick: on a busy
+	// Linux runner the token advanced from 0 to 1 after M correctly selected 0.
 	await ana.locator('#board').focus();
+	await expect(ana.locator('#board .player-token--moving')).toHaveCount(1);
+	await ana.evaluate(() => {
+		(window as any).__mSnapshot = null;
+		const captureAfterApp = (event: KeyboardEvent) => {
+			if (event.key.toLowerCase() !== 'm') return;
+			document.removeEventListener('keydown', captureAfterApp);
+			(window as any).__mSnapshot = {
+				focused: Number(document.querySelector('#board .square.focused')?.getAttribute('data-index')),
+				visible: Number(document.querySelector('#board .player-token--moving')?.closest('.square')?.getAttribute('data-index')),
+			};
+		};
+		document.addEventListener('keydown', captureAfterApp);
+	});
 	await ana.keyboard.press('m');
-	const midHop = await ana.evaluate(() => ({
-		focused: Number(document.querySelector('#board .square.focused')?.getAttribute('data-index')),
-		visible: Number(document.querySelector('#board .player-token--moving')?.closest('.square')?.getAttribute('data-index')),
-	}));
+	const midHop: { focused: number; visible: number } | null =
+		await ana.evaluate(() => (window as any).__mSnapshot);
+	expect(midHop, 'the real M keydown was not observed').not.toBeNull();
+	if (!midHop) return;
 	expect(midHop.focused).toBe(midHop.visible);
 	expect(midHop.focused, 'M exposed the authoritative destination before the token arrived').not.toBe(10);
 	await expect(ana.locator('#board .square[data-index="10"] .player-token')).toHaveCount(1, { timeout: 20_000 });
