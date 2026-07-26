@@ -373,23 +373,193 @@ public class GameHubRoutingTests
 		Assert.True(clients.Caller.Received("Error"));
 	}
 
+	[Fact]
+	public async Task CreateGameLobby_PersistsTheExplicitForbiddenWordLanguageAndChoices()
+	{
+		var repository = new CapturingRepository();
+		var store = new CorroPackageStore(
+			new CompositeSoundPackProvider(new DefaultSoundPackProvider()),
+			Path.Combine(Path.GetTempPath(), "corro_language_" + Guid.NewGuid().ToString("N")));
+		var token = "forbidden-" + Guid.NewGuid().ToString("N");
+		await store.StageFromDirectoryAsync(token, CorroTestPaths.PackageDir("forbidden-words"));
+		store.SetOrigin(token, new PackageOrigin { ShippedId = "forbidden-words" });
+		var registry = new GameSessionRegistry(
+			new FakeHubContext(), repository, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
+		var hub = CreateLobbyHub(repository, registry, out _, store);
+
+		await hub.CreateGameLobby(new CreateGameRequest
+		{
+			HostName = "Host",
+			HostToken = "disc",
+			Board = "Forbidden Words",
+			PackageToken = token,
+			Language = "es-ES",
+			MaxPlayers = 4,
+			TeamCount = 2,
+		});
+
+		Assert.Equal("es", repository.Created!.Language);
+		Assert.Equal(new[] { "en", "es" }, repository.Created.ForbiddenWordLanguages);
+		store.Release(token);
+	}
+
+	[Fact]
+	public async Task CreateGameLobby_RejectsAForbiddenWordLanguageOutsideThePackage()
+	{
+		var repository = new CapturingRepository();
+		var store = new CorroPackageStore(
+			new CompositeSoundPackProvider(new DefaultSoundPackProvider()),
+			Path.Combine(Path.GetTempPath(), "corro_language_" + Guid.NewGuid().ToString("N")));
+		var token = "forbidden-" + Guid.NewGuid().ToString("N");
+		await store.StageFromDirectoryAsync(token, CorroTestPaths.PackageDir("forbidden-words"));
+		store.SetOrigin(token, new PackageOrigin { ShippedId = "forbidden-words" });
+		var registry = new GameSessionRegistry(
+			new FakeHubContext(), repository, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
+		var hub = CreateLobbyHub(repository, registry, out var clients, store);
+
+		await hub.CreateGameLobby(new CreateGameRequest
+		{
+			HostName = "Host",
+			HostToken = "disc",
+			Board = "Forbidden Words",
+			PackageToken = token,
+			Language = "fr",
+			MaxPlayers = 4,
+			TeamCount = 2,
+		});
+
+		Assert.Null(repository.Created);
+		Assert.True(clients.Caller.Received("Error"));
+		store.Release(token);
+	}
+
+	[Fact]
+	public async Task Host_can_change_the_Forbidden_Words_language_while_waiting()
+	{
+		var repository = new CapturingRepository();
+		repository.Seed(WaitingForbiddenGame());
+		var registry = new GameSessionRegistry(
+			new FakeHubContext(), repository, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
+		var hub = CreateLobbyHub(repository, registry, out var clients);
+		registry.MapConnectionToGame(hub.Context.ConnectionId, "g1");
+		registry.AuthenticateConnection(hub.Context.ConnectionId, "host");
+
+		await hub.SetForbiddenWordLanguage(new SetForbiddenWordLanguageRequest
+		{
+			GameId = "g1",
+			HostId = "host",
+			Language = "ES-es",
+		});
+
+		Assert.Equal("es", repository.Created!.Language);
+		Assert.True(clients.Group("lobby_g1").Received("LobbyUpdated"));
+		Assert.True(clients.Group("lobby_g1").Received("ForbiddenWordLanguageChanged"));
+	}
+
+	[Fact]
+	public async Task Guest_cannot_change_the_Forbidden_Words_language()
+	{
+		var repository = new CapturingRepository();
+		repository.Seed(WaitingForbiddenGame());
+		var registry = new GameSessionRegistry(
+			new FakeHubContext(), repository, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
+		var hub = CreateLobbyHub(repository, registry, out var clients);
+		registry.MapConnectionToGame(hub.Context.ConnectionId, "g1");
+		registry.AuthenticateConnection(hub.Context.ConnectionId, "guest");
+
+		await hub.SetForbiddenWordLanguage(new SetForbiddenWordLanguageRequest
+		{
+			GameId = "g1",
+			HostId = "host",
+			Language = "es",
+		});
+
+		Assert.Equal("en", repository.Created!.Language);
+		Assert.True(clients.Caller.Received("Error"));
+		Assert.False(clients.Group("lobby_g1").Received("ForbiddenWordLanguageChanged"));
+	}
+
+	[Fact]
+	public async Task Forbidden_Words_language_is_locked_after_the_game_starts()
+	{
+		var repository = new CapturingRepository();
+		repository.Seed(WaitingForbiddenGame() with { Status = GameStatus.Active });
+		var registry = new GameSessionRegistry(
+			new FakeHubContext(), repository, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
+		var hub = CreateLobbyHub(repository, registry, out var clients);
+		registry.MapConnectionToGame(hub.Context.ConnectionId, "g1");
+		registry.AuthenticateConnection(hub.Context.ConnectionId, "host");
+
+		await hub.SetForbiddenWordLanguage(new SetForbiddenWordLanguageRequest
+		{
+			GameId = "g1",
+			HostId = "host",
+			Language = "es",
+		});
+
+		Assert.Equal("en", repository.Created!.Language);
+		Assert.True(clients.Caller.Received("Error"));
+		Assert.False(clients.Group("lobby_g1").Received("ForbiddenWordLanguageChanged"));
+	}
+
+	[Fact]
+	public async Task Reloaded_waiting_player_rejoins_live_lobby_broadcasts()
+	{
+		var repository = new CapturingRepository();
+		repository.Seed(WaitingForbiddenGame());
+		var registry = new GameSessionRegistry(
+			new FakeHubContext(), repository, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
+		var hub = CreateLobbyHub(repository, registry, out _);
+
+		var game = await hub.ReconnectLobby("g1", "host", "secret");
+
+		Assert.Equal("en", game.Language);
+		Assert.Equal(new[] { "en", "es" }, game.ForbiddenWordLanguages);
+		Assert.Contains(hub.Context.ConnectionId, registry.LobbyConnectionIds("g1"));
+	}
+
+	private static GameDocument WaitingForbiddenGame() => new()
+	{
+		Id = "game-g1",
+		GameId = "g1",
+		Status = GameStatus.WaitingForPlayers,
+		HostId = "host",
+		InviteCode = "INVITE",
+		Language = "en",
+		ForbiddenWordLanguages = new() { "en", "es" },
+		Players = new()
+		{
+			new LobbyPlayer
+			{
+				Id = "host",
+				Name = "Host",
+				Token = "disc",
+				IsHost = true,
+				IsReady = true,
+				PlayerSecretId = "secret",
+			},
+		},
+	};
+
 	private static GameHub CreateLobbyHub(
 		IGameRepository repository,
 		GameSessionRegistry registry,
-		out FakeClients clients)
+		out FakeClients clients,
+		CorroPackageStore? packageStore = null)
 	{
 		clients = new FakeClients();
 		return new GameHub(
 			repository,
 			new FakeGameServiceFactory(),
 			new FakeAuctionTimer(),
-			new CorroPackageStore(new CompositeSoundPackProvider(new DefaultSoundPackProvider())),
+			packageStore ?? new CorroPackageStore(new CompositeSoundPackProvider(new DefaultSoundPackProvider())),
 			TestFixtures.NewPackageRestorer(),
 			registry,
 			NullLogger<GameHub>.Instance)
 		{
 			Clients = clients,
 			Context = new FakeCallerContext("c-" + Guid.NewGuid().ToString("N")),
+			Groups = new FakeGroupManager(),
 		};
 	}
 
@@ -609,7 +779,9 @@ public class GameHubRoutingTests
 	private sealed class CapturingRepository : IGameRepository
 	{
 		public GameDocument? Created { get; private set; }
-		public Task<GameDocument?> LoadGameAsync(string gameId) => Task.FromResult<GameDocument?>(null);
+		public void Seed(GameDocument game) => Created = game;
+		public Task<GameDocument?> LoadGameAsync(string gameId)
+			=> Task.FromResult(Created?.GameId == gameId ? Created : null);
 		public Task<bool> DeleteGameAsync(string gameId) => Task.FromResult(true);
 		public async IAsyncEnumerable<GameDocument> GetGamesLastUpdatedBeforeAsync(DateTime cutoffUtc, int maxCount, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
 		{
@@ -627,7 +799,11 @@ public class GameHubRoutingTests
 			Created = game;
 			return Task.FromResult(game);
 		}
-		public Task<GameDocument> UpdateGameAsync(GameDocument game) => Task.FromResult(game);
+		public Task<GameDocument> UpdateGameAsync(GameDocument game)
+		{
+			Created = game;
+			return Task.FromResult(game);
+		}
 	}
 
 	private sealed class FakeHubContext : IHubContext<GameHub>

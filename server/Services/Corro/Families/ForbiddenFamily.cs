@@ -20,6 +20,13 @@ public sealed class ForbiddenFamily : IGameFamily
 {
 	public string GameType => "forbidden";
 
+	/// <summary>The real word decks a package can offer in the lobby, preserving manifest order.</summary>
+	public static List<string> AvailableWordLanguages(GameDefinition definition)
+		=> definition.Manifest.Locales
+			.Where(locale => definition.ForbiddenWords?.ContainsKey(locale) == true)
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.ToList();
+
 	public async Task<GameDefinition> LoadDefinitionAsync(
 		string packageDir,
 		Manifest manifest,
@@ -158,8 +165,8 @@ public sealed class ForbiddenFamily : IGameFamily
 		var definition = start.Definition;
 		var rules = definition.Manifest.ForbiddenRules ?? new ForbiddenRulesConfig();
 		var resolved = definition.ForbiddenWords?.GetValueOrDefault(start.Lang)
-			?? definition.ForbiddenWords?.Values.FirstOrDefault()
-			?? throw new InvalidOperationException("forbidden word deck is missing.");
+			?? throw new InvalidOperationException(
+				$"forbidden word deck does not provide the selected language '{start.Lang}'.");
 		var deck = (start.Random is { } random ? random.Shuffle(resolved) : resolved).ToList();
 		var forbidden = ForbiddenRulebook.CreateInitialState(arranged, deck, rules);
 		var teamOf = arranged

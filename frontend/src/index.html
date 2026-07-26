@@ -144,6 +144,13 @@
 					<select id="team-count"></select>
 				</div>
 
+				<!-- Forbidden Words only: one shared real-content deck for the whole match. -->
+				<div class="form-group hidden" id="forbidden-word-language-group" hidden>
+					<label for="forbidden-word-language" data-i18n="lobby.wordLanguage">Word language:</label>
+					<select id="forbidden-word-language" aria-describedby="forbidden-word-language-hint"></select>
+					<p id="forbidden-word-language-hint" class="form-hint" data-i18n="lobby.wordLanguageHint">Everyone uses the same target and forbidden words; interface languages stay personal.</p>
+				</div>
+
 				<details id="rules-details" class="rules-details">
 					<summary id="rules-summary" data-i18n="lobby.rules.heading">Game rules</summary>
 					<p class="rules-hint" data-i18n="lobby.rules.hint">Tune the rules for this game. The defaults match the standard rules.</p>
@@ -318,6 +325,12 @@
 					</div>
 					<div id="created-rejoin-mount"></div>
 
+					<div class="form-group hidden" id="host-forbidden-word-language-group" hidden>
+						<label for="host-forbidden-word-language" data-i18n="lobby.wordLanguage">Word language:</label>
+						<select id="host-forbidden-word-language" aria-describedby="host-forbidden-word-language-hint"></select>
+						<p id="host-forbidden-word-language-hint" class="form-hint" data-i18n="lobby.wordLanguageWaitingHint">The host may change this shared deck until the game starts.</p>
+					</div>
+
 					<div class="player-list">
 						<h4 data-i18n="lobby.playersInRoom">Players in room:</h4>
 						<ul id="host-player-list"></ul>
@@ -340,6 +353,7 @@
 					<h3 data-i18n="lobby.waitingRoom">Waiting room</h3>
 
 					<div id="joined-rejoin-mount"></div>
+					<p id="joined-forbidden-word-language" class="hidden" hidden></p>
 					<div class="player-list">
 						<h4 data-i18n="lobby.playersInRoom">Players in room:</h4>
 						<ul id="joined-player-list"></ul>

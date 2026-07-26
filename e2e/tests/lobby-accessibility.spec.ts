@@ -18,6 +18,7 @@ import {
 } from '../helpers/game';
 
 const TRACK_BOARD = 'snakes-and-ladders';
+const FORBIDDEN_BOARD = 'forbidden-words';
 
 /** A small, real .corro archive used to exercise the browser's successful upload state. */
 async function uploadedTrackPackage(): Promise<Buffer> {
@@ -83,6 +84,36 @@ test('switching shipped games keeps the loading feedback visual-only', async ({ 
 	await expect(visualStatus).toBeEmpty();
 	const heard = await page.evaluate(() => (window as any).__announcements as string[]);
 	expect(heard).not.toContain(loading);
+});
+
+test('Forbidden Words offers one accessible shared word-language choice', async ({ browser }) => {
+	const page = await newPlayerPage(browser, 'es-ES');
+	await gotoLobbyHome(page);
+	await page.locator('#go-create-btn').click();
+	await page.locator('#board-selector').selectOption(FORBIDDEN_BOARD);
+	const firstToken = packageManifest(FORBIDDEN_BOARD).tokens[0].id as string;
+	await expect(page.locator(`#create-form input.token-radio[value="${firstToken}"]`)).toBeAttached();
+
+	const group = page.locator('#forbidden-word-language-group');
+	const select = page.locator('#forbidden-word-language');
+	await expect(group).toBeVisible();
+	await expect(select).toHaveAccessibleName('Idioma de las palabras');
+	await expect(select).toHaveAttribute('aria-describedby', 'forbidden-word-language-hint');
+	await expect(select.locator('option')).toHaveText(['Inglés', 'Español']);
+	await expect(select).toHaveValue('es');
+	await flushAxeAudit(page);
+
+	// Once the host makes an explicit deck choice, changing their personal interface must not
+	// silently rewrite it. Only the option labels follow the interface locale.
+	await select.selectOption('en');
+	await page.locator('#language-selector').selectOption('en');
+	await page.locator('#language-apply-btn').click();
+	await expect(select).toHaveValue('en');
+	await expect(select.locator('option')).toHaveText(['English', 'Spanish']);
+	await flushAxeAudit(page);
+
+	await page.locator('#board-selector').selectOption(TRACK_BOARD);
+	await expect(group).toBeHidden();
 });
 
 test('home, dark theme, runtime language and create/join validation states are Axe-clean', async ({ browser }) => {

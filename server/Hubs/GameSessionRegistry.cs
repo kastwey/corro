@@ -94,9 +94,9 @@ public sealed class GameSessionRegistry
 
 	// ── Connection maps ───────────────────────────────────────────────────────
 
-	public void MapConnectionToGame(string connectionId, string gameId) => _connectionGameMap.TryAdd(connectionId, gameId);
-	public void AuthenticateConnection(string connectionId, string playerId) => _authenticatedConnections.TryAdd(connectionId, playerId);
-	public void MapLobbyConnection(string connectionId, string gameId) => _lobbyConnections.TryAdd(connectionId, gameId);
+	public void MapConnectionToGame(string connectionId, string gameId) => _connectionGameMap[connectionId] = gameId;
+	public void AuthenticateConnection(string connectionId, string playerId) => _authenticatedConnections[connectionId] = playerId;
+	public void MapLobbyConnection(string connectionId, string gameId) => _lobbyConnections[connectionId] = gameId;
 
 	public bool TryRemoveGameConnection(string connectionId, out string gameId) => _connectionGameMap.TryRemove(connectionId, out gameId!);
 	public bool TryRemoveAuthConnection(string connectionId, out string playerId) => _authenticatedConnections.TryRemove(connectionId, out playerId!);

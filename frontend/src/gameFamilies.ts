@@ -30,6 +30,7 @@ import { explodingStatusText } from './explodingRules.js';
 import { ForbiddenBoard } from './forbiddenBoard.js';
 import { forbiddenStatusText } from './forbiddenRules.js';
 import { gameManager } from './gameManager.js';
+import { soundEvents } from './soundEvents.js';
 import { seatDisplayName } from './raceGeometry.js';
 import { i18nBinder, localizeColor } from './i18nBinder.js';
 
@@ -463,6 +464,7 @@ const forbiddenFamily = makeCardFamily('forbidden', forbiddenStatusText, deps =>
 	getMyPlayerId: deps.getMyPlayerId,
 	announce: deps.announce,
 	tSync: deps.tSync,
+	sounds: soundEvents,
 	commands: {
 	  start: () => { void gameManager.forbiddenStart(); },
 	  correct: sequence => { void gameManager.forbiddenCorrect(sequence); },

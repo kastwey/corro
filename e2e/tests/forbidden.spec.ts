@@ -1,7 +1,7 @@
 // forbidden.spec.ts — the accessible spoken-clue family end to end.
 //
-// Four real browser contexts form two host-arranged teams. The host chooses English game
-// content while three players keep a Spanish interface, proving that private words and UI
+// Four real browser contexts form two host-arranged teams. The host explicitly chooses one
+// shared Spanish word deck while interfaces remain personal, proving that private words and UI
 // locale are independent. The scenario reaches the protected-card, active timer,
 // correct, violation and pass states, with an explicit Axe flush before each transition.
 
@@ -49,16 +49,39 @@ test('an assigned host is not reported as a complete two-team roster', async ({ 
 	await flushAxeAudit(host);
 });
 
-test('private English cards, per-player Spanish UI and authoritative role actions', async ({ browser }) => {
+test('shared Spanish cards, per-player UI and authoritative role actions', async ({ browser }) => {
 	const ana = await newPlayerPage(browser, 'en-US');
 	const berto = await newPlayerPage(browser, 'es-ES');
 	const carla = await newPlayerPage(browser, 'es-ES');
 	const david = await newPlayerPage(browser, 'es-ES');
 
-	const code = await createGame(ana, 'Ana', BOARD, { maxPlayers: 4, teamCount: 2 });
+	const code = await createGame(ana, 'Ana', BOARD, {
+		maxPlayers: 4,
+		teamCount: 2,
+		wordLanguage: 'es',
+	});
+	await expect(ana.locator('#host-forbidden-word-language-group')).toBeVisible();
+	await expect(ana.locator('#host-forbidden-word-language')).toHaveValue('es');
+	await ana.reload();
+	await expect(ana.locator('#lobby-created')).toBeVisible();
+	await expect(ana.locator('#host-forbidden-word-language')).toHaveValue('es');
 	await joinGame(berto, code, 'Berto');
 	await joinGame(carla, code, 'Carla');
 	await joinGame(david, code, 'David');
+	for (const page of [berto, carla, david]) {
+		await expect(page.locator('#joined-forbidden-word-language')).toHaveText(
+			appI18n('es').lobby.wordLanguageCurrent.replace('{{language}}', appI18n('es').language.spanish),
+		);
+	}
+
+	// The host can still change the shared deck while everyone is in the waiting room. Every
+	// listener sees and hears the authoritative update; the final Spanish choice survives start.
+	await berto.evaluate(() => { ((window as any).__announcements as string[]).length = 0; });
+	await ana.locator('#host-forbidden-word-language').selectOption('en');
+	await expect(berto.locator('#joined-forbidden-word-language')).toContainText('Inglés');
+	await expectAnnouncement(berto, /idioma de las palabras ahora es Inglés/);
+	await ana.locator('#host-forbidden-word-language').selectOption('es');
+	await expect(berto.locator('#joined-forbidden-word-language')).toContainText('Español');
 
 	await expect(ana.locator('#host-team-panel .team-box')).toHaveCount(2);
 	await assign(ana, 0, 'Ana');
@@ -106,7 +129,7 @@ test('private English cards, per-player Spanish UI and authoritative role action
 	const davidCard = david.locator('.forbidden-secret__text');
 
 	// Ana gives clues and opposing Carla monitors: only those two projections contain the
-	// private English card. Berto (guesser) and David (supporter) receive no secret DOM value.
+	// private Spanish card. Berto (guesser) and David (supporter) receive no secret DOM value.
 	await expect(anaCard).toBeVisible();
 	await expect(carlaCard).toBeVisible();
 	await expect(bertoCard).toBeHidden();
@@ -121,9 +144,9 @@ test('private English cards, per-player Spanish UI and authoritative role action
 	await expect(carla.locator('#forbidden-card-hint')).toContainText('Flecha arriba y Flecha abajo');
 	await expect(carla.locator('#forbidden-card-hint')).toContainText('pulsa V si el portavoz dice el objetivo');
 	await expect(anaCard).toHaveValue(
-		'Target word: lighthouse.\nForbidden words:\nlight,\ncoast,\ntower,\nsea,\nship.');
+		'Target word: faro.\nForbidden words:\nluz,\ncosta,\ntorre,\nmar,\nbarco.');
 	await expect(carlaCard).toHaveValue(
-		'Palabra objetivo: lighthouse.\nPalabras prohibidas:\nlight,\ncoast,\ntower,\nsea,\nship.');
+		'Palabra objetivo: faro.\nPalabras prohibidas:\nluz,\ncosta,\ntorre,\nmar,\nbarco.');
 	await expect(bertoCard).toHaveValue('');
 	await expect(davidCard).toHaveValue('');
 
@@ -191,6 +214,19 @@ test('private English cards, per-player Spanish UI and authoritative role action
 		el => (el as HTMLProgressElement).value,
 	), { timeout: 5_000 }).toBeLessThan(60);
 	await expectAnnouncement(berto, /Ana inicia el turno/);
+
+	// R is a family-local, read-only timer query for every role. It works both from the
+	// protected private card and from the role surface without moving focus or mutating state.
+	for (const [page, focus, announcement] of [
+		[ana, anaCard, /\d+ seconds remaining/],
+		[berto, berto.locator('.forbidden-shell'), /Quedan \d+ segundos/],
+	] as const) {
+		await page.evaluate(() => { ((window as any).__announcements as string[]).length = 0; });
+		await focus.focus();
+		await page.keyboard.press('r');
+		await expectAnnouncement(page, announcement);
+		await expect(focus).toBeFocused();
+	}
 	for (const page of [ana, berto, carla, david]) await flushAxeAudit(page);
 
 	// V is role-authorized as well as family-local: the clue-giver cannot use it, and the
@@ -202,7 +238,7 @@ test('private English cards, per-player Spanish UI and authoritative role action
 	await expect(ana.locator('.forbidden-score').first()).toContainText('0');
 
 	await ana.locator('.forbidden-correct').click();
-	await expectAnnouncement(berto, /Berto acierta lighthouse/);
+	await expectAnnouncement(berto, /Berto acierta faro/);
 	await expect(anaCard).not.toHaveValue(originalCard);
 	await expect(ana.locator('.forbidden-score').first()).toContainText('1');
 	await flushAxeAudit(ana);

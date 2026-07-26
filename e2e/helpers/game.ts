@@ -301,7 +301,13 @@ export async function createGame(
 	page: Page,
 	hostName: string,
 	boardId: string,
-	opts: { houseRules?: Record<string, boolean>; seat?: string; maxPlayers?: number; teamCount?: number } = {},
+	opts: {
+		houseRules?: Record<string, boolean>;
+		seat?: string;
+		maxPlayers?: number;
+		teamCount?: number;
+		wordLanguage?: string;
+	} = {},
 ): Promise<string> {
 	await gotoLobbyHome(page);
 	await page.click('#go-create-btn');
@@ -315,6 +321,7 @@ export async function createGame(
 	// Player count first: the journey team-count options depend on it.
 	if (opts.maxPlayers) await page.selectOption('#max-players', String(opts.maxPlayers));
 	if (opts.teamCount) await page.selectOption('#team-count', String(opts.teamCount));
+	if (opts.wordLanguage) await page.selectOption('#forbidden-word-language', opts.wordLanguage);
 	await page.fill('#host-name', hostName);
 	// The real control is an invisible radio absolutely positioned inside the label (the
 	// label is the visual), so its own geometry is useless to Playwright's hit testing.

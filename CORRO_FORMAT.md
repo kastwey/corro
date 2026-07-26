@@ -106,7 +106,7 @@ is common to all families.
 - `"gameType": "forbidden"` — two-team spoken clue play: a rotating clue-giver describes
   a private target without saying its forbidden words, a teammate guesses aloud and an opposing
   monitor adjudicates violations. **No `board.json` or `cards.json`** — real content ships in
-  `words.<lang>.json`, selected once from the host's game language, and rules live in
+  `words.<lang>.json`; the host explicitly selects one shared word language in the lobby, and rules live in
   `forbiddenRules` — see [The forbidden-word family](#the-forbidden-word-family). This family has
   **no bots**; voice chat is optional because players may share a physical room.
 
@@ -495,6 +495,7 @@ simply silent** — declare only what you ship.
 | `trivia.final` | trivia: the final question begins |
 | `trivia.win` | trivia: the final question is answered and the game is won |
 | `forbidden.start` | forbidden: the clue-giver starts the authoritative turn clock |
+| `forbidden.tick` | forbidden: optional audible clock loop while the timed turn is active (client-local lifecycle, never narration) |
 | `forbidden.correct` | forbidden: the team marks a target correct and receives the next card |
 | `forbidden.pass` | forbidden: the clue-giver uses a pass and receives the next card |
 | `forbidden.violation` | forbidden: the opposing monitor reports a forbidden word |
@@ -1221,8 +1222,10 @@ adjudicate the conversation through role-authorized actions.
 ### words.&lt;lang&gt;.json
 
 Each declared locale ships its own real word deck. As with trivia questions, these are content decks,
-not UI translations. The host's language when creating the game selects one deck for the whole match;
-each player's buttons, help and announcements still use that player's own interface language.
+not UI translations. The create form defaults the shared word language to the host's interface locale,
+but the host can choose another available deck and change it while the game is still waiting. One deck
+is then used for the whole match; each player's buttons, help and announcements still use that player's
+own interface language.
 
 ```jsonc
 [
@@ -1276,7 +1279,7 @@ not supported in this family.
 
 ### Hidden information and accessible card surface
 
-Persistence stores the full host-language deck and current card. Every client state is projected:
+Persistence stores the selected word language, the full matching deck and the current card. Every client state is projected:
 only the clue-giver and monitor receive `target` and `forbiddenWords`; all other players and the public
 view receive null/empty fields, and nobody receives the remaining deck.
 
@@ -1285,8 +1288,9 @@ uses `aria-readonly="true"` without native `readonly`: cursor movement, screen-r
 selection and copying remain available, while keyboard, `beforeinput`, paste, cut, drop and composition
 mutations are blocked. Game shortcuts still work while that box owns focus; plain Enter starts the
 clock only when the local player is the clue-giver in the preparing phase, and V reports the target
-or a listed word only when the local player is the active monitor. The countdown is not an ARIA live
-stream; speech during play remains audible.
+or a listed word only when the local player is the active monitor. R announces the latest
+server-fed remaining time to any player. The countdown is not an ARIA live stream; speech during
+play remains audible until someone explicitly asks for the time.
 
 ### Overridable voice (`game.forbidden_*`)
 

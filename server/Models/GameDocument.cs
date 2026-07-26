@@ -27,9 +27,16 @@ public record GameDocument
 	[JsonPropertyName("board")]
 	public string Board { get; init; } = string.Empty;
 
-	/// <summary>Host-selected language for package content resolved once at game start.</summary>
+	/// <summary>Host-selected package-content language. It may change while waiting and is fixed
+	/// when game start resolves the authoritative content deck.</summary>
 	[JsonPropertyName("language")]
 	public string Language { get; init; } = "en";
+
+	/// <summary>Word-deck languages offered by a Forbidden Words package. Persisted with the
+	/// waiting room so the host can change the shared deck language before starting without
+	/// depending on transient package staging; empty for every other family.</summary>
+	[JsonPropertyName("forbiddenWordLanguages")]
+	public List<string> ForbiddenWordLanguages { get; init; } = new();
 
 	/// <summary>Token of the staged .corro package (null for a built-in board).</summary>
 	[JsonPropertyName("packageToken")]

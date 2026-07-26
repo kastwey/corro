@@ -1,5 +1,4 @@
 import { resetCardBoard, registerStatusKeys, CARD_STATUS_SHORTCUTS } from './cardBoardShell.js';
-import { soundEvents } from './soundEvents.js';
 import { teamDisplayName } from './enginePalette.js';
 import { buildForbiddenRulesLines } from './rulesSummaries.js';
 import {
@@ -17,6 +16,11 @@ export interface ForbiddenBoardDeps {
 	getMyPlayerId(): string | null;
 	announce(text: string): void;
 	tSync(key: string, vars?: Record<string, unknown>): string;
+	sounds: {
+		playEvent(eventKey: string): void;
+		startLoop(eventKey: string): void;
+		stopLoop(eventKey: string): boolean;
+	};
 	commands: {
 		start(): void;
 		correct(cardSequence: number): void;
@@ -24,6 +28,8 @@ export interface ForbiddenBoardDeps {
 		violation(cardSequence: number): void;
 	};
 }
+
+const TIMER_SOUND_EVENT = 'forbidden.tick';
 
 export interface ProtectedTextAreaController {
 	setValue(value: string): void;
@@ -224,8 +230,22 @@ export class ForbiddenBoard {
 			this.startButton.click();
 		});
 		this.element.addEventListener('keydown', event => {
-			if (event.key.toLowerCase() !== 'v' || event.ctrlKey || event.altKey || event.metaKey
-				|| event.shiftKey || event.repeat || !visible(this.violationButton)) return;
+			if (event.ctrlKey || event.altKey || event.metaKey || event.shiftKey || event.repeat) return;
+			const key = event.key.toLowerCase();
+			if (key === 'r') {
+				const turn = this.deps.getGameState()?.forbidden?.turn;
+				if (!turn) return;
+				// R is family-local: "reloj" in Spanish and "remaining" in English. The
+				// latest value comes from the server timer tick, so querying it never starts
+				// a client-side spoken countdown or depends on animation frames.
+				event.preventDefault();
+				event.stopPropagation();
+				this.deps.announce(turn.phase === 'active'
+					? this.t('forbidden_timer_label', { seconds: this.secondsRemaining })
+					: this.t('forbidden_timer_not_running'));
+				return;
+			}
+			if (key !== 'v' || !visible(this.violationButton)) return;
 			// V is bank inventory in the engine keymap, but that command is property-only.
 			// Forbidden owns it locally and stops it before the document keymap, including while
 			// the protected card has focus. One action covers saying the target or any listed word.
@@ -307,9 +327,15 @@ export class ForbiddenBoard {
 	}
 
 	handleTimerTick(secondsRemaining: number): void {
-		if (this.deps.getGameState()?.forbidden?.turn.phase !== 'active') return;
+		if (this.deps.getGameState()?.forbidden?.turn.phase !== 'active') {
+			this.syncTimerSound(0, false);
+			return;
+		}
+		// startLoop is idempotent, so every authoritative tick safely retries a start that
+		// may have raced the package sound download without ever stacking another clock.
+		this.syncTimerSound(secondsRemaining, true);
 		if (secondsRemaining === 10 && this.lastTick !== 10) {
-			soundEvents.playEvent('forbidden.warning');
+			this.deps.sounds.playEvent('forbidden.warning');
 		}
 		this.lastTick = secondsRemaining;
 		this.updateTimer(secondsRemaining);
@@ -342,6 +368,7 @@ export class ForbiddenBoard {
 		return [
 			...CARD_STATUS_SHORTCUTS,
 			{ keys: 'enter', descKey: 'game.help_cmd_forbidden_start' },
+			{ keys: 'r', descKey: 'game.help_cmd_forbidden_timer' },
 			{ keys: 'v', descKey: 'game.help_cmd_forbidden_violation' },
 			{ keys: 'tab', descKey: 'game.help_cmd_forbidden_controls' },
 		];
@@ -395,6 +422,7 @@ export class ForbiddenBoard {
 		this.timerPanel.hidden = !active;
 		this.timerProgress.max = duration;
 		if (!active) {
+			this.syncTimerSound(0, false);
 			this.timerStartedAt = null;
 			this.lastTick = -1;
 			return;
@@ -405,7 +433,17 @@ export class ForbiddenBoard {
 			const deadline = startedAt ? Date.parse(startedAt) + duration * 1000 : Date.now() + duration * 1000;
 			this.secondsRemaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
 		}
-		this.updateTimer(this.secondsRemaining || duration);
+		const seconds = startedAt ? this.secondsRemaining : duration;
+		this.updateTimer(seconds);
+		this.syncTimerSound(seconds, true);
+	}
+
+	private syncTimerSound(secondsRemaining: number, active: boolean): void {
+		if (active && secondsRemaining > 0) {
+			this.deps.sounds.startLoop(TIMER_SOUND_EVENT);
+			return;
+		}
+		this.deps.sounds.stopLoop(TIMER_SOUND_EVENT);
 	}
 
 	private updateTimer(seconds: number): void {

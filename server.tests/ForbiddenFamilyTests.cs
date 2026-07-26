@@ -3,6 +3,7 @@ using CorroServer.Models.Corro;
 using CorroServer.Services.Corro;
 using CorroServer.Services.Corro.Families;
 using CorroServer.Services.Rules;
+using CorroServer.Services.Sounds;
 
 namespace CorroServer.Tests;
 
@@ -32,7 +33,25 @@ public class ForbiddenFamilyTests
 	}
 
 	[Fact]
-	public async Task Game_content_uses_host_language_while_the_interface_remains_key_based()
+	public void Shipped_package_bundles_the_auction_clock_under_its_own_timer_event()
+	{
+		var packageDir = CorroTestPaths.PackageDir("forbidden-words");
+		var soundsDir = Path.Combine(packageDir, "assets", "sounds");
+		var provider = new DefaultSoundPackProvider(soundsDir);
+		var events = provider.ResolveEvents(null);
+
+		Assert.Equal("timer-tick.ogg", Assert.Single(events["forbidden.tick"]));
+		Assert.True(provider.TryGetSoundFile("forbidden-words", "timer-tick.ogg", out var timerPath, out var contentType));
+		Assert.Equal("audio/ogg", contentType);
+
+		var attributedAuctionClock = Path.Combine(
+			CorroTestPaths.PackageDir("galactic-empire"), "assets", "sounds", "auction-tick.ogg");
+		Assert.True(File.ReadAllBytes(attributedAuctionClock).SequenceEqual(File.ReadAllBytes(timerPath)),
+			"Forbidden Words must bundle the verified CC0 auction-clock audio, not an unrelated timer cue.");
+	}
+
+	[Fact]
+	public async Task Game_content_uses_the_explicit_shared_word_language()
 	{
 		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
 		var family = new ForbiddenFamily();
@@ -49,6 +68,21 @@ public class ForbiddenFamilyTests
 		Assert.Equal("p0", game.State.Forbidden.Turn.ClueGiverId);
 		Assert.Equal("p1", game.State.Forbidden.Turn.GuesserId);
 		Assert.Equal("p2", game.State.Forbidden.Turn.MonitorId);
+	}
+
+	[Fact]
+	public async Task Game_rejects_a_word_language_the_package_does_not_supply()
+	{
+		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+		var error = Assert.Throws<InvalidOperationException>(() => new ForbiddenFamily().CreateGame(new FamilyStartContext
+		{
+			Players = Players(),
+			Definition = definition,
+			Lang = "fr",
+			Teams = Teams(),
+		}));
+
+		Assert.Contains("selected language 'fr'", error.Message);
 	}
 
 	[Fact]

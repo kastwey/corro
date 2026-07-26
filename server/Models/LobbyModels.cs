@@ -37,8 +37,8 @@ public record CreateGameRequest
 {
 	public required string HostName { get; init; }
 	public required string HostToken { get; init; }
-	/// <summary>Language used for package content that is selected once per game (for example,
-	/// trivia questions). Unsupported or missing values fall back to English.</summary>
+	/// <summary>Language selected for shared package content (for example, a Forbidden Words
+	/// deck). Unsupported values are rejected when the package exposes an explicit choice.</summary>
 	public string Language { get; init; } = "en";
 	public int MaxPlayers { get; init; } = 8;
 	public required string Board { get; init; }
@@ -72,6 +72,15 @@ public record AssignTeamRequest
 	public required string PlayerId { get; init; }
 	/// <summary>0-based team; null returns the player to the unassigned pool.</summary>
 	public int? TeamIndex { get; init; }
+}
+
+/// <summary>Host request: change the one shared Forbidden Words deck language while the
+/// game is still in its waiting room.</summary>
+public record SetForbiddenWordLanguageRequest
+{
+	public required string GameId { get; init; }
+	public required string HostId { get; init; }
+	public required string Language { get; init; }
 }
 
 /// <summary>Host request: seat a bot in the waiting room (families with a bot policy only).</summary>

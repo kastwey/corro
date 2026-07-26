@@ -1,6 +1,7 @@
 using CorroServer.Models;
 using CorroServer.Services;
 using CorroServer.Services.Corro;
+using CorroServer.Services.Corro.Families;
 using Microsoft.AspNetCore.SignalR;
 
 namespace CorroServer.Hubs;
@@ -22,6 +23,7 @@ public partial class GameHub
 	{
 		try
 		{
+			var requestedLanguage = request?.Language;
 			if (request is null
 				|| !LobbyInput.TryNormalizePlayerName(request.HostName, out var hostName)
 				|| !LobbyInput.IsIdentifier(request.HostToken)
@@ -67,7 +69,23 @@ public partial class GameHub
 			var stagedDefinition = request.PackageToken is { } stagedToken
 				? _packageStore.GetDefinition(stagedToken)
 				: null;
-			if (stagedDefinition?.Manifest.GameType == "forbidden"
+			var isForbidden = stagedDefinition?.Manifest.GameType == "forbidden";
+			var forbiddenWordLanguages = isForbidden
+				? ForbiddenFamily.AvailableWordLanguages(stagedDefinition!)
+				: new List<string>();
+			if (isForbidden)
+			{
+				if (!LobbyInput.TrySelectLanguage(
+					forbiddenWordLanguages,
+					requestedLanguage,
+					out var selectedWordLanguage))
+				{
+					await Clients.Caller.SendAsync("Error", "CONTENT_LANGUAGE_UNAVAILABLE");
+					return;
+				}
+				request = request with { Language = selectedWordLanguage };
+			}
+			if (isForbidden
 				&& (request.TeamCount != 2 || request.MaxPlayers is < 4 or > 8 || request.MaxPlayers % 2 != 0))
 			{
 				await Clients.Caller.SendAsync("Error", "BAD_TEAM_COUNT");
@@ -93,6 +111,7 @@ public partial class GameHub
 				MaxPlayers = request.MaxPlayers,
 				Board = request.Board,
 				Language = request.Language,
+				ForbiddenWordLanguages = forbiddenWordLanguages,
 				PackageToken = request.PackageToken,
 				ShippedBoardId = origin?.ShippedId,
 				PackageBlobKey = origin?.BlobKey,
@@ -120,6 +139,8 @@ public partial class GameHub
 			var savedGame = await _gameRepository.CreateGameAsync(gameDocument);
 
 			await Groups.AddToGroupAsync(Context.ConnectionId, $"lobby_{gameId}");
+			_registry.MapConnectionToGame(Context.ConnectionId, gameId);
+			_registry.AuthenticateConnection(Context.ConnectionId, hostId);
 			_registry.MapLobbyConnection(Context.ConnectionId, gameId);
 
 			var response = new CreateGameResponse
@@ -139,6 +160,107 @@ public partial class GameHub
 			_logger?.LogError(ex, "Error in CreateGameLobby");
 			await Clients.Caller.SendAsync("Error", "GAME_CREATE_ERROR");
 		}
+	}
+
+	/// <summary>The host changes the shared Forbidden Words deck language while waiting. The
+	/// selected package language is persisted and broadcast; game start then resolves exactly
+	/// that one deck for every player.</summary>
+	public async Task SetForbiddenWordLanguage(SetForbiddenWordLanguageRequest request)
+	{
+		try
+		{
+			if (request is null
+				|| !LobbyInput.IsIdentifier(request.GameId)
+				|| !LobbyInput.IsIdentifier(request.HostId))
+			{
+				await Clients.Caller.SendAsync("Error", "INVALID_LOBBY_REQUEST");
+				return;
+			}
+			if (!IsConnectionAuthenticated(out var callerId, out var callerGameId)
+				|| callerId != request.HostId
+				|| callerGameId != request.GameId)
+			{
+				await Clients.Caller.SendAsync("Error", "HOST_ONLY");
+				return;
+			}
+
+			var game = await _gameRepository.LoadGameAsync(request.GameId);
+			if (game is null)
+			{
+				await Clients.Caller.SendAsync("Error", "GAME_NOT_FOUND");
+				return;
+			}
+			if (game.HostId != request.HostId)
+			{
+				await Clients.Caller.SendAsync("Error", "HOST_ONLY");
+				return;
+			}
+			if (game.Status != GameStatus.WaitingForPlayers)
+			{
+				await Clients.Caller.SendAsync("Error", "GAME_ALREADY_STARTED");
+				return;
+			}
+			if (!LobbyInput.TrySelectLanguage(
+				game.ForbiddenWordLanguages,
+				request.Language,
+				out var selectedLanguage))
+			{
+				await Clients.Caller.SendAsync("Error", "CONTENT_LANGUAGE_UNAVAILABLE");
+				return;
+			}
+			if (game.Language == selectedLanguage)
+			{
+				return;
+			}
+
+			var savedGame = await _gameRepository.UpdateGameAsync(game with { Language = selectedLanguage });
+			var lobbyGroup = $"lobby_{game.GameId}";
+			await Clients.Group(lobbyGroup).SendAsync("LobbyUpdated", savedGame.Sanitized());
+			await Clients.Group(lobbyGroup).SendAsync("ForbiddenWordLanguageChanged", new
+			{
+				gameId = game.GameId,
+				language = selectedLanguage,
+			});
+		}
+		catch (Exception ex)
+		{
+			_logger?.LogError(ex, "Error in SetForbiddenWordLanguage");
+			await Clients.Caller.SendAsync("Error", "SET_CONTENT_LANGUAGE_FAILED");
+		}
+	}
+
+	/// <summary>Restore an authenticated waiting-room connection after a reload. A REST read can
+	/// repaint the room, but only this authenticated hub join restores live lobby broadcasts.</summary>
+	public async Task<GameDocument> ReconnectLobby(
+		string gameId,
+		string playerId,
+		string playerSecretId)
+	{
+		if (!LobbyInput.IsIdentifier(gameId)
+			|| !LobbyInput.IsIdentifier(playerId)
+			|| !LobbyInput.IsIdentifier(playerSecretId))
+		{
+			throw new HubException("INVALID_LOBBY_REQUEST");
+		}
+
+		var game = await _gameRepository.LoadGameAsync(gameId)
+			?? throw new HubException("GAME_NOT_FOUND");
+		if (game.Status != GameStatus.WaitingForPlayers)
+		{
+			throw new HubException("GAME_ALREADY_STARTED");
+		}
+		var player = game.Players.FirstOrDefault(candidate => candidate.Id == playerId)
+			?? throw new HubException("PLAYER_NOT_FOUND");
+		if (player.PlayerSecretId != playerSecretId)
+		{
+			throw new HubException("INVALID_CREDENTIALS");
+		}
+
+		await Groups.AddToGroupAsync(Context.ConnectionId, $"lobby_{gameId}");
+		_registry.MapConnectionToGame(Context.ConnectionId, gameId);
+		_registry.AuthenticateConnection(Context.ConnectionId, playerId);
+		_registry.MapLobbyConnection(Context.ConnectionId, gameId);
+		return game.Sanitized();
 	}
 
 	/// <summary>
@@ -228,6 +350,8 @@ public partial class GameHub
 			_logger?.LogDebug("JoinGameLobby: Game updated in DB");
 
 			await Groups.AddToGroupAsync(Context.ConnectionId, $"lobby_{game.GameId}");
+			_registry.MapConnectionToGame(Context.ConnectionId, game.GameId);
+			_registry.AuthenticateConnection(Context.ConnectionId, playerId);
 			_registry.MapLobbyConnection(Context.ConnectionId, game.GameId);
 
 			_logger?.LogDebug("JoinGameLobby: Sending LobbyUpdated to group lobby_{GameId}", game.GameId);
@@ -380,6 +504,8 @@ public partial class GameHub
 			status = game.Status,
 			maxPlayers = game.MaxPlayers,
 			board = game.Board,
+			language = game.Language,
+			forbiddenWordLanguages = game.ForbiddenWordLanguages,
 			packageToken = game.PackageToken,
 			teamCount = game.TeamCount, // null = individual play
 			tokens = definition?.Manifest.Tokens, // the board's player pieces; null => client uses the 8 built-ins

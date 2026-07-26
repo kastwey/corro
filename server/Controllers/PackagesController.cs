@@ -173,6 +173,9 @@ public class PackagesController : ControllerBase
 			Seats = definition.RaceBoard?.Seats
 				.Select(s => new LobbySeatInfo { Id = s.Id, Color = s.Color, NameKey = s.NameKey })
 				.ToList() ?? new(),
+			ForbiddenWordLanguages = definition.Manifest.GameType == "forbidden"
+				? CorroServer.Services.Corro.Families.ForbiddenFamily.AvailableWordLanguages(definition)
+				: new(),
 			// The board's create-time notice key (if any). NOT the unlock code — that never leaves the server.
 			Warning = definition.Manifest.Warning,
 		};

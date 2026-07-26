@@ -66,6 +66,15 @@ public class LobbyInputTests
 		string expected)
 		=> Assert.Equal(expected, LobbyInput.NormalizeLanguage(input));
 
+	[Fact]
+	public void Explicit_content_language_must_match_one_of_the_package_choices()
+	{
+		Assert.True(LobbyInput.TrySelectLanguage(new[] { "en", "es" }, "ES-es", out var spanish));
+		Assert.Equal("es", spanish);
+		Assert.False(LobbyInput.TrySelectLanguage(new[] { "en", "es" }, "fr", out _));
+		Assert.False(LobbyInput.TrySelectLanguage(new[] { "es" }, "en", out _));
+	}
+
 	[Theory]
 	[InlineData(1, false)]
 	[InlineData(2, true)]

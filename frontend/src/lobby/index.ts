@@ -30,6 +30,7 @@ import { buildBotNameForm } from './botNameForm.js';
 import { createPlayerIdentity } from './playerListItem.js';
 import { RovingToolbarList } from '../accessibleList.js';
 import { nextTeamAddFocus, teamRosterStatus } from './teamRoster.js';
+import { chooseWordLanguage, wordLanguageName } from './wordLanguage.js';
 import {
 	t, translateServerError, showLoading, showError,
 	showSection, hideSection, showView, focusFirstField, getElement, getInputValue, getSelectedRadio,
@@ -59,6 +60,8 @@ class UnifiedLobbyUI {
 		playerId: string;
 		expectedTeamIndex: number | null;
 	} | null = null;
+	/** A manual deck choice must survive later interface-language changes. */
+	private wordLanguageExplicit = false;
 
 	constructor() {
 		this.init();
@@ -140,6 +143,10 @@ class UnifiedLobbyUI {
 		gameClient.on('playerJoined', (data) => this.handlePlayerJoined(data));
 		gameClient.on('lobbyUpdated', (data) => this.handleLobbyUpdated(data));
 		gameClient.on('teamAssigned', (data) => this.handleTeamAssigned(data));
+		gameClient.on('forbiddenWordLanguageChanged', (data) => {
+			this.announceInLobby(t('lobby.wordLanguageChanged')
+				.replace('{{language}}', wordLanguageName(data.language, t)));
+		});
 		gameClient.on('gameStarted', (data) => this.handleGameStarted(data));
 		gameClient.on('gameDeleted', (data) => this.handleGameDeleted(data));
 		gameClient.on('error', (msg) => showError(translateServerError(msg)));
@@ -313,6 +320,7 @@ class UnifiedLobbyUI {
 		// Server sent updated game state, update our local state and UI
 		this.currentGame = game;
 		this.updatePlayerList(game.players);
+		this.renderWaitingWordLanguage(game);
 	}
 
 	private handleGameStarted(data: { gameId: string }): void {
@@ -357,6 +365,12 @@ class UnifiedLobbyUI {
 		// The valid team counts depend on the CHOSEN player count: refresh them together.
 		getElement<HTMLSelectElement>('max-players')?.addEventListener('change', () => {
 			if (this.uploadedPackage) this.renderTeamCountOptions(this.uploadedPackage);
+		});
+		getElement<HTMLSelectElement>('forbidden-word-language')?.addEventListener('change', () => {
+			this.wordLanguageExplicit = true;
+		});
+		getElement<HTMLSelectElement>('host-forbidden-word-language')?.addEventListener('change', event => {
+			void this.setWaitingWordLanguage((event.target as HTMLSelectElement).value);
 		});
 	}
 
@@ -432,6 +446,9 @@ class UnifiedLobbyUI {
 		this.renderPlayerCount(pkg);
 		// Team families offer their legal equal-team layouts for the chosen player count.
 		this.renderTeamCountOptions(pkg);
+		// Forbidden Words exposes each real word deck as one shared match-language choice.
+		this.wordLanguageExplicit = false;
+		this.renderCreateWordLanguages(pkg, i18nBinder.getCurrentLanguage());
 		// Reset any previous board's dynamic rules, then render this board's.
 		const pkgRules = getElement('package-rules');
 		if (pkgRules) { pkgRules.innerHTML = ''; pkgRules.classList.add('hidden'); }
@@ -576,6 +593,37 @@ class UnifiedLobbyUI {
 		// Keep the host's pick when it survives the new player count; else back to "none".
 		select.value = counts.includes(Number(chosen)) ? chosen : (family === 'forbidden' ? '2' : '0');
 		group.classList.toggle('hidden', counts.length === 0);
+	}
+
+	/** Populate the create-time word-deck selector. It is visible only when there is an
+	 * actual choice, but remains populated for a one-language package so creation submits
+	 * that sole valid deck instead of silently borrowing the interface locale. */
+	private renderCreateWordLanguages(pkg: PackageUploadResponse, preferred: string): void {
+		const group = getElement('forbidden-word-language-group');
+		const select = getElement<HTMLSelectElement>('forbidden-word-language');
+		if (!group || !select) return;
+
+		const languages = pkg.gameType === 'forbidden' ? pkg.forbiddenWordLanguages ?? [] : [];
+		const selected = chooseWordLanguage(languages, preferred);
+		this.fillWordLanguageSelect(select, languages, selected);
+		const visible = languages.length > 1;
+		group.hidden = !visible;
+		group.classList.toggle('hidden', !visible);
+	}
+
+	private fillWordLanguageSelect(
+		select: HTMLSelectElement,
+		languages: readonly string[],
+		selected: string,
+	): void {
+		select.innerHTML = '';
+		for (const language of languages) {
+			const option = document.createElement('option');
+			option.value = language;
+			option.textContent = wordLanguageName(language, t);
+			select.appendChild(option);
+		}
+		select.value = selected;
 	}
 
 	/**
@@ -800,8 +848,20 @@ class UnifiedLobbyUI {
 		const teamCount = (!getElement('team-count-group')?.classList.contains('hidden')
 			&& Number(getElement<HTMLSelectElement>('team-count')?.value)) || undefined;
 
+		const interfaceLanguage = i18nBinder.getCurrentLanguage();
+		const wordLanguages = this.uploadedPackage.forbiddenWordLanguages ?? [];
+		const language = this.uploadedPackage.gameType === 'forbidden'
+			? chooseWordLanguage(
+				wordLanguages,
+				getElement<HTMLSelectElement>('forbidden-word-language')?.value || interfaceLanguage,
+			)
+			: interfaceLanguage;
+		if (this.uploadedPackage.gameType === 'forbidden' && !language) {
+			return showError(t('lobby.errors.selectWordLanguage'));
+		}
+
 		const request: CreateGameRequest = {
-			hostName, hostToken: token, language: i18nBinder.getCurrentLanguage(), maxPlayers,
+			hostName, hostToken: token, language, maxPlayers,
 			// `board` is just the display label; the server uses packageToken.
 			board: this.localizePackageName(this.uploadedPackage.name),
 			packageToken: this.uploadedPackage.token,
@@ -1228,7 +1288,14 @@ class UnifiedLobbyUI {
 	private async attemptReconnect(session: SavedGame): Promise<void> {
 		try {
 			showLoading(true);
-			const gameState = await gameClient.getGameState(session.gameId);
+			let gameState = await gameClient.getGameState(session.gameId);
+			if (gameState?.status === 'WaitingForPlayers') {
+				gameState = await gameClient.reconnectLobby(
+					session.gameId,
+					session.playerId,
+					session.playerSecretId,
+				);
+			}
 			if (gameState) {
 				this.currentGame = gameState as any;
 				this.currentPlayerId = session.playerId;
@@ -1273,10 +1340,18 @@ class UnifiedLobbyUI {
 		if (details) {
 			const count = gameInfo.players?.length || 1;
 			const max = gameInfo.maxPlayers || 4;
-			details.innerHTML = `
-				<li>${t('lobby.playersCount', 'Players')}: ${count}/${max}</li>
-				<li>${t('lobby.statusWaiting', 'Waiting for players')}</li>
-			`;
+			details.innerHTML = '';
+			const players = document.createElement('li');
+			players.textContent = `${t('lobby.playersCount', 'Players')}: ${count}/${max}`;
+			const status = document.createElement('li');
+			status.textContent = t('lobby.statusWaiting', 'Waiting for players');
+			details.append(players, status);
+			if ((gameInfo.forbiddenWordLanguages?.length ?? 0) > 0 && gameInfo.language) {
+				const wordLanguage = document.createElement('li');
+				wordLanguage.textContent = t('lobby.wordLanguageCurrent')
+					.replace('{{language}}', wordLanguageName(gameInfo.language, t));
+				details.appendChild(wordLanguage);
+			}
 		}
 
 		// A joiner only has the lobby info, not the staged package, so load the board's own tokens
@@ -1363,6 +1438,52 @@ class UnifiedLobbyUI {
 		const code = inviteCode || game.gameId;
 		if (codeEl) codeEl.textContent = code;
 		if (urlEl) urlEl.textContent = `${window.location.origin}?code=${code}`;
+		this.renderWaitingWordLanguage(game);
+	}
+
+	/** The waiting room keeps the selected deck visible to everyone. The host receives a
+	 * real select and every guest receives one flowing read-only sentence. */
+	private renderWaitingWordLanguage(game: GameInfo): void {
+		const languages = game.forbiddenWordLanguages ?? [];
+		const selected = chooseWordLanguage(languages, game.language);
+		const hostGroup = getElement('host-forbidden-word-language-group');
+		const hostSelect = getElement<HTMLSelectElement>('host-forbidden-word-language');
+		const showHost = this.isHost && languages.length > 0 && !!selected;
+		if (hostGroup) {
+			hostGroup.hidden = !showHost;
+			hostGroup.classList.toggle('hidden', !showHost);
+		}
+		if (hostSelect && showHost) {
+			const focused = document.activeElement === hostSelect;
+			this.fillWordLanguageSelect(hostSelect, languages, selected);
+			if (focused) hostSelect.focus();
+		}
+
+		const guestSummary = getElement('joined-forbidden-word-language');
+		const showGuest = !this.isHost && languages.length > 0 && !!selected;
+		if (guestSummary) {
+			guestSummary.hidden = !showGuest;
+			guestSummary.classList.toggle('hidden', !showGuest);
+			guestSummary.textContent = showGuest
+				? t('lobby.wordLanguageCurrent')
+					.replace('{{language}}', wordLanguageName(selected, t))
+				: '';
+		}
+	}
+
+	private async setWaitingWordLanguage(language: string): Promise<void> {
+		if (!this.currentGame || !this.isHost) return;
+		try {
+			await gameClient.setForbiddenWordLanguage({
+				gameId: this.currentGame.gameId,
+				hostId: this.currentPlayerId,
+				language,
+			});
+		} catch (error) {
+			console.error('Error changing Forbidden Words language:', error);
+			this.renderWaitingWordLanguage(this.currentGame);
+			showError(t('lobby.errors.changeWordLanguage'));
+		}
 	}
 
 	private updatePlayerList(players: LobbyPlayer[]): void {
@@ -1718,7 +1839,13 @@ class UnifiedLobbyUI {
 			this.renderPlayerCount(this.uploadedPackage);
 			if (select && chosen) select.value = chosen;
 			this.renderTeamCountOptions(this.uploadedPackage);
+			const wordSelect = getElement<HTMLSelectElement>('forbidden-word-language');
+			const preferred = this.wordLanguageExplicit
+				? wordSelect?.value ?? i18nBinder.getCurrentLanguage()
+				: i18nBinder.getCurrentLanguage();
+			this.renderCreateWordLanguages(this.uploadedPackage, preferred);
 		}
+		if (this.currentGame) this.renderWaitingWordLanguage(this.currentGame);
 		void this.refreshSavedGames();
 	}
 }

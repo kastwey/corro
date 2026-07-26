@@ -73,6 +73,11 @@ leaves the server. Persistence stores the complete authoritative state.
 Projection code is security-sensitive. A new or changed family must test both what the
 owner can see and what rivals and unauthenticated viewers cannot see.
 
+Forbidden Words also separates **content language** from interface language. The host chooses one
+package-supplied word deck in the lobby (defaulting to the host interface), and that shared choice is
+visible to the room and locked when play starts. The clue-giver and monitor therefore adjudicate the
+same target and forbidden words even when their buttons and help are localized differently.
+
 ## Movement pacing
 
 Families with animated pieces coordinate narration and visuals through

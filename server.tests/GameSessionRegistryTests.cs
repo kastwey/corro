@@ -48,6 +48,25 @@ public class GameSessionRegistryTests
 	}
 
 	[Fact]
+	public void Remapping_a_connection_replaces_its_stale_game_player_and_lobby()
+	{
+		var reg = NewRegistry(out _, out _);
+		reg.MapConnectionToGame("c1", "g1");
+		reg.AuthenticateConnection("c1", "a");
+		reg.MapLobbyConnection("c1", "g1");
+
+		reg.MapConnectionToGame("c1", "g2");
+		reg.AuthenticateConnection("c1", "b");
+		reg.MapLobbyConnection("c1", "g2");
+
+		Assert.True(reg.IsAuthenticated("c1", out var playerId, out var gameId));
+		Assert.Equal("b", playerId);
+		Assert.Equal("g2", gameId);
+		Assert.DoesNotContain("c1", reg.LobbyConnectionIds("g1"));
+		Assert.Contains("c1", reg.LobbyConnectionIds("g2"));
+	}
+
+	[Fact]
 	public async Task CleanupIfGameOver_tears_the_game_down_when_it_is_over()
 	{
 		var reg = NewRegistry(out var timer, out var repo);

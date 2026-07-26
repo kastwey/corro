@@ -160,6 +160,17 @@ public class PackagesControllerTests
 	}
 
 	[Fact]
+	public async Task StageShipped_exposes_the_real_Forbidden_Words_deck_languages()
+	{
+		var store = NewStore();
+		var result = await NewController(store).StageShipped("forbidden-words");
+
+		var response = Assert.IsType<PackageUploadResponse>(Assert.IsType<OkObjectResult>(result.Result).Value);
+		Assert.Equal(new[] { "en", "es" }, response.ForbiddenWordLanguages);
+		store.Release(response.Token);
+	}
+
+	[Fact]
 	public async Task StageShipped_returns_not_found_for_an_unknown_board()
 	{
 		var result = await NewController(NewStore()).StageShipped("does-not-exist");

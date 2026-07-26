@@ -62,6 +62,7 @@ export interface GameClientEvents {
 	'gameStarted': StartGameResponse;
 	'lobbyUpdated': GameInfo;
 	'teamAssigned': { gameId: string; playerId: string; playerName: string; teamIndex: number | null };
+	'forbiddenWordLanguageChanged': { gameId: string; language: string };
 	'lobbyState': { gameId: string; status: string; players: any[] };
 	'playerJoined': { playerId: string; playerName: string };
 	'playerLeft': { playerId: string };
@@ -198,6 +199,10 @@ export class UnifiedGameClient {
 			this.emit('teamAssigned', data);
 		});
 
+		this.connection.on('ForbiddenWordLanguageChanged', (data: { gameId: string; language: string }) => {
+			this.emit('forbiddenWordLanguageChanged', data);
+		});
+
 		this.connection.on('PlayerJoined', (data: any) => {
 			this.emit('playerJoined', data);
 		});
@@ -312,6 +317,16 @@ export class UnifiedGameClient {
 	/** Journey team mode (host only): place a player in a team, or back in the pool (null). */
 	async assignTeam(request: { gameId: string; hostId: string; playerId: string; teamIndex: number | null }): Promise<void> {
 		await this.invoke("AssignTeam", request);
+	}
+
+	/** Change the one shared Forbidden Words deck language while the game is waiting. */
+	async setForbiddenWordLanguage(request: { gameId: string; hostId: string; language: string }): Promise<void> {
+		await this.invoke('SetForbiddenWordLanguage', request);
+	}
+
+	/** Rejoin the authenticated waiting-room SignalR group after a page reload. */
+	async reconnectLobby(gameId: string, playerId: string, playerSecretId: string): Promise<GameInfo> {
+		return await this.invoke<GameInfo>('ReconnectLobby', gameId, playerId, playerSecretId);
 	}
 
 	/** Seat a bot in the waiting room (host only; families with a bot policy).
@@ -431,7 +446,7 @@ export class UnifiedGameClient {
 	 * Invoke a hub method with the shared transport guard: fail fast when disconnected and
 	 * surface the server error to the caller (gameManager turns it into a spoken message).
 	 */
-	private async invoke(method: string, ...args: unknown[]): Promise<void> {
+	private async invoke<TResult = void>(method: string, ...args: unknown[]): Promise<TResult> {
 		if (!this.isConnected || !this.connection) {
 			// A user ACTION is the best reconnect trigger there is: instead of failing
 			// (or making them wait out the automatic backoff's next attempt), kick an
@@ -440,7 +455,7 @@ export class UnifiedGameClient {
 			if (!revived) throw new Error("Not connected to server");
 		}
 		try {
-			await this.connection!.invoke(method, ...args);
+			return await this.connection!.invoke<TResult>(method, ...args);
 		} catch (error) {
 			console.error(`Error invoking ${method}:`, error);
 			throw error;
@@ -783,12 +798,18 @@ export class UnifiedGameClient {
 
 			// Adapt GameDocument to GameInfo
 			return {
-				gameId: gameDocument.id || gameDocument.gameId,
+				gameId: gameDocument.gameId || gameDocument.id,
 				hostId: gameDocument.hostId,
 				inviteCode: gameDocument.inviteCode,
 				status: gameDocument.status,
 				maxPlayers: gameDocument.maxPlayers || 4,
-				players: gameDocument.players || []
+				players: gameDocument.players || [],
+				board: gameDocument.board,
+				language: gameDocument.language,
+				forbiddenWordLanguages: gameDocument.forbiddenWordLanguages || [],
+				packageToken: gameDocument.packageToken,
+				teamCount: gameDocument.teamCount,
+				voiceChatEnabled: gameDocument.voiceChatEnabled,
 			} as GameInfo;
 		} catch (error) {
 			console.error("Error getting game state:", error);

@@ -119,6 +119,9 @@ are authoring aids and are automatically left out of the packed `.corro` file.
 Card families do not have a `board.json`. That is expected. `race` and `track` do not need a
 `cards.json`. Do not create files merely because another family has them.
 
+For `forbidden`, every `words.<locale>.json` becomes a word-language option in the create form. The
+host chooses one shared deck for the match; players do not receive different translations of a card.
+
 Most starters support exactly two players so they stay small and easy to understand; `forbidden`
 starts with the four players its two teams require. To support more players, increase `players.max`, add enough distinct tokens or seats, and expand card decks when
 necessary. Run `validate`: it reports the exact capacity requirement for that family.

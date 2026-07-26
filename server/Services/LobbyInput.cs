@@ -35,11 +35,41 @@ public static class LobbyInput
 			&& !normalized.Any(char.IsControl);
 	}
 
-	/// <summary>Resolve the supported game-content locale, falling back to the public default.</summary>
-	public static string NormalizeLanguage(string? value)
+	/// <summary>Try to resolve one of the application-supported primary locales.</summary>
+	public static bool TryNormalizeLanguage(string? value, out string normalized)
 	{
 		var primary = value?.Trim().Split('-', '_')[0].ToLowerInvariant();
-		return primary == "es" ? "es" : "en";
+		normalized = primary == "es" ? "es" : "en";
+		return primary is "en" or "es";
+	}
+
+	/// <summary>Resolve the supported game-content locale, falling back to the public default.</summary>
+	public static string NormalizeLanguage(string? value)
+		=> TryNormalizeLanguage(value, out var normalized) ? normalized : "en";
+
+	/// <summary>Match an untrusted requested locale to an explicit package-owned language list.
+	/// The returned value is the package's canonical spelling, which is also its deck key.</summary>
+	public static bool TrySelectLanguage(
+		IEnumerable<string> available,
+		string? requested,
+		out string selected)
+	{
+		selected = string.Empty;
+		if (!TryNormalizeLanguage(requested, out var normalized))
+		{
+			return false;
+		}
+
+		var match = available.FirstOrDefault(candidate =>
+			TryNormalizeLanguage(candidate, out var candidateLanguage)
+			&& candidateLanguage == normalized);
+		if (match is null)
+		{
+			return false;
+		}
+
+		selected = match;
+		return true;
 	}
 
 	public static bool IsPlayerCount(int value) => value is >= 2 and <= MaxPlayersPerGame;

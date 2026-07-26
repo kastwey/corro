@@ -119,6 +119,9 @@ ayudas de autoría y se excluyen automáticamente del `.corro` final.
 Las familias de cartas no tienen `board.json`, y es correcto. `race` y `track` no necesitan
 `cards.json`. No crees archivos solo porque otra familia los tenga.
 
+En `forbidden`, cada archivo `words.<locale>.json` se convierte en una opción de idioma al crear la
+partida. El anfitrión elige un solo mazo común; los jugadores no reciben traducciones distintas de una carta.
+
 La mayoría de las plantillas comienzan con exactamente dos jugadores para ser pequeñas y comprensibles;
 `forbidden` empieza con los cuatro que necesitan sus dos equipos. Para admitir más, aumenta `players.max`, añade suficientes fichas o asientos distintos y amplía los mazos cuando
 sea necesario. Ejecuta `validate`: indicará la capacidad exacta exigida por la familia.

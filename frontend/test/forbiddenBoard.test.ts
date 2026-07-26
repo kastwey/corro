@@ -80,6 +80,22 @@ function gameState(): GameState {
 const translate = (key: string, vars?: Record<string, unknown>) =>
 	(globalThis as any).window.i18next.t(key, vars);
 
+function soundSpy() {
+	const played: string[] = [];
+	const started: string[] = [];
+	const stopped: string[] = [];
+	return {
+		played,
+		started,
+		stopped,
+		player: {
+			playEvent: (eventKey: string) => { played.push(eventKey); },
+			startLoop: (eventKey: string) => { started.push(eventKey); },
+			stopLoop: (eventKey: string) => { stopped.push(eventKey); return true; },
+		},
+	};
+}
+
 test('protected card is ARIA-readonly, never native readonly, and blocks every mutation route', async () => {
 	const textarea = document.createElement('textarea');
 	textarea.value = 'Target word: lighthouse.';
@@ -161,6 +177,7 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 		getMyPlayerId: () => myId,
 		announce: text => announced.push(text),
 		tSync: translate,
+		sounds: soundSpy().player,
 		commands: {
 			start: () => { commands.start++; },
 			correct: sequence => commands.correct.push(sequence),
@@ -201,6 +218,23 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 	assert.equal(root.querySelector('.forbidden-ready-list'), null);
 
 	card.focus();
+	let timerKeyLeakedToDocument = 0;
+	const documentTimerKey = () => { timerKeyLeakedToDocument++; };
+	document.addEventListener('keydown', documentTimerKey);
+	const inactiveTimerKey = new window.KeyboardEvent('keydown', {
+		key: 'r', bubbles: true, cancelable: true,
+	});
+	card.dispatchEvent(inactiveTimerKey);
+	document.removeEventListener('keydown', documentTimerKey);
+	assert.equal(inactiveTimerKey.defaultPrevented, true);
+	assert.equal(timerKeyLeakedToDocument, 0, 'family-local R never reaches document shortcuts');
+	assert.equal(announced.at(-1), 'The timer is not running.');
+	assert.equal(document.activeElement, card);
+	assert.deepEqual(
+		board.helpShortcuts().find(shortcut => shortcut.descKey === 'game.help_cmd_forbidden_timer'),
+		{ keys: 'r', descKey: 'game.help_cmd_forbidden_timer' },
+	);
+
 	const enterToStart = new window.KeyboardEvent('keydown', {
 		key: 'Enter', bubbles: true, cancelable: true,
 	});
@@ -233,6 +267,14 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 	const progress = root.querySelector<HTMLProgressElement>('.forbidden-timer__progress')!;
 	assert.equal(progress.value, 42);
 	assert.equal(progress.getAttribute('aria-label'), '42 seconds remaining');
+	card.focus();
+	const activeTimerKey = new window.KeyboardEvent('keydown', {
+		key: 'r', bubbles: true, cancelable: true,
+	});
+	card.dispatchEvent(activeTimerKey);
+	assert.equal(activeTimerKey.defaultPrevented, true);
+	assert.equal(announced.at(-1), '42 seconds remaining');
+	assert.equal(document.activeElement, card, 'the timer query keeps the private-card reading position');
 
 	state.forbidden!.turn.passesUsed = 3;
 	board.update(state);
@@ -289,6 +331,48 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 	root.remove();
 });
 
+test('the auction-style clock loops only during an active timed turn', () => {
+	const root = document.createElement('div');
+	document.body.appendChild(root);
+	const state = gameState();
+	const sounds = soundSpy();
+	const board = new ForbiddenBoard(root, {
+		getGameState: () => state,
+		getMyPlayerId: () => 'p0',
+		announce() {},
+		tSync: translate,
+		sounds: sounds.player,
+		commands: { start() {}, correct() {}, pass() {}, violation() {} },
+	});
+
+	board.update(state);
+	assert.deepEqual(sounds.started, [], 'the preparing turn has no ticking clock');
+	assert.deepEqual(sounds.stopped, ['forbidden.tick']);
+
+	state.forbidden!.turn.phase = 'active';
+	state.forbidden!.turn.startedAt = new Date().toISOString();
+	board.update(state);
+	assert.deepEqual(sounds.started, ['forbidden.tick']);
+
+	board.handleTimerTick(42);
+	assert.deepEqual(sounds.started, ['forbidden.tick', 'forbidden.tick'],
+		'each server tick retries the idempotent loop in case package loading raced the start');
+	board.handleTimerTick(10);
+	assert.deepEqual(sounds.played, ['forbidden.warning'], 'the existing ten-second warning remains');
+
+	board.handleTimerTick(0);
+	assert.equal(sounds.stopped.at(-1), 'forbidden.tick');
+	assert.equal(root.querySelector<HTMLProgressElement>('.forbidden-timer__progress')!.value, 0);
+
+	state.forbidden!.turn.phase = 'finished';
+	board.update(state);
+	assert.equal(sounds.stopped.at(-1), 'forbidden.tick', 'leaving the active phase always stops the clock');
+
+	board.handleTimerTick(9);
+	assert.equal(sounds.stopped.at(-1), 'forbidden.tick', 'a stale tick cannot restart a finished turn');
+	root.remove();
+});
+
 test('status shortcuts and pure role helpers produce flowing team sentences', () => {
 	const root = document.createElement('div');
 	document.body.appendChild(root);
@@ -299,6 +383,7 @@ test('status shortcuts and pure role helpers produce flowing team sentences', ()
 		getMyPlayerId: () => 'p0',
 		announce: text => announced.push(text),
 		tSync: translate,
+		sounds: soundSpy().player,
 		commands: { start() {}, correct() {}, pass() {}, violation() {} },
 	});
 	board.update(state);

@@ -28,6 +28,9 @@ public record PackageUploadResponse
 	/// <summary>A race board's seats (squadron colours) so the lobby offers a seat picker;
 	/// empty for the property family.</summary>
 	public List<LobbySeatInfo> Seats { get; init; } = new();
+	/// <summary>The real word-deck languages this Forbidden Words package supplies, in manifest
+	/// order. Empty for every other family; these are content choices, not player UI locales.</summary>
+	public List<string> ForbiddenWordLanguages { get; init; } = new();
 	/// <summary>
 	/// Optional i18n key (in the PACKAGE's own translations) the lobby shows the host as a notice when
 	/// they create a game with this board. Null when the package declares none. Carried verbatim — the

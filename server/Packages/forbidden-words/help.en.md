@@ -15,6 +15,8 @@ Roles rotate in team order. Every player gives clues once in a complete cycle.
 
 ## Starting a turn
 
+The host chooses one shared word language when creating the game and may change it in the waiting room. Everyone plays from that same target and forbidden-word deck, while buttons and help remain in each player's interface language.
+
 The clue-giver checks that everyone is ready, then selects **Start the timer**. Ask through voice chat when playing remotely or speak directly when everyone is together in person; the guesser and monitor do not need to confirm anything in Corro.
 
 The private card is a protected multiline text box. It cannot be changed, but cursor movement, screen-reader reading commands, selection and copying remain available.
@@ -36,8 +38,9 @@ Focus enters the role table. Use **Tab** and **Shift+Tab** to move through the p
 
 - Press **S** on the game surface to hear your team, score, cycle and role.
 - Press **Shift+S** to hear the opposing team's score.
+- Press **R** to hear how many seconds remain on the timer. Before a turn starts, it confirms that the timer is not running.
 - As monitor, press **V** from the private card or role table when the clue-giver says the target or any listed forbidden word.
-- The countdown does not announce every second over the conversation. Earcons mark important events; the timer remains available visually and through its accessible label.
+- An audible clock ticks while the turn is active and follows the normal sound mute and volume setting. The countdown does not announce every second over the conversation; use **R** whenever you need the exact remaining time.
 - **Ctrl+F6** and **Ctrl+Shift+F6** move through the game, players and connection panels.
 - **Ctrl+Shift+R** opens text chat. Voice chat has its own controls and remains optional.
 
