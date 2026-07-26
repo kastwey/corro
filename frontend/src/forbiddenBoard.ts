@@ -5,8 +5,8 @@ import { buildForbiddenRulesLines } from './rulesSummaries.js';
 import {
 	forbiddenRivalStatus,
 	forbiddenRole,
-	forbiddenRoleLabel,
 	forbiddenStatusText,
+	forbiddenTurnContextText,
 	formatForbiddenCard,
 } from './forbiddenRules.js';
 import type { GameState } from './models.js';
@@ -33,8 +33,9 @@ export interface ProtectedTextAreaController {
  * Makes an ordinary textarea semantically read-only without the native readonly state. The
  * control remains a real multiline text box: screen-reader reading commands, cursor movement,
  * selection and copying work normally. Every mutation route is blocked, including mobile
- * beforeinput/composition, paste, cut, drop and keyboard editing; inputmode="none" avoids
- * summoning a touch keyboard where browsers honour it.
+ * beforeinput/composition, paste, cut, drop and keyboard editing; events still bubble so game
+ * shortcuts remain available. inputmode="none" avoids summoning a touch keyboard where browsers
+ * honour it.
  */
 export function protectReadOnlyTextArea(textarea: HTMLTextAreaElement): ProtectedTextAreaController {
 	textarea.setAttribute('aria-readonly', 'true');
@@ -114,6 +115,8 @@ export class ForbiddenBoard {
 	private readonly roleLine: HTMLElement;
 	private readonly roleDetail: HTMLElement;
 	private readonly cardPanel: HTMLElement;
+	private readonly cardLabel: HTMLLabelElement;
+	private readonly cardHint: HTMLElement;
 	private readonly cardText: HTMLTextAreaElement;
 	private readonly protectedCard: ProtectedTextAreaController;
 	private readonly timerPanel: HTMLElement;
@@ -172,7 +175,7 @@ export class ForbiddenBoard {
 					<button type="button" class="btn btn--primary forbidden-start"></button>
 					<button type="button" class="btn forbidden-correct"></button>
 					<button type="button" class="btn forbidden-pass"></button>
-					<button type="button" class="btn forbidden-violation"></button>
+					<button type="button" class="btn forbidden-violation" aria-keyshortcuts="V"></button>
 				</div>
 				<p id="forbidden-pass-hint" class="forbidden-control-hint" hidden></p>
 			</section>
@@ -183,6 +186,8 @@ export class ForbiddenBoard {
 		this.roleLine = this.required('.forbidden-role-line');
 		this.roleDetail = this.required('.forbidden-role-detail');
 		this.cardPanel = this.required('.forbidden-secret');
+		this.cardLabel = this.required('.forbidden-secret__label');
+		this.cardHint = this.required('#forbidden-card-hint');
 		this.cardText = this.required('.forbidden-secret__text');
 		this.protectedCard = protectReadOnlyTextArea(this.cardText);
 		this.timerPanel = this.required('.forbidden-timer');
@@ -208,6 +213,26 @@ export class ForbiddenBoard {
 			const sequence = this.deps.getGameState()?.forbidden?.turn.cardSequence;
 			if (sequence !== undefined) deps.commands.violation(sequence);
 		});
+		this.cardText.addEventListener('keydown', event => {
+			if (event.key !== 'Enter' || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey
+				|| event.repeat || this.startButton.hidden
+				|| this.startButton.getAttribute('aria-disabled') === 'true') return;
+			// The protected field cannot accept a newline. While the clue-giver's start action is
+			// visible, Enter activates that same button without moving focus away from the card.
+			event.preventDefault();
+			event.stopPropagation();
+			this.startButton.click();
+		});
+		this.element.addEventListener('keydown', event => {
+			if (event.key.toLowerCase() !== 'v' || event.ctrlKey || event.altKey || event.metaKey
+				|| event.shiftKey || event.repeat || !visible(this.violationButton)) return;
+			// V is bank inventory in the engine keymap, but that command is property-only.
+			// Forbidden owns it locally and stops it before the document keymap, including while
+			// the protected card has focus. One action covers saying the target or any listed word.
+			event.preventDefault();
+			event.stopPropagation();
+			this.violationButton.click();
+		});
 
 		registerStatusKeys(element, {
 			getGameState: deps.getGameState,
@@ -225,7 +250,6 @@ export class ForbiddenBoard {
 		const focusedInside = this.element.contains(document.activeElement);
 		const turn = state.turn;
 		const role = forbiddenRole(turn, myId);
-		const name = (id: string) => gs.players.find(player => player.id === id)?.name ?? id;
 		const locale = document.documentElement.lang || navigator.language || 'en';
 
 		this.localizeStatic();
@@ -233,14 +257,9 @@ export class ForbiddenBoard {
 		this.roleLine.textContent = this.t('forbidden_turn_line', {
 			turn: turn.turnNumber,
 			cycle: state.cycle,
-			team: teamDisplayName(turn.teamIndex, this.deps.tSync),
 		});
-		this.roleDetail.textContent = this.t('forbidden_role_detail', {
-			role: forbiddenRoleLabel(role, this.deps.tSync),
-			clueGiver: name(turn.clueGiverId),
-			guesser: name(turn.guesserId),
-			monitor: name(turn.monitorId),
-		});
+		this.roleDetail.textContent = forbiddenTurnContextText(gs, myId, this.deps.tSync) ?? '';
+		this.localizeCardLabel(role);
 
 		const canSeeCard = !!turn.target && (role === 'clue-giver' || role === 'monitor');
 		this.cardPanel.hidden = !canSeeCard;
@@ -298,6 +317,17 @@ export class ForbiddenBoard {
 
 	isAnimating(): boolean { return false; }
 
+	/** T uses the same complete role context that remains visible in the turn card. */
+	announceTurn(): boolean {
+		const gs = this.deps.getGameState();
+		const myId = this.deps.getMyPlayerId();
+		if (!gs || !myId) return false;
+		const text = forbiddenTurnContextText(gs, myId, this.deps.tSync);
+		if (!text) return false;
+		this.deps.announce(text);
+		return true;
+	}
+
 	focusHand(): void {
 		if (visible(this.cardPanel)) {
 			this.cardText.focus();
@@ -311,6 +341,8 @@ export class ForbiddenBoard {
 	helpShortcuts(): HelpShortcut[] {
 		return [
 			...CARD_STATUS_SHORTCUTS,
+			{ keys: 'enter', descKey: 'game.help_cmd_forbidden_start' },
+			{ keys: 'v', descKey: 'game.help_cmd_forbidden_violation' },
 			{ keys: 'tab', descKey: 'game.help_cmd_forbidden_controls' },
 		];
 	}
@@ -325,12 +357,23 @@ export class ForbiddenBoard {
 		this.required('#forbidden-score-title').textContent = this.t('forbidden_scores_title');
 		this.required('#forbidden-turn-title').textContent = this.t('forbidden_turn_title');
 		this.required('.forbidden-secret__eyebrow').textContent = this.t('forbidden_secret_eyebrow');
-		this.required('.forbidden-secret__label').textContent = this.t('forbidden_card_label');
-		this.required('#forbidden-card-hint').textContent = this.t('forbidden_card_hint');
 		this.startButton.textContent = this.t('forbidden_start_button');
 		this.correctButton.textContent = this.t('forbidden_correct_button');
 		this.passButton.textContent = this.t('forbidden_pass_button');
 		this.violationButton.textContent = this.t('forbidden_violation_button');
+	}
+
+	private localizeCardLabel(role: ReturnType<typeof forbiddenRole>): void {
+		if (role === 'clue-giver') {
+			this.cardLabel.textContent = this.t('forbidden_card_label_clue_giver');
+			this.cardHint.textContent = this.t('forbidden_card_hint_clue_giver');
+		} else if (role === 'monitor') {
+			this.cardLabel.textContent = this.t('forbidden_card_label_monitor');
+			this.cardHint.textContent = this.t('forbidden_card_hint_monitor');
+		} else {
+			this.cardLabel.textContent = this.t('forbidden_card_label');
+			this.cardHint.textContent = this.t('forbidden_card_hint');
+		}
 	}
 
 	private renderScores(gs: GameState): void {

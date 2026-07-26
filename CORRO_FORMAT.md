@@ -1261,8 +1261,9 @@ not supported in this family.
 - Only the clue-giver may start the clock. They coordinate readiness through voice chat or in person;
   the engine does not require separate confirmations from the guesser or monitor.
 - During the timed phase, only the clue-giver may mark **Correct** or **Pass**; only the monitor may
-  report a **Forbidden word**. Every action carries the current card sequence, so simultaneous or
-  repeated activation cannot accidentally resolve a newly dealt card.
+  report that the clue-giver said the target or a listed **Forbidden word**. Both are the same
+  violation action. Every action carries the current card sequence, so simultaneous or repeated
+  activation cannot accidentally resolve a newly dealt card.
 - Correct adds `correctPoints`, pass changes no score and consumes one of `passesPerTurn`, and a
   violation subtracts `violationPenalty`. Each accepted action deals the next private card without
   restarting the clock.
@@ -1282,7 +1283,10 @@ view receive null/empty fields, and nobody receives the remaining deck.
 The client renders the authorized card as one flowing sentence in a protected multiline text box. It
 uses `aria-readonly="true"` without native `readonly`: cursor movement, screen-reader reading commands,
 selection and copying remain available, while keyboard, `beforeinput`, paste, cut, drop and composition
-mutations are blocked. The countdown is not an ARIA live stream; speech during play remains audible.
+mutations are blocked. Game shortcuts still work while that box owns focus; plain Enter starts the
+clock only when the local player is the clue-giver in the preparing phase, and V reports the target
+or a listed word only when the local player is the active monitor. The countdown is not an ARIA live
+stream; speech during play remains audible.
 
 ### Overridable voice (`game.forbidden_*`)
 

@@ -5,6 +5,7 @@ import {
 	forbiddenRivalStatus,
 	forbiddenRole,
 	forbiddenStatusText,
+	forbiddenTurnContextText,
 	formatForbiddenCard,
 } from '../src/forbiddenRules.js';
 import type { GameState } from '../src/models.js';
@@ -175,8 +176,15 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 	const correct = root.querySelector<HTMLButtonElement>('.forbidden-correct')!;
 	const pass = root.querySelector<HTMLButtonElement>('.forbidden-pass')!;
 	const violation = root.querySelector<HTMLButtonElement>('.forbidden-violation')!;
+	const roleDetail = root.querySelector<HTMLElement>('.forbidden-role-detail')!;
+	const cardLabel = root.querySelector<HTMLLabelElement>('.forbidden-secret__label')!;
 
 	assert.equal(cardPanel.hidden, false);
+	assert.equal(cardLabel.textContent, 'Clue-giver: target and forbidden words');
+	assert.equal(roleDetail.textContent,
+		'Red team. You are the clue-giver: describe the target without saying it or using its forbidden words. '
+		+ 'Berto guesses, and Cora monitors the target and forbidden words.');
+	assert.match(root.querySelector('#forbidden-card-hint')!.textContent!, /press Enter to start the timer/);
 	assert.equal(card.rows, 7);
 	assert.equal(card.value,
 		'Target word: lighthouse.\nForbidden words:\ntower,\ncoast,\nbeam,\nship,\nsea.');
@@ -192,16 +200,30 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 	assert.equal(root.querySelector('.forbidden-ready'), null);
 	assert.equal(root.querySelector('.forbidden-ready-list'), null);
 
-	start.click();
+	card.focus();
+	const enterToStart = new window.KeyboardEvent('keydown', {
+		key: 'Enter', bubbles: true, cancelable: true,
+	});
+	card.dispatchEvent(enterToStart);
+	assert.equal(enterToStart.defaultPrevented, true);
 	assert.equal(commands.start, 1);
+	assert.equal(document.activeElement, card, 'starting from the protected card keeps its reading position');
+	assert.deepEqual(
+		board.helpShortcuts().find(shortcut => shortcut.descKey === 'game.help_cmd_forbidden_start'),
+		{ keys: 'enter', descKey: 'game.help_cmd_forbidden_start' },
+	);
 
 	state.forbidden!.turn.phase = 'active';
 	state.forbidden!.turn.startedAt = new Date(Date.now() - 5_000).toISOString();
 	board.update(state);
+	card.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+	assert.equal(commands.start, 1, 'Enter cannot restart an active clock');
 	assert.equal(start.hidden, true);
 	assert.equal(correct.hidden, false);
 	assert.equal(pass.hidden, false);
 	assert.equal(violation.hidden, true);
+	card.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'v', bubbles: true, cancelable: true }));
+	assert.deepEqual(commands.violation, [], 'V cannot report a violation for the clue-giver');
 	correct.click();
 	pass.click();
 	assert.deepEqual(commands.correct, [1]);
@@ -225,18 +247,43 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 	myId = 'p3';
 	board.update(state);
 	assert.equal(cardPanel.hidden, true);
+	assert.equal(roleDetail.textContent,
+		'Red team. Ada gives clues, Cora monitors the target and forbidden words, and Berto guesses.');
 	assert.equal(document.activeElement, root.querySelector('.forbidden-shell'));
 
 	myId = 'p2';
 	board.update(state);
 	assert.equal(cardPanel.hidden, false);
+	assert.equal(cardLabel.textContent, 'Monitor: target and forbidden words');
+	assert.equal(roleDetail.textContent,
+		'Red team. You are the monitor: press V if Ada says the target or any forbidden word. '
+		+ 'Ada gives clues, and Berto guesses.');
 	assert.equal(violation.hidden, false);
-	violation.click();
+	assert.equal(violation.getAttribute('aria-keyshortcuts'), 'V');
+	assert.match(root.querySelector('#forbidden-card-hint')!.textContent!, /press V if the clue-giver says the target/);
+	let leakedToDocument = 0;
+	const documentKey = () => { leakedToDocument++; };
+	document.addEventListener('keydown', documentKey);
+	card.focus();
+	const violationKey = new window.KeyboardEvent('keydown', {
+		key: 'v', bubbles: true, cancelable: true,
+	});
+	card.dispatchEvent(violationKey);
+	document.removeEventListener('keydown', documentKey);
+	assert.equal(violationKey.defaultPrevented, true);
+	assert.equal(leakedToDocument, 0, 'family-local V never reaches the global bank-inventory binding');
+	assert.equal(document.activeElement, card);
 	assert.deepEqual(commands.violation, [1]);
+	assert.deepEqual(
+		board.helpShortcuts().find(shortcut => shortcut.descKey === 'game.help_cmd_forbidden_violation'),
+		{ keys: 'v', descKey: 'game.help_cmd_forbidden_violation' },
+	);
 
 	myId = 'p1';
 	board.update(state);
 	assert.equal(cardPanel.hidden, true);
+	assert.equal(roleDetail.textContent,
+		'Red team. You guess the target word this turn. Ada gives clues, and Cora monitors the target and forbidden words.');
 	assert.equal(root.querySelectorAll('.forbidden-controls button:not([hidden])').length, 0);
 
 	root.remove();
@@ -267,6 +314,16 @@ test('status shortcuts and pure role helpers produce flowing team sentences', ()
 	assert.equal(forbiddenRole(state.forbidden!.turn, 'p1'), 'guesser');
 	assert.equal(forbiddenRole(state.forbidden!.turn, 'p2'), 'monitor');
 	assert.equal(forbiddenRole(state.forbidden!.turn, 'p3'), 'spectator');
+	assert.equal(
+		forbiddenTurnContextText(state, 'p0', translate),
+		'Red team. You are the clue-giver: describe the target without saying it or using its forbidden words. '
+		+ 'Berto guesses, and Cora monitors the target and forbidden words.',
+	);
+	assert.equal(
+		forbiddenTurnContextText(state, 'p3', translate),
+		'Red team. Ada gives clues, Cora monitors the target and forbidden words, and Berto guesses.',
+		'an unassigned player hears every role without being assigned a fictitious one',
+	);
 	assert.equal(
 		formatForbiddenCard('faro', ['costa', 'luz', 'torre'], 'en', translate),
 		'Target word: faro.\nForbidden words:\ncosta,\nluz,\ntorre.',

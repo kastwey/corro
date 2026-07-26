@@ -81,6 +81,9 @@ export interface FamilyView {
   /** The active game rules as readable lines (Ctrl+Shift+F1); null/absent when the family
    *  lists none, in which case the rules command reports there is nothing to show. */
   rulesSummary?(): string[] | null;
+	/** Family-specific answer to T ("whose turn?"). False/absent falls back to the generic
+	 *  current-player line. Role-driven families use this to explain every assignment. */
+	announceTurn?(): boolean;
 }
 
 /** The race view also exposes its concrete board: the move-options UI (highlights,
@@ -309,6 +312,8 @@ interface CardFamilyBoard {
   /** The active game rules as readable lines, for the rules dialog (Ctrl+Shift+F1); null
    *  when the family lists none. Optional — only families with tunable rules implement it. */
   rulesSummary?(): string[] | null;
+	/** Optional family-specific T answer; the shared key layer retains the generic fallback. */
+	announceTurn?(): boolean;
 }
 
 /**
@@ -353,6 +358,7 @@ function makeCardFamily(
 		onBoardFocus: focusHand,
 		helpShortcuts: () => board.helpShortcuts(),
 		rulesSummary: () => board.rulesSummary?.() ?? null,
+		announceTurn: () => board.announceTurn?.() ?? false,
 	  };
 	},
   };

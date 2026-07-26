@@ -114,14 +114,50 @@ test('private English cards, per-player Spanish UI and authoritative role action
 	await expect(anaCard).toHaveAttribute('aria-readonly', 'true');
 	await expect(anaCard).not.toHaveAttribute('readonly', /.*/);
 	await expect(anaCard).toHaveAttribute('rows', '7');
+	await expect(anaCard).toHaveAccessibleName('Clue-giver: target and forbidden words');
+	await expect(carlaCard).toHaveAccessibleName('Supervisor: objetivo y palabras prohibidas');
 	await expect(ana.locator('#forbidden-card-hint')).toContainText('Up and Down Arrow');
+	await expect(ana.locator('#forbidden-card-hint')).toContainText('press Enter to start the timer');
 	await expect(carla.locator('#forbidden-card-hint')).toContainText('Flecha arriba y Flecha abajo');
+	await expect(carla.locator('#forbidden-card-hint')).toContainText('pulsa V si el portavoz dice el objetivo');
 	await expect(anaCard).toHaveValue(
 		'Target word: lighthouse.\nForbidden words:\nlight,\ncoast,\ntower,\nsea,\nship.');
 	await expect(carlaCard).toHaveValue(
 		'Palabra objetivo: lighthouse.\nPalabras prohibidas:\nlight,\ncoast,\ntower,\nsea,\nship.');
 	await expect(bertoCard).toHaveValue('');
 	await expect(davidCard).toHaveValue('');
+
+	// The persistent turn line and T query always name all three assignments. A player with
+	// a role hears "you" plus their duty; the unassigned fourth player is never given a fake
+	// supporter role. T remains available while the protected card itself owns focus.
+	await expect(ana.locator('.forbidden-role-detail')).toHaveText(
+		'Red team. You are the clue-giver: describe the target without saying it or using its forbidden words. '
+		+ 'Berto guesses, and Carla monitors the target and forbidden words.');
+	await expect(berto.locator('.forbidden-role-detail')).toHaveText(
+		'Equipo Rojo. Te toca adivinar la palabra objetivo. Ana da las pistas y Carla supervisa el objetivo y las palabras prohibidas.');
+	await expect(carla.locator('.forbidden-role-detail')).toHaveText(
+		'Equipo Rojo. Eres el supervisor: pulsa V si Ana dice el objetivo o cualquiera de las palabras prohibidas. '
+		+ 'Ana da las pistas y Berto adivina.');
+	await expect(david.locator('.forbidden-role-detail')).toHaveText(
+		'Equipo Rojo. Ana da las pistas, Carla supervisa el objetivo y las palabras prohibidas y Berto adivina.');
+
+	for (const [page, focus, announcement] of [
+		[ana, anaCard, /Red team\. You are the clue-giver.*Berto guesses.*Carla monitors/],
+		[berto, berto.locator('.forbidden-shell'), /Equipo Rojo\. Te toca adivinar.*Ana da las pistas.*Carla supervisa/],
+		[carla, carlaCard, /Equipo Rojo\. Eres el supervisor.*Ana da las pistas.*Berto adivina/],
+		[david, david.locator('.forbidden-shell'), /Equipo Rojo\. Ana da las pistas.*Carla supervisa.*Berto adivina/],
+	] as const) {
+		await page.evaluate(() => { ((window as any).__announcements as string[]).length = 0; });
+		await focus.focus();
+		await page.keyboard.press('t');
+		await expectAnnouncement(page, announcement);
+		await expect(focus).toBeFocused();
+	}
+	await ana.evaluate(() => { ((window as any).__announcements as string[]).length = 0; });
+	await anaCard.focus();
+	await ana.keyboard.press('s');
+	await expectAnnouncement(ana, /Red team: 0 points, cycle 1; your role is clue-giver/);
+	await expect(anaCard).toBeFocused();
 
 	const originalCard = await anaCard.inputValue();
 	await anaCard.focus();
@@ -136,11 +172,19 @@ test('private English cards, per-player Spanish UI and authoritative role action
 	for (const page of [berto, carla, david]) {
 		await expect(page.locator('.forbidden-controls button:not([hidden])')).toHaveCount(0);
 	}
-	await ana.locator('.forbidden-start').click();
+	await carlaCard.focus();
+	await carla.keyboard.press('Enter');
+	await expect(carlaCard).toBeFocused();
+	await expect(ana.locator('.forbidden-start')).toBeVisible();
+	await expect(carla.locator('.forbidden-timer')).toBeHidden();
+	await anaCard.focus();
+	await ana.keyboard.press('Enter');
+	await expect(anaCard).toBeFocused();
 
 	await expect(ana.locator('.forbidden-correct')).toBeVisible();
 	await expect(ana.locator('.forbidden-pass')).toBeVisible();
 	await expect(carla.locator('.forbidden-violation')).toBeVisible();
+	await expect(carla.locator('.forbidden-violation')).toHaveAttribute('aria-keyshortcuts', 'V');
 	await expect(berto.locator('.forbidden-controls button:not([hidden])')).toHaveCount(0);
 	await expect(ana.locator('.forbidden-timer')).toBeVisible();
 	await expect.poll(async () => ana.locator('.forbidden-timer__progress').evaluate(
@@ -149,14 +193,24 @@ test('private English cards, per-player Spanish UI and authoritative role action
 	await expectAnnouncement(berto, /Ana inicia el turno/);
 	for (const page of [ana, berto, carla, david]) await flushAxeAudit(page);
 
+	// V is role-authorized as well as family-local: the clue-giver cannot use it, and the
+	// protected card remains unchanged rather than accepting the typed character.
+	const beforeUnauthorizedViolation = await anaCard.inputValue();
+	await anaCard.focus();
+	await ana.keyboard.press('v');
+	await expect(anaCard).toHaveValue(beforeUnauthorizedViolation);
+	await expect(ana.locator('.forbidden-score').first()).toContainText('0');
+
 	await ana.locator('.forbidden-correct').click();
 	await expectAnnouncement(berto, /Berto acierta lighthouse/);
 	await expect(anaCard).not.toHaveValue(originalCard);
 	await expect(ana.locator('.forbidden-score').first()).toContainText('1');
 	await flushAxeAudit(ana);
 
-	await carla.locator('.forbidden-violation').click();
-	await expectAnnouncement(david, /Carla señala.*palabra prohibida/);
+	await carlaCard.focus();
+	await carla.keyboard.press('v');
+	await expect(carlaCard).toBeFocused();
+	await expectAnnouncement(david, /Carla señala.*objetivo o una palabra prohibida/);
 	await expect(ana.locator('.forbidden-score').first()).toContainText('0');
 	await flushAxeAudit(carla);
 

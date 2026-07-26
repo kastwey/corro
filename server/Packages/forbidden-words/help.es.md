@@ -8,7 +8,7 @@ El anfitrión crea dos equipos iguales. Los turnos se alternan entre ellos.
 
 - El **portavoz** ve la carta privada, da pistas y controla Correcta y Pasar.
 - El **adivinante** escucha y dice posibles respuestas.
-- El **supervisor** del equipo contrario también ve la carta privada y señala las palabras prohibidas.
+- El **supervisor** del equipo contrario también ve la carta privada y señala cuando el portavoz dice el objetivo o cualquier palabra de la lista.
 - Los demás jugadores apoyan a su equipo y esperan su próxima función.
 
 Las funciones rotan siguiendo el orden del equipo. Cada persona es portavoz una vez en cada ciclo completo.
@@ -25,7 +25,7 @@ El portavoz describe el objetivo en voz alta. El adivinante responde en voz alta
 
 - **Correcta, siguiente carta** suma un punto y reparte otra carta privada.
 - **Pasar** reparte otra carta sin cambiar la puntuación. Cada equipo dispone de tres pases por turno.
-- **Palabra prohibida** solo está disponible para el supervisor. Resta un punto y reparte otra carta.
+- **Objetivo o palabra prohibida** solo está disponible para el supervisor. Resta un punto y reparte otra carta.
 - Cuando se agota el tiempo, Corro cierra el turno automáticamente y rota las funciones.
 
 La puntuación puede bajar de cero. Cuando todos han sido portavoces una vez, gana el equipo con más puntos. Un empate añade otro ciclo completo, de modo que ambos equipos siempre tienen el mismo número de turnos.
@@ -36,6 +36,7 @@ El foco entra en la mesa de funciones. Usa **Tab** y **Shift+Tab** para moverte 
 
 - Pulsa **S** en la superficie del juego para oír tu equipo, puntuación, ciclo y función.
 - Pulsa **Shift+S** para oír la puntuación del equipo contrario.
+- Como supervisor, pulsa **V** desde la carta privada o la mesa de funciones cuando el portavoz diga el objetivo o cualquier palabra prohibida de la lista.
 - La cuenta atrás no anuncia cada segundo por encima de la conversación. Los sonidos marcan los momentos importantes; el temporizador sigue disponible visualmente y mediante su etiqueta accesible.
 - **Ctrl+F6** y **Ctrl+Shift+F6** recorren los paneles del juego, jugadores y conexión.
 - **Ctrl+Shift+R** abre el chat de texto. El chat de voz tiene sus propios controles y sigue siendo opcional.

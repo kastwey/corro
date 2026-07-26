@@ -25,6 +25,31 @@ export function forbiddenRoleLabel(role: ForbiddenRole, t: T): string {
 	}
 }
 
+/**
+ * Complete current-turn context for the role table and T shortcut. Every perspective names
+ * all three assignments; only a player who actually has one is addressed as "you". This is
+ * intentionally separate from the score-oriented S status so "whose turn?" always explains
+ * what each person must do, including for the unassigned fourth player.
+ */
+export function forbiddenTurnContextText(gs: GameState, playerId: string, t: T): string | null {
+	const turn = gs.forbidden?.turn;
+	if (!turn) return null;
+	const name = (id: string) => gs.players.find(player => player.id === id)?.name ?? id;
+	const vars = {
+		team: teamDisplayName(turn.teamIndex, t),
+		clueGiver: name(turn.clueGiverId),
+		guesser: name(turn.guesserId),
+		monitor: name(turn.monitorId),
+	};
+
+	switch (forbiddenRole(turn, playerId)) {
+		case 'clue-giver': return t('game.forbidden_turn_context_clue_giver', vars);
+		case 'guesser': return t('game.forbidden_turn_context_guesser', vars);
+		case 'monitor': return t('game.forbidden_turn_context_monitor', vars);
+		default: return t('game.forbidden_turn_context_spectator', vars);
+	}
+}
+
 /** One flowing status sentence for the player panel and S shortcut. */
 export function forbiddenStatusText(gs: GameState, playerId: string, t: T): string | null {
 	const state = gs.forbidden;

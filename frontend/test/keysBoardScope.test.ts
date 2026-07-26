@@ -334,8 +334,8 @@ test('in a property game the same keys keep working', () => {
 
 // ── T = "whose turn?": a real turn, or "no turns" in a simultaneous game ──────
 
-function attachTurn(family: string) {
-	const calls = { turn: 0, noTurns: 0 };
+function attachTurn(family: string, familyHandles = false) {
+	const calls = { turn: 0, noTurns: 0, familyTurn: 0, leave: 0, help: 0, moveLeft: 0 };
 	const board = document.createElement('div');
 	board.id = 'board';
 	board.setAttribute('role', 'application');
@@ -343,15 +343,25 @@ function attachTurn(family: string) {
 
 	const detach = attachKeyHandlers({
 		board,
-		keyMap: { t: 'AnnounceTurn' },
-		gameBoard: { getActiveIndex: () => -1, setActiveIndex: () => {} } as any,
+		keyMap: { t: 'AnnounceTurn', q: 'LeaveGame', f1: 'ShowBoardHelp', arrowleft: 'MoveLeft' },
+		gameBoard: {
+			getActiveIndex: () => -1,
+			setActiveIndex: () => {},
+			moveLeft: () => { calls.moveLeft++; return true; },
+		} as any,
 		gameCommands: {
 			announceTurn: () => { calls.turn++; return true; },
 			announceNoTurns: () => { calls.noTurns++; return true; },
 		} as any,
 		gameManager: { getSquares: () => [] } as any,
 		focusPlayersPanel: () => {},
+		showBoardHelp: () => { calls.help++; },
+		onLeaveGame: () => { calls.leave++; },
 		gameFamily: () => family,
+		onAnnounceTurn: () => {
+			calls.familyTurn++;
+			return familyHandles;
+		},
 	});
 	return { calls, board, detach };
 }
@@ -371,6 +381,38 @@ test('T says "no turns" in a SIMULTANEOUS family (draft), keeping the key useful
 		pressKey(h.board, 't');
 		assert.equal(h.calls.noTurns, 1, 'draft has no turn order');
 		assert.equal(h.calls.turn, 0);
+	} finally { h.detach(); h.board.remove(); }
+});
+
+test('T prefers a role-driven family answer over the generic current player', () => {
+	const h = attachTurn('forbidden', true);
+	try {
+		assert.equal(pressKey(h.board, 't'), true);
+		assert.equal(h.calls.familyTurn, 1);
+		assert.equal(h.calls.turn, 0);
+		assert.equal(h.calls.noTurns, 0);
+	} finally { h.detach(); h.board.remove(); }
+});
+
+test('mapped shortcuts remain available in an ARIA-readonly text area while review keys stay native', () => {
+	const h = attachTurn('forbidden', true);
+	const protectedText = document.createElement('textarea');
+	protectedText.setAttribute('aria-readonly', 'true');
+	const writableText = document.createElement('textarea');
+	h.board.append(protectedText, writableText);
+	try {
+		assert.equal(pressKey(protectedText, 't'), true);
+		assert.equal(h.calls.familyTurn, 1);
+		assert.equal(pressKey(protectedText, 'q'), true, 'a bare action shortcut remains available');
+		assert.equal(h.calls.leave, 1);
+		assert.equal(pressKey(protectedText, 'F1'), true, 'a bare help shortcut remains available');
+		assert.equal(h.calls.help, 1);
+		assert.equal(pressKey(protectedText, 'ArrowLeft'), false, 'caret review remains native');
+		assert.equal(h.calls.moveLeft, 0, 'the board cursor does not steal a text-review arrow');
+		assert.equal(pressKey(writableText, 't'), false);
+		assert.equal(h.calls.familyTurn, 1, 'typing in a writable field never runs the shortcut');
+		assert.equal(pressKey(writableText, 'q'), false);
+		assert.equal(h.calls.leave, 1, 'a writable field still owns bare letters');
 	} finally { h.detach(); h.board.remove(); }
 });
 

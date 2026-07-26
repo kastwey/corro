@@ -8,7 +8,7 @@ The host creates two equal teams. Turns alternate between them.
 
 - The **clue-giver** sees the private card, speaks clues and controls Correct and Pass.
 - The **guesser** listens and says possible answers.
-- The opposing **monitor** also sees the private card and reports a forbidden word when necessary.
+- The opposing **monitor** also sees the private card and reports when the clue-giver says the target or any listed word.
 - Other players support their team and wait for their next role.
 
 Roles rotate in team order. Every player gives clues once in a complete cycle.
@@ -25,7 +25,7 @@ The clue-giver describes the target aloud. The guesser answers aloud. Corro deli
 
 - **Correct, next card** adds one point and deals another private card.
 - **Pass** deals another card without changing the score. A team has three passes per turn.
-- **Forbidden word** is controlled only by the monitor. It removes one point and deals another card.
+- **Target or forbidden word** is controlled only by the monitor. It removes one point and deals another card.
 - When time expires, Corro closes the turn automatically and rotates the roles.
 
 The score is allowed to fall below zero. After every player has given clues once, the higher score wins. A tie adds another complete cycle, so both teams always receive the same number of turns.
@@ -36,6 +36,7 @@ Focus enters the role table. Use **Tab** and **Shift+Tab** to move through the p
 
 - Press **S** on the game surface to hear your team, score, cycle and role.
 - Press **Shift+S** to hear the opposing team's score.
+- As monitor, press **V** from the private card or role table when the clue-giver says the target or any listed forbidden word.
 - The countdown does not announce every second over the conversation. Earcons mark important events; the timer remains available visually and through its accessible label.
 - **Ctrl+F6** and **Ctrl+Shift+F6** move through the game, players and connection panels.
 - **Ctrl+Shift+R** opens text chat. Voice chat has its own controls and remains optional.

@@ -2133,6 +2133,9 @@ async function initBoard() {
 	onToggleVoicePanel: () => voicePanel.togglePanel(),
 	onToggleVoiceMute: () => { void voicePanel.toggleSelfMute(); },
 	onAnnounceVoiceSpeakers: () => voicePanel.announceActiveSpeakers(),
+	// T normally names the current player. A role-driven family can answer more usefully
+	// through its active view (Forbidden Words names the team and all three assignments).
+	onAnnounceTurn: () => currentFamilyView()?.announceTurn?.() ?? false,
 	// C off the property board: "how am I doing?" is your board identity there —
 	// the race squadron, or the track piece and its colour. The family owns the phrasing.
 	onAnnounceIdentity: () => {

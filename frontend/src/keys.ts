@@ -73,6 +73,8 @@ export interface KeyHandlersOptions {
 	onAnnounceVoiceSpeakers?: () => boolean; // Voices a current-speaker snapshot on demand
 	/** C off the property board: announce my board identity (squadron / piece colour). */
 	onAnnounceIdentity?: () => boolean;
+	/** Family-specific T answer. Returning false keeps the generic current-player fallback. */
+	onAnnounceTurn?: () => boolean;
 	/** The generic real-time REACTION key (exploding: play a Nope). Global — it fires off-turn
 	 *  from anywhere the board doesn't already own the key. Returns whether it handled it. */
 	onReaction?: () => boolean;
@@ -165,6 +167,16 @@ const DIALOG_READONLY_COMMANDS = new Set([
 	'AnnounceVoiceSpeakers',
 ]);
 
+/** Keys that must keep their native text-review behavior in a semantically read-only field.
+ * Printable and function-key shortcuts may still reach the game: there is nothing to type,
+ * but arrows/Home/End remain essential for screen-reader and selection navigation. Enter is
+ * also left to the owning surface, which can assign a context-specific action safely. */
+const READONLY_TEXT_REVIEW_KEYS = new Set([
+	'arrowleft', 'arrowright', 'arrowup', 'arrowdown',
+	'home', 'end', 'pageup', 'pagedown',
+	'backspace', 'delete', 'insert', 'enter', 'space', 'tab',
+]);
+
 /** The active family, defaulting to "property" (lobby, tests, property boards). */
 function familyOf(opts: KeyHandlersOptions): string {
 	return opts.gameFamily?.() ?? 'property';
@@ -179,6 +191,7 @@ function createCommandExecutor(opts: KeyHandlersOptions) {
 				case 'AnnounceOwner':
 					return opts.gameCommands.announceOwner(opts.gameBoard.getActiveIndex(), opts.gameManager?.getSquares() || []);
 				case 'AnnounceTurn':
+					if (opts.onAnnounceTurn?.()) return true;
 					// T is kept in every family (players reach for it), but a SIMULTANEOUS
 					// game (draft) has no turn order — so it answers "no turns here" instead
 					// of a nonexistent turn. Same family-aware pattern as C (AnnounceMyStatus).
@@ -534,10 +547,17 @@ export function attachKeyHandlers(opts: KeyHandlersOptions) {
 		// if there's no explicit mapping, do nothing
 		if (mapping === undefined) return;
 
-		// avoid interfering with typing: if focus is in an input/textarea and no modifiers, ignore shortcuts
-		if (isTextInput && !fullSpec.includes('ctrl') && !fullSpec.includes('meta') && !fullSpec.includes('alt')) return;
-
 		const spec = typeof mapping === 'string' ? { cmd: mapping } : mapping;
+		// Writable fields own every unmodified key. A semantically read-only field cannot be
+		// typed into, so mapped game shortcuts remain useful there—even bare letters and F1.
+		// Preserve the native caret/review keys above; the protected Forbidden card depends on
+		// Up/Down to read one word per line and owns Enter as its start-clock action.
+		const readOnlyShortcut = isTextInput
+			&& ((target as HTMLInputElement).readOnly || target?.getAttribute('aria-readonly') === 'true')
+			&& !READONLY_TEXT_REVIEW_KEYS.has(normalizeKeyName(ev.key));
+		if (isTextInput && !fullSpec.includes('ctrl') && !fullSpec.includes('meta')
+			&& !fullSpec.includes('alt') && !readOnlyShortcut) return;
+
 		if (spec && spec.cmd) {
 			// Board-scoped commands (movement, reading the focused square, roll/end via
 			// the bare keys) only act while the board owns focus, so they can't be fired
