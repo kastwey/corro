@@ -72,6 +72,9 @@
     "group": {
       "shedding": "Game rules"
     },
+    "sheddingScoring": "How the points are counted",
+    "sheddingScoringCollect": "Collect (classic: the round winner takes the rivals' points and the highest score wins)",
+    "sheddingScoringPenalty": "Penalties (you keep the points left in your own hand and the lowest score wins)",
     "sheddingAllowDoubles": "Allow playing identical cards together (doubles)",
     "sheddingStacking": "Stack draw cards (+2 / +4)",
     "sheddingStackingNone": "No stacking (classic: draw and lose your turn)",

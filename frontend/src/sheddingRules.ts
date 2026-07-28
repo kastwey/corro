@@ -101,6 +101,26 @@ export function canPlayCard(gs: GameState, myId: string, instanceId: string): Sh
 	}
 }
 
+/** Are the points running AGAINST their holder (the "penalty" scoring house rule)? */
+export function sheddingPenaltyScoring(gs: GameState): boolean {
+	return gs.sheddingRules?.scoring === 'penalty';
+}
+
+/**
+ * The score fact every surface speaks (S, Shift+S, the players panel): plain points under the
+ * classic count, points AGAINST you under penalty scoring — one helper so the surfaces can
+ * never word the same number two ways.
+ */
+export function sheddingScoreText(
+	gs: GameState,
+	total: number,
+	tSync: (key: string, vars?: Record<string, unknown>) => string,
+): string {
+	return sheddingPenaltyScoring(gs)
+		? tSync('game.shedding_status_score_penalty', { total })
+		: tSync('game.shedding_status_score', { total });
+}
+
 /**
  * One seat's spoken status. Mine: round, hand size, the colour in force and the top
  * card, the direction only when it is REVERSED (the exception speaks, the norm stays
@@ -120,7 +140,7 @@ export function sheddingStatusText(
 	if (seat.retired) {
 		return [
 			tSync('game.status_retired'),
-			tSync('game.shedding_status_score', { total: seat.score }),
+			sheddingScoreText(gs, seat.score, tSync),
 		].join(', ');
 	}
 
@@ -136,7 +156,7 @@ export function sheddingStatusText(
 		}));
 	}
 	if (shedding.direction === -1) parts.push(tSync('game.shedding_status_reversed'));
-	parts.push(tSync('game.shedding_status_score', { total: seat.score }));
+	parts.push(sheddingScoreText(gs, seat.score, tSync));
 	return parts.join(', ');
 }
 

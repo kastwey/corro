@@ -326,6 +326,18 @@ test('rulesSummary reads the effective rules for the active-rules dialog', () =>
 	assert.ok(lines.some(l => l.includes('game.shedding_rules_stacking')));
 });
 
+test('Shift+S words a rival score exactly as S words mine: penalty points when so ruled', () => {
+	const board = boardWith({ scoring: 'penalty' }, ['red-7'],
+		[seat('me', ['red-7']), seat('r1', [], { handCount: 1, score: 240 })]);
+
+	key(board.el, 'S', { shiftKey: true });
+
+	assert.equal(board.said[board.said.length - 1],
+		'N-r1: game.shedding_status_cards_one, game.shedding_status_score_penalty(240)');
+	assert.ok(board.view.rulesSummary()
+		.some(l => l === 'game.shedding_rules_scoring(game.shedding_rules_scoring_penalty)'));
+});
+
 test('doubles ON: marking identical numbers and sending plays the lead with the copies', () => {
 	const { el, view: dv, plays } = boardWith({ allowDoubles: true }, ['red-7', 'red-7']);
 	// The hand opted into multi-select — the help reflects it.

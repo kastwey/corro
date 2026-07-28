@@ -28,6 +28,8 @@ public class SheddingRulebookTests
 
 	private static readonly Dictionary<string, SheddingCardDef> Catalog = SheddingRulebook.Catalog(Deck());
 	private static readonly SheddingRulesConfig Rules = new();
+	/// <summary>The same table with the points pointed the other way (the house rule).</summary>
+	private static readonly SheddingRulesConfig PenaltyRules = new() { Scoring = "penalty" };
 
 	private static SheddingCardInstance Inst(string cardId, int n = 0)
 		=> new() { InstanceId = $"{cardId}@{n}", CardId = cardId };
@@ -387,13 +389,132 @@ public class SheddingRulebookTests
 		var c = Seat("c", "wild4");             // 50
 		var state = State("red-5", seats: new[] { a, b, c });
 
-		var score = SheddingRulebook.ScoreRound(state, "a", Catalog);
+		var score = SheddingRulebook.ScoreRound(state, "a", Catalog, Rules);
 
 		Assert.Equal(77, score.Points);
 		Assert.Equal(77, a.Score);
 		Assert.Equal(new List<int> { 77 }, a.RoundScores);
 		Assert.Equal(new List<int> { 0 }, b.RoundScores);
+		Assert.Empty(score.Banked); // only the winner banks under the classic count
 		Assert.All(state.Seats, s => Assert.Empty(s.Hand));
+	}
+
+	[Fact]
+	public void Penalty_scoring_leaves_every_hand_s_points_with_the_player_who_held_them()
+	{
+		var a = Seat("a");
+		var b = Seat("b", "red-7", "skip-red"); // 7 + 20
+		var c = Seat("c", "wild4");             // 50
+		var state = State("red-5", seats: new[] { a, b, c });
+
+		var score = SheddingRulebook.ScoreRound(state, "a", Catalog, PenaltyRules);
+
+		Assert.Equal(0, score.Points); // winning the round banks NOTHING here
+		Assert.Equal(0, a.Score);
+		Assert.Equal(27, b.Score);
+		Assert.Equal(50, c.Score);
+		Assert.Equal(new List<int> { 0 }, a.RoundScores);
+		Assert.Equal(new List<int> { 27 }, b.RoundScores);
+		Assert.Equal(new List<int> { 50 }, c.RoundScores);
+		Assert.Equal(new[] { ("b", 27, 27), ("c", 50, 50) },
+			score.Banked.Select(x => (x.Seat.PlayerId, x.Points, x.Total)));
+		Assert.All(state.Seats, s => Assert.Empty(s.Hand));
+	}
+
+	[Fact]
+	public void Penalty_scoring_banks_nothing_on_a_retired_seat_and_keeps_its_round_history_aligned()
+	{
+		var a = Seat("a");
+		var b = Seat("b", "red-7");
+		var c = Seat("c");
+		c.Retired = true;  // their hand already slid under the discards when they left
+		c.Score = 400;     // and the score they had banked is frozen there
+		var state = State("red-5", seats: new[] { a, b, c });
+
+		var score = SheddingRulebook.ScoreRound(state, "a", Catalog, PenaltyRules);
+
+		Assert.Equal(400, c.Score);
+		Assert.Equal(new List<int> { 0 }, c.RoundScores); // still one entry per round, for every seat
+		Assert.Single(a.RoundScores);
+		Assert.DoesNotContain(score.Banked, x => x.Seat.PlayerId == "c"); // and no line spoken for them
+	}
+
+	[Fact]
+	public void Placings_follow_the_scoring_direction_and_leave_retired_seats_out()
+	{
+		var a = Seat("a");
+		var b = Seat("b");
+		var c = Seat("c");
+		a.Score = 120;
+		b.Score = 40;
+		c.Score = 500;
+		c.Retired = true;
+		var state = State("red-5", seats: new[] { a, b, c });
+
+		Assert.Equal(new[] { "a", "b" }, SheddingRulebook.Placings(state, Rules).Select(s => s.PlayerId));
+		Assert.Equal(new[] { "b", "a" }, SheddingRulebook.Placings(state, PenaltyRules).Select(s => s.PlayerId));
+	}
+
+	[Fact]
+	public void Seats_level_on_points_keep_seat_order_in_both_directions()
+	{
+		var a = Seat("a");
+		var b = Seat("b");
+		a.Score = 60;
+		b.Score = 60;
+		var state = State("red-5", seats: new[] { a, b });
+
+		Assert.Equal(new[] { "a", "b" }, SheddingRulebook.Placings(state, Rules).Select(s => s.PlayerId));
+		Assert.Equal(new[] { "a", "b" }, SheddingRulebook.Placings(state, PenaltyRules).Select(s => s.PlayerId));
+	}
+
+	[Fact]
+	public void Emptying_your_hand_wins_a_level_score_in_both_directions()
+	{
+		// The single-round match where nobody's leftovers were worth anything: without this
+		// tie-break the earliest SEAT would take a match the other player actually shed out of.
+		var a = Seat("a");
+		var b = Seat("b");
+		var state = State("red-5", seats: new[] { a, b });
+
+		Assert.Equal(new[] { "b", "a" },
+			SheddingRulebook.Placings(state, Rules, roundWinnerId: "b").Select(s => s.PlayerId));
+		Assert.Equal(new[] { "b", "a" },
+			SheddingRulebook.Placings(state, PenaltyRules, roundWinnerId: "b").Select(s => s.PlayerId));
+
+		// It only ever breaks a TIE: a better score still outranks the round winner.
+		a.Score = 90;
+		Assert.Equal(new[] { "a", "b" },
+			SheddingRulebook.Placings(state, Rules, roundWinnerId: "b").Select(s => s.PlayerId));
+		Assert.Equal(new[] { "b", "a" },
+			SheddingRulebook.Placings(state, PenaltyRules, roundWinnerId: "b").Select(s => s.PlayerId));
+	}
+
+	[Fact]
+	public void MatchOver_watches_the_seats_still_playing_whichever_way_the_points_run()
+	{
+		var a = Seat("a");
+		var b = Seat("b");
+		var state = State("red-5", seats: new[] { a, b });
+		var target = Rules with { TargetScore = 500 };
+		var penaltyTarget = PenaltyRules with { TargetScore = 500 };
+
+		Assert.False(SheddingRulebook.MatchOver(state, target));
+		Assert.False(SheddingRulebook.MatchOver(state, penaltyTarget));
+
+		b.Score = 500;
+		b.Retired = true; // a leaver's frozen score cannot end anyone's match
+		Assert.False(SheddingRulebook.MatchOver(state, target));
+		Assert.False(SheddingRulebook.MatchOver(state, penaltyTarget));
+
+		a.Score = 520;
+		Assert.True(SheddingRulebook.MatchOver(state, target));
+		Assert.True(SheddingRulebook.MatchOver(state, penaltyTarget));
+
+		// A target of 0 is the single-round match: the round just played decided it.
+		a.Score = 0;
+		Assert.True(SheddingRulebook.MatchOver(state, Rules with { TargetScore = 0 }));
+		Assert.True(SheddingRulebook.MatchOver(state, PenaltyRules with { TargetScore = 0 }));
 	}
 
 	[Fact]
@@ -420,6 +541,6 @@ public class SheddingRulebookTests
 		Assert.Null(state.PendingDrawnPlay);
 		Assert.Equal(3, state.DiscardPile.Count);
 		Assert.Equal("red-5@9", state.DiscardPile[^1].InstanceId); // the top stays the top
-		Assert.DoesNotContain(SheddingRulebook.Placings(state), s => s.PlayerId == "c");
+		Assert.DoesNotContain(SheddingRulebook.Placings(state, Rules), s => s.PlayerId == "c");
 	}
 }

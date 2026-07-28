@@ -103,6 +103,7 @@ public class SheddingFamilyTests
 			{
 				["sheddingAllowDoubles"] = System.Text.Json.JsonSerializer.SerializeToElement(true),
 				["sheddingStacking"] = System.Text.Json.JsonSerializer.SerializeToElement("cross"),
+				["sheddingScoring"] = System.Text.Json.JsonSerializer.SerializeToElement("penalty"),
 				["startingMoney"] = System.Text.Json.JsonSerializer.SerializeToElement(9999), // property code: ignored
 			},
 		});
@@ -110,8 +111,39 @@ public class SheddingFamilyTests
 		var effective = game.State.SheddingRules!;
 		Assert.True(effective.AllowDoubles);
 		Assert.Equal("cross", effective.Stacking);
+		Assert.Equal("penalty", effective.Scoring);
 		Assert.Equal(7, effective.HandSize); // untouched fields keep the package defaults
 		Assert.Equal(effective, ((SheddingRuntime)game.Runtime!).Rules);
+	}
+
+	[Fact]
+	public void An_unusable_scoring_choice_leaves_the_classic_count_standing()
+	{
+		var game = Family.CreateGame(new FamilyStartContext
+		{
+			Players = new List<Player> { TestFixtures.NewPlayer("a"), TestFixtures.NewPlayer("b") },
+			Definition = Definition(),
+			Random = new ScriptedRandomSource(),
+			RuleValues = new Dictionary<string, System.Text.Json.JsonElement>
+			{
+				// Neither a mode the engine knows nor even a string: both must be ignored rather
+				// than throwing, so a stale lobby choice can never break a game start.
+				["sheddingScoring"] = System.Text.Json.JsonSerializer.SerializeToElement("wobble"),
+			},
+		});
+		Assert.Equal("collect", game.State.SheddingRules!.Scoring);
+
+		var numeric = Family.CreateGame(new FamilyStartContext
+		{
+			Players = new List<Player> { TestFixtures.NewPlayer("a"), TestFixtures.NewPlayer("b") },
+			Definition = Definition(),
+			Random = new ScriptedRandomSource(),
+			RuleValues = new Dictionary<string, System.Text.Json.JsonElement>
+			{
+				["sheddingScoring"] = System.Text.Json.JsonSerializer.SerializeToElement(3),
+			},
+		});
+		Assert.Equal("collect", numeric.State.SheddingRules!.Scoring);
 	}
 
 	[Fact]
@@ -125,6 +157,10 @@ public class SheddingFamilyTests
 		var badStacking = Definition(rules: new SheddingRulesConfig { Stacking = "wobble" });
 		Assert.Contains("stacking",
 			Assert.Throws<InvalidOperationException>(() => Family.ValidateDefinition(badStacking)).Message);
+
+		var badScoring = Definition(rules: new SheddingRulesConfig { Scoring = "wobble" });
+		Assert.Contains("scoring",
+			Assert.Throws<InvalidOperationException>(() => Family.ValidateDefinition(badScoring)).Message);
 
 		// A known code with a coherent default validates.
 		var ok = Definition();

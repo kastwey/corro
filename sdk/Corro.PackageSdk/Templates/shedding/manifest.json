@@ -15,6 +15,7 @@
     "wildDrawRequiresNoMatch": true,
     "allowDoubles": false,
     "stacking": "none",
+    "scoring": "collect",
     "lastCardCall": false,
     "lastCardPenalty": 2
   },

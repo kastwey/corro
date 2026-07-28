@@ -1,4 +1,5 @@
 using CorroServer.Models;
+using CorroServer.Models.Corro;
 using CorroServer.Services;
 using Xunit;
 
@@ -182,8 +183,12 @@ public class CardFamilyPersistenceTests
 				DiscardPile = { new SheddingCardInstance { InstanceId = "blue-2#0", CardId = "blue-2" } },
 				PendingDrawnPlay = new PendingDrawnPlay { PlayerId = "a", InstanceId = "blue-5#0" },
 			},
+			// The host's scoring choice rides the SNAPSHOT, not the manifest: a restarted match
+			// must read back the direction the points were running in, not the package default.
+			SheddingRules = new SheddingRulesConfig { Scoring = "penalty" },
 		};
 
+		Assert.Equal("penalty", RoundTrip(state).SheddingRules!.Scoring);
 		var back = RoundTrip(state).Shedding!;
 		Assert.Equal("blue", back.CurrentColor);
 		Assert.Equal(-1, back.Direction);

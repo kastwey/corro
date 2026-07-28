@@ -162,10 +162,16 @@ export function buildDraftRulesLines(rules: DraftRulesConfig | null | undefined,
 
 export function buildSheddingRulesLines(rules: SheddingRulesConfig | null | undefined, t: T): string[] {
 	const r = rules ?? { handSize: 7, targetScore: 500, drawnCardPlayable: true, wildDrawRequiresNoMatch: true };
+	// Under penalty scoring the target is what you must NOT reach, so it needs its own line:
+	// "Target score" would say the exact opposite of what the rule does.
+	const targetKey = r.scoring === 'penalty'
+		? 'game.shedding_rules_target_penalty'
+		: 'game.shedding_rules_target';
 	return [
 		t('game.shedding_rules_hand_size', { count: r.handSize }),
+		t('game.shedding_rules_scoring', { mode: scoringLabel(r.scoring, t) }),
 		r.targetScore > 0
-			? t('game.shedding_rules_target', { score: r.targetScore })
+			? t(targetKey, { score: r.targetScore })
 			: t('game.shedding_rules_target_single'),
 		t('game.shedding_rules_draw_play', { state: onOff(t, r.drawnCardPlayable) }),
 		t('game.shedding_rules_honest_wild', { state: onOff(t, r.wildDrawRequiresNoMatch) }),
@@ -173,6 +179,12 @@ export function buildSheddingRulesLines(rules: SheddingRulesConfig | null | unde
 		t('game.shedding_rules_stacking', { mode: stackingLabel(r.stacking, t) }),
 		t('game.shedding_rules_last_card', { state: onOff(t, !!r.lastCardCall) }),
 	];
+}
+
+function scoringLabel(scoring: string | undefined, t: T): string {
+	return scoring === 'penalty'
+		? t('game.shedding_rules_scoring_penalty')
+		: t('game.shedding_rules_scoring_collect');
 }
 
 function stackingLabel(stacking: string | undefined, t: T): string {

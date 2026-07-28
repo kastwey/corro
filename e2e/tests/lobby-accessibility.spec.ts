@@ -19,6 +19,7 @@ import {
 
 const TRACK_BOARD = 'snakes-and-ladders';
 const FORBIDDEN_BOARD = 'forbidden-words';
+const SHEDDING_BOARD = 'four-colours';
 
 /** A small, real .corro archive used to exercise the browser's successful upload state. */
 async function uploadedTrackPackage(): Promise<Buffer> {
@@ -114,6 +115,34 @@ test('Forbidden Words offers one accessible shared word-language choice', async 
 
 	await page.locator('#board-selector').selectOption(TRACK_BOARD);
 	await expect(group).toBeHidden();
+});
+
+test('Four Colours offers the scoring direction as a named, accessible radio group', async ({ browser }) => {
+	const page = await newPlayerPage(browser, 'es-ES');
+	await gotoLobbyHome(page);
+	await page.locator('#go-create-btn').click();
+	await page.locator('#board-selector').selectOption(SHEDDING_BOARD);
+	const firstToken = packageManifest(SHEDDING_BOARD).tokens[0].id as string;
+	await expect(page.locator(`#create-form input.token-radio[value="${firstToken}"]`)).toBeAttached();
+
+	await page.locator('#rules-details').evaluate(el => { (el as HTMLDetailsElement).open = true; });
+	const options = page.locator('#package-rules [data-rule-id="sheddingScoring"]');
+	await expect(options).toHaveCount(2);
+	// The radios live in their OWN fieldset, whose legend is what names the group for a
+	// screen reader (the `has` locator resolves relative to that fieldset).
+	const group = page.locator('#package-rules fieldset.rule-choice', {
+		has: page.locator('[data-rule-id="sheddingScoring"]'),
+	});
+	await expect(group.locator('legend')).toHaveText('Cómo se cuentan los puntos');
+	await expect(options.nth(0)).toBeChecked(); // the classic count is the default
+	await expect(options.nth(1)).not.toBeChecked();
+	await flushAxeAudit(page);
+
+	// The other selection is a state of its own: keep it visible long enough to be audited.
+	await options.nth(1).dispatchEvent('click');
+	await expect(options.nth(1)).toBeChecked();
+	await expect(options.nth(0)).not.toBeChecked();
+	await flushAxeAudit(page);
 });
 
 test('home, dark theme, runtime language and create/join validation states are Axe-clean', async ({ browser }) => {

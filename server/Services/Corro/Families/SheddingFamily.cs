@@ -121,6 +121,12 @@ public sealed class SheddingFamily : IGameFamily
 				$"sheddingRules.stacking must be one of {string.Join(", ", HouseRuleCatalog.SheddingStackingModes)}.");
 		}
 
+		if (!HouseRuleCatalog.SheddingScoringModes.Contains(rules.Scoring))
+		{
+			throw new InvalidOperationException(
+				$"sheddingRules.scoring must be one of {string.Join(", ", HouseRuleCatalog.SheddingScoringModes)}.");
+		}
+
 		// House rules must reference SHEDDING codes the engine implements (same doctrine as
 		// every family: a package can't invent mechanics, only expose known codes).
 		foreach (var rule in d.Manifest.HouseRules)

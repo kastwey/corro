@@ -302,7 +302,8 @@ export async function createGame(
 	hostName: string,
 	boardId: string,
 	opts: {
-		houseRules?: Record<string, boolean>;
+		/** Toggle rules by boolean; a CHOICE rule by the option id to select. */
+		houseRules?: Record<string, boolean | string>;
 		seat?: string;
 		maxPlayers?: number;
 		teamCount?: number;
@@ -338,6 +339,12 @@ export async function createGame(
 	if (houseRules.length > 0) {
 		await page.locator('#rules-details').evaluate(el => { (el as HTMLDetailsElement).open = true; });
 		for (const [ruleId, value] of houseRules) {
+			if (typeof value === 'string') {
+				// A choice rule is a radio group: pick the option by its value.
+				await page.locator(`#package-rules [data-rule-id="${ruleId}"][value="${value}"]`)
+					.dispatchEvent('click');
+				continue;
+			}
 			const box = page.locator(`#package-rules [data-rule-id="${ruleId}"]`);
 			if (await box.isChecked() !== value) await box.dispatchEvent('click');
 		}

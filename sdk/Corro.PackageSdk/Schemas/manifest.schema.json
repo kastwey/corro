@@ -285,6 +285,7 @@
         "wildDrawRequiresNoMatch": { "type": "boolean" },
         "allowDoubles": { "type": "boolean" },
         "stacking": { "enum": ["none", "sameType", "cross"] },
+        "scoring": { "enum": ["collect", "penalty"] },
         "lastCardCall": { "type": "boolean" },
         "lastCardPenalty": { "type": "integer", "minimum": 0 }
       },

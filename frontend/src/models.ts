@@ -543,6 +543,10 @@ export interface SheddingRulesConfig {
   allowDoubles?: boolean;
   /** House rule: how draw cards may be stacked ("none" | "sameType" | "cross"). */
   stacking?: string;
+  /** House rule: which way the points run ("collect" = the winner banks the rivals'
+   *  leftovers and the highest score wins; "penalty" = you bank your own and reaching
+   *  the target loses). */
+  scoring?: string;
   /** House rule: declare your last card or be caught. */
   lastCardCall?: boolean;
   /** Cards drawn when caught without declaring the last card. */

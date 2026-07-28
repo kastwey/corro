@@ -7,8 +7,9 @@ namespace CorroServer.Services.Rules;
 /// Pure rules of the shedding game family: matching (by
 /// colour, by number value or by action type), the action effects (skip, reverse,
 /// penalty draws, wilds naming the colour in force), the draw-one-and-maybe-play-it
-/// pause, the direction-aware turn order that skips retired seats, round scoring (the
-/// winner collects the points left in every rival hand) and the fresh redeal. No I/O,
+/// pause, the direction-aware turn order that skips retired seats, round scoring (which the
+/// "scoring" house rule points either way: the winner collects the rivals' leftovers, or
+/// everyone banks their own against them) and the fresh redeal. No I/O,
 /// no announcements, no transport — the flow layer (SheddingTurnFlow) drives these and
 /// owns the voice. Randomness is injected.
 /// </summary>
@@ -25,8 +26,9 @@ public static class SheddingRulebook
 		=> catalog.Values.Where(c => c.Color is { Length: > 0 })
 			.Select(c => c.Color!).Distinct().ToList();
 
-	/// <summary>Round-scoring points a card leaves in a loser's hand: the package's own
-	/// figure, or the classic table (numbers their value, coloured actions 20, wilds 50).</summary>
+	/// <summary>Round-scoring points a card left in hand is worth — to the round winner under
+	/// "collect" scoring, against its own holder under "penalty": the package's own figure, or
+	/// the classic table (numbers their value, coloured actions 20, wilds 50).</summary>
 	public static int PointsOf(SheddingCardDef def)
 		=> def.Points ?? def.Type switch
 		{
@@ -466,35 +468,94 @@ public static class SheddingRulebook
 
 	// ── Round scoring ─────────────────────────────────────────────────────────
 
+	/// <summary>What one seat banked this round and the running total it leaves them on —
+	/// the per-player voice of a "penalty" round.</summary>
+	public sealed record RoundBank(SheddingSeatState Seat, int Points, int Total);
+
 	public sealed record RoundScore(
 		SheddingSeatState Winner,
-		/// <summary>Points the winner collected from every rival hand this round.</summary>
+		/// <summary>Points the winner banked this round: every rival's leftovers under "collect"
+		/// scoring, and always zero under "penalty" (there the leftovers stay with their holder).</summary>
 		int Points,
-		int Total);
+		int Total,
+		/// <summary>Under "penalty" scoring, what each of the OTHER seats still playing banked
+		/// from its own hand, in seat order. Empty under "collect", where only the winner banks.</summary>
+		IReadOnlyList<RoundBank> Banked);
 
-	/// <summary>The round winner collects the points left in every rival hand; every
-	/// hand empties (the next deal rebuilds the whole deck anyway).</summary>
+	/// <summary>Bank what the round left on the table, then empty every hand (the next deal
+	/// rebuilds the whole deck anyway). Under "collect" scoring the winner takes the points left
+	/// in every rival hand; under "penalty" each player banks their OWN leftovers against
+	/// themselves and the winner banks nothing. The same cards are counted either way — the
+	/// house rule only decides who carries them.</summary>
 	public static RoundScore ScoreRound(
-		SheddingState state, string winnerId, IReadOnlyDictionary<string, SheddingCardDef> catalog)
+		SheddingState state, string winnerId, IReadOnlyDictionary<string, SheddingCardDef> catalog,
+		SheddingRulesConfig rules)
 	{
 		var winner = SeatOf(state, winnerId);
-		var points = state.Seats
-			.Where(s => s.PlayerId != winnerId)
-			.Sum(s => s.Hand.Sum(i => PointsOf(catalog.GetValueOrDefault(i.CardId) ?? new SheddingCardDef())));
-		winner.Score += points;
+		// Read every hand BEFORE anything clears: the same loop cannot both value and empty them.
+		var hands = state.Seats
+			.Select(seat => (Seat: seat, Points: seat.Hand
+				.Sum(i => PointsOf(catalog.GetValueOrDefault(i.CardId) ?? new SheddingCardDef()))))
+			.ToList();
+
+		var collected = 0;
+		var banked = new List<RoundBank>();
+		if (rules.Scoring == "penalty")
+		{
+			foreach (var (seat, points) in hands)
+			{
+				// The winner emptied their hand, so their own total is zero anyway — but say it
+				// explicitly: banking nothing is the whole point of winning the round here.
+				var own = seat.PlayerId == winnerId ? 0 : points;
+				seat.Score += own;
+				seat.RoundScores.Add(own);
+				if (seat.PlayerId != winnerId && !seat.Retired)
+				{
+					banked.Add(new RoundBank(seat, own, seat.Score));
+				}
+			}
+		}
+		else
+		{
+			collected = hands.Where(h => h.Seat.PlayerId != winnerId).Sum(h => h.Points);
+			winner.Score += collected;
+			foreach (var (seat, _) in hands)
+			{
+				seat.RoundScores.Add(seat.PlayerId == winnerId ? collected : 0);
+			}
+		}
+
 		foreach (var seat in state.Seats)
 		{
-			seat.RoundScores.Add(seat.PlayerId == winnerId ? points : 0);
 			seat.Hand.Clear();
 		}
+
 		SyncCounts(state);
-		return new RoundScore(winner, points, winner.Score);
+		return new RoundScore(winner, collected, winner.Score, banked);
 	}
 
-	/// <summary>Final placings among the seats that finished: score first, then seat
-	/// order keeps it stable. Retired players keep the place the leave flow gave them.</summary>
-	public static List<SheddingSeatState> Placings(SheddingState state)
-		=> ActiveSeats(state).OrderByDescending(s => s.Score).ToList();
+	/// <summary>Is the match decided? Reaching the target ends it whoever gets there — winning
+	/// under "collect" scoring, losing under "penalty" — and only a seat still PLAYING can reach
+	/// it: a leaver's score froze when their hand slid under the discards. A target of 0 means
+	/// the single round just played decided everything.</summary>
+	public static bool MatchOver(SheddingState state, SheddingRulesConfig rules)
+		=> rules.TargetScore <= 0 || ActiveSeats(state).Any(s => s.Score >= rules.TargetScore);
+
+	/// <summary>Final placings among the seats that finished: the best score first — the HIGHEST
+	/// under "collect" scoring, the LOWEST under "penalty". Emptying your hand breaks a level
+	/// score, so pass the round winner: a single round where every leftover hand was worth
+	/// nothing still crowns whoever went out rather than the earliest seat. Otherwise the sort is
+	/// stable and seats level on points keep seat order. Retired players keep the place the leave
+	/// flow gave them.</summary>
+	public static List<SheddingSeatState> Placings(
+		SheddingState state, SheddingRulesConfig rules, string? roundWinnerId = null)
+	{
+		var seats = ActiveSeats(state);
+		var byScore = rules.Scoring == "penalty"
+			? seats.OrderBy(s => s.Score)
+			: seats.OrderByDescending(s => s.Score);
+		return byScore.ThenByDescending(s => s.PlayerId == roundWinnerId).ToList();
+	}
 
 	// ── Last-card declaration (house rule) ─────────────────────────────────────
 

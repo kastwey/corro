@@ -9,7 +9,7 @@ puedes jugarla al momento (Intro) o quedártela y pasar (Espacio otra vez).
 
 - **F1** abre esta guía de Cuatro Colores.
 - **Ctrl+F1** abre la lista completa de atajos disponibles con las reglas activas de esta partida.
-- **Ctrl+Shift+F1** muestra las reglas activas, como las cadenas de robo, los dobles y la llamada de última carta.
+- **Ctrl+Shift+F1** muestra las reglas activas, como la puntuación, las cadenas de robo, los dobles y la llamada de última carta.
 - Con una carta de la mano enfocada, **Shift+F1** abre su ayuda y explica qué hace y cuándo puede jugarse.
 
 ## Las cartas
@@ -25,9 +25,17 @@ puedes jugarla al momento (Intro) o quedártela y pasar (Espacio otra vez).
 
 ## La partida
 
-Quien se queda sin cartas gana la **ronda** y suma los puntos de las manos rivales
-(números por su valor, acciones 20, comodines 50). Se juegan rondas hasta que alguien
-llega a **500**; el ganador de cada ronda abre la siguiente.
+Quien se queda sin cartas gana la **ronda**, y las cartas que quedan en las demás manos se
+cuentan (números por su valor, acciones 20, comodines 50). Adónde van esos puntos lo decide la
+mesa al crear la partida:
+
+- **Sumar** (el recuento clásico): quien gana la ronda se los lleva. Se juegan rondas hasta que
+  alguien llega a **500**, y esa persona gana la partida.
+- **Castigo**: cada cual se queda los puntos que le sobran en la mano y quien gana la ronda no
+  se apunta nada. Llegar a **500** hace perder la partida, así que gana la puntuación más baja.
+
+En ambos casos el ganador de cada ronda abre la siguiente, y **Ctrl+Shift+F1** dice qué
+recuento está en vigor.
 
 Aquí nadie grita: el número de cartas de cada jugador se **consulta cuando quieras** —
 la **S** dice cómo vas (cartas, color en vigor, carta de arriba y puntos) y **Shift+S**

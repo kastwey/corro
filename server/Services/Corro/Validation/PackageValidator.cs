@@ -24,9 +24,21 @@ public sealed class PackageValidator : IPackageValidator
 		CheckGameType(definition, problems);
 		CheckTokens(definition, problems);
 		CheckSquareNames(definition, problems);
+		CheckHouseRules(definition, problems);
 		CheckI18nReferences(definition, problems);
 		return problems;
 	}
+
+	/// <summary>A host-editable CHOICE rule must offer the values the engine actually accepts:
+	/// the appliers keep the default whenever the stored value is not one of theirs, so an option
+	/// the engine never heard of would be rendered in the lobby, chosen by the host, written to
+	/// the game document — and then quietly dropped, leaving a game that plays by a rule nobody
+	/// picked. Nothing else in the pipeline compares the two sets.</summary>
+	private static void CheckHouseRules(GameDefinition d, List<string> problems)
+		=> problems.AddRange(d.Manifest.HouseRules
+			.Select(HouseRuleCatalog.ChoiceProblem)
+			.Where(problem => problem != null)
+			.Select(problem => problem!));
 
 	/// <summary>Every package must declare which game family it targets, and it must be one this
 	/// engine version implements (the .corro format anticipates more — each family brings its
@@ -158,6 +170,22 @@ public sealed class PackageValidator : IPackageValidator
 		foreach (var (term, key) in d.Manifest.Terminology)
 		{
 			Add(key, $"terminology '{term}'");
+		}
+
+		// The lobby falls back to the raw rule/option ID when a label is missing, so a dangling
+		// key here reads as "sheddingScoringPenalty" in the host's rules panel.
+		foreach (var g in d.Manifest.RuleGroups)
+		{
+			Add(g.NameKey, $"rule group '{g.Id}'");
+		}
+
+		foreach (var rule in d.Manifest.HouseRules)
+		{
+			Add(rule.NameKey, $"house rule '{rule.Id}'");
+			foreach (var option in rule.Options ?? new List<HouseRuleOption>())
+			{
+				Add(option.NameKey, $"house rule '{rule.Id}' option '{option.Id}'");
+			}
 		}
 
 		Add(d.Manifest.Currency.NameKey, "currency.name");

@@ -12,7 +12,7 @@ import { popupMenu } from './popupMenu.js';
 import { escapeHtml } from './escapeHtml.js';
 import { contrastingTextColor } from './colorContrast.js';
 import {
-	canPlayCard, deckColors, sheddingCardHelp, sheddingCatalog, sheddingSeat,
+	canPlayCard, deckColors, sheddingCardHelp, sheddingCatalog, sheddingScoreText, sheddingSeat,
 	sheddingStatusText, sheddingWatchText, topDef,
 } from './sheddingRules.js';
 import { soundEvents } from './soundEvents.js';
@@ -117,7 +117,7 @@ export class SheddingBoard {
 			const cards = seat.handCount === 1
 				? this.deps.tSync('game.shedding_status_cards_one')
 				: this.deps.tSync('game.shedding_status_cards', { count: seat.handCount });
-			const score = this.deps.tSync('game.shedding_status_score', { total: seat.score });
+			const score = sheddingScoreText(gs, seat.score, this.deps.tSync);
 			return `${name}: ${cards}, ${score}`;
 		});
 		return lines.length > 0 ? lines.join('. ') : null;

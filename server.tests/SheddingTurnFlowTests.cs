@@ -18,6 +18,7 @@ public class SheddingTurnFlowTests
 {
 	private static List<SheddingCardDef> Deck() => new()
 	{
+		new() { Id = "red-0", Type = "number", Color = "red", Value = 0, Count = 4, NameKey = "c.red0" },
 		new() { Id = "red-5", Type = "number", Color = "red", Value = 5, Count = 4, NameKey = "c.red5" },
 		new() { Id = "red-7", Type = "number", Color = "red", Value = 7, Count = 4, NameKey = "c.red7" },
 		new() { Id = "blue-5", Type = "number", Color = "blue", Value = 5, Count = 4, NameKey = "c.blue5" },
@@ -311,6 +312,7 @@ public class SheddingTurnFlowTests
 		Assert.True(Assert.IsType<SheddingActionResponse>(response).GameEnded);
 		Assert.True(state.IsGameOver);
 		Assert.Equal("a", state.WinnerId);
+		Assert.Equal(state.Players.First(p => p.Id == "a").Name, state.WinnerName);
 		Assert.Contains("game.game_over", Keys(context));
 		Assert.Equal(1, state.Players.First(p => p.Id == "a").FinishPlace);
 	}
@@ -325,6 +327,146 @@ public class SheddingTurnFlowTests
 		var response = await Play(context, state, "a", "red-7#0");
 
 		Assert.True(Assert.IsType<SheddingActionResponse>(response).GameEnded);
+	}
+
+	[Fact]
+	public async Task A_single_round_worth_no_points_still_goes_to_the_hand_that_emptied()
+	{
+		// Everyone ends on zero: the loser was left holding a nil-value card. The match must
+		// follow the emptied hand, not the seat order — and WinnerId and first place must agree,
+		// since the end screen forces place 1 onto WinnerId.
+		var (state, context) = Game(
+			rules: new SheddingRulesConfig { TargetScore = 0 },
+			hands: new[] { ("a", new[] { "red-0" }), ("b", new[] { "red-7" }) });
+		state.CurrentTurn = "b";
+
+		await Play(context, state, "b", "red-7#0");
+
+		Assert.True(state.IsGameOver);
+		Assert.Equal(0, SheddingRulebook.SeatOf(state.Shedding!, "b").Score);
+		Assert.Equal("b", state.WinnerId);
+		Assert.Equal(1, state.Players.First(p => p.Id == "b").FinishPlace);
+		Assert.Equal("b", TestFixtures.Announcer(context).Sent
+			.Single(d => d.Key == "game.game_over").Vars["actorId"]);
+	}
+
+	// ── Rounds and the match under PENALTY scoring ────────────────────────────
+
+	[Fact]
+	public async Task Penalty_scoring_speaks_the_winner_s_empty_bank_and_each_rival_s_own_points()
+	{
+		var (state, context) = Game(
+			rules: new SheddingRulesConfig { Scoring = "penalty" },
+			hands: new[]
+			{
+				("a", new[] { "red-7" }),
+				("b", new[] { "wild", "blue-7" }), // 50 + 7, kept by b
+				("c", new[] { "blue-5" }),         // 5, kept by c
+			});
+
+		var response = await Play(context, state, "a", "red-7#0");
+
+		var action = Assert.IsType<SheddingActionResponse>(response);
+		Assert.True(action.RoundEnded);
+		Assert.False(action.GameEnded); // nobody near the 500 target
+
+		var announcer = TestFixtures.Announcer(context);
+		var cleared = announcer.Sent.Single(d => d.Key == "game.shedding_round_cleared");
+		Assert.Equal(0, cleared.Vars["total"]);
+		Assert.DoesNotContain("game.shedding_round_won", Keys(context)); // the collect voice stays quiet
+		var banked = announcer.Sent.Where(d => d.Key == "game.shedding_round_banked").ToList();
+		Assert.Equal(new object[] { "b", "c" }, banked.Select(d => d.Vars["actorId"]));
+		Assert.Equal(new object[] { 57, 5 }, banked.Select(d => d.Vars["points"]));
+
+		Assert.Equal(0, SheddingRulebook.SeatOf(state.Shedding!, "a").Score);
+		Assert.Equal(57, SheddingRulebook.SeatOf(state.Shedding!, "b").Score);
+		Assert.Equal("a", state.CurrentTurn); // the round winner still leads the redeal
+	}
+
+	[Fact]
+	public async Task Penalty_scoring_gives_the_match_to_the_lowest_score_when_a_rival_reaches_the_target()
+	{
+		var (state, context) = Game(
+			rules: new SheddingRulesConfig { TargetScore = 50, Scoring = "penalty" },
+			hands: new[]
+			{
+				("a", new[] { "red-7" }),
+				("b", new[] { "wild" }), // 50: reaching the target LOSES here
+			});
+
+		var response = await Play(context, state, "a", "red-7#0");
+
+		Assert.True(Assert.IsType<SheddingActionResponse>(response).GameEnded);
+		Assert.True(state.IsGameOver);
+		Assert.Equal("a", state.WinnerId);
+
+		var lost = TestFixtures.Announcer(context).Sent.Single(d => d.Key == "game.shedding_match_lost");
+		Assert.Equal("b", lost.Vars["actorId"]);
+		Assert.Equal(50, lost.Vars["total"]);
+		Assert.Equal(50, lost.Vars["target"]);
+
+		// The end screen forces place 1 onto WinnerId, so the two must name the same player.
+		Assert.Equal(1, state.Players.First(p => p.Id == "a").FinishPlace);
+		Assert.Equal(2, state.Players.First(p => p.Id == "b").FinishPlace);
+	}
+
+	[Fact]
+	public async Task Two_players_crossing_the_target_at_once_still_place_by_their_totals()
+	{
+		var (state, context) = Game(
+			rules: new SheddingRulesConfig { TargetScore = 20, Scoring = "penalty" },
+			hands: new[]
+			{
+				("a", new[] { "red-7" }),
+				("b", new[] { "wild" }),          // 50
+				("c", new[] { "wild", "red-7" }), // 57: the worst hand places last
+			});
+
+		await Play(context, state, "a", "red-7#0");
+
+		Assert.True(state.IsGameOver);
+		Assert.Equal("a", state.WinnerId);
+		Assert.Equal(1, state.Players.First(p => p.Id == "a").FinishPlace);
+		Assert.Equal(2, state.Players.First(p => p.Id == "b").FinishPlace);
+		Assert.Equal(3, state.Players.First(p => p.Id == "c").FinishPlace);
+		Assert.Equal("c", TestFixtures.Announcer(context).Sent
+			.Single(d => d.Key == "game.shedding_match_lost").Vars["actorId"]);
+	}
+
+	[Fact]
+	public async Task A_leaver_keeps_their_place_when_a_penalty_match_ends_without_them()
+	{
+		var (state, context) = Game(
+			rules: new SheddingRulesConfig { TargetScore = 50, Scoring = "penalty" },
+			hands: new[]
+			{
+				("a", new[] { "red-7" }),
+				("b", new[] { "wild" }),   // 50: ends the match
+				("c", new[] { "blue-7" }),
+			});
+
+		await new CorroServer.Services.Rules.CorroRulebook()
+			.DeclareBankruptcyAsync(state.Players.First(p => p.Id == "c"), context);
+		await Play(context, state, "a", "red-7#0");
+
+		Assert.True(state.IsGameOver);
+		Assert.Equal("a", state.WinnerId);
+		var places = state.Players.Select(p => p.FinishPlace).ToList();
+		Assert.Equal(places.Count, places.Distinct().Count()); // nobody shares a place
+		Assert.Equal(1, state.Players.First(p => p.Id == "a").FinishPlace);
+		Assert.Equal(2, state.Players.First(p => p.Id == "b").FinishPlace);
+	}
+
+	[Fact]
+	public async Task A_single_round_penalty_game_ends_without_claiming_anyone_reached_a_target()
+	{
+		var (state, context) = Game(
+			rules: new SheddingRulesConfig { TargetScore = 0, Scoring = "penalty" },
+			hands: new[] { ("a", new[] { "red-7" }), ("b", new[] { "blue-7" }) });
+
+		Assert.True(Assert.IsType<SheddingActionResponse>(await Play(context, state, "a", "red-7#0")).GameEnded);
+		Assert.Equal("a", state.WinnerId);
+		Assert.DoesNotContain("game.shedding_match_lost", Keys(context)); // there was no target to reach
 	}
 
 	// ── Leaving ───────────────────────────────────────────────────────────────

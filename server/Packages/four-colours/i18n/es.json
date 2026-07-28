@@ -72,6 +72,9 @@
     "group": {
       "shedding": "Reglas de la partida"
     },
+    "sheddingScoring": "Cómo se cuentan los puntos",
+    "sheddingScoringCollect": "Sumar (clásico: quien gana la ronda se lleva los puntos rivales y gana la puntuación más alta)",
+    "sheddingScoringPenalty": "Castigo (te quedas los puntos que tengas en la mano y gana la puntuación más baja)",
     "sheddingAllowDoubles": "Permitir jugar cartas idénticas a la vez (dobles)",
     "sheddingStacking": "Apilar cartas de robo (+2 / +4)",
     "sheddingStackingNone": "Sin apilar (clásico: robas y pierdes el turno)",

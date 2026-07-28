@@ -187,8 +187,10 @@ the wrong rules.
     "freeParkingJackpot": false      // taxes/fines feed the free-parking pot
   },
 
-  // Optional: rules the HOST can tweak in the lobby before starting. Each declared rule
-  // renders as a checkbox/number field; "default" pre-fills it. Grouping is cosmetic.
+  // Optional: rules the HOST can tweak in the lobby before starting. Each declared rule renders
+  // as a checkbox, a number field or (type "choice") a radio group; "default" pre-fills it.
+  // Grouping is cosmetic. Every nameKey — the rule's and each option's — must resolve, and a
+  // choice may only offer values the engine's code accepts. Validation enforces both.
   "ruleGroups": [ { "id": "building", "nameKey": "rules.group.building" } ],
   "houseRules": [
     { "id": "startingMoney",  "nameKey": "rules.startingMoney",  "default": 1500, "type": "number" }
@@ -962,10 +964,13 @@ lives in the shared `game.hand_multi_*` keys, overridable the same way.)
 A `"gameType": "shedding"` package ships **only a deck**. Turn-based: play
 one card matching the top of the discards — by **colour**, by **number value** or by
 **action type** — or **draw one** and, if it fits, choose to play it or keep it (the
-game pauses on the drawer's decision). First empty hand wins the **round** and collects
-the points left in every rival hand; rounds repeat until `targetScore`, each round dealt
-from a fresh full deck with the previous winner leading. Hands, the draw pile, the
-discards **below the top card** and the drawer's pause are hidden information.
+game pauses on the drawer's decision). First empty hand wins the **round**; the points left
+in the other hands then go wherever `scoring` sends them — to the winner under the classic
+`collect` count, or against each holder under `penalty`. Rounds repeat until someone reaches
+`targetScore`, which **wins** the match under `collect` and **loses** it under `penalty`
+(there the lowest score wins), each round dealt from a fresh full deck with the previous
+winner leading. Hands, the draw pile, the discards **below the top card** and the drawer's
+pause are hidden information.
 
 This family deliberately has **no one-card-left shout**: hand counts are on-demand
 information (the S / Shift+S status keys), so noticing who runs short stays part of the
@@ -993,8 +998,9 @@ game for every player, sighted or not — never a reflex race.
   the player holds **no card of the colour in force** — the server enforces it, so there
   is no bluffing and no challenge window.
 - Action cards also match each other by TYPE (a skip on a skip, across colours).
-- `points` (optional, any type) — round-scoring override; the default is the classic
-  table: numbers their value, coloured actions 20, wilds 50.
+- `points` (optional, any type) — what the card is worth when the round ends with it still in
+  hand (to the round winner under `collect` scoring, against its own holder under `penalty`);
+  the default is the classic table: numbers their value, coloured actions 20, wilds 50.
 - Colours are package-defined ids; **every colour needs a spoken name** under the
   package's `colors.<id>` i18n key (the wilds name it out loud; validated).
 - The round opener flips from the pile until a NUMBER shows (flipped actions slide under
@@ -1007,13 +1013,28 @@ game for every player, sighted or not — never a reflex race.
   "handSize": 7,
   "targetScore": 500,             // 0 = a single round
   "drawnCardPlayable": true,      // the classic "draw one, play it if it fits" pause
-  "wildDrawRequiresNoMatch": true // the honest wild-draw gate (false = always legal)
+  "wildDrawRequiresNoMatch": true,// the honest wild-draw gate (false = always legal)
+  "scoring": "collect",           // "collect" = the winner banks the rivals' leftovers and the
+                                  // highest score wins; "penalty" = each player banks their own
+                                  // and reaching targetScore LOSES, so the lowest score wins
+  "allowDoubles": false,          // play several identical number cards in one turn
+  "stacking": "none",             // "none" | "sameType" | "cross" — answering a draw card
+  "lastCardCall": false,          // declare your last card or be caught
+  "lastCardPenalty": 2            // cards drawn when caught without declaring
 }
 ```
 
+The same fields are the shedding **house-rule codes** a package may expose to the host in
+`houseRules[]`, named in camelCase with the family prefix: `sheddingScoring` and
+`sheddingStacking` (both `"type": "choice"`), `sheddingAllowDoubles` and `sheddingLastCardCall`
+(toggles), and `sheddingLastCardPenalty` (number). A choice rule must declare option ids the
+engine accepts and default to one of them — validation rejects the package otherwise, because a
+value the engine does not know would be offered, chosen and then silently dropped.
+
 Validation: unique ids, known types, wilds colourless and everything else coloured and
-named, at least two colours and one number card, non-negative values/points, and a deck
-of at least `players.max × handSize + 1` cards (draws recirculate the buried discards).
+named, at least two colours and one number card, non-negative values/points, a `scoring` and
+`stacking` the engine knows, and a deck of at least `players.max × handSize + 1` cards (draws
+recirculate the buried discards).
 
 ### Overridable voice (`game.shedding_*`)
 
@@ -1022,7 +1043,10 @@ Plays and effects: `shedding_played`, `shedding_color_chosen`, `shedding_reverse
 `shedding_penalty_cards` (+`_2`, `_3`, `_4` — the victim's private identities). The draw
 flow: `shedding_drew`, `shedding_drew_playable`, `shedding_drew_unplayable`,
 `shedding_kept` (+`_self`), `shedding_deck_empty` (+`_self`). Rounds:
-`shedding_round_started`, `shedding_round_won` (+`_self`). Refusals:
+`shedding_round_started`, `shedding_round_won` (+`_self`) under `collect` scoring, and under
+`penalty` its pair `shedding_round_cleared` (+`_self`, the winner banking nothing) plus one
+`shedding_round_banked` (+`_self`) per rival, closing on `shedding_match_lost` (+`_self`).
+Refusals:
 `shedding_not_playable`, `shedding_wild_needs_no_match`, `shedding_only_drawn`,
 `shedding_bad_color`, `shedding_pending_decision`, `shedding_nothing_pending`,
 `shedding_card_not_in_hand`, `shedding_unknown_card`, `shedding_not_seated`,
