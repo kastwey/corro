@@ -1,0 +1,47 @@
+using System.Collections.Concurrent;
+using CorroServer.Models;
+
+namespace CorroServer.Services.Accounts;
+
+/// <summary>
+/// Process-local account store. Mirrors <see cref="InMemoryGameRepository"/>: it is what a
+/// clone-and-run or offline session gets when no Cosmos connection string is configured (accounts
+/// then last only as long as the process), and what the unit tests exercise the sign-in policy
+/// against without an emulator.
+/// </summary>
+public class InMemoryUserRepository : IUserRepository
+{
+	private readonly ConcurrentDictionary<string, UserDocument> _users = new();
+	private readonly ConcurrentDictionary<string, IdentityLinkDocument> _identities = new();
+
+	public Task<UserDocument?> GetUserAsync(string userId, CancellationToken ct = default) =>
+		Task.FromResult(_users.GetValueOrDefault(userId));
+
+	public Task<IdentityLinkDocument?> GetIdentityLinkAsync(string identityKey, CancellationToken ct = default) =>
+		Task.FromResult(_identities.GetValueOrDefault(identityKey));
+
+	/// <summary>GetOrAdd gives exactly the semantics the interface asks for: the first writer wins
+	/// and every later caller receives that same stored document.</summary>
+	public Task<IdentityLinkDocument> CreateOrGetIdentityLinkAsync(
+		IdentityLinkDocument link,
+		CancellationToken ct = default) =>
+		Task.FromResult(_identities.GetOrAdd(link.IdentityKey, link));
+
+	public Task<UserDocument> UpsertUserAsync(UserDocument user, CancellationToken ct = default)
+	{
+		_users[user.UserId] = user;
+		return Task.FromResult(user);
+	}
+
+	public Task DeleteUserAsync(string userId, CancellationToken ct = default)
+	{
+		_users.TryRemove(userId, out _);
+		return Task.CompletedTask;
+	}
+
+	public Task DeleteIdentityLinkAsync(string identityKey, CancellationToken ct = default)
+	{
+		_identities.TryRemove(identityKey, out _);
+		return Task.CompletedTask;
+	}
+}

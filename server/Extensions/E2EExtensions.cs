@@ -1,4 +1,5 @@
 using CorroServer.Services;
+using CorroServer.Services.Accounts;
 using CorroServer.Hubs;
 using CorroServer.Services.Corro;
 using CorroServer.Services.Rules;
@@ -41,6 +42,15 @@ public static class E2EExtensions
 		{
 			ActionDelay = TimeSpan.FromMilliseconds(50),
 		});
+		// A sign-in provider the browser suite can actually complete. It replaces only the trip to
+		// the provider's own consent screen: the route, the account resolution, the session cookie
+		// and every client state are the real ones, so the accessibility audit sees the real UI.
+		// Registered here means it exists ONLY under ASPNETCORE_ENVIRONMENT=E2E.
+		services.AddSingleton(new AuthProviderCatalog(
+			new[] { new AuthProviderDescriptor(AuthProviders.E2E, IsTestDouble: true) }));
+		// Accounts must not survive between E2E runs either.
+		services.AddSingleton<IUserRepository, InMemoryUserRepository>();
+
 		// Merge E2E-only shipped packages from outside server/Packages. They exercise listing,
 		// unlock, staging, persistence and play without entering production publish artifacts.
 		if (!string.IsNullOrWhiteSpace(packagesRoot))

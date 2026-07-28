@@ -14,6 +14,51 @@
     "english": "English",
     "spanish": "Spanish"
   },
+  "account": {
+    "signInPrompt": "Sign in to keep your games, unlock codes and friends on any device.",
+    "signInWith": "Sign in with {{provider}}",
+    "signedInAs": "Signed in as {{name}}.",
+    "signedIn": "Signed in.",
+    "signOut": "Sign out",
+    "signInFailed": "Signing in did not finish, so you are not signed in. You can try again, or carry on playing without an account.",
+    "manage": "Your account",
+    "provider": {
+      "google": "Google",
+      "microsoft": "Microsoft",
+      "e2e": "the test provider"
+    },
+    "settings": {
+      "title": "Your account",
+      "nameLabel": "Name other players see",
+      "nameHint": "Leave it empty to go back to the name your sign-in provider gave.",
+      "nameSave": "Save name",
+      "nameSaved": "Your name is saved.",
+      "nameTooLong": "That name is too long: it can have at most {{max}} characters.",
+      "methodsHeading": "Ways to sign in",
+      "methodLinked": "{{provider}}, linked to this account.",
+      "methodLinkedTo": "{{provider}}, linked to {{email}}.",
+      "methodNotLinked": "{{provider}}, not linked yet.",
+      "link": "Add {{provider}}",
+      "unlink": "Remove {{provider}}",
+      "unlinked": "{{provider}} is no longer linked to your account.",
+      "lastMethodHint": "This is your only way to sign in, so it cannot be removed. Add another one first, or erase the account instead.",
+      "unlinkLastRefused": "{{provider}} is your only way to sign in, so it was not removed.",
+      "unlinkNotLinked": "{{provider}} was not linked to your account.",
+      "linkOk": "{{provider}} is now linked to your account.",
+      "linkAlready": "{{provider}} was already linked to your account.",
+      "linkProviderInUse": "Your account already uses a different {{provider}} login, so this one was not added.",
+      "linkClaimed": "That {{provider}} login already belongs to another account, so it was not added.",
+      "linkFailed": "Adding {{provider}} did not finish, so nothing changed.",
+      "sessionEnded": "Your session has ended, so nothing changed. Sign in again to continue.",
+      "actionFailed": "That did not work, so nothing changed. Please try again.",
+      "eraseHeading": "Erase your account",
+      "eraseExplanation": "This removes your profile and every way of signing in to it. Games you played stay with the other players, but they stop being linked to you. It cannot be undone.",
+      "erase": "Erase my account",
+      "eraseConfirm": "Erase your account for good?",
+      "eraseCancel": "Keep my account",
+      "eraseConfirmButton": "Yes, erase it"
+    }
+  },
   "lobby": {
     "backToHome": "Back to home",
     "home": {

@@ -1,0 +1,236 @@
+/* account.css - Optional player account control in the lobby header.
+ *
+ * Semantic theme tokens throughout, so the control follows the light/dark switch instead of
+ * hardcoding a foreground over a background that only works in one of them. */
+
+.account-bar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+	background: var(--surface-2);
+	border: 1px solid var(--border);
+	padding: 10px 12px;
+	border-radius: var(--radius);
+}
+
+.account-bar[hidden] {
+	display: none;
+}
+
+.account-prompt,
+.account-status {
+	margin: 0;
+	font-size: 13px;
+	color: var(--text-muted);
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.account-status {
+	color: var(--text);
+	font-weight: 600;
+}
+
+/* The sign-in affordances navigate away, so they are links. They are STYLED like buttons for
+ * pointer users while keeping the link role, and they carry an underline so the styling is not the
+ * only thing distinguishing them from surrounding text. */
+.account-providers {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.account-signin-link {
+	display: inline-block;
+	padding: 8px 12px;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-sm);
+	background: var(--surface);
+	color: var(--text);
+	font-size: 14px;
+	font-weight: 600;
+	text-decoration: underline;
+	/* Only the border transitions. Animating the background would let it lag behind `color`, which
+	 * flips instantly with the theme token — leaving the label briefly unreadable against the old
+	 * background every time the theme is toggled. */
+	transition: border-color 0.2s ease;
+}
+
+.account-signin-link:hover {
+	border-color: var(--accent);
+	background: var(--accent-soft);
+}
+
+.account-signin-link:focus-visible {
+	outline: none;
+	border-color: var(--accent);
+	box-shadow: var(--focus-ring);
+}
+
+.account-signout-btn {
+	width: auto;
+	padding: 8px 12px;
+	font-size: 14px;
+	flex: 0 0 auto;
+}
+
+/* A failed sign-in is explanatory, not catastrophic: readable danger ink on a tinted surface
+ * rather than dimmed text, so it keeps full contrast in both themes. */
+.account-error {
+	margin: 0;
+	flex: 1 1 100%;
+	padding: 8px 10px;
+	border: 1px solid var(--danger);
+	border-radius: var(--radius-sm);
+	background: var(--danger-soft);
+	color: var(--text);
+	font-size: 13px;
+}
+
+.account-manage-btn {
+	width: auto;
+	padding: 8px 12px;
+	font-size: 14px;
+	flex: 0 0 auto;
+}
+
+/* ── the account settings dialog ─────────────────────────────────────────── */
+
+.account-settings-status:empty {
+	/* An empty live region must take no space, but it has to stay in the DOM: a screen reader
+	 * announces changes to an existing region, not the sudden arrival of a new one. */
+	margin: 0;
+}
+
+.account-settings-status {
+	margin: 0 0 12px;
+	color: var(--text);
+	font-weight: 600;
+}
+
+.account-settings-hint {
+	margin: 4px 0 0;
+	font-size: 13px;
+	color: var(--text-muted);
+}
+
+.account-settings h3 {
+	margin: 20px 0 8px;
+	font-size: 16px;
+}
+
+.account-method-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.account-method {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 8px 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--surface-2);
+}
+
+.account-method-line {
+	color: var(--text);
+	min-width: 0;
+}
+
+/* Adding a provider navigates away, so it is a link and stays visibly one. */
+.account-link-provider {
+	color: var(--text);
+	font-weight: 600;
+	text-decoration: underline;
+}
+
+.account-link-provider:focus-visible {
+	outline: none;
+	box-shadow: var(--focus-ring);
+	border-radius: var(--radius-sm);
+}
+
+.account-unlink-btn {
+	width: auto;
+	padding: 6px 10px;
+	font-size: 13px;
+	flex: 0 0 auto;
+}
+
+/* The refused state is never conveyed by dimming alone: the control keeps a fully readable
+ * foreground and gains a dashed edge, and its reason is spoken through aria-describedby. */
+.account-unlink-btn[aria-disabled="true"] {
+	border-style: dashed;
+	border-color: var(--border-strong);
+	background: var(--surface-3);
+	color: var(--text);
+	cursor: not-allowed;
+}
+
+.account-danger-btn {
+	width: auto;
+	padding: 8px 12px;
+	border: 1px solid var(--danger);
+	border-radius: var(--radius-sm);
+	background: var(--danger-soft);
+	color: var(--text);
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.account-danger-btn:hover {
+	border-color: var(--danger-hover);
+}
+
+.account-danger-btn:focus-visible {
+	outline: none;
+	box-shadow: var(--focus-ring);
+}
+
+.account-erase-confirm {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	padding: 10px;
+	border: 1px solid var(--danger);
+	border-radius: var(--radius-sm);
+	background: var(--danger-soft);
+}
+
+.account-erase-confirm p {
+	margin: 0;
+	flex: 1 1 100%;
+	color: var(--text);
+	font-weight: 600;
+}
+
+@media (max-width: 600px) {
+	.account-bar {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.account-method {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.account-providers {
+		flex-direction: column;
+	}
+
+	.account-signin-link {
+		text-align: center;
+	}
+}

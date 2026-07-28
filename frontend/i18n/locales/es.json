@@ -14,6 +14,51 @@
     "english": "Inglés",
     "spanish": "Español"
   },
+  "account": {
+    "signInPrompt": "Inicia sesión para conservar tus partidas, tus códigos de desbloqueo y tus amistades en cualquier dispositivo.",
+    "signInWith": "Iniciar sesión con {{provider}}",
+    "signedInAs": "Sesión iniciada como {{name}}.",
+    "signedIn": "Sesión iniciada.",
+    "signOut": "Cerrar sesión",
+    "signInFailed": "El inicio de sesión no se completó, así que no has iniciado sesión. Puedes volver a intentarlo o seguir jugando sin cuenta.",
+    "manage": "Tu cuenta",
+    "provider": {
+      "google": "Google",
+      "microsoft": "Microsoft",
+      "e2e": "el proveedor de prueba"
+    },
+    "settings": {
+      "title": "Tu cuenta",
+      "nameLabel": "Nombre que ven las demás personas",
+      "nameHint": "Déjalo vacío para volver al nombre que dio tu proveedor de acceso.",
+      "nameSave": "Guardar nombre",
+      "nameSaved": "Tu nombre está guardado.",
+      "nameTooLong": "Ese nombre es demasiado largo: puede tener {{max}} caracteres como máximo.",
+      "methodsHeading": "Formas de iniciar sesión",
+      "methodLinked": "{{provider}}, vinculado a esta cuenta.",
+      "methodLinkedTo": "{{provider}}, vinculado a {{email}}.",
+      "methodNotLinked": "{{provider}}, todavía sin vincular.",
+      "link": "Añadir {{provider}}",
+      "unlink": "Quitar {{provider}}",
+      "unlinked": "{{provider}} ya no está vinculado a tu cuenta.",
+      "lastMethodHint": "Es tu única forma de iniciar sesión, así que no se puede quitar. Añade otra antes, o borra la cuenta si es lo que quieres.",
+      "unlinkLastRefused": "{{provider}} es tu única forma de iniciar sesión, así que no se ha quitado.",
+      "unlinkNotLinked": "{{provider}} no estaba vinculado a tu cuenta.",
+      "linkOk": "{{provider}} ya está vinculado a tu cuenta.",
+      "linkAlready": "{{provider}} ya estaba vinculado a tu cuenta.",
+      "linkProviderInUse": "Tu cuenta ya usa otro acceso de {{provider}}, así que este no se ha añadido.",
+      "linkClaimed": "Ese acceso de {{provider}} ya pertenece a otra cuenta, así que no se ha añadido.",
+      "linkFailed": "No se completó la vinculación con {{provider}}, así que no ha cambiado nada.",
+      "sessionEnded": "Tu sesión ha terminado, así que no ha cambiado nada. Vuelve a iniciar sesión para continuar.",
+      "actionFailed": "No ha funcionado, así que no ha cambiado nada. Inténtalo de nuevo.",
+      "eraseHeading": "Borrar tu cuenta",
+      "eraseExplanation": "Esto elimina tu perfil y todas sus formas de iniciar sesión. Las partidas que jugaste siguen con las demás personas, pero dejan de estar vinculadas a ti. No se puede deshacer.",
+      "erase": "Borrar mi cuenta",
+      "eraseConfirm": "¿Borrar tu cuenta definitivamente?",
+      "eraseCancel": "Conservar mi cuenta",
+      "eraseConfirmButton": "Sí, bórrala"
+    }
+  },
   "lobby": {
     "backToHome": "Volver al inicio",
     "home": {

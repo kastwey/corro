@@ -24,6 +24,7 @@
 	<link rel="stylesheet" href="css/forms.css">
 	<link rel="stylesheet" href="css/tokens.css">
 	<link rel="stylesheet" href="css/language-selector.css">
+	<link rel="stylesheet" href="css/account.css">
 	<link rel="stylesheet" href="css/lobby.css">
 	<link rel="stylesheet" href="css/modal.css">
 </head>
@@ -37,6 +38,11 @@
 				</h1>
 				<p class="brand-tagline" data-site-tagline data-i18n="branding.tagline">Play together, play your way.</p>
 			</div>
+
+			<!-- Optional player account, above the preferences: who you are matters more than how the
+				 page is displayed. Stays empty and hidden unless the deployment configured a sign-in
+				 provider, so an account-less deployment shows no account UI at all. -->
+			<div id="account-bar" class="account-bar" hidden></div>
 
 			<!-- Language and theme are preferences, not page navigation. -->
 			<div class="language-selector">

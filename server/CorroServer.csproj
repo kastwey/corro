@@ -10,6 +10,10 @@
   <ItemGroup>
     <PackageReference Include="Azure.Storage.Blobs" Version="12.29.1" />
     <PackageReference Include="Livekit.Server.Sdk.Dotnet" Version="1.2.2" />
+    <!-- External sign-in. The framework owns the OAuth/OIDC dance with each provider; this app only
+         issues its own session afterwards, so it never validates a provider token per request. -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="10.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="10.0.0" />
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.53.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>

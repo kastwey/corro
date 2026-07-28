@@ -176,6 +176,13 @@ content ids, and add a boundary regression.
   handlers), `Services/Rules/` (`CorroRulebook` partials + `Rules/Cards/`), and
   `Packages/` (shipped package sources; cards target square INDICES so decks are
   portable across boards).
+- Accounts (optional external sign-in): `server/Services/Accounts/` + `server/Controllers/AuthController.cs`
+  + client `account.ts` / `accountSettings.ts`. Read [docs/accounts.md](docs/accounts.md) before
+  touching them. Three rules outrank convenience there: an account is matched ONLY on
+  (issuer, subject), never on the email address; because the session cookie is `SameSite=Lax`, an
+  endpoint that changes account state must never be a GET; and the LAST remaining sign-in method can
+  never be removed, or the account becomes unreachable forever. Signing in is never a precondition
+  for creating, joining or playing a game.
 - Tests: `frontend/test/` (node:test/jsdom) and `server.tests/` (xUnit).
 - Game families (genres): registered in `server/.../Families/GameFamilies.cs` +
   client `gameFamilies.ts`/`familyTraits.ts`. Read `docs/game-families.md` and the

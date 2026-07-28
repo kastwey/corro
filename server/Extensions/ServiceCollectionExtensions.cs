@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CorroServer.Services;
+using CorroServer.Services.Accounts;
 using CorroServer.Services.Corro;
 using CorroServer.Services.Corro.Validation;
 using CorroServer.Services.Rules;
@@ -156,6 +157,9 @@ public static class ServiceCollectionExtensions
 			// Singleton (stateless: wraps the singleton CosmosClient). Injectable by the singleton
 			// registry, and avoids a per-request client lookup.
 			services.AddSingleton<IGameRepository, CosmosGameRepository>();
+			// Accounts follow the games' durability: with Cosmos they survive restarts, without it
+			// they are process-local like everything else in a clone-and-run session.
+			services.AddSingleton<IUserRepository, CosmosUserRepository>();
 			// Retention is relevant only to durable production-style persistence. It catches up once on
 			// startup and then runs daily, reusing the same session-aware deletion path as the Hub.
 			services.AddSingleton<GameRetentionCleanup>();
@@ -165,7 +169,12 @@ public static class ServiceCollectionExtensions
 		{
 			// Singleton so games persist across requests for the life of the process.
 			services.AddSingleton<IGameRepository, InMemoryGameRepository>();
+			services.AddSingleton<IUserRepository, InMemoryUserRepository>();
 		}
+
+		// Optional external sign-in. With no provider configured this registers the schemes and an
+		// empty catalog, so the client shows no account UI and everything account-less is unaffected.
+		services.AddCorroAuthentication(configuration);
 		// IGameService is not scoped: each game owns an instance created by IGameServiceFactory.
 		// GameStateHelper owns board state; the former BoardService is no longer needed.
 
@@ -233,6 +242,26 @@ public static class ServiceCollectionExtensions
 
 			logger.LogInformation("Games container: {Status}",
 				gamesContainerResponse.StatusCode == System.Net.HttpStatusCode.Created ? "Created" : "Already exists");
+
+			// Accounts live in two containers because sign-in and every later request arrive with
+			// DIFFERENT keys: Users answers "who is this account" by account id, Identities answers
+			// "which account is this provider login" by the (issuer, subject) composite. Partitioning
+			// each by the key it is actually queried with keeps both a point read.
+			var usersContainerResponse = await database.CreateContainerIfNotExistsAsync(
+				id: CosmosUserRepository.UsersContainerName,
+				partitionKeyPath: "/userId"
+			);
+
+			logger.LogInformation("Users container: {Status}",
+				usersContainerResponse.StatusCode == System.Net.HttpStatusCode.Created ? "Created" : "Already exists");
+
+			var identitiesContainerResponse = await database.CreateContainerIfNotExistsAsync(
+				id: CosmosUserRepository.IdentitiesContainerName,
+				partitionKeyPath: "/identityKey"
+			);
+
+			logger.LogInformation("Identities container: {Status}",
+				identitiesContainerResponse.StatusCode == System.Net.HttpStatusCode.Created ? "Created" : "Already exists");
 
 			logger.LogInformation("Cosmos DB initialization completed successfully");
 		}

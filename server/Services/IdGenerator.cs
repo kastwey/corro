@@ -49,6 +49,15 @@ public static class IdGenerator
 	}
 
 	/// <summary>
+	/// A new account ID. Opaque and independent of any provider subject or email address, so an
+	/// account survives the player changing either one.
+	/// </summary>
+	public static string UserId()
+	{
+		return Guid.NewGuid().ToString();
+	}
+
+	/// <summary>
 	/// A player's personal RE-ENTRY code: 8 characters, unambiguous alphabet. It is a
 	/// credential (whoever types it can reclaim the seat while it is disconnected), so it
 	/// must be unguessable (32^8 ≈ 10^12) yet short enough to note down or dictate.

@@ -28,6 +28,11 @@ internal class Program
 
 		var app = builder.Build();
 
+		// Populates User from the session cookie. Required even though no endpoint carries
+		// [Authorize]: the account endpoints read the principal directly, and every one of them
+		// treats "anonymous" as a normal outcome rather than a failure.
+		app.UseAuthentication();
+
 		// Use controllers for the REST API
 		app.MapControllers();
 

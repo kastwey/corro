@@ -2,6 +2,7 @@ using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CorroServer.Services;
+using CorroServer.Services.Accounts;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -82,5 +83,17 @@ internal static class Emulators
 		var db = (await client.CreateDatabaseIfNotExistsAsync("CorroGame")).Database;
 		await db.CreateContainerIfNotExistsAsync("Games", "/gameId");
 		return new CosmosGameRepository(client, NullLogger<CosmosGameRepository>.Instance);
+	}
+
+	/// <summary>The account repository against the emulator, with both account containers ensured.
+	/// They are partitioned by the key each one is actually queried with, exactly as the server
+	/// creates them at startup.</summary>
+	public static async Task<CosmosUserRepository> NewCosmosUserRepositoryAsync()
+	{
+		var client = NewCosmosClient();
+		var db = (await client.CreateDatabaseIfNotExistsAsync(CosmosUserRepository.DatabaseName)).Database;
+		await db.CreateContainerIfNotExistsAsync(CosmosUserRepository.UsersContainerName, "/userId");
+		await db.CreateContainerIfNotExistsAsync(CosmosUserRepository.IdentitiesContainerName, "/identityKey");
+		return new CosmosUserRepository(client, NullLogger<CosmosUserRepository>.Instance);
 	}
 }

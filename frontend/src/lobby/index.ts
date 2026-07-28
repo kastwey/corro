@@ -24,6 +24,8 @@ import { renderSeatSelector, getUsedSeats } from './seats.js';
 import { LatestOnly } from './latestOnly.js';
 import { tokenIconHtml, setPackageTokens } from '../tokenIcons.js';
 import { initThemeToggle } from '../themeToggle.js';
+import { initAccountBar } from '../account.js';
+import { openAccountSettings } from '../accountSettings.js';
 import { initializeSiteBranding } from '../siteBranding.js';
 import { applyRuleSettings, readRuleSettings } from './ruleFields.js';
 import { buildBotNameForm } from './botNameForm.js';
@@ -71,6 +73,7 @@ class UnifiedLobbyUI {
 		await this.initializeI18n();
 		await initializeSiteBranding(document, fetch, () => i18nBinder.getCurrentLanguage());
 		this.setupThemeToggle();
+		this.setupAccountBar();
 		dialogManager.init(); // Initialize DialogManager
 		// Keep keyboard focus inside the lobby: Tab / Shift+Tab wrap instead of
 		// escaping to the browser chrome. Yields while a modal <dialog> is open.
@@ -90,6 +93,58 @@ class UnifiedLobbyUI {
 		if (mount) {
 			initThemeToggle(mount);
 		}
+	}
+
+	/**
+	 * Renders the optional account control. Deliberately NOT awaited by init(): signing in is never
+	 * a precondition for playing, so a slow or failing account endpoint must not delay the lobby
+	 * becoming interactive.
+	 */
+	private setupAccountBar(): void {
+		const mount = document.getElementById('account-bar');
+		if (!mount) return;
+
+		// The server reports what became of a sign-in or a link through the URL, because a provider
+		// round-trip is a full page navigation with no response left to carry it. Consume the
+		// markers right away so a later reload cannot replay a stale outcome.
+		const signInFailed = getUrlParam('signInError') === '1';
+		const linkCode = getUrlParam('linkResult');
+		const linkReturn = linkCode
+			? { code: linkCode, provider: getUrlParam('linkProvider') || '' }
+			: null;
+		if (signInFailed || linkReturn) {
+			const url = new URL(window.location.href);
+			for (const marker of ['signInError', 'linkResult', 'linkProvider']) {
+				url.searchParams.delete(marker);
+			}
+			window.history.replaceState({}, '', url.toString());
+		}
+
+		// Come back to the lobby exactly where the player left it (a game link keeps working).
+		const returnUrl = () => window.location.pathname + window.location.search;
+
+		const openSettings = (linkOutcome: typeof linkReturn = null) => {
+			void openAccountSettings({
+				returnUrl: returnUrl(),
+				linkReturn: linkOutcome,
+				returnFocusTo: 'account-manage-btn',
+				// Rebuild the bar so a rename or a removed provider shows immediately.
+				onChanged: () => this.setupAccountBar(),
+				onSignedOut: () => this.setupAccountBar(),
+			});
+		};
+
+		void initAccountBar(mount, {
+			returnUrl: returnUrl(),
+			signInFailed,
+			onManageAccount: () => openSettings(),
+		}).then(session => {
+			// A link that has just come back reopens the settings where the player started it, so
+			// the outcome is reported in context instead of vanishing into a page reload.
+			if (linkReturn && session.signedIn) {
+				openSettings(linkReturn);
+			}
+		});
 	}
 
 	private async initializeI18n(): Promise<void> {

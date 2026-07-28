@@ -353,6 +353,20 @@ Prereq: **Docker** installed. Ports used: **8081** (Cosmos), **1234** (Cosmos da
 scripts are optional — you can also `docker compose up -d` and start the server yourself with
 the two `ConnectionStrings:*` set in user-secrets.
 
+#### Optional: external sign-in
+
+Player accounts are optional, and so is configuring them: with no provider credentials the server
+starts normally and the lobby shows no account UI. To try the real flow locally, register an OAuth
+client with the provider (redirect URI `http://localhost:5000/signin-google`, and likewise
+`/signin-microsoft`) and store the credentials in user-secrets:
+
+```bash
+dotnet user-secrets --project server set "Authentication:Google:ClientId" "<id>"
+```
+
+Each provider needs BOTH `ClientId` and `ClientSecret` or neither — a half-configured provider
+fails startup on purpose. See [docs/accounts.md](docs/accounts.md).
+
 ### Level 2 — Everything in Docker (no local SDK or Node)
 
 The whole stack — **app included** — in containers, one command. Built from
