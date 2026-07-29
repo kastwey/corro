@@ -36,37 +36,11 @@ public sealed class JourneyFamily : IGameFamily
 	/// distances, named cards, and a playable configuration.</summary>
 	public void ValidateDefinition(GameDefinition d)
 	{
-		var deck = d.JourneyDeck
-			?? throw new InvalidOperationException("journey package has no deck (cards.json).");
-		if (deck.Count == 0)
-		{
-			throw new InvalidOperationException("journey deck has no cards.");
-		}
-
-		var ids = deck.Select(c => c.Id).ToList();
-		if (ids.Any(string.IsNullOrWhiteSpace) || ids.Distinct().Count() != ids.Count)
-		{
-			throw new InvalidOperationException("every journey card needs a unique id.");
-		}
+		var deck = DeckValidation.RequireWellFormedDeck(d.JourneyDeck, "journey", CardTypes);
 
 		var attackKinds = deck.Where(c => c.Type == "attack").Select(c => c.Kind).ToHashSet();
 		foreach (var card in deck)
 		{
-			if (!CardTypes.Contains(card.Type))
-			{
-				throw new InvalidOperationException($"journey card '{card.Id}' has an unknown type '{card.Type}'.");
-			}
-
-			if (string.IsNullOrWhiteSpace(card.NameKey))
-			{
-				throw new InvalidOperationException($"journey card '{card.Id}' has no name (add a nameKey).");
-			}
-
-			if (card.Count < 1)
-			{
-				throw new InvalidOperationException($"journey card '{card.Id}' needs a positive count.");
-			}
-
 			switch (card.Type)
 			{
 				case "distance" when card.Value <= 0:

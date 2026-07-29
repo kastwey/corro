@@ -58,6 +58,7 @@ public class DraftTurnFlowTests
 			Helper = baseContext.Helper,
 			Settings = baseContext.Settings,
 			FamilyRuntime = new DraftRuntime(DraftRulebook.Catalog(Deck()), Deck(), state.DraftRules!),
+			Random = baseContext.Random,
 			Announce = baseContext.Announce,
 			Announcer = baseContext.Announcer,
 			Presenter = baseContext.Presenter,

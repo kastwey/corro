@@ -39,18 +39,7 @@ public sealed class AssemblyFamily : IGameFamily
 	/// colours to ever win, named cards, and a playable configuration.</summary>
 	public void ValidateDefinition(GameDefinition d)
 	{
-		var deck = d.AssemblyDeck
-			?? throw new InvalidOperationException("assembly package has no deck (cards.json).");
-		if (deck.Count == 0)
-		{
-			throw new InvalidOperationException("assembly deck has no cards.");
-		}
-
-		var ids = deck.Select(c => c.Id).ToList();
-		if (ids.Any(string.IsNullOrWhiteSpace) || ids.Distinct().Count() != ids.Count)
-		{
-			throw new InvalidOperationException("every assembly card needs a unique id.");
-		}
+		var deck = DeckValidation.RequireWellFormedDeck(d.AssemblyDeck, "assembly", CardTypes);
 
 		var pieceColors = deck
 			.Where(c => c.Type == "piece" && c.Color is { } col && col != AssemblyRulebook.Wild)
@@ -58,21 +47,6 @@ public sealed class AssemblyFamily : IGameFamily
 
 		foreach (var card in deck)
 		{
-			if (!CardTypes.Contains(card.Type))
-			{
-				throw new InvalidOperationException($"assembly card '{card.Id}' has an unknown type '{card.Type}'.");
-			}
-
-			if (string.IsNullOrWhiteSpace(card.NameKey))
-			{
-				throw new InvalidOperationException($"assembly card '{card.Id}' has no name (add a nameKey).");
-			}
-
-			if (card.Count < 1)
-			{
-				throw new InvalidOperationException($"assembly card '{card.Id}' needs a positive count.");
-			}
-
 			switch (card.Type)
 			{
 				case "piece" or "attack" or "remedy" when string.IsNullOrWhiteSpace(card.Color):

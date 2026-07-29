@@ -12,7 +12,7 @@ namespace CorroServer.Services.Commands;
 /// roll (doubles), and must have no unresolved debt. A still-pending purchase is
 /// resolved as "do not buy" (auction if the smallBuilding rule is enabled, otherwise discarded).
 /// </summary>
-public class EndTurnHandler : ICommandHandler<EndTurnCommand>
+public class EndTurnHandler : PlayerCommandHandler<EndTurnCommand>
 {
 	private readonly ICorroRulebook _rulebook;
 
@@ -21,13 +21,8 @@ public class EndTurnHandler : ICommandHandler<EndTurnCommand>
 		_rulebook = rulebook;
 	}
 
-	public async Task<ServerResponse> HandleAsync(EndTurnCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(EndTurnCommand command, Player player, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
 		// Only the player whose turn it is may end it. Without this guard another player
 		// could pass the turn — and, since HasRolledThisTurn reflects the CURRENT player,
 		// effectively "end the turn without having rolled" themselves.

@@ -499,82 +499,38 @@ public static class SheddingTurnFlow
 	}
 }
 
-/// <summary>Shedding: play a matching card (wilds carry the chosen colour). Carries the
-/// rulebook for its randomness source: penalty draws may reshuffle the buried discards.</summary>
-public class SheddingPlayHandler : ICommandHandler<SheddingPlayCommand>
+/// <summary>Shedding: play a matching card (wilds carry the chosen colour). Penalty draws
+/// may reshuffle the buried discards, so this reads the game's randomness from the context.</summary>
+public class SheddingPlayHandler : PlayerCommandHandler<SheddingPlayCommand>
 {
-	private readonly ICorroRulebook _rulebook;
-	public SheddingPlayHandler(ICorroRulebook rulebook) => _rulebook = rulebook;
-
-	public async Task<ServerResponse> HandleAsync(SheddingPlayCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await SheddingTurnFlow.PlayAsync(command, player, context, _rulebook.RandomSource);
-	}
+	protected override Task<ServerResponse> HandleAsync(SheddingPlayCommand command, Player player, GameContext context)
+		=> SheddingTurnFlow.PlayAsync(command, player, context, context.Random);
 }
 
 /// <summary>Shedding: draw one card — and maybe get the play-it-or-keep-it pause.</summary>
-public class SheddingDrawHandler : ICommandHandler<SheddingDrawCommand>
+public class SheddingDrawHandler : PlayerCommandHandler<SheddingDrawCommand>
 {
-	private readonly ICorroRulebook _rulebook;
-	public SheddingDrawHandler(ICorroRulebook rulebook) => _rulebook = rulebook;
-
-	public async Task<ServerResponse> HandleAsync(SheddingDrawCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await SheddingTurnFlow.DrawAsync(player, context, _rulebook.RandomSource);
-	}
+	protected override Task<ServerResponse> HandleAsync(SheddingDrawCommand command, Player player, GameContext context)
+		=> SheddingTurnFlow.DrawAsync(player, context, context.Random);
 }
 
 /// <summary>Shedding: keep the just-drawn card and pass the turn.</summary>
-public class SheddingKeepHandler : ICommandHandler<SheddingKeepCommand>
+public class SheddingKeepHandler : PlayerCommandHandler<SheddingKeepCommand>
 {
-	public async Task<ServerResponse> HandleAsync(SheddingKeepCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await SheddingTurnFlow.KeepAsync(player, context);
-	}
+	protected override Task<ServerResponse> HandleAsync(SheddingKeepCommand command, Player player, GameContext context)
+		=> SheddingTurnFlow.KeepAsync(player, context);
 }
 
 /// <summary>Shedding: declare the last card. Off-turn.</summary>
-public class SheddingDeclareLastCardHandler : ICommandHandler<SheddingDeclareLastCardCommand>
+public class SheddingDeclareLastCardHandler : PlayerCommandHandler<SheddingDeclareLastCardCommand>
 {
-	public async Task<ServerResponse> HandleAsync(SheddingDeclareLastCardCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await SheddingTurnFlow.DeclareLastCardAsync(player, context);
-	}
+	protected override Task<ServerResponse> HandleAsync(SheddingDeclareLastCardCommand command, Player player, GameContext context)
+		=> SheddingTurnFlow.DeclareLastCardAsync(player, context);
 }
 
 /// <summary>Shedding: catch a rival who forgot the last-card declaration. Off-turn.</summary>
-public class SheddingCatchLastCardHandler : ICommandHandler<SheddingCatchLastCardCommand>
+public class SheddingCatchLastCardHandler : PlayerCommandHandler<SheddingCatchLastCardCommand>
 {
-	private readonly ICorroRulebook _rulebook;
-	public SheddingCatchLastCardHandler(ICorroRulebook rulebook) => _rulebook = rulebook;
-
-	public async Task<ServerResponse> HandleAsync(SheddingCatchLastCardCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await SheddingTurnFlow.CatchLastCardAsync(player, context, _rulebook.RandomSource);
-	}
+	protected override Task<ServerResponse> HandleAsync(SheddingCatchLastCardCommand command, Player player, GameContext context)
+		=> SheddingTurnFlow.CatchLastCardAsync(player, context, context.Random);
 }

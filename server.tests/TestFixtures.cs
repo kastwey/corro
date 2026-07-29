@@ -121,6 +121,8 @@ internal static class TestFixtures
 			GameState = state,
 			Helper = helper,
 			Settings = settings ?? new GameSettings(),
+			// The identity shuffle: deterministic decks, like the E2E environment.
+			Random = new CorroServer.Services.Rules.ScriptedRandomSource(),
 			RentRules = rentRules ?? CorroServer.Models.Corro.RulesConfig.ClassicRules,
 			// Same shape the families publish at game start: board + rules (rules defaulted).
 			FamilyRuntime =

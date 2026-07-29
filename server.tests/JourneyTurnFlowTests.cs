@@ -67,6 +67,7 @@ public class JourneyTurnFlowTests
 			Helper = baseContext.Helper,
 			Settings = baseContext.Settings,
 			FamilyRuntime = new JourneyRuntime(JourneyRulebook.Catalog(Deck()), Deck(), rules),
+			Random = baseContext.Random,
 			Announce = baseContext.Announce,
 			Announcer = baseContext.Announcer,
 			Presenter = baseContext.Presenter,
@@ -174,7 +175,7 @@ public class JourneyTurnFlowTests
 		state.Journey!.DrawPile.Add(Inst("distance-25", 9));
 		JourneyRulebook.SyncCounts(state.Journey);
 
-		var response = await new JourneyPlayHandler(new CorroRulebook()).HandleAsync(
+		var response = await new JourneyPlayHandler().HandleAsync(
 			new JourneyPlayCommand { PlayerId = "A", InstanceId = "go#0" }, ctx);
 
 		Assert.Equal("DRAW_FIRST", Assert.IsType<ErrorResponse>(response).Code);
@@ -203,7 +204,7 @@ public class JourneyTurnFlowTests
 		var (state, ctx) = Game(hands: new[] { ("A", new[] { "go" }), ("B", new[] { "go" }) });
 		state.Journey!.HasDrawn = true; // empty pile → no draw needed anyway
 
-		var response = await new JourneyPlayHandler(new CorroRulebook()).HandleAsync(
+		var response = await new JourneyPlayHandler().HandleAsync(
 			new JourneyPlayCommand { PlayerId = "A", InstanceId = "go#0" }, ctx);
 
 		var action = Assert.IsType<JourneyActionResponse>(response);
@@ -221,7 +222,7 @@ public class JourneyTurnFlowTests
 		var (state, ctx) = Game(hands: new[] { ("A", new[] { "gas" }), ("B", new[] { "go" }) });
 		state.Journey!.HasDrawn = true;
 
-		await new JourneyPlayHandler(new CorroRulebook()).HandleAsync(
+		await new JourneyPlayHandler().HandleAsync(
 			new JourneyPlayCommand { PlayerId = "A", InstanceId = "gas#0" }, ctx);
 
 		// ONE themed line instead of "plays a remedy:" + the card name — plus the rolling
@@ -242,7 +243,7 @@ public class JourneyTurnFlowTests
 		});
 		state.Journey!.HasDrawn = true;
 
-		await new JourneyPlayHandler(new CorroRulebook()).HandleAsync(
+		await new JourneyPlayHandler().HandleAsync(
 			new JourneyPlayCommand { PlayerId = "A", InstanceId = "limit#0", TargetId = "B" }, ctx);
 
 		// One line each: the attacker's, the VICTIM's (their own flavored variant) and the
@@ -261,7 +262,7 @@ public class JourneyTurnFlowTests
 		var (state, ctx) = Game(hands: new[] { ("A", new[] { "distance-25" }), ("B", new[] { "go" }) });
 		state.Journey!.HasDrawn = true; // still stopped: distance is illegal
 
-		var response = await new JourneyPlayHandler(new CorroRulebook()).HandleAsync(
+		var response = await new JourneyPlayHandler().HandleAsync(
 			new JourneyPlayCommand { PlayerId = "A", InstanceId = "distance-25#0" }, ctx);
 
 		var error = Assert.IsType<ErrorResponse>(response);
@@ -288,7 +289,7 @@ public class JourneyTurnFlowTests
 	{
 		var (state, ctx) = AttackIntoShield();
 
-		var response = await new JourneyPlayHandler(new CorroRulebook()).HandleAsync(
+		var response = await new JourneyPlayHandler().HandleAsync(
 			new JourneyPlayCommand { PlayerId = "A", InstanceId = "stop#0", TargetId = "B" }, ctx);
 
 		var action = Assert.IsType<JourneyActionResponse>(response);
@@ -309,7 +310,7 @@ public class JourneyTurnFlowTests
 	public async Task Accepting_the_coup_cancels_the_attack_and_steals_the_turn()
 	{
 		var (state, ctx) = AttackIntoShield();
-		await new JourneyPlayHandler(new CorroRulebook()).HandleAsync(
+		await new JourneyPlayHandler().HandleAsync(
 			new JourneyPlayCommand { PlayerId = "A", InstanceId = "stop#0", TargetId = "B" }, ctx);
 
 		var response = await new JourneyCoupHandler().HandleAsync(
@@ -327,7 +328,7 @@ public class JourneyTurnFlowTests
 	public async Task Declining_the_coup_is_SILENT_and_the_turn_moves_on()
 	{
 		var (state, ctx) = AttackIntoShield();
-		await new JourneyPlayHandler(new CorroRulebook()).HandleAsync(
+		await new JourneyPlayHandler().HandleAsync(
 			new JourneyPlayCommand { PlayerId = "A", InstanceId = "stop#0", TargetId = "B" }, ctx);
 
 		await new JourneyCoupHandler().HandleAsync(
@@ -357,7 +358,7 @@ public class JourneyTurnFlowTests
 		journey.HasDrawn = true;
 		journey.Seats[0].Hazards.Clear(); // rolling: the 25 completes the 25 km goal
 
-		var response = await new JourneyPlayHandler(new CorroRulebook()).HandleAsync(
+		var response = await new JourneyPlayHandler().HandleAsync(
 			new JourneyPlayCommand { PlayerId = "A", InstanceId = "distance-25#0" }, ctx);
 
 		var action = Assert.IsType<JourneyActionResponse>(response);
@@ -384,7 +385,7 @@ public class JourneyTurnFlowTests
 		journey.HasDrawn = true;
 		journey.Seats[0].Hazards.Clear();
 
-		await new JourneyPlayHandler(new CorroRulebook()).HandleAsync(
+		await new JourneyPlayHandler().HandleAsync(
 			new JourneyPlayCommand { PlayerId = "A", InstanceId = "distance-25#0" }, ctx);
 
 		Assert.True(state.IsGameOver);
@@ -403,7 +404,7 @@ public class JourneyTurnFlowTests
 		state.Journey!.HasDrawn = true;
 		state.Journey.Seats[0].Hazards.Clear();
 
-		await new JourneyPlayHandler(new CorroRulebook()).HandleAsync(
+		await new JourneyPlayHandler().HandleAsync(
 			new JourneyPlayCommand { PlayerId = "A", InstanceId = "distance-25#0" }, ctx);
 
 		Assert.True(state.IsGameOver);
@@ -421,7 +422,7 @@ public class JourneyTurnFlowTests
 		});
 		state.Journey!.HasDrawn = true;
 
-		await new JourneyDiscardHandler(new CorroRulebook()).HandleAsync(
+		await new JourneyDiscardHandler().HandleAsync(
 			new JourneyDiscardCommand { PlayerId = "A", InstanceId = "go#0" }, ctx);
 
 		// B is skipped: the table hears it, B hears the first-person line, C gets the turn.
@@ -439,7 +440,7 @@ public class JourneyTurnFlowTests
 			hands: new[] { ("A", new[] { "go" }), ("B", System.Array.Empty<string>()) });
 		// Empty pile: no draw required; discarding A's only card empties the table.
 
-		var response = await new JourneyDiscardHandler(new CorroRulebook()).HandleAsync(
+		var response = await new JourneyDiscardHandler().HandleAsync(
 			new JourneyDiscardCommand { PlayerId = "A", InstanceId = "go#0" }, ctx);
 
 		var action = Assert.IsType<JourneyActionResponse>(response);

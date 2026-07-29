@@ -20,6 +20,10 @@ public sealed class ForbiddenFamily : IGameFamily
 {
 	public string GameType => "forbidden";
 
+	/// <summary>Two teams, always: one side's clue-giver is watched by the OTHER side's monitor,
+	/// so there is no legal seating with one team or an odd table.</summary>
+	public int? RequiredTeamCount => 2;
+
 	/// <summary>The real word decks a package can offer in the lobby, preserving manifest order.</summary>
 	public static List<string> AvailableWordLanguages(GameDefinition definition)
 		=> definition.Manifest.Locales

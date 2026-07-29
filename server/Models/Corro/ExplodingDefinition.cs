@@ -8,7 +8,7 @@ namespace CorroServer.Models.Corro;
 // other family; it only picks counts and names).
 
 /// <summary>One card DEFINITION in the deck catalog (the deck holds <see cref="Count"/> copies).</summary>
-public sealed record ExplodingCardDef
+public sealed record ExplodingCardDef : IPackageCardDef
 {
 	public string Id { get; init; } = string.Empty;
 	/// <summary>Sanitized path-data loaded from optional assets/cards/&lt;id&gt;.svg.</summary>

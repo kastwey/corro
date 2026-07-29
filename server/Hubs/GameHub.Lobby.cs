@@ -85,8 +85,12 @@ public partial class GameHub
 				}
 				request = request with { Language = selectedWordLanguage };
 			}
-			if (isForbidden
-				&& (request.TeamCount != 2 || request.MaxPlayers is < 4 or > 8 || request.MaxPlayers % 2 != 0))
+			// A family that plays only in teams (forbidden: clue-giver vs the opposing monitor) says
+			// how many; the table must split evenly into exactly that many.
+			if (GameFamilies.For(stagedDefinition?.Manifest.GameType).RequiredTeamCount is { } required
+				&& (request.TeamCount != required
+					|| request.MaxPlayers % required != 0
+					|| request.MaxPlayers / required < 2))
 			{
 				await Clients.Caller.SendAsync("Error", "BAD_TEAM_COUNT");
 				return;
@@ -857,8 +861,11 @@ public partial class GameHub
 					return;
 				}
 			}
-			if (definition.Manifest.GameType == "forbidden"
-				&& (game.TeamCount != 2 || arrangedTeams is not { Count: 2 }))
+			// A team-only family must reach the table fully seated into exactly its team count —
+			// the lobby refused any other shape at creation, but a game restored from an older
+			// document (or one whose teams were never filled) is caught here.
+			if (GameFamilies.For(definition.Manifest.GameType).RequiredTeamCount is { } requiredTeams
+				&& (game.TeamCount != requiredTeams || arrangedTeams?.Count != requiredTeams))
 			{
 				await Clients.Caller.SendAsync("Error", "TEAMS_INCOMPLETE");
 				return;

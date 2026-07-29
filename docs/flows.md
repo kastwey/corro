@@ -12,12 +12,17 @@ You are in a match-and-discard game, focused on a card in your hand, and you pre
 1. `handPanel` sees Enter on the focused card and calls the family's `onPlay`.
 2. `sheddingBoard.playCard(card)` checks it's your turn locally (a fast, spoken refusal if
    not — the server would reject it anyway) and, for a wild, opens the colour picker.
-3. It calls `gameManager.sheddingPlay(instanceId, chosenColor)`, which via `runAsMe`
-   resolves your player id and guards the turn, then calls
-   `gameClient.sheddingPlay(...)`, which does `invoke("SheddingPlay", ...)` over SignalR.
+3. It calls `gameManager.sheddingPlay(instanceId, chosenColor)`, which via `send` resolves
+   your player id, guards the turn and stamps the id onto the command
+   `{ $type: 'SHEDDING_PLAY', instanceId, chosenColor, … }`. That goes to
+   `gameClient.executeCommand(...)` — the single `invoke("ExecuteCommand", …)` every action
+   in the game shares.
 
 **Server — decide and narrate**
-4. `GameHub.SheddingPlay` packages a `SheddingPlayCommand` and calls `ExecuteCommand`.
+4. `GameHub.ExecuteCommand` receives it: System.Text.Json materializes the `"SHEDDING_PLAY"`
+   discriminator into a `SheddingPlayCommand` (only types on `GameCommand`'s derived-type
+   allowlist can be built at all), the caller-identity check confirms the command names *you*,
+   and it goes to the game service.
 5. `CommandDispatcher` runs the **turn guard** (are you the current player?) and the trade
    guard, then routes to `SheddingPlayHandler`.
 6. The handler calls the **pure** `SheddingRulebook.Play(...)`, which mutates the

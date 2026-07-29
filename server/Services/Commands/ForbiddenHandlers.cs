@@ -93,14 +93,10 @@ public static class ForbiddenTurnFlow
 		=> state.Players.First(player => player.Id == playerId).Name;
 }
 
-public sealed class ForbiddenStartHandler : ICommandHandler<ForbiddenStartCommand>
+public sealed class ForbiddenStartHandler : PlayerCommandHandler<ForbiddenStartCommand>
 {
-	public async Task<ServerResponse> HandleAsync(ForbiddenStartCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(ForbiddenStartCommand command, Player player, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } playerError)
-		{
-			return playerError;
-		}
 		if (ForbiddenTurnFlow.RequireState(context, out var state, out _) is { } stateError)
 		{
 			return stateError;
@@ -128,14 +124,10 @@ public sealed class ForbiddenStartHandler : ICommandHandler<ForbiddenStartComman
 	}
 }
 
-public sealed class ForbiddenCorrectHandler : ICommandHandler<ForbiddenCorrectCommand>
+public sealed class ForbiddenCorrectHandler : PlayerCommandHandler<ForbiddenCorrectCommand>
 {
-	public async Task<ServerResponse> HandleAsync(ForbiddenCorrectCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(ForbiddenCorrectCommand command, Player player, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } playerError)
-		{
-			return playerError;
-		}
 		if (ForbiddenTurnFlow.RequireState(context, out var state, out var runtime) is { } stateError)
 		{
 			return stateError;
@@ -169,14 +161,10 @@ public sealed class ForbiddenCorrectHandler : ICommandHandler<ForbiddenCorrectCo
 	}
 }
 
-public sealed class ForbiddenPassHandler : ICommandHandler<ForbiddenPassCommand>
+public sealed class ForbiddenPassHandler : PlayerCommandHandler<ForbiddenPassCommand>
 {
-	public async Task<ServerResponse> HandleAsync(ForbiddenPassCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(ForbiddenPassCommand command, Player player, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } playerError)
-		{
-			return playerError;
-		}
 		if (ForbiddenTurnFlow.RequireState(context, out var state, out var runtime) is { } stateError)
 		{
 			return stateError;
@@ -208,14 +196,10 @@ public sealed class ForbiddenPassHandler : ICommandHandler<ForbiddenPassCommand>
 	}
 }
 
-public sealed class ForbiddenViolationHandler : ICommandHandler<ForbiddenViolationCommand>
+public sealed class ForbiddenViolationHandler : PlayerCommandHandler<ForbiddenViolationCommand>
 {
-	public async Task<ServerResponse> HandleAsync(ForbiddenViolationCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(ForbiddenViolationCommand command, Player player, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } playerError)
-		{
-			return playerError;
-		}
 		if (ForbiddenTurnFlow.RequireState(context, out var state, out var runtime) is { } stateError)
 		{
 			return stateError;

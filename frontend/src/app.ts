@@ -326,10 +326,10 @@ async function initBoard() {
 	// The turn really will end and I'm standing on a buyable property: confirm so an accidental
 	// Enter never forfeits it.
 	if (guard === 'confirm') {
-	  confirmForfeitBuyable(() => gameManager.endTurn(myId));
+	  confirmForfeitBuyable(() => gameManager.endTurn());
 	  return;
 	}
-	gameManager.endTurn(myId);
+	gameManager.endTurn();
   });
   const buyPropertySettled = guardSettled(() => openBuyConfirm());
   const payReleaseCostSettled = guardSettled(() => gameManager.payReleaseCost());

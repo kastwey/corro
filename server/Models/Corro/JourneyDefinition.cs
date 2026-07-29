@@ -11,7 +11,7 @@ namespace CorroServer.Models.Corro;
 // right-of-way immunity shields it like any other.
 
 /// <summary>One card DEFINITION in the deck catalog (the deck holds <see cref="Count"/> copies).</summary>
-public sealed record JourneyCardDef
+public sealed record JourneyCardDef : IPackageCardDef
 {
 	public string Id { get; init; } = string.Empty;
 	/// <summary>Sanitized path-data loaded from optional assets/cards/&lt;id&gt;.svg.</summary>

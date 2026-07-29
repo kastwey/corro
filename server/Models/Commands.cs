@@ -2,7 +2,66 @@ using System.Text.Json.Serialization;
 
 namespace CorroServer.Models;
 
-// Base type for every game command.
+/// <summary>
+/// Base type for every game command.
+///
+/// The derived-type list below is the WIRE ALLOWLIST: the hub takes a single
+/// <c>ExecuteCommand(GameCommand)</c> and System.Text.Json can only ever materialise one of
+/// these. Commands the SERVER alone may raise — the timer-driven auction end, the Nope-window
+/// resolution and the Forbidden turn expiry, all issued by <c>GameSessionRegistry</c> — are
+/// deliberately absent, so no client can forge them however it shapes the payload.
+///
+/// The discriminator values are the same strings <see cref="Type"/> reports, so a captured
+/// frame still reads as "ROLL_DICE" rather than a .NET type name.
+/// </summary>
+[JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization)]
+[JsonDerivedType(typeof(BuyPropertyCommand), "BUY_PROPERTY")]
+[JsonDerivedType(typeof(EndTurnCommand), "END_TURN")]
+[JsonDerivedType(typeof(RollDiceCommand), "ROLL_DICE")]
+[JsonDerivedType(typeof(MoveRacePieceCommand), "MOVE_RACE_PIECE")]
+[JsonDerivedType(typeof(TriviaChooseJudgeCommand), "TRIVIA_CHOOSE_JUDGE")]
+[JsonDerivedType(typeof(TriviaMoveCommand), "TRIVIA_MOVE")]
+[JsonDerivedType(typeof(TriviaAnswerCommand), "TRIVIA_ANSWER")]
+[JsonDerivedType(typeof(TriviaJudgeCommand), "TRIVIA_JUDGE")]
+[JsonDerivedType(typeof(ForbiddenStartCommand), "FORBIDDEN_START")]
+[JsonDerivedType(typeof(ForbiddenCorrectCommand), "FORBIDDEN_CORRECT")]
+[JsonDerivedType(typeof(ForbiddenPassCommand), "FORBIDDEN_PASS")]
+[JsonDerivedType(typeof(ForbiddenViolationCommand), "FORBIDDEN_VIOLATION")]
+[JsonDerivedType(typeof(JourneyDrawCommand), "JOURNEY_DRAW")]
+[JsonDerivedType(typeof(JourneyPlayCommand), "JOURNEY_PLAY")]
+[JsonDerivedType(typeof(JourneyDiscardCommand), "JOURNEY_DISCARD")]
+[JsonDerivedType(typeof(JourneyCoupCommand), "JOURNEY_COUP")]
+[JsonDerivedType(typeof(AssemblyPlayCommand), "ASSEMBLY_PLAY")]
+[JsonDerivedType(typeof(AssemblyDiscardCommand), "ASSEMBLY_DISCARD")]
+[JsonDerivedType(typeof(DraftPickCommand), "DRAFT_PICK")]
+[JsonDerivedType(typeof(SheddingPlayCommand), "SHEDDING_PLAY")]
+[JsonDerivedType(typeof(SheddingDrawCommand), "SHEDDING_DRAW")]
+[JsonDerivedType(typeof(SheddingKeepCommand), "SHEDDING_KEEP")]
+[JsonDerivedType(typeof(SheddingDeclareLastCardCommand), "SHEDDING_DECLARE_LAST_CARD")]
+[JsonDerivedType(typeof(SheddingCatchLastCardCommand), "SHEDDING_CATCH_LAST_CARD")]
+[JsonDerivedType(typeof(ExplodingPlayCommand), "EXPLODING_PLAY")]
+[JsonDerivedType(typeof(ExplodingGiveCommand), "EXPLODING_GIVE")]
+[JsonDerivedType(typeof(ExplodingNopeCommand), "EXPLODING_NOPE")]
+[JsonDerivedType(typeof(ExplodingDrawCommand), "EXPLODING_DRAW")]
+[JsonDerivedType(typeof(ExplodingDefuseCommand), "EXPLODING_DEFUSE")]
+[JsonDerivedType(typeof(BusChoiceCommand), "BUS_CHOICE")]
+[JsonDerivedType(typeof(PlaceBidCommand), "PLACE_BID")]
+[JsonDerivedType(typeof(PassAuctionCommand), "PASS_AUCTION")]
+[JsonDerivedType(typeof(GetMoneyCommand), "GET_MONEY")]
+[JsonDerivedType(typeof(GetReleasePassesCommand), "GET_RELEASE_PASSES")]
+[JsonDerivedType(typeof(PayReleaseCostCommand), "PAY_HOLDING_RELEASE_COST")]
+[JsonDerivedType(typeof(UseReleasePassCommand), "USE_RELEASE_PASS")]
+[JsonDerivedType(typeof(AnnounceTurnCommand), "ANNOUNCE_TURN")]
+[JsonDerivedType(typeof(MortgagePropertyCommand), "MORTGAGE_PROPERTY")]
+[JsonDerivedType(typeof(UnmortgagePropertyCommand), "UNMORTGAGE_PROPERTY")]
+[JsonDerivedType(typeof(SellBuildingsCommand), "SELL_BUILDINGS")]
+[JsonDerivedType(typeof(BuildCommand), "BUILD")]
+[JsonDerivedType(typeof(ResolveDebtCommand), "RESOLVE_DEBT")]
+[JsonDerivedType(typeof(DeclareBankruptcyCommand), "DECLARE_BANKRUPTCY")]
+[JsonDerivedType(typeof(GetDebtStatusCommand), "GET_DEBT_STATUS")]
+[JsonDerivedType(typeof(ProposeTradeCommand), "PROPOSE_TRADE")]
+[JsonDerivedType(typeof(RespondTradeCommand), "RESPOND_TRADE")]
+[JsonDerivedType(typeof(CancelTradeCommand), "CANCEL_TRADE")]
 public abstract record GameCommand
 {
 	public abstract string Type { get; }
@@ -470,6 +529,17 @@ public abstract record ServerResponse
 {
 	public abstract string Type { get; }
 	public DateTime Timestamp { get; init; } = DateTime.UtcNow;
+
+	/// <summary>
+	/// Who this response is for. A command's response is PRIVATE to the caller by default —
+	/// everyone else learns what happened through the announcements and the new state. A response
+	/// overrides this to true when a player who sent NO command still needs it to arrive: an
+	/// auction's winner, a trade's other party, a rival watching a bid, a spectator watching dice.
+	///
+	/// Each response says so itself, so the hub routes on the answer instead of matching a list of
+	/// type names, and the REASON lives next to the response it applies to.
+	/// </summary>
+	public virtual bool ReachesEveryPlayer => false;
 }
 
 /// <summary>Race family: outcome of a die roll (the move itself may need a piece choice).</summary>
@@ -667,6 +737,9 @@ public record PropertyPurchasedResponse : ServerResponse
 public record DiceRolledResponse : ServerResponse
 {
 	public override string Type => "DICE_ROLLED";
+	/// <summary>Every spectator's visual dice tray must show what was thrown (live-play bug:
+	/// "I only see dice when I roll"). The client handler is isMe-guarded, so spectators only paint.</summary>
+	public override bool ReachesEveryPlayer => true;
 	public required string PlayerId { get; init; }
 	public required string PlayerName { get; init; }
 	public int Die1 { get; init; }
@@ -734,6 +807,9 @@ public record AuctionStartedResponse : ServerResponse
 public record BidPlacedResponse : ServerResponse
 {
 	public override string Type => "BID_PLACED";
+	/// <summary>Rival bidders need the new bid INSTANTLY. The per-second timer tick also carries
+	/// it, but waiting up to a second made their "current bid" look frozen.</summary>
+	public override bool ReachesEveryPlayer => true;
 	public required int SquareIndex { get; init; }
 	public required string SquareName { get; init; }
 	public required string BidderId { get; init; }
@@ -760,6 +836,8 @@ public record AuctionPassedResponse : ServerResponse
 public record AuctionEndedResponse : ServerResponse
 {
 	public override string Type => "AUCTION_ENDED";
+	/// <summary>The winner sent no command — without this their auction modal never closes.</summary>
+	public override bool ReachesEveryPlayer => true;
 	public required int SquareIndex { get; init; }
 	public required string SquareName { get; init; }
 	public string? WinnerId { get; init; }
@@ -929,6 +1007,8 @@ public record TradeSideDto
 public record TradeProposedResponse : ServerResponse
 {
 	public override string Type => "TRADE_PROPOSED";
+	/// <summary>The other party must receive it for their trade dialog to open.</summary>
+	public override bool ReachesEveryPlayer => true;
 	public required string TradeId { get; init; }
 	public required string InitiatorId { get; init; }
 	public required string InitiatorName { get; init; }
@@ -949,6 +1029,8 @@ public record TradeProposedResponse : ServerResponse
 public record TradeResolvedResponse : ServerResponse
 {
 	public override string Type => "TRADE_RESOLVED";
+	/// <summary>The other party must receive it for their trade dialog to close.</summary>
+	public override bool ReachesEveryPlayer => true;
 	public required string TradeId { get; init; }
 
 	/// <summary>"accepted", "declined" or "cancelled".</summary>

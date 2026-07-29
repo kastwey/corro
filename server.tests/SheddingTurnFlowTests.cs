@@ -63,6 +63,7 @@ public class SheddingTurnFlowTests
 			Helper = baseContext.Helper,
 			Settings = baseContext.Settings,
 			FamilyRuntime = new SheddingRuntime(SheddingRulebook.Catalog(Deck()), Deck(), state.SheddingRules!),
+			Random = baseContext.Random,
 			Announce = baseContext.Announce,
 			Announcer = baseContext.Announcer,
 			Presenter = baseContext.Presenter,

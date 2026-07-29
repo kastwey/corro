@@ -115,7 +115,6 @@ public partial class CorroRulebook : ICorroRulebook
 	public int RollSingleDie() => _random.Next(1, 7);
 
 	/// <inheritdoc />
-	public IRandomSource RandomSource => _random;
 
 	private DiceResult RollDice(GameSettings settings, Player player)
 	{

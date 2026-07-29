@@ -448,65 +448,31 @@ public static class JourneyTurnFlow
 	}
 }
 
-/// <summary>Journey: draw the top card.</summary>
-public class JourneyDrawHandler : ICommandHandler<JourneyDrawCommand>
+/// <summary>Journey: draw the top card (the start of your turn).</summary>
+public class JourneyDrawHandler : PlayerCommandHandler<JourneyDrawCommand>
 {
-	public async Task<ServerResponse> HandleAsync(JourneyDrawCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await JourneyTurnFlow.DrawAsync(player, context);
-	}
+	protected override Task<ServerResponse> HandleAsync(JourneyDrawCommand command, Player player, GameContext context)
+		=> JourneyTurnFlow.DrawAsync(player, context);
 }
 
-/// <summary>Journey: play a card (attacks carry the victim). Carries the rulebook for its
-/// randomness source: ending a hand redeals through it (identity shuffle in E2E).</summary>
-public class JourneyPlayHandler : ICommandHandler<JourneyPlayCommand>
+/// <summary>Journey: play a card (attacks carry the victim). Ending a hand redeals through
+/// the context's randomness (identity shuffle in E2E).</summary>
+public class JourneyPlayHandler : PlayerCommandHandler<JourneyPlayCommand>
 {
-	private readonly ICorroRulebook _rulebook;
-	public JourneyPlayHandler(ICorroRulebook rulebook) => _rulebook = rulebook;
-
-	public async Task<ServerResponse> HandleAsync(JourneyPlayCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await JourneyTurnFlow.PlayAsync(command, player, context, _rulebook.RandomSource);
-	}
+	protected override Task<ServerResponse> HandleAsync(JourneyPlayCommand command, Player player, GameContext context)
+		=> JourneyTurnFlow.PlayAsync(command, player, context, context.Random);
 }
 
 /// <summary>Journey: discard instead of playing (may exhaust the hand → redeal too).</summary>
-public class JourneyDiscardHandler : ICommandHandler<JourneyDiscardCommand>
+public class JourneyDiscardHandler : PlayerCommandHandler<JourneyDiscardCommand>
 {
-	private readonly ICorroRulebook _rulebook;
-	public JourneyDiscardHandler(ICorroRulebook rulebook) => _rulebook = rulebook;
-
-	public async Task<ServerResponse> HandleAsync(JourneyDiscardCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await JourneyTurnFlow.DiscardAsync(command, player, context, _rulebook.RandomSource);
-	}
+	protected override Task<ServerResponse> HandleAsync(JourneyDiscardCommand command, Player player, GameContext context)
+		=> JourneyTurnFlow.DiscardAsync(command, player, context, context.Random);
 }
 
 /// <summary>Journey: the victim's coup fourré answer (out of turn).</summary>
-public class JourneyCoupHandler : ICommandHandler<JourneyCoupCommand>
+public class JourneyCoupHandler : PlayerCommandHandler<JourneyCoupCommand>
 {
-	public async Task<ServerResponse> HandleAsync(JourneyCoupCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await JourneyTurnFlow.ResolveCoupAsync(command, player, context);
-	}
+	protected override Task<ServerResponse> HandleAsync(JourneyCoupCommand command, Player player, GameContext context)
+		=> JourneyTurnFlow.ResolveCoupAsync(command, player, context);
 }

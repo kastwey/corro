@@ -80,6 +80,7 @@ public class AssemblyTurnFlowTests
 			Helper = baseContext.Helper,
 			Settings = baseContext.Settings,
 			FamilyRuntime = new AssemblyRuntime(AssemblyRulebook.Catalog(Deck), Deck, Rules),
+			Random = baseContext.Random,
 			Announce = baseContext.Announce,
 			Announcer = baseContext.Announcer,
 			Presenter = baseContext.Presenter,

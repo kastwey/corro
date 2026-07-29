@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Reflection;
 using CorroServer.Hubs;
 using CorroServer.Models;
@@ -203,42 +205,97 @@ public class GameHubRoutingTests
 	}
 
 	[Fact]
-	public async Task PayReleaseCost_RoutesPayReleaseCostCommand_WithCallerPlayerId()
+	public async Task ExecuteCommand_ForAnotherPlayer_IsRejected_AndNeverReachesTheGame()
 	{
-		var (hub, _, _, _, service) = BuildHubWithService(
+		// The single polymorphic entry point makes this the ONE guard standing between a client and
+		// every command in the engine, so it is pinned here: a payload naming somebody else's player
+		// id must be refused before the game service ever sees it.
+		var (hub, clients, _, _, service) = BuildHubWithService(
 			new BidPlacedResponse { SquareIndex = 0, SquareName = "", BidderId = "", BidderName = "", Amount = 0 });
 
-		await hub.PayReleaseCost("a");
+		await hub.ExecuteCommand(new RollDiceCommand { PlayerId = "b" });
 
-		var command = Assert.IsType<PayReleaseCostCommand>(service.LastCommand);
-		Assert.Equal("a", command.PlayerId);
+		Assert.Equal("CANNOT_EXECUTE_FOR_OTHERS", clients.Caller.LastError());
+		Assert.Null(service.LastCommand);
 	}
 
+	/// <summary>
+	/// The wire contract: a command the client is allowed to send round-trips through the
+	/// polymorphic allowlist into its own concrete type, carrying its payload. If a command is
+	/// ever added without a <c>[JsonDerivedType]</c> entry, its arm here stops deserializing.
+	/// </summary>
+	[Theory]
+	[InlineData("ROLL_DICE", typeof(RollDiceCommand), "")]
+	[InlineData("END_TURN", typeof(EndTurnCommand), "")]
+	[InlineData("PAY_HOLDING_RELEASE_COST", typeof(PayReleaseCostCommand), "")]
+	[InlineData("USE_RELEASE_PASS", typeof(UseReleasePassCommand), "")]
+	[InlineData("FORBIDDEN_CORRECT", typeof(ForbiddenCorrectCommand), ",\"cardSequence\":3")]
+	[InlineData("SHEDDING_PLAY", typeof(SheddingPlayCommand), ",\"instanceId\":\"red5#0\"")]
+	[InlineData("EXPLODING_NOPE", typeof(ExplodingNopeCommand), ",\"instanceId\":\"nope#0\"")]
+	[InlineData("PROPOSE_TRADE", typeof(ProposeTradeCommand), ",\"targetPlayerId\":\"b\"")]
+	public void GameCommand_DeserializesFromItsWireDiscriminator(string discriminator, Type expected, string payload)
+	{
+		var json = $$"""{"$type":"{{discriminator}}","playerId":"a"{{payload}}}""";
+
+		var command = JsonSerializer.Deserialize<GameCommand>(json, WireJson);
+
+		Assert.IsType(expected, command);
+		Assert.Equal("a", command!.PlayerId);
+		Assert.Equal(discriminator, command.Type);
+	}
+
+	/// <summary>
+	/// The other half of that contract, and the reason the allowlist is written by hand: the three
+	/// commands only <c>GameSessionRegistry</c>'s timers may raise — ending an auction, resolving a
+	/// Nope window, expiring a Forbidden turn — are absent from it, so a client cannot forge one
+	/// however it shapes the payload. Adding any of them to the list would fail this test.
+	/// </summary>
+	[Theory]
+	[InlineData("END_AUCTION")]
+	[InlineData("EXPLODING_RESOLVE_WINDOW")]
+	[InlineData("FORBIDDEN_EXPIRE_TURN")]
+	public void GameCommand_ServerOnlyCommands_CannotBeDeserializedFromTheWire(string discriminator)
+	{
+		var json = $$"""{"$type":"{{discriminator}}","playerId":"a"}""";
+
+		Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<GameCommand>(json, WireJson));
+	}
+
+	/// <summary>
+	/// The bid timer follows the STATE, not whichever command ran. It used to be stopped by the
+	/// hub's PassAuction method, which meant every other route out of an auction had to remember
+	/// to do it — and left auction-specific code sitting in the one entry point every family's
+	/// commands share. It is now reconciled on each state change, beside the Nope window and the
+	/// Forbidden clock.
+	/// </summary>
 	[Fact]
-	public async Task UseReleasePass_RoutesUseReleasePassCommand_WithCallerPlayerId()
+	public void BidTimer_RunsWhileTheAuctionIsLive_AndIsRetiredOnceItResolves()
 	{
-		var (hub, _, _, _, service) = BuildHubWithService(
-			new BidPlacedResponse { SquareIndex = 0, SquareName = "", BidderId = "", BidderName = "", Amount = 0 });
+		var live = new GameState
+		{
+			ActiveAuction = new AuctionState { SquareIndex = 1, SquareName = "Square 1", InitiatorPlayerId = "a" }
+		};
+		Assert.Same(live.ActiveAuction, GameSessionRegistry.ShouldRunBidTimer(live));
 
-		await hub.UseReleasePass("a");
+		// Resolved (a bid won it, or the last rival passed): IsActive goes false and the timer
+		// must not keep ticking against a finished auction.
+		var resolved = new GameState
+		{
+			ActiveAuction = new AuctionState
+			{
+				SquareIndex = 1, SquareName = "Square 1", InitiatorPlayerId = "a", IsActive = false
+			}
+		};
+		Assert.Null(GameSessionRegistry.ShouldRunBidTimer(resolved));
 
-		var command = Assert.IsType<UseReleasePassCommand>(service.LastCommand);
-		Assert.Equal("a", command.PlayerId);
+		// And an ordinary turn in any family — no auction at all — never arms it.
+		Assert.Null(GameSessionRegistry.ShouldRunBidTimer(new GameState()));
+		Assert.Null(GameSessionRegistry.ShouldRunBidTimer(null));
 	}
 
-	[Fact]
-	public async Task RollDice_RoutesRollDiceCommand_WithCallerPlayerId()
-	{
-		// Pins RollDice's routing so it can be simplified to delegate to ExecuteCommand (like the
-		// other command hub methods) instead of re-implementing auth/lookup/dispatch itself.
-		var (hub, _, _, _, service) = BuildHubWithService(
-			new BidPlacedResponse { SquareIndex = 0, SquareName = "", BidderId = "", BidderName = "", Amount = 0 });
-
-		await hub.RollDice("a");
-
-		var command = Assert.IsType<RollDiceCommand>(service.LastCommand);
-		Assert.Equal("a", command.PlayerId);
-	}
+	/// <summary>Deserializes the way SignalR's JSON protocol does (camelCase properties).</summary>
+	private static readonly JsonSerializerOptions WireJson =
+		new(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
 	[Fact]
 	public async Task CreateGameLobby_PersistsLobbySettings_NotJustTheDefaults()
@@ -615,10 +672,20 @@ public class GameHubRoutingTests
 	private sealed class RecordingProxy : ISingleClientProxy
 	{
 		private readonly List<string> _methods = new();
+		private readonly List<string> _errors = new();
 		public bool Received(string method) => _methods.Contains(method);
+
+		/// <summary>The last error CODE pushed to this target, or null if none — the hub sends
+		/// rejections as <c>Error</c> with the code as its single argument.</summary>
+		public string? LastError() => _errors.Count > 0 ? _errors[^1] : null;
+
 		public Task SendCoreAsync(string method, object?[] args, CancellationToken cancellationToken = default)
 		{
 			_methods.Add(method);
+			if (method == "Error" && args is [string code, ..])
+			{
+				_errors.Add(code);
+			}
 			return Task.CompletedTask;
 		}
 		public Task<T> InvokeCoreAsync<T>(string method, object?[] args, CancellationToken cancellationToken = default)

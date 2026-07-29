@@ -405,6 +405,34 @@ public sealed class GameSessionRegistry
 		}
 	}
 
+	/// <summary>Run the per-second bid timer while an auction is live, and retire it the moment
+	/// the auction resolves — however it resolved (the last rival passing, a bid winning it, the
+	/// property family's own paths). Like its two siblings above this is driven by the STATE, not
+	/// by which command ran, so no caller has to remember to stop it.
+	///
+	/// Re-arming on every state change is free: the countdown is computed from the authoritative
+	/// <see cref="AuctionState.CurrentPhaseStartedAt"/> (see
+	/// <c>AuctionTimerService.EvaluateBidTick</c>), never from the timer's own elapsed time, so the
+	/// timer is only a heartbeat. Restoring a game is the one case that arms explicitly instead
+	/// (GameHub gives the revived auction a FRESH window first, then arms).</summary>
+	private void ArmOrCancelAuctionTimer(string gameId, IGameService gameService)
+	{
+		if (ShouldRunBidTimer(gameService.GameState) is { } auction)
+		{
+			_timers.StartTimers(gameId, gameService.Settings, auction);
+		}
+		else
+		{
+			_timers.StopTimers(gameId);
+		}
+	}
+
+	/// <summary>The auction the bid timer should be running for, or null when it must be retired.
+	/// Pure, so the rule is unit-testable without a registry, timers or a live game — the same
+	/// treatment the dispatcher's guards and <c>AuctionTimerService.EvaluateBidTick</c> get.</summary>
+	internal static AuctionState? ShouldRunBidTimer(GameState? state)
+		=> state?.ActiveAuction is { IsActive: true } auction ? auction : null;
+
 	/// <summary>Keep the forbidden turn clock aligned with the live projected state. Card
 	/// changes do not reset it: every re-arm samples the same StartedAt value.</summary>
 	private void ArmOrCancelForbiddenTimer(string gameId, IGameService gameService)
@@ -590,6 +618,7 @@ public sealed class GameSessionRegistry
 			// so a Nope — which moves that stamp and re-fires this event — restarts the countdown.
 			ArmOrCancelNopeWindow(gameId, gameService);
 			ArmOrCancelForbiddenTimer(gameId, gameService);
+			ArmOrCancelAuctionTimer(gameId, gameService);
 
 			// Persist OFF the awaited command path: a per-game background writer coalesces (latest-wins)
 			// and reuses the cached GameDocument (no per-command Cosmos read).

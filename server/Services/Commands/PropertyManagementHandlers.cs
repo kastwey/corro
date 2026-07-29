@@ -7,7 +7,7 @@ namespace CorroServer.Services.Commands;
 /// Handler for mortgage property command.
 /// Validates and delegates to CorroRulebook.
 /// </summary>
-public class MortgagePropertyHandler : ICommandHandler<MortgagePropertyCommand>
+public class MortgagePropertyHandler : PlayerCommandHandler<MortgagePropertyCommand>
 {
 	private readonly ICorroRulebook _rulebook;
 
@@ -16,14 +16,9 @@ public class MortgagePropertyHandler : ICommandHandler<MortgagePropertyCommand>
 		_rulebook = rulebook;
 	}
 
-	public async Task<ServerResponse> HandleAsync(MortgagePropertyCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(MortgagePropertyCommand command, Player player, GameContext context)
 	{
 		context.Logger?.LogDebug("MortgagePropertyHandler: {PlayerId} mortgaging square {SquareIndex}", command.PlayerId, command.SquareIndex);
-
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
 
 		var outcome = await _rulebook.MortgagePropertyAsync(player, command.SquareIndex, context);
 
@@ -51,7 +46,7 @@ public class MortgagePropertyHandler : ICommandHandler<MortgagePropertyCommand>
 /// Handler for unmortgage property command.
 /// Validates and delegates to CorroRulebook.
 /// </summary>
-public class UnmortgagePropertyHandler : ICommandHandler<UnmortgagePropertyCommand>
+public class UnmortgagePropertyHandler : PlayerCommandHandler<UnmortgagePropertyCommand>
 {
 	private readonly ICorroRulebook _rulebook;
 
@@ -60,14 +55,9 @@ public class UnmortgagePropertyHandler : ICommandHandler<UnmortgagePropertyComma
 		_rulebook = rulebook;
 	}
 
-	public async Task<ServerResponse> HandleAsync(UnmortgagePropertyCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(UnmortgagePropertyCommand command, Player player, GameContext context)
 	{
 		context.Logger?.LogDebug("UnmortgagePropertyHandler: {PlayerId} unmortgaging square {SquareIndex}", command.PlayerId, command.SquareIndex);
-
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
 
 		var outcome = await _rulebook.UnmortgagePropertyAsync(player, command.SquareIndex, context);
 
@@ -94,7 +84,7 @@ public class UnmortgagePropertyHandler : ICommandHandler<UnmortgagePropertyComma
 /// Handler for sell smallBuildings command.
 /// Validates and delegates to CorroRulebook.
 /// </summary>
-public class SellBuildingsHandler : ICommandHandler<SellBuildingsCommand>
+public class SellBuildingsHandler : PlayerCommandHandler<SellBuildingsCommand>
 {
 	private readonly ICorroRulebook _rulebook;
 
@@ -103,14 +93,9 @@ public class SellBuildingsHandler : ICommandHandler<SellBuildingsCommand>
 		_rulebook = rulebook;
 	}
 
-	public async Task<ServerResponse> HandleAsync(SellBuildingsCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(SellBuildingsCommand command, Player player, GameContext context)
 	{
 		context.Logger?.LogDebug("SellBuildingsHandler: {PlayerId} selling {Count} smallBuildings on square {SquareIndex}", command.PlayerId, command.Count, command.SquareIndex);
-
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
 
 		// For now, sell one smallBuilding at a time
 		var totalSaleValue = 0;
@@ -170,7 +155,7 @@ public class SellBuildingsHandler : ICommandHandler<SellBuildingsCommand>
 /// Handler for build smallBuilding command.
 /// Validates and delegates to CorroRulebook.
 /// </summary>
-public class BuildHandler : ICommandHandler<BuildCommand>
+public class BuildHandler : PlayerCommandHandler<BuildCommand>
 {
 	private readonly ICorroRulebook _rulebook;
 
@@ -179,14 +164,9 @@ public class BuildHandler : ICommandHandler<BuildCommand>
 		_rulebook = rulebook;
 	}
 
-	public async Task<ServerResponse> HandleAsync(BuildCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(BuildCommand command, Player player, GameContext context)
 	{
 		context.Logger?.LogDebug("BuildHandler: {PlayerId} building {Count} on square {SquareIndex}", command.PlayerId, command.Count, command.SquareIndex);
-
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
 
 		// Build one smallBuilding at a time so the even-building rule is enforced per step.
 		var totalSpent = 0;
