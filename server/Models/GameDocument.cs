@@ -32,11 +32,11 @@ public record GameDocument
 	[JsonPropertyName("language")]
 	public string Language { get; init; } = "en";
 
-	/// <summary>Word-deck languages offered by a Forbidden Words package. Persisted with the
-	/// waiting room so the host can change the shared deck language before starting without
-	/// depending on transient package staging; empty for every other family.</summary>
-	[JsonPropertyName("forbiddenWordLanguages")]
-	public List<string> ForbiddenWordLanguages { get; init; } = new();
+	/// <summary>The content languages this package offers (see IGameFamily.ContentLanguages).
+	/// Persisted with the waiting room so the host can change the shared deck before starting
+	/// without depending on transient package staging; empty when content is not language-split.</summary>
+	[JsonPropertyName("contentLanguages")]
+	public List<string> ContentLanguages { get; init; } = new();
 
 	/// <summary>Token of the staged .corro package (null for a built-in board).</summary>
 	[JsonPropertyName("packageToken")]

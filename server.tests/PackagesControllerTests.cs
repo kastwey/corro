@@ -166,7 +166,7 @@ public class PackagesControllerTests
 		var result = await NewController(store).StageShipped("forbidden-words");
 
 		var response = Assert.IsType<PackageUploadResponse>(Assert.IsType<OkObjectResult>(result.Result).Value);
-		Assert.Equal(new[] { "en", "es" }, response.ForbiddenWordLanguages);
+		Assert.Equal(new[] { "en", "es" }, response.ContentLanguages);
 		store.Release(response.Token);
 	}
 

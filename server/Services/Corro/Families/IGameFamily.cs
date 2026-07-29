@@ -65,6 +65,19 @@ public interface IGameFamily
 	GameState ProjectFor(GameState state, string? playerId) => state;
 
 	/// <summary>
+	/// The languages this package's CONTENT is written in, when that content is language-split and
+	/// the host must pick ONE deck for the whole table (forbidden's word decks, trivia's question
+	/// decks). Empty — the default — means the family's content is not language-split at all, and
+	/// the lobby simply offers no choice.
+	///
+	/// This is NOT the interface language: every player still reads and hears the UI in their own.
+	/// It is the language of the words being guessed or the questions being asked, which the whole
+	/// table necessarily shares. The lobby offers the picker whenever this returns more than one,
+	/// so a family adopting language-split content needs no lobby change.
+	/// </summary>
+	IReadOnlyList<string> ContentLanguages(GameDefinition definition) => Array.Empty<string>();
+
+	/// <summary>
 	/// The number of teams this family REQUIRES the lobby to arrange, or null (the default) when
 	/// team play is optional and the host picks. A family that answers N is only playable as N
 	/// equal teams: the lobby rejects any other team count, and any table size that cannot split

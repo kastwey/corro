@@ -24,8 +24,9 @@ public sealed class ForbiddenFamily : IGameFamily
 	/// so there is no legal seating with one team or an odd table.</summary>
 	public int? RequiredTeamCount => 2;
 
-	/// <summary>The real word decks a package can offer in the lobby, preserving manifest order.</summary>
-	public static List<string> AvailableWordLanguages(GameDefinition definition)
+	/// <summary>The real word decks a package can offer in the lobby, preserving manifest order.
+	/// A locale the manifest lists but has no words for is not a choice, so it never appears.</summary>
+	public IReadOnlyList<string> ContentLanguages(GameDefinition definition)
 		=> definition.Manifest.Locales
 			.Where(locale => definition.ForbiddenWords?.ContainsKey(locale) == true)
 			.Distinct(StringComparer.OrdinalIgnoreCase)

@@ -28,9 +28,15 @@ public record PackageUploadResponse
 	/// <summary>A race board's seats (squadron colours) so the lobby offers a seat picker;
 	/// empty for the property family.</summary>
 	public List<LobbySeatInfo> Seats { get; init; } = new();
-	/// <summary>The real word-deck languages this Forbidden Words package supplies, in manifest
-	/// order. Empty for every other family; these are content choices, not player UI locales.</summary>
-	public List<string> ForbiddenWordLanguages { get; init; } = new();
+	/// <summary>The languages this package's language-split CONTENT is written in (a Forbidden
+	/// Words deck, a trivia question deck), in manifest order. The host picks ONE for the whole
+	/// table. Empty when the family's content is not language-split — this is a content choice,
+	/// never a player's UI locale, which stays per player.</summary>
+	public List<string> ContentLanguages { get; init; } = new();
+	/// <summary>The number of teams this family REQUIRES (see IGameFamily.RequiredTeamCount), or
+	/// null when team play is optional. The lobby offers only the table sizes that split evenly
+	/// into that many teams, instead of hardcoding which family needs what.</summary>
+	public int? RequiredTeamCount { get; init; }
 	/// <summary>
 	/// Optional i18n key (in the PACKAGE's own translations) the lobby shows the host as a notice when
 	/// they create a game with this board. Null when the package declares none. Carried verbatim — the

@@ -610,7 +610,7 @@ class UnifiedLobbyUI {
 		const select = getElement<HTMLSelectElement>('forbidden-word-language');
 		if (!group || !select) return;
 
-		const languages = pkg.gameType === 'forbidden' ? pkg.forbiddenWordLanguages ?? [] : [];
+		const languages = pkg.contentLanguages ?? [];
 		const selected = chooseWordLanguage(languages, preferred);
 		this.fillWordLanguageSelect(select, languages, selected);
 		const visible = languages.length > 1;
@@ -642,10 +642,13 @@ class UnifiedLobbyUI {
 		if (!select) return;
 		const min = pkg.minPlayers || 2;
 		const max = Math.max(pkg.maxPlayers || 8, min);
-		const forbidden = pkg.gameType === 'forbidden';
+		// A team-only board (forbidden: clue-giver vs the opposing monitor) only seats tables that
+		// split evenly into its teams, with at least two players each. The SERVER says how many —
+		// the lobby no longer guesses which family that is.
+		const teams = pkg.requiredTeamCount ?? 0;
 		select.innerHTML = '';
 		for (let n = min; n <= max; n++) {
-			if (forbidden && n % 2 !== 0) continue;
+			if (teams > 0 && (n % teams !== 0 || n / teams < 2)) continue;
 			const option = document.createElement('option');
 			option.value = String(n);
 			option.textContent = t('lobby.playersOption', '{{count}} players').replace('{{count}}', String(n));
@@ -855,15 +858,17 @@ class UnifiedLobbyUI {
 		const teamCount = (!getElement('team-count-group')?.classList.contains('hidden')
 			&& Number(getElement<HTMLSelectElement>('team-count')?.value)) || undefined;
 
+		// A package whose CONTENT is language-split (a word deck, a question deck) needs the host to
+		// name one deck for the whole table; every other package just travels with my own locale.
 		const interfaceLanguage = i18nBinder.getCurrentLanguage();
-		const wordLanguages = this.uploadedPackage.forbiddenWordLanguages ?? [];
-		const language = this.uploadedPackage.gameType === 'forbidden'
+		const contentLanguages = this.uploadedPackage.contentLanguages ?? [];
+		const language = contentLanguages.length > 0
 			? chooseWordLanguage(
-				wordLanguages,
+				contentLanguages,
 				getElement<HTMLSelectElement>('forbidden-word-language')?.value || interfaceLanguage,
 			)
 			: interfaceLanguage;
-		if (this.uploadedPackage.gameType === 'forbidden' && !language) {
+		if (contentLanguages.length > 0 && !language) {
 			return showError(t('lobby.errors.selectWordLanguage'));
 		}
 
@@ -1353,7 +1358,7 @@ class UnifiedLobbyUI {
 			const status = document.createElement('li');
 			status.textContent = t('lobby.statusWaiting', 'Waiting for players');
 			details.append(players, status);
-			if ((gameInfo.forbiddenWordLanguages?.length ?? 0) > 0 && gameInfo.language) {
+			if ((gameInfo.contentLanguages?.length ?? 0) > 0 && gameInfo.language) {
 				const wordLanguage = document.createElement('li');
 				wordLanguage.textContent = t('lobby.wordLanguageCurrent')
 					.replace('{{language}}', wordLanguageName(gameInfo.language, t));
@@ -1451,7 +1456,7 @@ class UnifiedLobbyUI {
 	/** The waiting room keeps the selected deck visible to everyone. The host receives a
 	 * real select and every guest receives one flowing read-only sentence. */
 	private renderWaitingWordLanguage(game: GameInfo): void {
-		const languages = game.forbiddenWordLanguages ?? [];
+		const languages = game.contentLanguages ?? [];
 		const selected = chooseWordLanguage(languages, game.language);
 		const hostGroup = getElement('host-forbidden-word-language-group');
 		const hostSelect = getElement<HTMLSelectElement>('host-forbidden-word-language');

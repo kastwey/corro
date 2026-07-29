@@ -456,7 +456,7 @@ public class GameHubRoutingTests
 		});
 
 		Assert.Equal("es", repository.Created!.Language);
-		Assert.Equal(new[] { "en", "es" }, repository.Created.ForbiddenWordLanguages);
+		Assert.Equal(new[] { "en", "es" }, repository.Created.ContentLanguages);
 		store.Release(token);
 	}
 
@@ -571,7 +571,7 @@ public class GameHubRoutingTests
 		var game = await hub.ReconnectLobby("g1", "host", "secret");
 
 		Assert.Equal("en", game.Language);
-		Assert.Equal(new[] { "en", "es" }, game.ForbiddenWordLanguages);
+		Assert.Equal(new[] { "en", "es" }, game.ContentLanguages);
 		Assert.Contains(hub.Context.ConnectionId, registry.LobbyConnectionIds("g1"));
 	}
 
@@ -583,7 +583,7 @@ public class GameHubRoutingTests
 		HostId = "host",
 		InviteCode = "INVITE",
 		Language = "en",
-		ForbiddenWordLanguages = new() { "en", "es" },
+		ContentLanguages = new() { "en", "es" },
 		Players = new()
 		{
 			new LobbyPlayer

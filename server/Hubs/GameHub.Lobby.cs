@@ -69,21 +69,19 @@ public partial class GameHub
 			var stagedDefinition = request.PackageToken is { } stagedToken
 				? _packageStore.GetDefinition(stagedToken)
 				: null;
-			var isForbidden = stagedDefinition?.Manifest.GameType == "forbidden";
-			var forbiddenWordLanguages = isForbidden
-				? ForbiddenFamily.AvailableWordLanguages(stagedDefinition!)
-				: new List<string>();
-			if (isForbidden)
+			// A family whose content is language-split (forbidden's words, trivia's questions) makes
+			// the host pick ONE deck for the whole table; everyone else keeps their own UI locale.
+			var contentLanguages = stagedDefinition is null
+				? new List<string>()
+				: GameFamilies.For(stagedDefinition.Manifest.GameType).ContentLanguages(stagedDefinition).ToList();
+			if (contentLanguages.Count > 0)
 			{
-				if (!LobbyInput.TrySelectLanguage(
-					forbiddenWordLanguages,
-					requestedLanguage,
-					out var selectedWordLanguage))
+				if (!LobbyInput.TrySelectLanguage(contentLanguages, requestedLanguage, out var selectedContentLanguage))
 				{
 					await Clients.Caller.SendAsync("Error", "CONTENT_LANGUAGE_UNAVAILABLE");
 					return;
 				}
-				request = request with { Language = selectedWordLanguage };
+				request = request with { Language = selectedContentLanguage };
 			}
 			// A family that plays only in teams (forbidden: clue-giver vs the opposing monitor) says
 			// how many; the table must split evenly into exactly that many.
@@ -115,7 +113,7 @@ public partial class GameHub
 				MaxPlayers = request.MaxPlayers,
 				Board = request.Board,
 				Language = request.Language,
-				ForbiddenWordLanguages = forbiddenWordLanguages,
+				ContentLanguages = contentLanguages,
 				PackageToken = request.PackageToken,
 				ShippedBoardId = origin?.ShippedId,
 				PackageBlobKey = origin?.BlobKey,
@@ -205,7 +203,7 @@ public partial class GameHub
 				return;
 			}
 			if (!LobbyInput.TrySelectLanguage(
-				game.ForbiddenWordLanguages,
+				game.ContentLanguages,
 				request.Language,
 				out var selectedLanguage))
 			{
@@ -509,7 +507,7 @@ public partial class GameHub
 			maxPlayers = game.MaxPlayers,
 			board = game.Board,
 			language = game.Language,
-			forbiddenWordLanguages = game.ForbiddenWordLanguages,
+			contentLanguages = game.ContentLanguages,
 			packageToken = game.PackageToken,
 			teamCount = game.TeamCount, // null = individual play
 			tokens = definition?.Manifest.Tokens, // the board's player pieces; null => client uses the 8 built-ins

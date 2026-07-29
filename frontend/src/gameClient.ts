@@ -597,7 +597,7 @@ export class UnifiedGameClient {
 				players: gameDocument.players || [],
 				board: gameDocument.board,
 				language: gameDocument.language,
-				forbiddenWordLanguages: gameDocument.forbiddenWordLanguages || [],
+				contentLanguages: gameDocument.contentLanguages || [],
 				packageToken: gameDocument.packageToken,
 				teamCount: gameDocument.teamCount,
 				voiceChatEnabled: gameDocument.voiceChatEnabled,

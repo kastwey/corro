@@ -842,8 +842,10 @@ export interface GameInfo {
   board?: string;
   /** Host-selected package-content language, fixed when play starts. */
   language?: string;
-  /** Shared word-deck languages offered by a Forbidden Words game. */
-  forbiddenWordLanguages?: string[];
+  /** The languages this package's language-split CONTENT offers (a word deck, a question deck).
+   *  The host picks one for the whole table; absent/empty when content is not language-split.
+   *  NOT the interface locale — every player keeps their own. */
+  contentLanguages?: string[];
   /** Token of the .corro package backing this game; set for a package board. */
   packageToken?: string;
   /** The board's player tokens (id + SVG + name key); absent => the joiner uses the 8 built-ins. */
@@ -951,8 +953,12 @@ export interface PackageUploadResponse {
   maxPlayers: number;
   /** A race board's seats (squadron colours) for the lobby's seat picker; empty for property. */
   seats?: LobbySeatInfo[];
-  /** Shared word-deck languages offered by a Forbidden Words package. */
-  forbiddenWordLanguages?: string[];
+  /** The languages this package's language-split CONTENT offers; empty when it has none.
+   *  The lobby shows the picker whenever there is more than one. */
+  contentLanguages?: string[];
+  /** How many teams this board REQUIRES, or absent when team play is optional. The player-count
+   *  selector offers only the table sizes that split evenly into that many. */
+  requiredTeamCount?: number | null;
   /**
    * An i18n key (in the PACKAGE's own translations) shown to the host as a notice when they create a
    * game with this board. Absent when the package declares none. The engine carries it verbatim and
