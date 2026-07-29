@@ -23,6 +23,7 @@
   grid-template-columns: minmax(0, 1fr) minmax(300px, 1.5fr);
   grid-template-areas:
     "hero title"
+    "scores now"
     "scores turn";
   gap: clamp(14px, 2vw, 24px);
   max-width: 1040px;
@@ -59,9 +60,18 @@
   text-shadow: 0 3px 0 var(--surface);
 }
 
-.forbidden-title {
+/* Title and subtitle share ONE grid cell as a flow container. Placing both in the same named
+   area made them two grid items stacked in the same box, so the subtitle painted over the
+   title as soon as either grew (a long locale, a wrapped line, a larger user font). */
+.forbidden-headline {
   grid-area: title;
   align-self: center;
+  min-width: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.forbidden-title {
   margin: 0;
   font-size: clamp(1.65rem, 4vw, 3.25rem);
   line-height: 1.02;
@@ -69,19 +79,37 @@
 }
 
 .forbidden-subtitle {
-  grid-area: title;
-  align-self: end;
-  margin: 0 0 -0.6rem;
+  margin: 0;
   color: var(--text-muted);
   font-size: clamp(0.95rem, 1.6vw, 1.1rem);
+  line-height: 1.45;
 }
 
 .forbidden-scoreboard,
+.forbidden-now,
 .forbidden-turn-card {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
+}
+
+/* "Who is playing" is the answer people look for first, so it is the loud element of the
+   board: full text colour on the accent wash, never the muted grey the duty lines use. */
+.forbidden-now {
+  grid-area: now;
+  align-self: start;
+  padding: clamp(14px, 2vw, 20px);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.forbidden-now__line {
+  margin: 6px 0 0;
+  color: var(--text);
+  font-size: clamp(1.02rem, 1.9vw, 1.2rem);
+  font-weight: 700;
+  line-height: 1.45;
 }
 
 .forbidden-scoreboard {
@@ -91,6 +119,7 @@
 }
 
 .forbidden-scoreboard h3,
+.forbidden-now h3,
 .forbidden-turn-card h3 {
   margin: 0;
   font-size: 1.05rem;
@@ -141,22 +170,31 @@
   gap: 18px;
 }
 
-.forbidden-role-line,
-.forbidden-role-detail,
 .forbidden-turn-summary,
-.forbidden-hint,
 .forbidden-control-hint {
   color: var(--text-muted);
 }
 
-.forbidden-role-line {
-  margin: 6px 0 0;
-  font-weight: 650;
-}
-
+/* My own duty carries the turn for me, so it keeps full contrast; the other players' rows sit
+   one step back without ever being dimmed by opacity alone. */
 .forbidden-role-detail {
   margin: 14px 0;
+  color: var(--text);
+  font-weight: 650;
   line-height: 1.55;
+}
+
+.forbidden-role-list {
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+
+.forbidden-role-item {
+  color: var(--text-muted);
+  line-height: 1.5;
 }
 
 .forbidden-secret {
@@ -205,11 +243,6 @@
   outline: none;
   border-color: var(--accent);
   box-shadow: var(--focus-ring);
-}
-
-.forbidden-hint {
-  margin: 10px 0 0;
-  font-size: 0.88rem;
 }
 
 .forbidden-timer {
@@ -295,6 +328,7 @@
       "hero"
       "title"
       "scores"
+      "now"
       "turn";
   }
 
@@ -302,13 +336,8 @@
     width: 88px;
   }
 
-  .forbidden-title,
-  .forbidden-subtitle {
+  .forbidden-headline {
     text-align: center;
-  }
-
-  .forbidden-subtitle {
-    margin: 8px 0 2px;
   }
 
   .forbidden-score-list {

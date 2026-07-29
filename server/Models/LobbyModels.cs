@@ -74,6 +74,13 @@ public record AssignTeamRequest
 	public int? TeamIndex { get; init; }
 }
 
+/// <summary>Host request: deal every player in the room into the teams at random.</summary>
+public record FillTeamsRequest
+{
+	public required string GameId { get; init; }
+	public required string HostId { get; init; }
+}
+
 /// <summary>Host request: change the one shared Forbidden Words deck language while the
 /// game is still in its waiting room.</summary>
 public record SetForbiddenWordLanguageRequest

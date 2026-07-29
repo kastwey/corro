@@ -720,6 +720,58 @@ public partial class GameHub
 	}
 
 	/// <summary>
+	/// Team mode: the HOST deals every player into the teams at random, in one move. The
+	/// arrangement is decided HERE — a client-side shuffle would be a burst of independent
+	/// requests that a player arriving mid-burst could leave half applied. The room gets the
+	/// usual document broadcast plus a TeamsFilled event so every client speaks the result.
+	/// </summary>
+	public async Task FillTeamsAtRandom(FillTeamsRequest request)
+	{
+		try
+		{
+			var game = await _gameRepository.LoadGameAsync(request.GameId);
+			if (game == null)
+			{
+				await Clients.Caller.SendAsync("Error", "GAME_NOT_FOUND");
+				return;
+			}
+			if (game.HostId != request.HostId)
+			{
+				await Clients.Caller.SendAsync("Error", "HOST_ONLY");
+				return;
+			}
+			if (game.Status != GameStatus.WaitingForPlayers || game.TeamCount is not { } teamCount || teamCount < 2)
+			{
+				await Clients.Caller.SendAsync("Error", "NO_TEAMS_HERE");
+				return;
+			}
+
+			var placements = LobbyTeams.DealAtRandom(
+				game.Players.Select(p => p.Id).ToList(),
+				teamCount,
+				game.MaxPlayers / teamCount,
+				_random);
+
+			var updatedGame = game with
+			{
+				Players = game.Players
+					.Select(p => placements.TryGetValue(p.Id, out var team) ? p with { TeamIndex = team } : p)
+					.ToList(),
+			};
+			var savedGame = await _gameRepository.UpdateGameAsync(updatedGame);
+
+			var lobbyGroup = $"lobby_{game.GameId}";
+			await Clients.Group(lobbyGroup).SendAsync("LobbyUpdated", savedGame.Sanitized());
+			await Clients.Group(lobbyGroup).SendAsync("TeamsFilled", new { gameId = game.GameId });
+		}
+		catch (Exception ex)
+		{
+			_logger?.LogError(ex, "Error in FillTeamsAtRandom");
+			await Clients.Caller.SendAsync("Error", "FILL_TEAMS_FAILED");
+		}
+	}
+
+	/// <summary>
 	/// Start a game via SignalR
 	/// </summary>
 	public async Task StartGameLobby(StartGameRequest request)

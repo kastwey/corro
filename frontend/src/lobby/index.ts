@@ -12,6 +12,7 @@ import { i18nBinder } from '../i18nBinder.js';
 import { randomBotName } from '../botNames.js';
 import { familyHasBots } from '../familyTraits.js';
 import { teamDisplayName } from '../enginePalette.js';
+import { joinList } from '../listFormat.js';
 import { popupMenu } from '../popupMenu.js';
 import { renderHouseRules, readHouseRuleValues } from '../houseRules.js';
 import { GameSessionStore, SavedGame } from '../sessionUtils.js';
@@ -29,7 +30,10 @@ import { applyRuleSettings, readRuleSettings } from './ruleFields.js';
 import { buildBotNameForm } from './botNameForm.js';
 import { createPlayerIdentity } from './playerListItem.js';
 import { RovingToolbarList } from '../accessibleList.js';
-import { nextTeamAddFocus, teamRosterStatus } from './teamRoster.js';
+import {
+	teamPanelFocusPlan, teamRosterStatus,
+	type PendingTeamFocus, type PreservedTeamFocus,
+} from './teamRoster.js';
 import { chooseWordLanguage, wordLanguageName } from './wordLanguage.js';
 import {
 	t, translateServerError, showLoading, showError,
@@ -54,12 +58,9 @@ class UnifiedLobbyUI {
 	/** Team member lists are rebuilt from authoritative lobby state; detach their delegated
 	 *  keyboard handlers before each rebuild. */
 	private teamListNavigators: RovingToolbarList[] = [];
-	/** Focus destination requested by an in-flight team move. The LobbyUpdated repaint consumes it. */
-	private pendingTeamFocus: {
-		preferredTeamIndex: number;
-		playerId: string;
-		expectedTeamIndex: number | null;
-	} | null = null;
+	/** Focus destination requested by an in-flight team move. Only the repaint that CONFIRMS the
+	 *  move consumes it, so unrelated repaints never drag the host's focus along. */
+	private pendingTeamFocus: PendingTeamFocus | null = null;
 	/** A manual deck choice must survive later interface-language changes. */
 	private wordLanguageExplicit = false;
 
@@ -149,7 +150,13 @@ class UnifiedLobbyUI {
 		});
 		gameClient.on('gameStarted', (data) => this.handleGameStarted(data));
 		gameClient.on('gameDeleted', (data) => this.handleGameDeleted(data));
-		gameClient.on('error', (msg) => showError(translateServerError(msg)));
+		gameClient.on('teamsFilled', () => this.handleTeamsFilled());
+		gameClient.on('error', (msg) => {
+			// A refused move never repaints anything, so its focus request would otherwise wait
+			// around and pounce on the next unrelated update.
+			this.pendingTeamFocus = null;
+			showError(translateServerError(msg));
+		});
 
 		// Language change handler
 		window.addEventListener('languageChanged', () => {
@@ -1597,6 +1604,17 @@ class UnifiedLobbyUI {
 		heading.textContent = t('lobby.teamsHeading');
 		panel.appendChild(heading);
 
+		// One move for the whole room: the arrangement everybody normally wants, without
+		// walking the pool player by player. Only offered while there is somebody to deal.
+		if (interactive && game.players.length > 0) {
+			const shuffle = document.createElement('button');
+			shuffle.type = 'button';
+			shuffle.className = 'secondary-button team-panel__shuffle';
+			shuffle.textContent = t('lobby.fillTeamsRandomly');
+			shuffle.addEventListener('click', () => { void this.fillTeamsAtRandom(); });
+			panel.appendChild(shuffle);
+		}
+
 		for (let index = 0; index < teamCount; index++) {
 			const members = game.players.filter(p => p.teamIndex === index);
 			const teamName = this.teamName(index);
@@ -1725,19 +1743,45 @@ class UnifiedLobbyUI {
 		}
 	}
 
+	/** Deal the whole room into the teams; the server decides the arrangement. */
+	private async fillTeamsAtRandom(): Promise<void> {
+		if (!this.currentGame || !this.isHost) return;
+		try {
+			await gameClient.fillTeamsAtRandom({
+				gameId: this.currentGame.gameId,
+				hostId: this.currentPlayerId,
+			});
+		} catch (error) {
+			console.error('Error filling teams:', error);
+			showError(t('lobby.errors.fillTeams'));
+		}
+	}
+
+	/** The room hears the arrangement itself, team by team — the repaint alone is silent. */
+	private handleTeamsFilled(): void {
+		const game = this.currentGame;
+		if (!game?.teamCount) return;
+		const rosters: string[] = [];
+		for (let index = 0; index < game.teamCount; index++) {
+			const names = game.players.filter(player => player.teamIndex === index).map(player => player.name);
+			if (names.length === 0) continue;
+			rosters.push(t('lobby.teamRoster')
+				.replace('{{team}}', this.teamName(index))
+				.replace('{{players}}', joinList(names)));
+		}
+		this.announceInLobby(`${t('lobby.teamsFilled')} ${rosters.join(' ')}`.trim());
+	}
+
 	private destroyTeamListNavigators(): void {
 		for (const navigator of this.teamListNavigators) navigator.destroy();
 		this.teamListNavigators = [];
 	}
 
 	/** Capture a stable identity before authoritative state replaces the team DOM. */
-	private captureTeamPanelFocus(): {
-		kind: 'add' | 'member' | 'action';
-		teamIndex: number;
-		playerId?: string;
-	} | null {
+	private captureTeamPanelFocus(): PreservedTeamFocus | null {
 		const active = document.activeElement as HTMLElement | null;
 		if (!active?.closest('#host-team-panel, #joined-team-panel')) return null;
+		if (active.matches('.team-panel__shuffle')) return { kind: 'shuffle', teamIndex: -1 };
 		const box = active.closest<HTMLElement>('.team-box');
 		const teamIndex = Number(box?.dataset.teamIndex);
 		if (!Number.isInteger(teamIndex)) return null;
@@ -1752,39 +1796,33 @@ class UnifiedLobbyUI {
 		};
 	}
 
-	private restoreTeamPanelFocus(
-		game: GameInfo,
-		preserved: { kind: 'add' | 'member' | 'action'; teamIndex: number; playerId?: string } | null,
-	): void {
+	private restoreTeamPanelFocus(game: GameInfo, preserved: PreservedTeamFocus | null): void {
 		const hostPanel = getElement('host-team-panel');
 		if (!hostPanel || !this.isHost) return;
 
-		const pending = this.pendingTeamFocus;
-		if (pending) {
-			const addButtons = Array.from(hostPanel.querySelectorAll<HTMLButtonElement>('.team-box__add'));
-			const addable = addButtons.map(button => Number(button.dataset.teamIndex));
-			const targetIndex = nextTeamAddFocus(pending.preferredTeamIndex, addable, game.teamCount ?? 0);
-			const target = targetIndex === null
-				? hostPanel.querySelector<HTMLElement>(`.team-member[data-player-id="${CSS.escape(pending.playerId)}"]`)
-				: addButtons.find(button => Number(button.dataset.teamIndex) === targetIndex) ?? null;
-			target?.focus();
-			const updated = game.players.find(player => player.id === pending.playerId);
-			if ((updated?.teamIndex ?? null) === pending.expectedTeamIndex) this.pendingTeamFocus = null;
-			return;
-		}
+		const addButtons = Array.from(hostPanel.querySelectorAll<HTMLButtonElement>('.team-box__add'));
+		const plan = teamPanelFocusPlan(
+			this.pendingTeamFocus,
+			preserved,
+			game.players.map(player => ({ id: player.id, teamIndex: player.teamIndex ?? null })),
+			addButtons.map(button => Number(button.dataset.teamIndex)),
+			game.teamCount ?? 0,
+		);
+		this.pendingTeamFocus = plan.pending;
+		if (!plan.target) return;
 
-		if (!preserved) return;
-		if (preserved.kind === 'add') {
-			const addButtons = Array.from(hostPanel.querySelectorAll<HTMLButtonElement>('.team-box__add'));
-			const addable = addButtons.map(button => Number(button.dataset.teamIndex));
-			const targetIndex = nextTeamAddFocus(preserved.teamIndex, addable, game.teamCount ?? 0);
-			addButtons.find(button => Number(button.dataset.teamIndex) === targetIndex)?.focus();
+		if (plan.target.kind === 'shuffle') {
+			hostPanel.querySelector<HTMLElement>('.team-panel__shuffle')?.focus();
 			return;
 		}
-		const row = preserved.playerId
-			? hostPanel.querySelector<HTMLElement>(`.team-member[data-player-id="${CSS.escape(preserved.playerId)}"]`)
-			: null;
-		if (preserved.kind === 'action') row?.querySelector<HTMLElement>('.team-member__actions button')?.focus();
+		if (plan.target.kind === 'add') {
+			const teamIndex = plan.target.teamIndex;
+			addButtons.find(button => Number(button.dataset.teamIndex) === teamIndex)?.focus();
+			return;
+		}
+		const row = hostPanel.querySelector<HTMLElement>(
+			`.team-member[data-player-id="${CSS.escape(plan.target.playerId)}"]`);
+		if (plan.target.kind === 'action') row?.querySelector<HTMLElement>('.team-member__actions button')?.focus();
 		else row?.focus();
 	}
 

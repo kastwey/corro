@@ -137,12 +137,11 @@ test('shared Spanish cards, per-player UI and authoritative role actions', async
 	await expect(anaCard).toHaveAttribute('aria-readonly', 'true');
 	await expect(anaCard).not.toHaveAttribute('readonly', /.*/);
 	await expect(anaCard).toHaveAttribute('rows', '7');
-	await expect(anaCard).toHaveAccessibleName('Clue-giver: target and forbidden words');
-	await expect(carlaCard).toHaveAccessibleName('Supervisor: objetivo y palabras prohibidas');
-	await expect(ana.locator('#forbidden-card-hint')).toContainText('Up and Down Arrow');
-	await expect(ana.locator('#forbidden-card-hint')).toContainText('press Enter to start the timer');
-	await expect(carla.locator('#forbidden-card-hint')).toContainText('Flecha arriba y Flecha abajo');
-	await expect(carla.locator('#forbidden-card-hint')).toContainText('pulsa V si el portavoz dice el objetivo');
+	// One word, the same for every role, and no paragraph read out on every single focus.
+	await expect(anaCard).toHaveAccessibleName('Words');
+	await expect(carlaCard).toHaveAccessibleName('Palabras');
+	await expect(ana.locator('#forbidden-card-hint')).toHaveCount(0);
+	await expect(anaCard).not.toHaveAttribute('aria-describedby', /.*/);
 	await expect(anaCard).toHaveValue(
 		'Target word: faro.\nForbidden words:\nluz,\ncosta,\ntorre,\nmar,\nbarco.');
 	await expect(carlaCard).toHaveValue(
@@ -150,25 +149,49 @@ test('shared Spanish cards, per-player UI and authoritative role actions', async
 	await expect(bertoCard).toHaveValue('');
 	await expect(davidCard).toHaveValue('');
 
-	// The persistent turn line and T query always name all three assignments. A player with
-	// a role hears "you" plus their duty; the unassigned fourth player is never given a fake
-	// supporter role. T remains available while the protected card itself owns focus.
+	// "Who is playing" is its own section, and it is the same fact for everyone at the table.
+	await expect(ana.locator('.forbidden-now h3')).toHaveText('Who is playing');
+	await expect(berto.locator('.forbidden-now h3')).toHaveText('Quién juega');
+	await expect(ana.locator('.forbidden-now__line')).toHaveText(
+		'Turn 1 of cycle 1: your Red team is about to play, and you give the clues.');
+	await expect(david.locator('.forbidden-now__line')).toHaveText(
+		'Turno 1 del ciclo 1: va a jugar el Equipo Rojo y Ana da las pistas.');
+	// Three named sibling regions, no nesting and no skipped level.
+	await expect(ana.locator('.forbidden-shell > section')).toHaveCount(3);
+	await expect(ana.locator('.forbidden-shell h4')).toHaveCount(0);
+	// Headings that ANNOUNCE as the same level must also LOOK like the same level: a new
+	// section that misses the shared rule renders at the UA default, which no Axe rule sees.
+	const headingSizes = await ana.evaluate(() =>
+		[...document.querySelectorAll('.forbidden-shell > section > h3')]
+			.map(h => getComputedStyle(h).fontSize));
+	expect(new Set(headingSizes).size, `section headings differ in size: ${headingSizes}`).toBe(1);
+
+	// The turn card now says MY duty, and lists everyone else — including the players holding
+	// no assignment at all, who had no line on this surface before.
 	await expect(ana.locator('.forbidden-role-detail')).toHaveText(
-		'Red team. You are the clue-giver: describe the target without saying it or using its forbidden words. '
-		+ 'Berto guesses, and Carla monitors the target and forbidden words.');
+		'You are the clue-giver: describe the target without saying it or using its forbidden words.');
 	await expect(berto.locator('.forbidden-role-detail')).toHaveText(
-		'Equipo Rojo. Te toca adivinar la palabra objetivo. Ana da las pistas y Carla supervisa el objetivo y las palabras prohibidas.');
+		'Este turno adivinas la palabra objetivo, en voz alta.');
 	await expect(carla.locator('.forbidden-role-detail')).toHaveText(
-		'Equipo Rojo. Eres el supervisor: pulsa V si Ana dice el objetivo o cualquiera de las palabras prohibidas. '
-		+ 'Ana da las pistas y Berto adivina.');
+		'Eres el supervisor: pulsa V si Ana dice el objetivo o cualquiera de las palabras prohibidas.');
 	await expect(david.locator('.forbidden-role-detail')).toHaveText(
-		'Equipo Rojo. Ana da las pistas, Carla supervisa el objetivo y las palabras prohibidas y Berto adivina.');
+		'Este turno apoyas a tu equipo, sin ninguna acción propia.');
+	await expect(ana.locator('.forbidden-role-list li')).toHaveText([
+		'Berto guesses for the Red team.',
+		'Carla monitors the target and the forbidden words for the blue team.',
+		'David supports the blue team this turn.',
+	]);
+	await expect(david.locator('.forbidden-role-list li')).toHaveText([
+		'Ana da las pistas por el Equipo Rojo.',
+		'Berto adivina por el Equipo Rojo.',
+		'Carla supervisa el objetivo y las palabras prohibidas por el Equipo azul.',
+	]);
 
 	for (const [page, focus, announcement] of [
-		[ana, anaCard, /Red team\. You are the clue-giver.*Berto guesses.*Carla monitors/],
-		[berto, berto.locator('.forbidden-shell'), /Equipo Rojo\. Te toca adivinar.*Ana da las pistas.*Carla supervisa/],
-		[carla, carlaCard, /Equipo Rojo\. Eres el supervisor.*Ana da las pistas.*Berto adivina/],
-		[david, david.locator('.forbidden-shell'), /Equipo Rojo\. Ana da las pistas.*Carla supervisa.*Berto adivina/],
+		[ana, anaCard, /your Red team is about to play.*You are the clue-giver.*David supports/],
+		[berto, berto.locator('.forbidden-shell'), /va a jugar el Equipo Rojo.*adivinas la palabra objetivo.*Ana da las pistas/],
+		[carla, carlaCard, /va a jugar el Equipo Rojo.*Eres el supervisor.*Berto adivina/],
+		[david, david.locator('.forbidden-shell'), /va a jugar el Equipo Rojo.*apoyas a tu equipo.*Carla supervisa/],
 	] as const) {
 		await page.evaluate(() => { ((window as any).__announcements as string[]).length = 0; });
 		await focus.focus();
@@ -277,5 +300,53 @@ test('shared Spanish cards, per-player UI and authoritative role actions', async
 			.slice(0, 20);
 	});
 	expect(overflow, `horizontal overflow at 390px: ${JSON.stringify(overflow)}`).toEqual([]);
+
+	// The headline is two boxes in ONE grid cell's flow, never two items stacked in the same
+	// cell: the subtitle used to be painted over the title, which no Axe rule can see.
+	for (const page of [carla, berto]) {
+		const headline = await page.evaluate(() => {
+			const title = document.querySelector('.forbidden-title')!.getBoundingClientRect();
+			const subtitle = document.querySelector('.forbidden-subtitle')!.getBoundingClientRect();
+			return { titleBottom: title.bottom, titleHeight: title.height, subtitleTop: subtitle.top, subtitleHeight: subtitle.height };
+		});
+		expect(headline.titleHeight, 'the title is rendered').toBeGreaterThan(0);
+		expect(headline.subtitleHeight, 'the subtitle is rendered').toBeGreaterThan(0);
+		expect(headline.subtitleTop, `subtitle overlaps the title: ${JSON.stringify(headline)}`)
+			.toBeGreaterThanOrEqual(headline.titleBottom - 1);
+	}
 	await flushAxeAudit(carla);
+});
+
+test('the host can deal the whole room into the teams in one move', async ({ browser }) => {
+	const ana = await newPlayerPage(browser, 'es-ES');
+	const berto = await newPlayerPage(browser, 'es-ES');
+	const carla = await newPlayerPage(browser, 'es-ES');
+	const david = await newPlayerPage(browser, 'es-ES');
+
+	const code = await createGame(ana, 'Ana', BOARD, { maxPlayers: 4, teamCount: 2 });
+	await joinGame(berto, code, 'Berto');
+	await joinGame(carla, code, 'Carla');
+	await joinGame(david, code, 'David');
+
+	const shuffle = ana.locator('#host-team-panel .team-panel__shuffle');
+	await expect(shuffle).toHaveText('Repartir los equipos al azar');
+	// Guests watch the same picture without the controls.
+	await expect(berto.locator('#joined-team-panel .team-panel__shuffle')).toHaveCount(0);
+	await flushAxeAudit(ana);
+
+	await berto.evaluate(() => { ((window as any).__announcements as string[]).length = 0; });
+	await shuffle.click();
+
+	// Everybody is placed, the teams come out even, and the pool is empty.
+	await expect(ana.locator('#host-team-panel .team-box').nth(0).locator('legend')).toHaveText(/2\/2/);
+	await expect(ana.locator('#host-team-panel .team-box').nth(1).locator('legend')).toHaveText(/2\/2/);
+	await expect(ana.locator('#host-team-panel .team-pool'))
+		.toHaveText(appI18n('es').lobby.teamPoolEmpty as string);
+	// The room HEARS the arrangement — the repaint alone says nothing to a screen reader.
+	await expectAnnouncement(berto, /Equipos repartidos al azar\..*Equipo Rojo: .*Equipo azul: /);
+	await flushAxeAudit(ana);
+
+	// And the deal is a real arrangement the game can start from.
+	await startGame(ana, [ana, berto, carla, david]);
+	await expect(ana.locator('.forbidden-now__line')).toContainText('Turno 1 del ciclo 1');
 });

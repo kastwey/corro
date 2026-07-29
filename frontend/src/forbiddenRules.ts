@@ -26,28 +26,79 @@ export function forbiddenRoleLabel(role: ForbiddenRole, t: T): string {
 }
 
 /**
- * Complete current-turn context for the role table and T shortcut. Every perspective names
- * all three assignments; only a player who actually has one is addressed as "you". This is
- * intentionally separate from the score-oriented S status so "whose turn?" always explains
- * what each person must do, including for the unassigned fourth player.
+ * The headline of the turn: which team is up, whose voice carries it, and where we are in the
+ * match. It is the answer to "who is playing?" at a glance, so it deliberately leaves out the
+ * seconds (the timer panel owns those) and every duty (the turn card owns those).
  */
-export function forbiddenTurnContextText(gs: GameState, playerId: string, t: T): string | null {
+export function forbiddenNowPlayingText(gs: GameState, playerId: string, t: T): string | null {
+	const state = gs.forbidden;
+	const turn = state?.turn;
+	if (!state || !turn) return null;
+	const mine = turn.clueGiverId === playerId;
+	const vars = {
+		turn: turn.turnNumber,
+		cycle: state.cycle,
+		team: teamDisplayName(turn.teamIndex, t),
+		clueGiver: gs.players.find(player => player.id === turn.clueGiverId)?.name ?? turn.clueGiverId,
+	};
+	const key = turn.phase === 'active' ? 'game.forbidden_now_active' : 'game.forbidden_now_preparing';
+	return t(mine ? `${key}_self` : key, vars);
+}
+
+/** What THIS player must do while the turn runs — their own duty, nobody else's. */
+export function forbiddenDutyText(gs: GameState, playerId: string, t: T): string | null {
 	const turn = gs.forbidden?.turn;
 	if (!turn) return null;
-	const name = (id: string) => gs.players.find(player => player.id === id)?.name ?? id;
-	const vars = {
-		team: teamDisplayName(turn.teamIndex, t),
-		clueGiver: name(turn.clueGiverId),
-		guesser: name(turn.guesserId),
-		monitor: name(turn.monitorId),
+	const clueGiver = gs.players.find(player => player.id === turn.clueGiverId)?.name ?? turn.clueGiverId;
+	switch (forbiddenRole(turn, playerId)) {
+		case 'clue-giver': return t('game.forbidden_duty_clue_giver');
+		case 'guesser': return t('game.forbidden_duty_guesser');
+		case 'monitor': return t('game.forbidden_duty_monitor', { clueGiver });
+		default: return t('game.forbidden_duty_spectator');
+	}
+}
+
+/**
+ * Everyone ELSE at the table this turn, one flowing sentence each, in the order the turn runs
+ * through them: the clue-giver, the guesser, the monitor, then the players supporting from
+ * their seats — who hold no assignment and were, until now, invisible to a player who cannot
+ * see the table. Each line names the team it belongs to, since the monitor comes from the rival one.
+ */
+export function forbiddenOtherRoleLines(gs: GameState, playerId: string, t: T): string[] {
+	const state = gs.forbidden;
+	const turn = state?.turn;
+	if (!state || !turn) return [];
+
+	const roleOf = (id: string): ForbiddenRole => forbiddenRole(turn, id);
+	const order: Record<ForbiddenRole, number> = {
+		'clue-giver': 0, guesser: 1, monitor: 2, spectator: 3,
+	};
+	const key: Record<ForbiddenRole, string> = {
+		'clue-giver': 'game.forbidden_role_item_clue_giver',
+		guesser: 'game.forbidden_role_item_guesser',
+		monitor: 'game.forbidden_role_item_monitor',
+		spectator: 'game.forbidden_role_item_supporter',
 	};
 
-	switch (forbiddenRole(turn, playerId)) {
-		case 'clue-giver': return t('game.forbidden_turn_context_clue_giver', vars);
-		case 'guesser': return t('game.forbidden_turn_context_guesser', vars);
-		case 'monitor': return t('game.forbidden_turn_context_monitor', vars);
-		default: return t('game.forbidden_turn_context_spectator', vars);
-	}
+	return state.teams
+		.flatMap(team => team.memberIds.map(id => ({ id, teamIndex: team.teamIndex })))
+		.filter(member => member.id !== playerId)
+		.sort((a, b) => order[roleOf(a.id)] - order[roleOf(b.id)])
+		.map(member => t(key[roleOf(member.id)], {
+			player: gs.players.find(player => player.id === member.id)?.name ?? member.id,
+			team: teamDisplayName(member.teamIndex, t),
+		}));
+}
+
+/**
+ * The complete turn context the T shortcut speaks: exactly what the turn card shows — the
+ * headline, my own duty, and everyone else's — so hearing it and reading it can never diverge.
+ */
+export function forbiddenTurnContextText(gs: GameState, playerId: string, t: T): string | null {
+	const now = forbiddenNowPlayingText(gs, playerId, t);
+	const duty = forbiddenDutyText(gs, playerId, t);
+	if (!now || !duty) return null;
+	return [now, duty, ...forbiddenOtherRoleLines(gs, playerId, t)].join(' ');
 }
 
 /** One flowing status sentence for the player panel and S shortcut. */

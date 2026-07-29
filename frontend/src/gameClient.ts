@@ -62,6 +62,7 @@ export interface GameClientEvents {
 	'gameStarted': StartGameResponse;
 	'lobbyUpdated': GameInfo;
 	'teamAssigned': { gameId: string; playerId: string; playerName: string; teamIndex: number | null };
+	'teamsFilled': { gameId: string };
 	'forbiddenWordLanguageChanged': { gameId: string; language: string };
 	'lobbyState': { gameId: string; status: string; players: any[] };
 	'playerJoined': { playerId: string; playerName: string };
@@ -199,6 +200,11 @@ export class UnifiedGameClient {
 			this.emit('teamAssigned', data);
 		});
 
+		// The host dealt the whole room into the teams in one move.
+		this.connection.on('TeamsFilled', (data: { gameId: string }) => {
+			this.emit('teamsFilled', data);
+		});
+
 		this.connection.on('ForbiddenWordLanguageChanged', (data: { gameId: string; language: string }) => {
 			this.emit('forbiddenWordLanguageChanged', data);
 		});
@@ -317,6 +323,11 @@ export class UnifiedGameClient {
 	/** Journey team mode (host only): place a player in a team, or back in the pool (null). */
 	async assignTeam(request: { gameId: string; hostId: string; playerId: string; teamIndex: number | null }): Promise<void> {
 		await this.invoke("AssignTeam", request);
+	}
+
+	/** Team mode (host only): deal every player in the room into the teams at random. */
+	async fillTeamsAtRandom(request: { gameId: string; hostId: string }): Promise<void> {
+		await this.invoke("FillTeamsAtRandom", request);
 	}
 
 	/** Change the one shared Forbidden Words deck language while the game is waiting. */

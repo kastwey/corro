@@ -198,6 +198,10 @@
 	margin: 1rem 0;
 }
 
+.team-panel__shuffle {
+	margin: 0.25rem 0 0.75rem;
+}
+
 .team-box {
 	border: 1px solid var(--border);
 	border-radius: var(--radius-sm);
