@@ -136,29 +136,22 @@ public sealed class PackageValidator : IPackageValidator
 			Add(c.TextKey, $"card '{c.Id}'");
 		}
 
+		// Every card of every family needs a translatable name; the family word in the report comes
+		// from the game type, so a new card family is covered without touching this sweep.
+		var family = d.Manifest.GameType;
+		foreach (var card in d.AllFamilyCards)
+		{
+			Add(card.NameKey, $"{family} card '{card.Id}'");
+		}
+
+		// A "played" line is the journey/assembly families' own second key per card.
 		foreach (var jc in d.JourneyDeck ?? new List<Models.Corro.JourneyCardDef>())
 		{
-			Add(jc.NameKey, $"journey card '{jc.Id}'");
 			Add(jc.PlayedKey, $"journey card '{jc.Id}' playedKey");
 		}
 		foreach (var ac in d.AssemblyDeck ?? new List<Models.Corro.AssemblyCardDef>())
 		{
-			Add(ac.NameKey, $"assembly card '{ac.Id}'");
 			Add(ac.PlayedKey, $"assembly card '{ac.Id}' playedKey");
-		}
-		foreach (var dc in d.DraftDeck ?? new List<Models.Corro.DraftCardDef>())
-		{
-			Add(dc.NameKey, $"draft card '{dc.Id}'");
-		}
-
-		foreach (var sc in d.SheddingDeck ?? new List<Models.Corro.SheddingCardDef>())
-		{
-			Add(sc.NameKey, $"shedding card '{sc.Id}'");
-		}
-
-		foreach (var ec in d.ExplodingDeck ?? new List<Models.Corro.ExplodingCardDef>())
-		{
-			Add(ec.NameKey, $"exploding card '{ec.Id}'");
 		}
 		// Wilds NAME the colour in force out loud: every deck colour needs a spoken name.
 		foreach (var color in (d.SheddingDeck ?? new List<Models.Corro.SheddingCardDef>())
