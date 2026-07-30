@@ -145,10 +145,10 @@
 				</div>
 
 				<!-- Forbidden Words only: one shared real-content deck for the whole match. -->
-				<div class="form-group hidden" id="forbidden-word-language-group" hidden>
-					<label for="forbidden-word-language" data-i18n="lobby.wordLanguage">Word language:</label>
-					<select id="forbidden-word-language" aria-describedby="forbidden-word-language-hint"></select>
-					<p id="forbidden-word-language-hint" class="form-hint" data-i18n="lobby.wordLanguageHint">Everyone uses the same target and forbidden words; interface languages stay personal.</p>
+				<div class="form-group hidden" id="content-language-group" hidden>
+					<label for="content-language" data-i18n="lobby.contentLanguage">Content language:</label>
+					<select id="content-language" aria-describedby="content-language-hint"></select>
+					<p id="content-language-hint" class="form-hint" data-i18n="lobby.contentLanguageHint">The whole table shares one deck, so everyone plays with the same words and questions; each player still reads the interface in their own language.</p>
 				</div>
 
 				<details id="rules-details" class="rules-details">
@@ -325,10 +325,10 @@
 					</div>
 					<div id="created-rejoin-mount"></div>
 
-					<div class="form-group hidden" id="host-forbidden-word-language-group" hidden>
-						<label for="host-forbidden-word-language" data-i18n="lobby.wordLanguage">Word language:</label>
-						<select id="host-forbidden-word-language" aria-describedby="host-forbidden-word-language-hint"></select>
-						<p id="host-forbidden-word-language-hint" class="form-hint" data-i18n="lobby.wordLanguageWaitingHint">The host may change this shared deck until the game starts.</p>
+					<div class="form-group hidden" id="host-content-language-group" hidden>
+						<label for="host-content-language" data-i18n="lobby.contentLanguage">Content language:</label>
+						<select id="host-content-language" aria-describedby="host-content-language-hint"></select>
+						<p id="host-content-language-hint" class="form-hint" data-i18n="lobby.contentLanguageWaitingHint">The host may change this shared deck until the game starts.</p>
 					</div>
 
 					<div class="player-list">
@@ -353,7 +353,7 @@
 					<h3 data-i18n="lobby.waitingRoom">Waiting room</h3>
 
 					<div id="joined-rejoin-mount"></div>
-					<p id="joined-forbidden-word-language" class="hidden" hidden></p>
+					<p id="joined-content-language" class="hidden" hidden></p>
 					<div class="player-list">
 						<h4 data-i18n="lobby.playersInRoom">Players in room:</h4>
 						<ul id="joined-player-list"></ul>

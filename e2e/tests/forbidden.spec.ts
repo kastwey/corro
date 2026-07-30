@@ -58,30 +58,30 @@ test('shared Spanish cards, per-player UI and authoritative role actions', async
 	const code = await createGame(ana, 'Ana', BOARD, {
 		maxPlayers: 4,
 		teamCount: 2,
-		wordLanguage: 'es',
+		contentLanguage: 'es',
 	});
-	await expect(ana.locator('#host-forbidden-word-language-group')).toBeVisible();
-	await expect(ana.locator('#host-forbidden-word-language')).toHaveValue('es');
+	await expect(ana.locator('#host-content-language-group')).toBeVisible();
+	await expect(ana.locator('#host-content-language')).toHaveValue('es');
 	await ana.reload();
 	await expect(ana.locator('#lobby-created')).toBeVisible();
-	await expect(ana.locator('#host-forbidden-word-language')).toHaveValue('es');
+	await expect(ana.locator('#host-content-language')).toHaveValue('es');
 	await joinGame(berto, code, 'Berto');
 	await joinGame(carla, code, 'Carla');
 	await joinGame(david, code, 'David');
 	for (const page of [berto, carla, david]) {
-		await expect(page.locator('#joined-forbidden-word-language')).toHaveText(
-			appI18n('es').lobby.wordLanguageCurrent.replace('{{language}}', appI18n('es').language.spanish),
+		await expect(page.locator('#joined-content-language')).toHaveText(
+			appI18n('es').lobby.contentLanguageCurrent.replace('{{language}}', appI18n('es').language.spanish),
 		);
 	}
 
 	// The host can still change the shared deck while everyone is in the waiting room. Every
 	// listener sees and hears the authoritative update; the final Spanish choice survives start.
 	await berto.evaluate(() => { ((window as any).__announcements as string[]).length = 0; });
-	await ana.locator('#host-forbidden-word-language').selectOption('en');
-	await expect(berto.locator('#joined-forbidden-word-language')).toContainText('Inglés');
-	await expectAnnouncement(berto, /idioma de las palabras ahora es Inglés/);
-	await ana.locator('#host-forbidden-word-language').selectOption('es');
-	await expect(berto.locator('#joined-forbidden-word-language')).toContainText('Español');
+	await ana.locator('#host-content-language').selectOption('en');
+	await expect(berto.locator('#joined-content-language')).toContainText('Inglés');
+	await expectAnnouncement(berto, /idioma del contenido ahora es Inglés/);
+	await ana.locator('#host-content-language').selectOption('es');
+	await expect(berto.locator('#joined-content-language')).toContainText('Español');
 
 	await expect(ana.locator('#host-team-panel .team-box')).toHaveCount(2);
 	await assign(ana, 0, 'Ana');

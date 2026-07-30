@@ -431,7 +431,7 @@ public class GameHubRoutingTests
 	}
 
 	[Fact]
-	public async Task CreateGameLobby_PersistsTheExplicitForbiddenWordLanguageAndChoices()
+	public async Task CreateGameLobby_PersistsTheExplicitContentLanguageAndChoices()
 	{
 		var repository = new CapturingRepository();
 		var store = new CorroPackageStore(
@@ -461,7 +461,7 @@ public class GameHubRoutingTests
 	}
 
 	[Fact]
-	public async Task CreateGameLobby_RejectsAForbiddenWordLanguageOutsideThePackage()
+	public async Task CreateGameLobby_RejectsAContentLanguageOutsideThePackage()
 	{
 		var repository = new CapturingRepository();
 		var store = new CorroPackageStore(
@@ -491,7 +491,7 @@ public class GameHubRoutingTests
 	}
 
 	[Fact]
-	public async Task Host_can_change_the_Forbidden_Words_language_while_waiting()
+	public async Task Host_can_change_the_shared_content_language_while_waiting()
 	{
 		var repository = new CapturingRepository();
 		repository.Seed(WaitingForbiddenGame());
@@ -501,7 +501,7 @@ public class GameHubRoutingTests
 		registry.MapConnectionToGame(hub.Context.ConnectionId, "g1");
 		registry.AuthenticateConnection(hub.Context.ConnectionId, "host");
 
-		await hub.SetForbiddenWordLanguage(new SetForbiddenWordLanguageRequest
+		await hub.SetContentLanguage(new SetContentLanguageRequest
 		{
 			GameId = "g1",
 			HostId = "host",
@@ -510,11 +510,11 @@ public class GameHubRoutingTests
 
 		Assert.Equal("es", repository.Created!.Language);
 		Assert.True(clients.Group("lobby_g1").Received("LobbyUpdated"));
-		Assert.True(clients.Group("lobby_g1").Received("ForbiddenWordLanguageChanged"));
+		Assert.True(clients.Group("lobby_g1").Received("ContentLanguageChanged"));
 	}
 
 	[Fact]
-	public async Task Guest_cannot_change_the_Forbidden_Words_language()
+	public async Task Guest_cannot_change_the_shared_content_language()
 	{
 		var repository = new CapturingRepository();
 		repository.Seed(WaitingForbiddenGame());
@@ -524,7 +524,7 @@ public class GameHubRoutingTests
 		registry.MapConnectionToGame(hub.Context.ConnectionId, "g1");
 		registry.AuthenticateConnection(hub.Context.ConnectionId, "guest");
 
-		await hub.SetForbiddenWordLanguage(new SetForbiddenWordLanguageRequest
+		await hub.SetContentLanguage(new SetContentLanguageRequest
 		{
 			GameId = "g1",
 			HostId = "host",
@@ -533,11 +533,11 @@ public class GameHubRoutingTests
 
 		Assert.Equal("en", repository.Created!.Language);
 		Assert.True(clients.Caller.Received("Error"));
-		Assert.False(clients.Group("lobby_g1").Received("ForbiddenWordLanguageChanged"));
+		Assert.False(clients.Group("lobby_g1").Received("ContentLanguageChanged"));
 	}
 
 	[Fact]
-	public async Task Forbidden_Words_language_is_locked_after_the_game_starts()
+	public async Task The_content_language_is_locked_once_the_game_starts()
 	{
 		var repository = new CapturingRepository();
 		repository.Seed(WaitingForbiddenGame() with { Status = GameStatus.Active });
@@ -547,7 +547,7 @@ public class GameHubRoutingTests
 		registry.MapConnectionToGame(hub.Context.ConnectionId, "g1");
 		registry.AuthenticateConnection(hub.Context.ConnectionId, "host");
 
-		await hub.SetForbiddenWordLanguage(new SetForbiddenWordLanguageRequest
+		await hub.SetContentLanguage(new SetContentLanguageRequest
 		{
 			GameId = "g1",
 			HostId = "host",
@@ -556,7 +556,7 @@ public class GameHubRoutingTests
 
 		Assert.Equal("en", repository.Created!.Language);
 		Assert.True(clients.Caller.Received("Error"));
-		Assert.False(clients.Group("lobby_g1").Received("ForbiddenWordLanguageChanged"));
+		Assert.False(clients.Group("lobby_g1").Received("ContentLanguageChanged"));
 	}
 
 	[Fact]

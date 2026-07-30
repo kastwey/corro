@@ -1,13 +1,14 @@
 /**
- * Shared Forbidden Words deck-language helpers. Card content has one authoritative language
- * for the whole match; this is deliberately independent from each player's interface locale.
+ * Shared content-deck language helpers. A package whose CONTENT is language-split — the forbidden
+ * words to guess, the trivia questions to answer — has one authoritative deck for the whole match,
+ * deliberately independent from each player's interface locale, which stays personal.
  */
 
 const primaryLanguage = (value: string | null | undefined): string =>
 	(value ?? '').trim().split(/[-_]/, 1)[0].toLowerCase();
 
 /** Pick a package-owned deck language, preferring the host's current interface language. */
-export function chooseWordLanguage(
+export function chooseContentLanguage(
 	available: readonly string[] | null | undefined,
 	preferred: string | null | undefined,
 ): string {
@@ -19,8 +20,9 @@ export function chooseWordLanguage(
 		?? '';
 }
 
-/** Name a supported deck language in the listener's interface language. */
-export function wordLanguageName(
+/** Name a supported deck language in the LISTENER's interface language, so a Spanish
+ *  player reads "Inglés" for an English deck. */
+export function contentLanguageName(
 	language: string,
 	translate: (key: string) => string,
 ): string {

@@ -20,6 +20,7 @@ import {
 const TRACK_BOARD = 'snakes-and-ladders';
 const FORBIDDEN_BOARD = 'forbidden-words';
 const SHEDDING_BOARD = 'four-colours';
+const TRIVIA_BOARD = 'wheel-of-wits';
 
 /** A small, real .corro archive used to exercise the browser's successful upload state. */
 async function uploadedTrackPackage(): Promise<Buffer> {
@@ -87,35 +88,44 @@ test('switching shipped games keeps the loading feedback visual-only', async ({ 
 	expect(heard).not.toContain(loading);
 });
 
-test('Forbidden Words offers one accessible shared word-language choice', async ({ browser }) => {
-	const page = await newPlayerPage(browser, 'es-ES');
-	await gotoLobbyHome(page);
-	await page.locator('#go-create-btn').click();
-	await page.locator('#board-selector').selectOption(FORBIDDEN_BOARD);
-	const firstToken = packageManifest(FORBIDDEN_BOARD).tokens[0].id as string;
-	await expect(page.locator(`#create-form input.token-radio[value="${firstToken}"]`)).toBeAttached();
+// Both families whose CONTENT is language-split reach the same picker: the words a Forbidden
+// Words table guesses, and the questions a trivia table answers. It is one shared deck for the
+// whole table, deliberately separate from each player's own interface language.
+for (const board of [
+	{ id: FORBIDDEN_BOARD, label: 'Forbidden Words' },
+	{ id: TRIVIA_BOARD, label: 'trivia' },
+]) {
+	test(`${board.label} offers one accessible shared content-language choice`, async ({ browser }) => {
+		const page = await newPlayerPage(browser, 'es-ES');
+		await gotoLobbyHome(page);
+		await page.locator('#go-create-btn').click();
+		await page.locator('#board-selector').selectOption(board.id);
+		const firstToken = packageManifest(board.id).tokens[0].id as string;
+		await expect(page.locator(`#create-form input.token-radio[value="${firstToken}"]`)).toBeAttached();
 
-	const group = page.locator('#forbidden-word-language-group');
-	const select = page.locator('#forbidden-word-language');
-	await expect(group).toBeVisible();
-	await expect(select).toHaveAccessibleName('Idioma de las palabras');
-	await expect(select).toHaveAttribute('aria-describedby', 'forbidden-word-language-hint');
-	await expect(select.locator('option')).toHaveText(['Inglés', 'Español']);
-	await expect(select).toHaveValue('es');
-	await flushAxeAudit(page);
+		const group = page.locator('#content-language-group');
+		const select = page.locator('#content-language');
+		await expect(group).toBeVisible();
+		await expect(select).toHaveAccessibleName('Idioma del contenido');
+		await expect(select).toHaveAttribute('aria-describedby', 'content-language-hint');
+		await expect(select.locator('option')).toHaveText(['Inglés', 'Español']);
+		await expect(select).toHaveValue('es');
+		await flushAxeAudit(page);
 
-	// Once the host makes an explicit deck choice, changing their personal interface must not
-	// silently rewrite it. Only the option labels follow the interface locale.
-	await select.selectOption('en');
-	await page.locator('#language-selector').selectOption('en');
-	await page.locator('#language-apply-btn').click();
-	await expect(select).toHaveValue('en');
-	await expect(select.locator('option')).toHaveText(['English', 'Spanish']);
-	await flushAxeAudit(page);
+		// Once the host makes an explicit deck choice, changing their personal interface must not
+		// silently rewrite it. Only the option labels follow the interface locale.
+		await select.selectOption('en');
+		await page.locator('#language-selector').selectOption('en');
+		await page.locator('#language-apply-btn').click();
+		await expect(select).toHaveValue('en');
+		await expect(select.locator('option')).toHaveText(['English', 'Spanish']);
+		await flushAxeAudit(page);
 
-	await page.locator('#board-selector').selectOption(TRACK_BOARD);
-	await expect(group).toBeHidden();
-});
+		// A board whose content is NOT language-split offers no choice at all.
+		await page.locator('#board-selector').selectOption(TRACK_BOARD);
+		await expect(group).toBeHidden();
+	});
+}
 
 test('Four Colours offers the scoring direction as a named, accessible radio group', async ({ browser }) => {
 	const page = await newPlayerPage(browser, 'es-ES');

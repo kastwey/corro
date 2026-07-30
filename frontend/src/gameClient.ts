@@ -63,7 +63,7 @@ export interface GameClientEvents {
 	'lobbyUpdated': GameInfo;
 	'teamAssigned': { gameId: string; playerId: string; playerName: string; teamIndex: number | null };
 	'teamsFilled': { gameId: string };
-	'forbiddenWordLanguageChanged': { gameId: string; language: string };
+	'contentLanguageChanged': { gameId: string; language: string };
 	'lobbyState': { gameId: string; status: string; players: any[] };
 	'playerJoined': { playerId: string; playerName: string };
 	'playerLeft': { playerId: string };
@@ -205,8 +205,8 @@ export class UnifiedGameClient {
 			this.emit('teamsFilled', data);
 		});
 
-		this.connection.on('ForbiddenWordLanguageChanged', (data: { gameId: string; language: string }) => {
-			this.emit('forbiddenWordLanguageChanged', data);
+		this.connection.on('ContentLanguageChanged', (data: { gameId: string; language: string }) => {
+			this.emit('contentLanguageChanged', data);
 		});
 
 		this.connection.on('PlayerJoined', (data: any) => {
@@ -330,9 +330,9 @@ export class UnifiedGameClient {
 		await this.invoke("FillTeamsAtRandom", request);
 	}
 
-	/** Change the one shared Forbidden Words deck language while the game is waiting. */
-	async setForbiddenWordLanguage(request: { gameId: string; hostId: string; language: string }): Promise<void> {
-		await this.invoke('SetForbiddenWordLanguage', request);
+	/** Change the one shared content deck (words to guess, questions to answer) while waiting. */
+	async setContentLanguage(request: { gameId: string; hostId: string; language: string }): Promise<void> {
+		await this.invoke('SetContentLanguage', request);
 	}
 
 	/** Rejoin the authenticated waiting-room SignalR group after a page reload. */

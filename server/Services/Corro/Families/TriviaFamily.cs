@@ -22,6 +22,16 @@ public sealed class TriviaFamily : IGameFamily
 {
 	public string GameType => "trivia";
 
+	/// <summary>The question decks this pack actually ships, in manifest order. The whole table
+	/// answers the SAME questions, so the host names one deck in the lobby — before this the game
+	/// silently fell back to whichever deck came first when the host's locale was not in the pack,
+	/// and nobody was told which language they were about to be quizzed in.</summary>
+	public IReadOnlyList<string> ContentLanguages(GameDefinition definition)
+		=> definition.Manifest.Locales
+			.Where(locale => definition.TriviaQuestions?.ContainsKey(locale) == true)
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.ToList();
+
 	public async Task<GameDefinition> LoadDefinitionAsync(string packageDir, Manifest manifest,
 		Dictionary<string, Dictionary<string, string>> i18n)
 	{

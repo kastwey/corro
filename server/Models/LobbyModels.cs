@@ -81,9 +81,9 @@ public record FillTeamsRequest
 	public required string HostId { get; init; }
 }
 
-/// <summary>Host request: change the one shared Forbidden Words deck language while the
-/// game is still in its waiting room.</summary>
-public record SetForbiddenWordLanguageRequest
+/// <summary>Host request: change the one shared content-deck language (the words being
+/// guessed, the questions being asked) while the game is still in its waiting room.</summary>
+public record SetContentLanguageRequest
 {
 	public required string GameId { get; init; }
 	public required string HostId { get; init; }

@@ -157,3 +157,33 @@ test('trivia: roll, pick a headquarters, answer, the judge rules, a wedge is ear
 	// The players panel carries the same count, so it is readable without asking.
 	await expect(berto.locator('.player-card', { hasText: 'Ana' })).toContainText('1 de 6 quesitos');
 });
+
+test('trivia: the host names the question deck, and the whole table is quizzed in it', async ({ browser }) => {
+	// Before the picker existed, the deck was whatever the host's interface locale happened to
+	// match — and if the pack did not carry it, some other language entirely, unannounced. The
+	// host now says which deck the table answers, independently of the interface each player reads.
+	const ana = await newPlayerPage(browser);
+	const berto = await newPlayerPage(browser);
+
+	const code = await createGame(ana, 'Ana', BOARD, { contentLanguage: 'en' });
+	await joinGame(berto, code, 'Berto');
+	await startGame(ana, [ana, berto]);
+
+	await scriptDice(4);
+	await actionButton(ana, 'rollDice').click();
+	await ana.locator('#board .trivia-cell--option[data-node="R0"]').click();
+
+	// The question arrives in the deck Ana chose, not in her interface language...
+	const anaDialog = ana.locator('#game-dialog');
+	await expect(anaDialog.locator('.dialog-title')).toContainText('What is the capital of Australia?');
+	// ...while the interface around it stays Spanish: the deck is CONTENT, not locale.
+	await expect(anaDialog).toContainText('Responder');
+
+	await anaDialog.locator('input[type="text"]').pressSequentially('Canberra');
+	await anaDialog.locator('.dialog-buttons button', { hasText: 'Responder' }).click();
+
+	// One shared deck: the judge rules on the SAME English question, in his own Spanish interface.
+	const bertoDialog = berto.locator('#game-dialog');
+	await expect(bertoDialog).toContainText('What is the capital of Australia?');
+	await expect(bertoDialog.getByRole('button', { name: 'Correcto', exact: true })).toBeVisible();
+});

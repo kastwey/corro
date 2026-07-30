@@ -164,10 +164,11 @@ public partial class GameHub
 		}
 	}
 
-	/// <summary>The host changes the shared Forbidden Words deck language while waiting. The
-	/// selected package language is persisted and broadcast; game start then resolves exactly
-	/// that one deck for every player.</summary>
-	public async Task SetForbiddenWordLanguage(SetForbiddenWordLanguageRequest request)
+	/// <summary>The host changes the one shared content deck while waiting — the forbidden words
+	/// to guess, the trivia questions to answer. The selected package language is persisted and
+	/// broadcast; game start then resolves exactly that one deck for every player. A game whose
+	/// package has no language-split content offers no choice, so this rejects it.</summary>
+	public async Task SetContentLanguage(SetContentLanguageRequest request)
 	{
 		try
 		{
@@ -218,7 +219,7 @@ public partial class GameHub
 			var savedGame = await _gameRepository.UpdateGameAsync(game with { Language = selectedLanguage });
 			var lobbyGroup = $"lobby_{game.GameId}";
 			await Clients.Group(lobbyGroup).SendAsync("LobbyUpdated", savedGame.Sanitized());
-			await Clients.Group(lobbyGroup).SendAsync("ForbiddenWordLanguageChanged", new
+			await Clients.Group(lobbyGroup).SendAsync("ContentLanguageChanged", new
 			{
 				gameId = game.GameId,
 				language = selectedLanguage,
@@ -226,7 +227,7 @@ public partial class GameHub
 		}
 		catch (Exception ex)
 		{
-			_logger?.LogError(ex, "Error in SetForbiddenWordLanguage");
+			_logger?.LogError(ex, "Error in SetContentLanguage");
 			await Clients.Caller.SendAsync("Error", "SET_CONTENT_LANGUAGE_FAILED");
 		}
 	}
