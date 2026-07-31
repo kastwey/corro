@@ -24,3 +24,27 @@ export function buildGroupKeyMap(groups: GroupInfo[] | undefined): Record<string
 	}
 	return map;
 }
+
+/**
+ * Indexes a board's squares by their group's colour, for the group-navigation commands ("jump to
+ * the next brown square"). The colour is normalized to bare letters so a board that writes its
+ * groups as "Brown", "brown" or "dark-brown" still lands them in one bucket, and squares that
+ * belong to no group (corners, taxes, card squares) are simply absent.
+ *
+ * Order matters: the indices come out ascending, which is what makes "next" and "previous" walk
+ * the board the way the player sees it.
+ */
+export function buildGroupSquareIndex(squares: readonly { color?: string }[]): Map<string, number[]> {
+	const index = new Map<string, number[]>();
+	squares.forEach((square, position) => {
+		if (!square.color) return;
+		const group = String(square.color).toLowerCase().replace(/[^a-z]/g, '');
+		// A colour of only digits or punctuation ("#123456") normalizes to nothing: it names no
+		// group the player could ask for, so it gets no bucket.
+		if (!group) return;
+		const bucket = index.get(group);
+		if (bucket) bucket.push(position);
+		else index.set(group, [position]);
+	});
+	return index;
+}

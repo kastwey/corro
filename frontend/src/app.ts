@@ -10,7 +10,8 @@ import {
 	recordAnnouncementHistory,
 } from './announcer.js';
 import { attachKeyHandlers, PROPERTY_ONLY_COMMANDS, CARD_FAMILY_HIDDEN_COMMANDS } from './keys.js';
-import { buildGroupKeyMap } from './groupKeys.js';
+import { buildGroupKeyMap, buildGroupSquareIndex } from './groupKeys.js';
+import { AUDIO_UNLOCK_EVENTS, shouldResumeAudioContext, tokenHopCue } from './audioGating.js';
 import { Board } from './board.js';
 import { TokenAnimator } from './tokenAnimator.js';
 import { makeSettleGuard } from './settleGuard.js';
@@ -48,7 +49,7 @@ import { connectionPanel } from './connectionPanel.js';
 import { initThemeToggle } from './themeToggle.js';
 import { initSoundToggle, type SoundToggleController } from './soundToggle.js';
 import { groupStatusMessage } from './groupStatus.js';
-import { desiredModal } from './modalReconcile.js';
+import { desiredModal, desiredTriviaDialog, triviaDialogKey as triviaDialogKeyOf } from './modalReconcile.js';
 import type {
   AuctionModalData,
 	BusChoiceModalData,
@@ -587,14 +588,23 @@ async function initBoard() {
 		// "finger" earcon so the hop is never silent. Honour the game-sound mute toggle and the
 		// chosen volume, softened a touch since a hop fires repeatedly across a multi-square move.
 		playTokenHopSound = () => {
-		  if (!soundEnabled || soundEvents.isMuted()) return;
-		  if (soundEvents.hasEvent('token.hop')) {
-			soundEvents.playEventOverlap('token.hop', 0.5);
-			return;
+		  // Which cue (or none) is decided in audioGating; overlap keeps each hop
+		  // fire-and-forget so consecutive taps don't cut each other off — otherwise a fast
+		  // multi-square move blurs into fewer audible hops.
+		  switch (tokenHopCue({
+			loaded: soundEnabled,
+			muted: soundEvents.isMuted(),
+			hasPackageCue: soundEvents.hasEvent('token.hop'),
+		  })) {
+			case 'package':
+			  soundEvents.playEventOverlap('token.hop', 0.5);
+			  break;
+			case 'fallback':
+			  playSound('finger', { volume: soundEvents.getVolume() * 0.5, overlap: true }).catch(() => {});
+			  break;
+			case 'silent':
+			  break;
 		  }
-		  // overlap: each hop is fire-and-forget so consecutive taps don't cut each other
-		  // off (otherwise a fast multi-square move blurs into fewer audible hops).
-		  playSound('finger', { volume: soundEvents.getVolume() * 0.5, overlap: true }).catch(() => {});
 		};
 	  }
 	  console.debug('[sound] initSound: finger loaded =', loaded, '| AudioContext =', soundManager.getAudioContextState());
@@ -623,7 +633,7 @@ async function initBoard() {
   // Cover the gesture types iPadOS/iOS Safari may deliver first: a tap can surface as
   // pointerdown / touchstart / touchend / click depending on context, and keyboard players
   // get keydown. Any one of them unlocks (the handler self-guards against re-entry).
-  ['pointerdown', 'touchstart', 'touchend', 'click', 'keydown'].forEach(event =>
+  AUDIO_UNLOCK_EVENTS.forEach(event =>
 	document.addEventListener(event, enableAudioOnFirstInteraction, { once: true }));
 
   // Browsers suspend a tab's AudioContext when it goes to the background. When a second
@@ -634,7 +644,7 @@ async function initBoard() {
   // again so earcons stay reliable across windows.
   const resumeAudioOnForeground = (reason: string) => {
 	const state = soundManager.getAudioContextState();
-	if (state === 'suspended' || state === 'interrupted') {
+	if (shouldResumeAudioContext(state)) {
 	  console.debug(`[sound] ${reason}: resuming AudioContext (was "${state}")`);
 	  soundManager.unlock();
 	}
@@ -1413,7 +1423,8 @@ async function initBoard() {
 	let busChoiceOpenTimer: number | null = null;
   // Which trivia dialog is showing (judge setup / destination / answer / verdict) — keyed by
   // content so we only reopen (and re-announce) when the pending step actually changes.
-  let triviaDialogKey: string | null = null;
+  /** The trivia dialog currently on screen, as its reconcile key; null when none is. */
+  let openTriviaDialogKey: string | null = null;
   const racePendingKey = (p: PendingRaceMove) =>
 	`${p.kind}:${p.steps}:${p.options.map(o => `${o.pieceIndex}>${o.toLocation}${o.toSquare}`).join(',')}`;
   // Grace before the choice dialog takes focus, so the screen reader finishes the roll
@@ -1691,7 +1702,7 @@ async function initBoard() {
 	  buttons: gs.players.map((p, i) => ({
 		label: p.name,
 		variant: i === 0 ? 'primary' as const : 'secondary' as const,
-		action: () => { dialogManager.close(); triviaDialogKey = null; void gameManager.triviaChooseJudge(p.id); },
+		action: () => { dialogManager.close(); openTriviaDialogKey = null; void gameManager.triviaChooseJudge(p.id); },
 	  })),
 	});
   }
@@ -1702,7 +1713,7 @@ async function initBoard() {
 	const pick = (node: string): void => {
 	  dialogManager.closeNonModal();
 	  triviaBoard?.setMoveOptions(null, null);
-	  triviaDialogKey = null;
+	  openTriviaDialogKey = null;
 	  document.getElementById('board')?.focus();
 	  // Arm the gate NOW (the move is a separate action from the roll): the landing announcement
 	  // and the question dialog then pace to the piece's walk, releasing when it arrives.
@@ -1738,7 +1749,7 @@ async function initBoard() {
 		buttons: q.choices.map((choice, i) => ({
 		  label: choice,
 		  variant: i === 0 ? 'primary' as const : 'secondary' as const,
-		  action: () => { dialogManager.close(); triviaDialogKey = null; void gameManager.triviaAnswer(null, i); },
+		  action: () => { dialogManager.close(); openTriviaDialogKey = null; void gameManager.triviaAnswer(null, i); },
 		})),
 	  });
 	  return;
@@ -1755,7 +1766,7 @@ async function initBoard() {
 	  const value = input.value.trim();
 	  if (!value) return;
 	  dialogManager.close();
-	  triviaDialogKey = null;
+	  openTriviaDialogKey = null;
 	  void gameManager.triviaAnswer(value, -1);
 	};
 	input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
@@ -1799,38 +1810,27 @@ async function initBoard() {
 	  plainButtons: true,
 	  dismissable: false, // mandatory: the verdict is the only way forward — Núria's accidental Escape stalled the whole table
 	  buttons: [
-		{ label: tSync('game.trivia_judge_correct'), variant: 'primary' as const, action: () => { dialogManager.close(); triviaDialogKey = null; void gameManager.triviaJudge(true); } },
-		{ label: tSync('game.trivia_judge_wrong'), variant: 'secondary' as const, action: () => { dialogManager.close(); triviaDialogKey = null; void gameManager.triviaJudge(false); } },
+		{ label: tSync('game.trivia_judge_correct'), variant: 'primary' as const, action: () => { dialogManager.close(); openTriviaDialogKey = null; void gameManager.triviaJudge(true); } },
+		{ label: tSync('game.trivia_judge_wrong'), variant: 'secondary' as const, action: () => { dialogManager.close(); openTriviaDialogKey = null; void gameManager.triviaJudge(false); } },
 	  ],
 	});
   }
 
   function reconcileTriviaModals(gs: GameState | null | undefined, myId: string | null): void {
-	const trivia = gs?.trivia;
-	let desiredKey: string | null = null;
-	let open: (() => void) | null = null;
-	if (gs && trivia && myId) {
-	  if (trivia.pendingJudgeSetup && trivia.pendingJudgeSetup.hostId === myId) {
-		desiredKey = 'judgeSetup';
-		open = () => openTriviaJudgeSetup(gs);
-	  } else if (trivia.pendingMove && trivia.pendingMove.playerId === myId) {
-		const options = trivia.pendingMove.options;
-		desiredKey = `move:${options.join(',')}`;
-		open = () => openTriviaMove(gs, options);
-	  } else if (trivia.pendingQuestion) {
-		const q = trivia.pendingQuestion;
-		if (q.playerId === myId && !q.submitted) {
-		  desiredKey = `answer:${q.questionId}`;
-		  open = () => openTriviaAnswer(gs, q);
-		} else if (q.judgeId === myId && q.submitted) {
-		  desiredKey = `judge:${q.questionId}`;
-		  open = () => openTriviaJudge(gs, q);
-		}
-	  }
-	}
-	if (desiredKey === triviaDialogKey) return;
-	if (triviaDialogKey !== null) closeTriviaDialog(triviaDialogKey);
-	triviaDialogKey = desiredKey;
+	// WHICH dialog is a pure decision (modalReconcile); this function only opens and closes.
+	const desired = desiredTriviaDialog(gs, myId);
+	const desiredKey = triviaDialogKeyOf(desired);
+	const open: (() => void) | null = gs === null || gs === undefined ? null : {
+	  none: null,
+	  judgeSetup: () => openTriviaJudgeSetup(gs),
+	  move: () => openTriviaMove(gs, (desired as { options: string[] }).options),
+	  answer: () => openTriviaAnswer(gs, (desired as { question: TriviaPendingQuestion }).question),
+	  judge: () => openTriviaJudge(gs, (desired as { question: TriviaPendingQuestion }).question),
+	}[desired.kind];
+
+	if (desiredKey === openTriviaDialogKey) return;
+	if (openTriviaDialogKey !== null) closeTriviaDialog(openTriviaDialogKey);
+	openTriviaDialogKey = desiredKey;
 	// Pace the dialog to the piece's walk: deferVisual holds the open until the move settles when
 	// the gate is armed (a move just happened), and runs it immediately otherwise (roll, judge…).
 	if (open) {
@@ -1995,8 +1995,7 @@ async function initBoard() {
   renderPlayers();
 
   // build the group map (squares indexed by their group's colour value) for group-navigation shortcuts
-  const groupMap = new Map<string, number[]>();
-  gameManager.getSquares().forEach((s, i) => { if (s.color) { const c = String(s.color).toLowerCase().replace(/[^a-z]/g, ''); const arr = groupMap.get(c) || []; arr.push(i); groupMap.set(c, arr); } });
+  const groupMap = buildGroupSquareIndex(gameManager.getSquares());
 
   // load keymap (served by the server as the single source of truth — see EngineKeymap)
   let keyMap: Record<string, any> = {};

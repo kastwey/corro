@@ -11,7 +11,9 @@
 // Kept DOM-free and i18n-free (like squareMenu.ts) so it is unit-testable;
 // app.ts attaches the callbacks and localizes the labels.
 
-import type { GameState, PendingRaceMove, Square, TradeOfferDto, TradeSideDto } from './models.js';
+import type {
+	GameState, PendingRaceMove, Square, TradeOfferDto, TradeSideDto, TriviaPendingQuestion,
+} from './models.js';
 
 export interface AuctionModalData {
 	squareIndex: number;
@@ -196,6 +198,71 @@ export function desiredModal(
 				kind: 'tradeWaiting',
 				data: { tradeId: trade.id, targetName: trade.targetName },
 			};
+		}
+	}
+
+	return { kind: 'none' };
+}
+
+// ── Trivia family: which of its four dialogs the state calls for ────────────────────────────
+//
+// Trivia drives a chain of dialogs — pick the judge, pick a destination, answer, rule on the
+// answer — and WHICH one belongs to me depends on my role in the pending question, not on an
+// event. That decision lived inline in app.ts while every other modal's lived here, so it was the
+// one nobody could unit-test. It is the same shape as `desiredModal`: pure in, description out.
+
+export type DesiredTriviaDialog =
+	| { kind: 'none' }
+	/** The host must name the judge before the first turn (judgeMode "fixed"). */
+	| { kind: 'judgeSetup' }
+	/** My roll landed several legal squares; I pick where to stop. */
+	| { kind: 'move'; options: string[] }
+	/** The pending question is mine and unanswered. */
+	| { kind: 'answer'; question: TriviaPendingQuestion }
+	/** I am the judge and the answer is in. */
+	| { kind: 'judge'; question: TriviaPendingQuestion };
+
+/**
+ * A stable identity for the dialog a state calls for. Reconciliation compares this to what is
+ * already open: an unchanged key means "leave it alone" — without it, every state push would tear
+ * down and rebuild the open dialog, stealing focus mid-answer. The key therefore includes what
+ * makes a dialog DIFFERENT (the question, the offered destinations), not just its kind.
+ */
+export function triviaDialogKey(dialog: DesiredTriviaDialog): string | null {
+	switch (dialog.kind) {
+		case 'none': return null;
+		case 'judgeSetup': return 'judgeSetup';
+		case 'move': return `move:${dialog.options.join(',')}`;
+		case 'answer': return `answer:${dialog.question.questionId}`;
+		case 'judge': return `judge:${dialog.question.questionId}`;
+	}
+}
+
+/**
+ * The trivia dialog the local player should be seeing. At most one applies: the roles are
+ * exclusive (the judge never answers their own question), and a player with no part in the
+ * pending question gets `none` and keeps exploring the board.
+ */
+export function desiredTriviaDialog(
+	state: GameState | null | undefined,
+	myPlayerId: string | null,
+): DesiredTriviaDialog {
+	const trivia = state?.trivia;
+	if (!state || !trivia || !myPlayerId) return { kind: 'none' };
+
+	if (trivia.pendingJudgeSetup?.hostId === myPlayerId) return { kind: 'judgeSetup' };
+	if (trivia.pendingMove?.playerId === myPlayerId) {
+		return { kind: 'move', options: trivia.pendingMove.options };
+	}
+
+	const question = trivia.pendingQuestion;
+	if (question) {
+		// Unanswered and mine: I answer. Answered and I am the judge: I rule.
+		if (question.playerId === myPlayerId && !question.submitted) {
+			return { kind: 'answer', question };
+		}
+		if (question.judgeId === myPlayerId && question.submitted) {
+			return { kind: 'judge', question };
 		}
 	}
 
