@@ -30,7 +30,7 @@ export function localizeBoardName(boardId: string): string {
  * then es, then any). Pure over its inputs — no globals — so it is unit-testable directly.
  */
 export function pickPackageName(name: Record<string, string>, lang: string): string {
-	return name[lang] ?? name['en'] ?? name['es'] ?? Object.values(name)[0] ?? '';
+	return name[lang] ?? name.en ?? name.es ?? Object.values(name)[0] ?? '';
 }
 
 /**
@@ -42,7 +42,7 @@ export function pickPackageName(name: Record<string, string>, lang: string): str
  */
 export function renderBoardOptions(
 	select: HTMLSelectElement,
-	boards: ReadonlyArray<{ id: string; name: Record<string, string> }>,
+	boards: readonly { id: string; name: Record<string, string> }[],
 	lang: string,
 ): void {
 	const previous = select.value;
@@ -95,8 +95,10 @@ export function translateServerError(errorCode: string): string {
  * error is not a recognizable HubException, so callers can fall back to a generic message.
  */
 export function parseHubErrorCode(error: unknown): string | null {
-	const raw = error instanceof Error ? error.message : String(error ?? '');
-	const match = raw.match(/HubException:\s*([A-Z_]+)/);
+	// Only an Error or a string can carry a hub code. Stringifying anything else would
+	// produce "[object Object]", which fails the match below for no discoverable reason.
+	const raw = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+	const match = /HubException:\s*([A-Z_]+)/.exec(raw);
 	return match ? match[1] : null;
 }
 

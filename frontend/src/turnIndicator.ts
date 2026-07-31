@@ -60,7 +60,7 @@ class TurnIndicator {
 	/**
 	 * Set when a player is resolving debts
 	 */
-	setDebtorPlayer(player: Player | null, totalDebt: number = 0): void {
+	setDebtorPlayer(player: Player | null, totalDebt = 0): void {
 		this.state.debtorPlayer = player;
 		this.state.debtAmount = totalDebt;
 		this.render();

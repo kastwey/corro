@@ -27,7 +27,7 @@ function gameState(nodes: Record<string, string>): GameState {
 }
 
 function makeTimers() {
-	const queue: Array<{ fn: () => void; ms: number }> = [];
+	const queue: { fn: () => void; ms: number }[] = [];
 	return {
 		queue,
 		setTimer: (fn: () => void, ms: number) => { queue.push({ fn, ms }); return queue.length; },

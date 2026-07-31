@@ -368,7 +368,7 @@ class TradeDialogClass {
 		const validateAmounts = (): HTMLInputElement | null => {
 			const target = currentTarget();
 			const me = myLive();
-			const checks: Array<{ input: HTMLInputElement; max: number; over: () => string }> = [
+			const checks: { input: HTMLInputElement; max: number; over: () => string }[] = [
 				{ input: giveMoney, max: me.money, over: () => t('trade_error_money_over_you', { max: money(me.money) }) },
 				{ input: giveReleasePasses, max: me.releasePasses ?? 0, over: () => t('trade_error_release_pass_over_you', { count: me.releasePasses ?? 0 }) },
 				{ input: reqMoney, max: target.money, over: () => t('trade_error_money_over_target', { name: target.name, max: money(target.money) }) },

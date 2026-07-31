@@ -6,8 +6,8 @@
 
 import type { GameSettings } from '../models.js';
 
-type NumField = { id: string; key: keyof GameSettings; kind: 'num'; def: number };
-type BoolField = { id: string; key: keyof GameSettings; kind: 'bool' };
+interface NumField { id: string; key: keyof GameSettings; kind: 'num'; def: number }
+interface BoolField { id: string; key: keyof GameSettings; kind: 'bool' }
 export type RuleField = NumField | BoolField;
 
 /** Every host-editable rule: its input id, the GameSettings key it maps to, and (for numbers) the default. */

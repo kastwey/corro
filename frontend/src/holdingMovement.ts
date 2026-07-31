@@ -22,7 +22,7 @@ export interface HoldingMovementPlayer {
  * animator places a first-seen token instantly anyway, so "snapping" it changes nothing visible.)
  */
 export function holdingTeleports(
-	players: ReadonlyArray<HoldingMovementPlayer>,
+	players: readonly HoldingMovementPlayer[],
 	wasHeld: Map<string, boolean>,
 	walkToHolding: boolean,
 ): Set<string> {

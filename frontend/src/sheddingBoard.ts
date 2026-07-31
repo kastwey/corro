@@ -25,20 +25,20 @@ import type { GameState } from './models.js';
 import type { HelpShortcut } from './shortcuts.js';
 
 export interface SheddingBoardDeps {
-	getGameState(): GameState | null;
-	getMyPlayerId(): string | null;
-	announce(text: string): void;
-	tSync(key: string, vars?: Record<string, unknown>): string;
-	onIdle(): void;
-	motionDisabled(): boolean;
+	getGameState: () => GameState | null;
+	getMyPlayerId: () => string | null;
+	announce: (text: string) => void;
+	tSync: (key: string, vars?: Record<string, unknown>) => string;
+	onIdle: () => void;
+	motionDisabled: () => boolean;
 	commands: {
-		play(instanceId: string, chosenColor?: string | null, extraInstanceIds?: string[] | null): void;
-		draw(): void;
-		keep(): void;
+		play: (instanceId: string, chosenColor?: string | null, extraInstanceIds?: string[] | null) => void;
+		draw: () => void;
+		keep: () => void;
 		/** Declare the last card (optional house rule). */
-		declareLastCard(): void;
+		declareLastCard: () => void;
 		/** Catch a rival who forgot the last-card declaration. */
-		catchLastCard(): void;
+		catchLastCard: () => void;
 	};
 }
 

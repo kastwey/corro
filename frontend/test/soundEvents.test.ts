@@ -514,7 +514,7 @@ test('a cue that races switchPack is queued and replayed once the game pack load
 
 /** Like stubAudio but also records play OPTIONS and stopSound ids, for the loop tests. */
 function stubLoopAudio(events: Record<string, string[]>) {
-	const plays: Array<{ id: string; loop: boolean }> = [];
+	const plays: { id: string; loop: boolean }[] = [];
 	const stopped: string[] = [];
 	const original = {
 		isSupported: soundManager.isSupported,

@@ -15,8 +15,8 @@ interface SoundInstance {
 class SoundManager {
   private audioContext: AudioContext | null = null;
   private masterGain: GainNode | null = null;
-  private sounds: Map<string, SoundInstance> = new Map();
-  private audioBuffers: Map<string, AudioBuffer> = new Map();
+  private sounds = new Map<string, SoundInstance>();
+  private audioBuffers = new Map<string, AudioBuffer>();
   /** iOS only unlocks audio output after a real buffer plays in a gesture; primed once. */
   private outputPrimed = false;
   /** Optional subscriber notified whenever the AudioContext changes state. */
@@ -282,7 +282,7 @@ class SoundManager {
    */
   setSoundPitch(id: string, pitch: number): boolean {
 	const sound = this.sounds.get(id);
-	if (!sound || !sound.source || !sound.isPlaying) return false;
+	if (!sound?.source || !sound.isPlaying) return false;
 
 	const newPitch = Math.max(0.25, Math.min(4.0, pitch));
 	sound.source.playbackRate.value = newPitch;

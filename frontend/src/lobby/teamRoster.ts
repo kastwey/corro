@@ -47,18 +47,18 @@ export function nextTeamAddFocus(
 }
 
 /** A move the host asked for, waiting for the repaint that proves the server did it. */
-export type PendingTeamFocus = {
+export interface PendingTeamFocus {
 	preferredTeamIndex: number;
 	playerId: string;
 	expectedTeamIndex: number | null;
-};
+}
 
 /** Where focus was, in terms that survive the panel being rebuilt. */
-export type PreservedTeamFocus = {
+export interface PreservedTeamFocus {
 	kind: 'add' | 'member' | 'action' | 'shuffle';
 	teamIndex: number;
 	playerId?: string;
-};
+}
 
 export type TeamFocusTarget =
 	| { kind: 'add'; teamIndex: number }

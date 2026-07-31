@@ -23,7 +23,7 @@ const BOARD: RaceBoardDef = {
 	],
 };
 
-type PieceSpec = { location: 'home' | 'circuit' | 'corridor' | 'goal'; square: number };
+interface PieceSpec { location: 'home' | 'circuit' | 'corridor' | 'goal'; square: number }
 
 function gameState(aPieces: PieceSpec[], bPieces: PieceSpec[] = [{ location: 'home', square: 0 }]): GameState {
 	const race: RaceState = {
@@ -40,7 +40,7 @@ function gameState(aPieces: PieceSpec[], bPieces: PieceSpec[] = [{ location: 'ho
 
 /** Manual timer queue: each scheduled callback is run explicitly by the test. */
 function makeTimers() {
-	const queue: Array<{ fn: () => void; ms: number }> = [];
+	const queue: { fn: () => void; ms: number }[] = [];
 	return {
 		queue,
 		setTimer: (fn: () => void, ms: number) => { queue.push({ fn, ms }); return queue.length; },

@@ -32,7 +32,7 @@ before(async () => {
 });
 
 test('landing on a coloured street reads the translated colour in parentheses (es)', () => {
-	i18next.changeLanguage('es');
+	void i18next.changeLanguage('es');
 	const text = i18next.t('game.landed_on_property_colored_self', { square: 'Paseo Marítimo', colorKey: 'game.color_darkblue' });
 	assert.equal(text, 'Caes en Paseo Marítimo (Azul oscuro)');
 	assert.ok(!text.includes('color_'), 'must not leak the raw colour key');
@@ -40,21 +40,21 @@ test('landing on a coloured street reads the translated colour in parentheses (e
 });
 
 test('landing on a coloured street reads the translated colour in parentheses (en)', () => {
-	i18next.changeLanguage('en');
+	void i18next.changeLanguage('en');
 	const text = i18next.t('game.landed_on_property_colored', { player: 'Ana', square: 'Main Square', colorKey: 'game.color_darkblue' });
 	assert.equal(text, 'Ana landed on Main Square (Dark blue)');
-	i18next.changeLanguage('es');
+	void i18next.changeLanguage('es');
 });
 
 test('completing a full group reads the translated colour, not the raw key', () => {
-	i18next.changeLanguage('es');
+	void i18next.changeLanguage('es');
 	const text = i18next.t('game.group_completed_self', { colorKey: 'game.color_brown' });
 	assert.ok(text.includes('Marrón'), `expected the colour name, got: ${text}`);
 	assert.ok(!text.includes('color_') && !text.includes('$t('));
 });
 
 test('group ownership hint agrees in gender and uses the board member noun (es)', () => {
-	i18next.changeLanguage('es');
+	void i18next.changeLanguage('es');
 	// feminine group (central): "ninguna central"
 	const fem = i18next.t('game.group_member_none', { context: 'f', member: 'central', group: 'Suministros', total: 2 });
 	assert.equal(fem, 'Aún no tienes ninguna central del grupo Suministros (2 en total).');
@@ -67,10 +67,10 @@ test('group ownership hint agrees in gender and uses the board member noun (es)'
 });
 
 test('group ownership hint in English ignores gender (no _f divergence)', () => {
-	i18next.changeLanguage('en');
+	void i18next.changeLanguage('en');
 	const none = i18next.t('game.group_member_none', { context: 'f', member: 'power plant', group: 'Utilities', total: 2 });
 	assert.equal(none, "You don't own any power plant in the Utilities group yet (2 total).");
-	i18next.changeLanguage('es');
+	void i18next.changeLanguage('es');
 });
 
 test('a package group key (hex-coloured board) resolves to the group name, never a leaked key', () => {
@@ -78,7 +78,7 @@ test('a package group key (hex-coloured board) resolves to the group name, never
 	// $t(game.color_{{color}}) leaked "game.color_#b9a04a". Now the group's own name key is
 	// nested directly, so a package key like "groups.utility" resolves to its merged name.
 	i18next.addResource('es', 'translation', 'groups.utility', 'Suministros');
-	i18next.changeLanguage('es');
+	void i18next.changeLanguage('es');
 
 	const landed = i18next.t('game.landed_on_property_colored_self', { square: 'Central de Antimateria', colorKey: 'groups.utility' });
 	assert.equal(landed, 'Caes en Central de Antimateria (Suministros)');

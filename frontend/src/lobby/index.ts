@@ -44,8 +44,8 @@ import {
 
 class UnifiedLobbyUI {
 	private currentGame: GameInfo | null = null;
-	private currentPlayerId: string = '';
-	private isHost: boolean = false;
+	private currentPlayerId = '';
+	private isHost = false;
 	/** The shipped boards offered in the picker (engine boards served as packages). */
 	private shippedBoards: ShippedBoard[] = [];
 	/** The staged package for this game (a shipped board OR a custom upload) — always set once ready. */
@@ -65,7 +65,7 @@ class UnifiedLobbyUI {
 	private contentLanguageExplicit = false;
 
 	constructor() {
-		this.init();
+		void this.init();
 	}
 
 	private async init(): Promise<void> {
@@ -319,7 +319,7 @@ class UnifiedLobbyUI {
 	private handlePlayerJoined(_data: { playerId: string; playerName: string }): void {
 		if (this.currentGame) {
 			// Refresh game state to get updated player list
-			this.refreshGameState();
+			void this.refreshGameState();
 		}
 	}
 
@@ -1080,7 +1080,7 @@ class UnifiedLobbyUI {
 
 		if (inviteCode) {
 			showView('view-join');
-			this.autoValidateInviteCode(inviteCode);
+			void this.autoValidateInviteCode(inviteCode);
 			return;
 		}
 
@@ -1088,7 +1088,7 @@ class UnifiedLobbyUI {
 		if (gameIdFromUrl) {
 			const saved = GameSessionStore.getGame(gameIdFromUrl);
 			if (saved) {
-				this.attemptReconnect(saved);
+				void this.attemptReconnect(saved);
 				return;
 			}
 		}

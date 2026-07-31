@@ -96,7 +96,7 @@ export class GameCommands {
 			return true; 
 		}
 		const s = squares[activeIndex];
-		if (s && s.ownerId) {
+		if (s?.ownerId) {
 			const owner = this.opts.getPlayers().find(p => p.id === s.ownerId);
 			const ownerLabel = owner ? owner.name : String(s.ownerId);
 			this.opts.announce(this.opts.t('announce_owner_is', { who: ownerLabel }));
@@ -125,7 +125,7 @@ export class GameCommands {
 		return true;
 	}
 
-	groupNext(activeIndex: number, group: string, forward: boolean = true): boolean {
+	groupNext(activeIndex: number, group: string, forward = true): boolean {
 		if (!group || group.trim() === '') return false;
 		const clean = String(group).toLowerCase().replace(/[^a-z]/g, '');
 		const arr = this.opts.getGroupMap().get(clean) || [];
@@ -374,7 +374,7 @@ export class GameCommands {
 
 	announceBankBuildingInventory(): boolean {
 		const inventory = this.opts.getBankBuildingInventory?.();
-		if (!inventory || !inventory.limited) {
+		if (!inventory?.limited) {
 			this.opts.announce(this.opts.t('announce_bank_buildings_unlimited'));
 			return true;
 		}

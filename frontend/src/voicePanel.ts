@@ -318,6 +318,9 @@ export class VoicePanel {
 		let transport: VoiceTransport | null = null;
 		try {
 			const credentials = await this.deps.requestToken();
+			// Not const: the callbacks on the next line close over `created` BEFORE it is
+			// assigned, which is exactly what the definite-assignment form expresses.
+			// eslint-disable-next-line prefer-const
 			let created!: VoiceTransport;
 			const callbacks = this.transportCallbacks(() => created);
 			created = this.deps.createTransport?.(callbacks) ?? createVoiceTransport(callbacks);

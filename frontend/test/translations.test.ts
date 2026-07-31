@@ -219,9 +219,9 @@ function extractServerKeys(): { announced: Map<string, string>; actor: Map<strin
 		for (const call of content.matchAll(announceCall)) {
 			const openIdx = call.index! + call[0].length - 1;
 			const args = balancedArgs(content, openIdx);
-			if (!/actorId/.test(args)) continue;
+			if (!args.includes('actorId')) continue;
 
-			const direct = args.match(/^\s*"(game\.[a-z_]+)"/);
+			const direct = /^\s*"(game\.[a-z_]+)"/.exec(args);
 			if (direct) {
 				if (!actor.has(direct[1])) actor.set(direct[1], rel);
 				continue;

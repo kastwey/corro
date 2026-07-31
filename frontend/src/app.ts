@@ -312,7 +312,7 @@ async function initBoard() {
 	  confirmForfeitBuyable(() => gameManager.rollDice());
 	  return;
 	}
-	gameManager.rollDice();
+	void gameManager.rollDice();
   });
   const endTurnSettled = guardSettled(() => {
 	const myId = gameManager.getMyPlayerId();
@@ -333,7 +333,7 @@ async function initBoard() {
 	  confirmForfeitBuyable(() => gameManager.endTurn());
 	  return;
 	}
-	gameManager.endTurn();
+	void gameManager.endTurn();
   });
   const buyPropertySettled = guardSettled(() => openBuyConfirm());
   const payReleaseCostSettled = guardSettled(() => gameManager.payReleaseCost());
@@ -870,11 +870,11 @@ async function initBoard() {
 			reason: a.enabled ? undefined : (a.reasonKey ? tSync(a.reasonKey, a.reasonVars) : undefined),
 			onSelect: () => {
 				switch (a.id) {
-					case 'build': gameManager.build(index, 1); break;
+					case 'build': void gameManager.build(index, 1); break;
 					case 'sellHotel':
-					case 'sellHouse': gameManager.sellBuildings(index, 1); break;
-					case 'mortgage': gameManager.mortgageProperty(index); break;
-					case 'unmortgage': gameManager.unmortgageProperty(index); break;
+					case 'sellHouse': void gameManager.sellBuildings(index, 1); break;
+					case 'mortgage': void gameManager.mortgageProperty(index); break;
+					case 'unmortgage': void gameManager.unmortgageProperty(index); break;
 					case 'buy': openBuyConfirm(); break;
 				}
 			},
@@ -1993,7 +1993,10 @@ async function initBoard() {
 
   // load keymap (served by the server as the single source of truth — see EngineKeymap)
   let keyMap: Record<string, any> = {};
-  try { const kmResp = await fetch('/api/config/keymap'); if (kmResp.ok) keyMap = await kmResp.json(); } catch (e) {}
+  // A missing or unreachable keymap leaves the engine defaults in place; the board is
+  // still playable, so this must never block startup.
+  try { const kmResp = await fetch('/api/config/keymap'); if (kmResp.ok) keyMap = await kmResp.json(); }
+  catch { /* keep the built-in bindings */ }
   // The board's group-navigation shortcuts are package-specific (each board brings its own colours),
   // so build them from the game's groups and merge them over the static engine keymap.
   Object.assign(keyMap, buildGroupKeyMap(gameManager.getCurrentGameState()?.groups));
@@ -2177,7 +2180,7 @@ async function initBoard() {
   setTimeout(() => board.focus(), 0);
 }
 
-initBoard();
+void initBoard();
 
 board.addEventListener('focus', (e) => {
   if (e.target !== board) return;

@@ -123,11 +123,11 @@ class PopupMenu {
 	private selecting = false;
 	private activeIndex = 0;
 	private menuAriaLabel = '';
-	private readonly parentMenus: Array<{
+	private readonly parentMenus: {
 		items: PopupMenuItem[];
 		ariaLabel: string;
 		returnIndex: number;
-	}> = [];
+	}[] = [];
 	private readonly outsideHandler = (e: Event) => this.onOutsidePointer(e);
 
 	open(opts: PopupMenuOptions): void {

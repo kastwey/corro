@@ -19,10 +19,10 @@ before(() => setupDom());
 
 let panel: VoicePanel;
 let transport: FakeVoiceTransport;
-let announcements: Array<{ key: string; vars: Record<string, unknown>; instant: boolean }>;
+let announcements: { key: string; vars: Record<string, unknown>; instant: boolean }[];
 let availabilityChanges: boolean[];
 let hostMutes: string[];
-let presenceUpdates: Array<Array<{ id: string; muted: boolean; speaking: boolean }>>;
+let presenceUpdates: { id: string; muted: boolean; speaking: boolean }[][];
 let soundEvents: string[];
 let host = true;
 let nextConnectError: unknown = null;
@@ -52,7 +52,7 @@ class FakeVoiceTransport implements VoiceTransport {
 	connectedWith: { url: string; token: string } | null = null;
 	disconnects = 0;
 	muteChanges: boolean[] = [];
-	volumeChanges: Array<{ id: string; volume: number }> = [];
+	volumeChanges: { id: string; volume: number }[] = [];
 	connectError: unknown = null;
 	connectedPreferences: VoiceDevicePreferences | null = null;
 	deviceSnapshot: VoiceDeviceSnapshot = fakeDeviceSnapshot();
@@ -62,6 +62,9 @@ class FakeVoiceTransport implements VoiceTransport {
 	constructor(readonly callbacks: VoiceTransportCallbacks) { }
 
 	async connect(url: string, token: string, preferences?: VoiceDevicePreferences): Promise<void> {
+		// The fake rethrows whatever the test handed it, which includes non-Error rejections —
+		// that is exactly the case the panel's error path has to survive.
+		// eslint-disable-next-line @typescript-eslint/only-throw-error
 		if (this.connectError) throw this.connectError;
 		this.connectedWith = { url, token };
 		this.connectedPreferences = preferences ? { ...preferences } : null;

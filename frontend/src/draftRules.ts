@@ -47,7 +47,7 @@ export function tableSummary(
 
 	// First pass: count plain copies per card, keeping first-appearance order (boosted
 	// slots stay individual — each names its multiplier).
-	const items: Array<{ boosted?: string; cardId?: string; name?: string }> = [];
+	const items: { boosted?: string; cardId?: string; name?: string }[] = [];
 	const counts = new Map<string, number>();
 	for (const slot of seat.table) {
 		if (slot.onMultiplier) {

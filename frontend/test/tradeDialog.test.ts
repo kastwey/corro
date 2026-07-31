@@ -157,7 +157,7 @@ test('tradeValuationText embeds both values and the verdict', () => {
 
 // ── Handlers (emit-only) ───────────────────────────────────────────────────────
 
-function ctx(myPlayerId: string | null, captured: Array<{ event: string; data: any }>): CommandContext {
+function ctx(myPlayerId: string | null, captured: { event: string; data: any }[]): CommandContext {
 	return {
 		gameState: null,
 		board: null,
@@ -180,18 +180,18 @@ test('TradeProposedHandler flags isForMe for the target and isMine for the initi
 	};
 	const handler = new TradeProposedHandler();
 
-	const asTarget: Array<{ event: string; data: any }> = [];
+	const asTarget: { event: string; data: any }[] = [];
 	handler.handle(response, ctx('B', asTarget));
 	assert.equal(asTarget[0].event, 'tradeProposed');
 	assert.equal(asTarget[0].data.isForMe, true);
 	assert.equal(asTarget[0].data.isMine, false);
 
-	const asInitiator: Array<{ event: string; data: any }> = [];
+	const asInitiator: { event: string; data: any }[] = [];
 	handler.handle(response, ctx('A', asInitiator));
 	assert.equal(asInitiator[0].data.isForMe, false);
 	assert.equal(asInitiator[0].data.isMine, true);
 
-	const asBystander: Array<{ event: string; data: any }> = [];
+	const asBystander: { event: string; data: any }[] = [];
 	handler.handle(response, ctx('C', asBystander));
 	assert.equal(asBystander[0].data.isForMe, false);
 	assert.equal(asBystander[0].data.isMine, false);
@@ -205,7 +205,7 @@ test('TradeResolvedHandler flags involvesMe only for the two parties', () => {
 	const handler = new TradeResolvedHandler();
 
 	for (const [me, expected] of [['A', true], ['B', true], ['C', false]] as const) {
-		const captured: Array<{ event: string; data: any }> = [];
+		const captured: { event: string; data: any }[] = [];
 		handler.handle(response, ctx(me, captured));
 		assert.equal(captured[0].event, 'tradeResolved');
 		assert.equal(captured[0].data.involvesMe, expected);

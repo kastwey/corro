@@ -21,7 +21,7 @@ interface MarkdownHeading {
 function plainHeadingText(text: string): string {
 	return text
 		.replace(/\[([^\]]+)\]\((?:https?:\/\/|#)[^)]+\)/g, '$1')
-		.replace(/[\*_`~]/g, '');
+		.replace(/[*_`~]/g, '');
 }
 
 function headingSlug(text: string): string {

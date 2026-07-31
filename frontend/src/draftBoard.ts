@@ -22,15 +22,15 @@ import type { DraftCardDef, DraftSeatState, GameState } from './models.js';
 import type { HelpShortcut } from './shortcuts.js';
 
 export interface DraftBoardDeps {
-	getGameState(): GameState | null;
-	getMyPlayerId(): string | null;
-	announce(text: string): void;
-	tSync(key: string, vars?: Record<string, unknown>): string;
-	onIdle(): void;
-	motionDisabled(): boolean;
+	getGameState: () => GameState | null;
+	getMyPlayerId: () => string | null;
+	announce: (text: string) => void;
+	tSync: (key: string, vars?: Record<string, unknown>) => string;
+	onIdle: () => void;
+	motionDisabled: () => boolean;
 	commands: {
 		/** Commit the secret pick; the second card rides an "extra" on my table. */
-		pick(instanceId: string, secondInstanceId?: string | null): void;
+		pick: (instanceId: string, secondInstanceId?: string | null) => void;
 	};
 }
 
@@ -265,7 +265,7 @@ export class DraftBoard {
 	 *  boosted card (multiplier caught its points card) kept apart with its ×factor badge. */
 	private tableTiles(seat: DraftSeatState, catalog: Map<string, DraftCardDef>): string {
 		const plain = new Map<string, { def?: DraftCardDef; count: number }>();
-		const boosted: Array<{ def?: DraftCardDef; multiplier?: DraftCardDef; factor: number }> = [];
+		const boosted: { def?: DraftCardDef; multiplier?: DraftCardDef; factor: number }[] = [];
 		for (const slot of seat.table) {
 			const def = catalog.get(slot.card.cardId);
 			if (slot.onMultiplier) {

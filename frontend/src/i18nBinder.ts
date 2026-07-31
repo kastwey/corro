@@ -62,7 +62,7 @@ export class I18nBinder {
 
   /** Formats an amount with the active board's currency symbol (the `money` interpolation format). */
   private formatMoney(value: unknown): string {
-	return `${value}${this.moneySymbol}`;
+	return `${String(value)}${this.moneySymbol}`;
   }
 
   /** Public money formatter for strings built in TS (not via i18n), e.g. board square labels. */
@@ -254,9 +254,8 @@ export class I18nBinder {
 	const attrElements = container.querySelectorAll('*');
 	let attrCount = 0;
 	attrElements.forEach(element => {
-	  const attributes = element.attributes;
-	  for (let i = 0; i < attributes.length; i++) {
-		const attr = attributes[i];
+	  // NamedNodeMap is array-like but not iterable under this lib target.
+	  for (const attr of Array.from(element.attributes)) {
 		if (attr.name.startsWith('data-i18n-attr:')) {
 		  const targetAttr = attr.name.replace('data-i18n-attr:', '');
 		  const key = attr.value;
@@ -383,6 +382,8 @@ export class I18nBinder {
   /**
    * Observes DOM changes and automatically applies translations to new elements
    */
+  // Kept async so the caller's await chain during startup reads uniformly.
+  // eslint-disable-next-line @typescript-eslint/require-await
   async observeDOM(): Promise<void> {
 	if (!this.initialized) {
 	  console.warn('i18next not initialized. Call init() first.');
@@ -394,7 +395,7 @@ export class I18nBinder {
 		if (mutation.type === 'childList') {
 		  mutation.addedNodes.forEach((node) => {
 			if (node.nodeType === Node.ELEMENT_NODE) {
-			  this.applyI18n(node as Element);
+			  void this.applyI18n(node as Element);
 			}
 		  });
 		}

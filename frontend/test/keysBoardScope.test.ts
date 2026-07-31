@@ -601,7 +601,7 @@ test('typing a number on the property board keeps its 0-based index translation'
 // ── family:"race" keymap entries (S = route landmarks) and directional M ─────
 
 function attachRaceKeys(family: string) {
-	const calls: Array<{ cmd: string; forward: boolean }> = [];
+	const calls: { cmd: string; forward: boolean }[] = [];
 	const board = document.createElement('div');
 	board.id = 'board';
 	board.setAttribute('role', 'application');

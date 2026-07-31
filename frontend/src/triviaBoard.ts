@@ -110,7 +110,7 @@ export class TriviaBoard {
 		const board = this.board();
 		if (!board) return false;
 		if (this.cursor === 'C') return false;
-		if (this.cursor[0] === 'S') {
+		if (this.cursor.startsWith('S')) {
 			const { spoke, index } = parseSpoke(this.cursor);
 			if (index === 1) { this.centerSpoke = spoke; return this.setCursor('C'); }
 			return this.setCursor(`S${spoke}.${index - 1}`);
@@ -127,7 +127,7 @@ export class TriviaBoard {
 		const board = this.board();
 		if (!board) return false;
 		if (this.cursor === 'C') return this.setCursor(`S${this.centerSpoke}.1`);
-		if (this.cursor[0] === 'S') {
+		if (this.cursor.startsWith('S')) {
 			const { spoke, index } = parseSpoke(this.cursor);
 			if (index === board.spokeLength) return this.setCursor(`R${this.wedgeIndices(board)[spoke]}`);
 			return this.setCursor(`S${spoke}.${index + 1}`);
@@ -151,7 +151,7 @@ export class TriviaBoard {
 			}));
 			return true;
 		}
-		if (this.cursor[0] === 'R') {
+		if (this.cursor.startsWith('R')) {
 			const n = board.ring.length;
 			const k = parseRing(this.cursor);
 			return this.setCursor(`R${(k + dir + n) % n}`);
@@ -354,7 +354,7 @@ export class TriviaBoard {
 		// Spatial anchor: name the region of the circle you are in, but only when it CHANGES
 		// while walking the ring (a wedge already gives its exact clock hour, so it skips the
 		// region). Off the ring, forget it so re-entering re-announces.
-		if (nodeId[0] === 'R') {
+		if (nodeId.startsWith('R')) {
 			const k = parseRing(nodeId);
 			const oct = octant(ringAngle(k, board.ring.length));
 			const changed = oct !== this.lastRegion;
@@ -378,10 +378,10 @@ export class TriviaBoard {
 		const board = this.board();
 		if (!board) return;
 		const node = this.cursor;
-		let text = '';
+		let text: string;
 		if (node === 'C') {
 			text = t(this.deps, 'trivia_pos_center');
-		} else if (node[0] === 'S') {
+		} else if (node.startsWith('S')) {
 			const { spoke, index } = parseSpoke(node);
 			text = t(this.deps, 'trivia_pos_spoke', {
 				dest: catKey(spokeDestCategory(board, spoke)),
@@ -560,7 +560,7 @@ export function triviaNodeLabel(
 ): string {
 	const g = (key: string, vars?: Record<string, unknown>) => tSync(`game.${key}`, vars);
 	if (node === 'C') return g('trivia_cell_center');
-	if (node[0] === 'S') {
+	if (node.startsWith('S')) {
 		const { spoke, index } = parseSpoke(node);
 		const squareCat = (spoke + index) % CATS; // this square's own category (spokes are multicoloured)
 		return g('trivia_cell_spoke', {
@@ -590,7 +590,7 @@ export function triviaPositionSuffix(
 	tSync: (key: string, vars?: Record<string, unknown>) => string,
 ): string {
 	if (node === 'C') return '';
-	if (node[0] === 'S') return tSync('game.trivia_pos_clock', { hour: clockHour(spokeAngle(parseSpoke(node).spoke)) });
+	if (node.startsWith('S')) return tSync('game.trivia_pos_clock', { hour: clockHour(spokeAngle(parseSpoke(node).spoke)) });
 	const k = parseRing(node);
 	const slot = board.ring[k];
 	if (!slot || slot.wedge) return '';
@@ -606,8 +606,8 @@ function parseSpoke(node: string): { spoke: number; index: number } {
  *  spoke"). Every square of the spoke shares it, so navigation and questions stay consistent. */
 function spokeDestCategory(board: TriviaBoardDef, spoke: number): number {
 	let seen = -1;
-	for (let k = 0; k < board.ring.length; k++) {
-		if (board.ring[k].wedge) { seen++; if (seen === spoke) return board.ring[k].category; }
+	for (const slot of board.ring) {
+		if (slot.wedge) { seen++; if (seen === spoke) return slot.category; }
 	}
 	return 0;
 }

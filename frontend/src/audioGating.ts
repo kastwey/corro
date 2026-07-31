@@ -6,7 +6,8 @@
 // closure and therefore untestable, while being exactly the kind of thing that regresses silently
 // — a muted game that still ticks, a themed hop that never replaces the fallback.
 
-/** The AudioContext states browsers report. "interrupted" is Safari's (a call, an alarm). */
+/** The AudioContext states browsers report. "interrupted" is Safari's (a call, an alarm);
+ *  the check below takes a bare string because a browser may report one outside this set. */
 export type AudioContextState = 'running' | 'suspended' | 'closed' | 'interrupted' | 'unknown';
 
 /**
@@ -17,7 +18,7 @@ export type AudioContextState = 'running' | 'suspended' | 'closed' | 'interrupte
  * unpredictably in one window or the other. A "closed" context cannot be revived, and a running
  * one must be left alone: resuming it needlessly costs a gesture the player has not made.
  */
-export function shouldResumeAudioContext(state: AudioContextState | string): boolean {
+export function shouldResumeAudioContext(state: string): boolean {
 	return state === 'suspended' || state === 'interrupted';
 }
 

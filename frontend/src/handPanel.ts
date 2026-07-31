@@ -115,7 +115,7 @@ export interface HandMultiSelect {
 }
 
 export interface HandPanelDeps {
-	getCards(): HandCard[];
+	getCards: () => HandCard[];
 	/** Optional visual cap for card columns. The accessible list and its linear navigation stay
 	 * unchanged; only illustrated rows wrap into balanced table-like lines. */
 	maxVisualColumns?: number;
@@ -123,27 +123,27 @@ export interface HandPanelDeps {
 	 *  OPTIONAL along with onDraw: a family whose refill is automatic (assembly) has no
 	 *  draw affordance at all — no button, and Space falls through. */
 	canDraw?(): { ok: true } | { ok: false; reason: string };
-	onDraw?(): void;
-	onPlay(card: HandCard): void;
+	onDraw?: () => void;
+	onPlay: (card: HandCard) => void;
 	/** OPTIONAL like onDraw: a family whose turn has no discard at all (draft — the pick
 	 *  IS the whole turn) supplies none, and the affordance disappears everywhere (no
 	 *  button, Delete falls through, no unplayable-card discard offer). */
-	onDiscard?(card: HandCard): void;
+	onDiscard?: (card: HandCard) => void;
 	/** May the player discard right now? Gates the discard PROMPT the way {@link canDraw}
 	 *  gates draw: when it refuses (journey's "draw a card first"), the reason is spoken and
 	 *  no "do you want to discard?" dialog opens. Optional — a family without this gate always
 	 *  offers discard (whenever onDiscard is wired). */
 	canDiscard?(): { ok: true } | { ok: false; reason: string };
 	/** Instant, assertive announcement (UI mechanics only). */
-	announce(text: string): void;
+	announce: (text: string) => void;
 	/** Full-key translator (keys under game.hand_*). */
-	t(key: string, vars?: Record<string, unknown>): string;
+	t: (key: string, vars?: Record<string, unknown>) => string;
 	/** Opt-in multi-select (see <see cref="HandMultiSelect"/>): Ctrl+Space (or the tools
 	 *  toggle, or Ctrl+click) switches modes; in multi mode Space marks and Enter sends. */
 	multiSelect?: HandMultiSelect;
 	/** Sound-pack event player for the panel's own cues (mode switches). Optional: no
 	 *  sounds without it, everything else works the same. */
-	playSound?(event: string): void;
+	playSound?: (event: string) => void;
 	/** How this family words its hand keys for the shortcuts help (see HandShortcutText). */
 	shortcutText: HandShortcutText;
 	/** Optional family-owned orderings. Supplying these replaces value/type/colour/original;

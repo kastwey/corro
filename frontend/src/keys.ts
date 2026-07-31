@@ -257,7 +257,7 @@ function createCommandExecutor(opts: KeyHandlersOptions) {
 					}
 					return false;
 				case 'GroupNext': {
-					const group = args && args.group ? String(args.group) : '';
+					const group = args?.group ? String(args.group) : '';
 					const forward = args && typeof args.forward === 'boolean' ? args.forward : true;
 					return opts.gameCommands.groupNext(opts.gameBoard.getActiveIndex(), group, forward);
 				}
@@ -291,7 +291,7 @@ function createCommandExecutor(opts: KeyHandlersOptions) {
 						return true;
 					}
 					if (opts.gameManager?.rollDice) {
-						opts.gameManager.rollDice();
+						void opts.gameManager.rollDice();
 						return true;
 					}
 					return false;
@@ -558,7 +558,7 @@ export function attachKeyHandlers(opts: KeyHandlersOptions) {
 		if (isTextInput && !fullSpec.includes('ctrl') && !fullSpec.includes('meta')
 			&& !fullSpec.includes('alt') && !readOnlyShortcut) return;
 
-		if (spec && spec.cmd) {
+		if (spec?.cmd) {
 			// Board-scoped commands (movement, reading the focused square, roll/end via
 			// the bare keys) only act while the board owns focus, so they can't be fired
 			// by accident from another panel. Their modifier aliases (Ctrl+E, Ctrl+B,

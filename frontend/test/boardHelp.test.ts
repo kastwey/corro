@@ -68,7 +68,7 @@ test('fragment links are safe and focus their heading without accepting arbitrar
 	assert.equal(focusHelpFragment(root, '#screen-reader-help'), true);
 	assert.equal(document.activeElement, heading);
 	assert.equal(focusHelpFragment(root, '#missing'), false);
-	assert.equal(focusHelpFragment(root, '#x\"] body'), false);
+	assert.equal(focusHelpFragment(root, '#x"] body'), false);
 	assert.doesNotMatch(renderMarkdown('[bad](javascript:alert(1))'), /<a /);
 });
 

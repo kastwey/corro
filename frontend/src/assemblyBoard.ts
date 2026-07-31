@@ -21,15 +21,15 @@ import type { AssemblyCardDef, AssemblySeatState, AssemblySlot, GameState } from
 import type { HelpShortcut } from './shortcuts.js';
 
 export interface AssemblyBoardDeps {
-	getGameState(): GameState | null;
-	getMyPlayerId(): string | null;
-	announce(text: string): void;
-	tSync(key: string, vars?: Record<string, unknown>): string;
-	onIdle(): void;
-	motionDisabled(): boolean;
+	getGameState: () => GameState | null;
+	getMyPlayerId: () => string | null;
+	announce: (text: string) => void;
+	tSync: (key: string, vars?: Record<string, unknown>) => string;
+	onIdle: () => void;
+	motionDisabled: () => boolean;
 	commands: {
-		play(instanceId: string, targeting?: { targetPlayerId?: string | null; targetColor?: string | null; giveColor?: string | null }): void;
-		discard(instanceIds: string[]): void;
+		play: (instanceId: string, targeting?: { targetPlayerId?: string | null; targetColor?: string | null; giveColor?: string | null }) => void;
+		discard: (instanceIds: string[]) => void;
 	};
 }
 

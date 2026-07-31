@@ -25,10 +25,10 @@ let boardElement: HTMLElement;
 let state: GameState;
 let view: ExplodingBoard;
 let announcements: string[];
-let played: Array<[string, string | undefined, string | undefined]>;
+let played: [string, string | undefined, string | undefined][];
 let defuseDepths: number[];
 let motionDisabled: boolean;
-let timers: Array<{ callback: () => void; delayMs: number; cancelled: boolean }>;
+let timers: { callback: () => void; delayMs: number; cancelled: boolean }[];
 
 function game(): GameState {
 	const hand = DECK.filter(card => card.id !== 'attack').map(card => instance(card.id));
@@ -72,8 +72,8 @@ function addFavor(): HTMLElement {
 
 beforeEach(() => {
 	popupMenu.close();
-	try { localStorage.removeItem('corro.handPreferences'); } catch {}
-	try { localStorage.removeItem('corro.handPreferences.exploding'); } catch {}
+	try { localStorage.removeItem('corro.handPreferences'); } catch { /* jsdom may ship no storage */ }
+	try { localStorage.removeItem('corro.handPreferences.exploding'); } catch { /* jsdom may ship no storage */ }
 	document.body.innerHTML = '<div id="board"></div>';
 	boardElement = document.getElementById('board')!;
 	state = game();

@@ -58,8 +58,10 @@ class FakeRoom {
 	remoteParticipants = new Map();
 	activeSpeakers: any[] = [];
 	canPlaybackAudio = true;
-	private handlers = new Map<string, Array<(...args: any[]) => void>>();
+	private handlers = new Map<string, ((...args: any[]) => void)[]>();
 
+	// The fake registers itself so the test can drive it; that is the point of the double.
+	// eslint-disable-next-line @typescript-eslint/no-this-alias
 	constructor() { currentRoom = this; }
 	async connect() { calls.push('connect'); }
 	async startAudio() { calls.push('startAudio'); }

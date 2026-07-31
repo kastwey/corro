@@ -170,7 +170,9 @@ class PropertyInfoDialog {
 		if (!this.dialog) return;
 		this.nav?.destroy();
 		this.nav = null;
-		try { this.dialog.close(); } catch (e) { this.dialog.removeAttribute('open'); }
+		// close() throws if the dialog was never shown modally; dropping the attribute is the
+			// equivalent teardown.
+			try { this.dialog.close(); } catch { this.dialog.removeAttribute('open'); }
 		setAnnouncerHost(null);
 		this.dialog.remove();
 		this.dialog = null;

@@ -56,7 +56,7 @@ function initializePanel(): void {
 }
 
 beforeEach(() => {
-	try { (globalThis as any).window.localStorage.removeItem('corro.chatDisclaimerDismissed'); } catch {}
+	try { (globalThis as any).window.localStorage.removeItem('corro.chatDisclaimerDismissed'); } catch { /* jsdom may ship no storage */ }
 	sent.length = 0;
 	recorded.length = 0;
 	boardFocused = 0;

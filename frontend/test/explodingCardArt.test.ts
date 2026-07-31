@@ -10,7 +10,7 @@ function def(type: string, svg?: string): ExplodingCardDef {
 }
 
 test('every exploding mechanic receives a neutral face without package knowledge', () => {
-	const roles: Array<[string, string]> = [
+	const roles: [string, string][] = [
 		['bomb', 'bomb'], ['defuse', 'defuse'], ['nope', 'nope'], ['attack', 'attack'],
 		['skip', 'skip'], ['favor', 'favor'], ['shuffle', 'shuffle'],
 		['seeFuture', 'future'], ['cat', 'cat'],

@@ -201,7 +201,7 @@ class AnnouncerQueue {
 	/** The current polite batch must flush through the ASSERTIVE region (own-action story). */
 	private batchAssertive = false;
 	/** Resolvers waiting for the next polite live-region write before state may repaint. */
-	private politeWriteWaiters: Array<() => void> = [];
+	private politeWriteWaiters: (() => void)[] = [];
 	/** Rolling history of spoken game announcements, oldest first. */
 	private history: string[] = [];
 	/** Index into history currently under review; -1 means "live" (not browsing). */

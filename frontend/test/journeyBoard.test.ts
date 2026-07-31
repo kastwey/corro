@@ -70,7 +70,7 @@ let gs: GameState;
 let deps: JourneyBoardDeps;
 let boardEl: HTMLElement;
 let view: JourneyBoard;
-let played: Array<[string, string | null | undefined]>;
+let played: [string, string | null | undefined][];
 let drawn: number;
 let coups: boolean[];
 let announced: string[];

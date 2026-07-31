@@ -92,11 +92,11 @@ export interface GameClientEvents {
 
 export class UnifiedGameClient {
 	private connection: HubConnection | null = null;
-	private eventHandlers = new Map<keyof GameClientEvents, Array<(data: any) => void>>();
+	private eventHandlers = new Map<keyof GameClientEvents, ((data: any) => void)[]>();
 	private isConnected = false;
 	private hubUrl: string;
 
-	constructor(hubUrl: string = '/gamehub') {
+	constructor(hubUrl = '/gamehub') {
 		this.hubUrl = hubUrl;
 	}
 

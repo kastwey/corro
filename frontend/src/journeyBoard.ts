@@ -37,19 +37,19 @@ import type { GameState, JourneyCardDef, JourneySeatState } from './models.js';
 import type { HelpShortcut } from './shortcuts.js';
 
 export interface JourneyBoardDeps {
-	getGameState(): GameState | null;
-	getMyPlayerId(): string | null;
+	getGameState: () => GameState | null;
+	getMyPlayerId: () => string | null;
 	/** Instant, assertive raw-text announcement. */
-	announce(text: string): void;
-	tSync(key: string, vars?: Record<string, unknown>): string;
+	announce: (text: string) => void;
+	tSync: (key: string, vars?: Record<string, unknown>) => string;
 	/** Animation went idle: release gated announcements + advance the turn sequencer. */
-	onIdle(): void;
-	motionDisabled(): boolean;
+	onIdle: () => void;
+	motionDisabled: () => boolean;
 	commands: {
-		draw(): void;
-		play(instanceId: string, targetId?: string | null): void;
-		discard(instanceId: string): void;
-		coup(accept: boolean): void;
+		draw: () => void;
+		play: (instanceId: string, targetId?: string | null) => void;
+		discard: (instanceId: string) => void;
+		coup: (accept: boolean) => void;
 	};
 }
 

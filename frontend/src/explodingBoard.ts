@@ -69,27 +69,27 @@ const EXPLODING_HAND_SORTING: HandSorting = {
 };
 
 export interface ExplodingBoardDeps {
-	getGameState(): GameState | null;
-	getMyPlayerId(): string | null;
-	announce(text: string): void;
-	tSync(key: string, vars?: Record<string, unknown>): string;
-	onIdle(): void;
-	motionDisabled(): boolean;
+	getGameState: () => GameState | null;
+	getMyPlayerId: () => string | null;
+	announce: (text: string) => void;
+	tSync: (key: string, vars?: Record<string, unknown>) => string;
+	onIdle: () => void;
+	motionDisabled: () => boolean;
 	/** Injectable timer hooks keep the focus-delay regression deterministic in DOM tests. */
-	setTimer?(callback: () => void, delayMs: number): unknown;
-	clearTimer?(handle: unknown): void;
+	setTimer?: (callback: () => void, delayMs: number) => unknown;
+	clearTimer?: (handle: unknown) => void;
 	commands: {
 		/** Play an action card. `targetId` names a Favor / cat-steal victim; `secondInstanceId`
 		 *  is the matching cat of a pair. */
-		play(instanceId: string, targetId?: string, secondInstanceId?: string): void;
+		play: (instanceId: string, targetId?: string, secondInstanceId?: string) => void;
 		/** Draw the top card — ends the turn; may detonate. */
-		draw(): void;
+		draw: () => void;
 		/** Play a Nope on the pending action (off-turn). */
-		nope(instanceId: string): void;
+		nope: (instanceId: string) => void;
 		/** Tuck the just-drawn (defused) bomb back at `depth` cards from the top. */
-		defuse(depth: number): void;
+		defuse: (depth: number) => void;
 		/** As a Favor's target, give the requester the chosen card. */
-		give(instanceId: string): void;
+		give: (instanceId: string) => void;
 	};
 }
 
@@ -99,7 +99,7 @@ export class ExplodingBoard {
 	private table!: HTMLElement;
 	/** The bomb instance whose depth picker is scheduled or open (so update() doesn't repeat it). */
 	private bombPickerFor: string | null = null;
-	private bombPickerTimer: unknown | null = null;
+	private bombPickerTimer: unknown = null;
 	private readonly setTimer: (callback: () => void, delayMs: number) => unknown;
 	private readonly clearTimer: (handle: unknown) => void;
 

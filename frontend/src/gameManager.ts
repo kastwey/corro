@@ -138,7 +138,7 @@ export function pickConsequenceState(
 }
 
 export class GameManager {
-	private eventHandlers = new Map<keyof GameManagerEvents, Array<(data: any) => void>>();
+	private eventHandlers = new Map<keyof GameManagerEvents, ((data: any) => void)[]>();
 	private GameState: GameState | null = null;
 	// Presentation state: the last state whose CONSEQUENCES the player has actually SEEN land (paced
 	// to the token hop by the announcement gate). Consequence READS — the Free Parking pot, the debt
@@ -316,6 +316,9 @@ export class GameManager {
 	 * Creates the context object for command handlers
 	 */
 	private createCommandContext(): CommandContext {
+		// The literal below exposes LIVE getters onto this manager; aliasing is how they reach
+		// it from inside the object.
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const manager = this;
 		return {
 			// Live getter, NOT a snapshot: a handler that reads `gameState` from a deferred
@@ -743,6 +746,8 @@ export class GameManager {
 		await this.send({ $type: 'EXPLODING_NOPE', instanceId });
 	}
 
+	// Kept async so callers may await it uniformly with the commands beside it.
+	// eslint-disable-next-line @typescript-eslint/require-await
 	async announceTurn(playerId?: string): Promise<void> {
 		const player = playerId ? this.getPlayer(playerId) : this.getCurrentPlayer();
 		if (player) {

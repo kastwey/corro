@@ -10,7 +10,7 @@ import { tSync } from './i18nBinder.js';
 const t = (key: string, vars?: Record<string, any>) => tSync(`game.${key}`, vars);
 
 // Pip layout per die face, as [row, column] coordinates on a 3x3 grid.
-const PIPS: Record<number, Array<[number, number]>> = {
+const PIPS: Record<number, [number, number][]> = {
 	1: [[2, 2]],
 	2: [[1, 1], [3, 3]],
 	3: [[1, 1], [2, 2], [3, 3]],

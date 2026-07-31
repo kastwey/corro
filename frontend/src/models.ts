@@ -783,7 +783,7 @@ export interface GameState {
   players: Player[];
   bank: { money: number; freeParkingPot?: number; freeParkingJackpot?: boolean };
   currentTurn: string | null;
-  ownership: Array<{ index: number; ownerId: string }>;
+  ownership: { index: number; ownerId: string }[];
   squares: Square[];
   /** The package's card decks; absent/empty for classic games (center falls back to chance/community). */
   decks?: DeckInfo[];

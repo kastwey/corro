@@ -114,7 +114,7 @@ test('Tab from a roving tabindex=-1 element moves to the adjacent tab stop, neve
 
 	// Forward Tab from the roving element advances to the next real tab stop (last).
 	rover.focus();
-	let cancelled = !dispatchTab(false);
+	const cancelled = !dispatchTab(false);
 	assert.equal(cancelled, true, 'Tab is consumed at a non-tab-stop');
 	assert.equal(document.activeElement, last);
 
@@ -206,7 +206,9 @@ test('a page trap keeps a NON-modal <dialog> within the body (Tab never escapes)
 });
 
 test('deactivate() detaches the trap so Tab is no longer wrapped', () => {
-	const first = button('first');
+	// Two focusables must EXIST for the trap to have anything to wrap; only `last` is
+	// referenced below, so the first is created for its presence alone.
+	button('first');
 	const last = button('last');
 	trap = new FocusTrap({ getRoot: () => document.body });
 	trap.activate();

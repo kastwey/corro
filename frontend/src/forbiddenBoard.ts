@@ -15,20 +15,20 @@ import type { GameState } from './models.js';
 import type { HelpShortcut } from './shortcuts.js';
 
 export interface ForbiddenBoardDeps {
-	getGameState(): GameState | null;
-	getMyPlayerId(): string | null;
-	announce(text: string): void;
-	tSync(key: string, vars?: Record<string, unknown>): string;
+	getGameState: () => GameState | null;
+	getMyPlayerId: () => string | null;
+	announce: (text: string) => void;
+	tSync: (key: string, vars?: Record<string, unknown>) => string;
 	sounds: {
-		playEvent(eventKey: string): void;
-		startLoop(eventKey: string): void;
-		stopLoop(eventKey: string): boolean;
+		playEvent: (eventKey: string) => void;
+		startLoop: (eventKey: string) => void;
+		stopLoop: (eventKey: string) => boolean;
 	};
 	commands: {
-		start(): void;
-		correct(cardSequence: number): void;
-		pass(cardSequence: number): void;
-		violation(cardSequence: number): void;
+		start: () => void;
+		correct: (cardSequence: number) => void;
+		pass: (cardSequence: number) => void;
+		violation: (cardSequence: number) => void;
 	};
 }
 

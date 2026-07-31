@@ -19,8 +19,8 @@ import type { AnnouncementEvent } from './gameClient.js';
 import type { GameState } from './models.js';
 
 export interface VisualNarrativeDeps {
-	getGameState(): GameState | null;
-	getMyPlayerId(): string | null;
+	getGameState: () => GameState | null;
+	getMyPlayerId: () => string | null;
 }
 
 interface VisualMeta {

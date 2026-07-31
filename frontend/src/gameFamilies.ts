@@ -45,19 +45,19 @@ const ENGINE_PALETTE_WORDS: Record<string, string> = {
 export interface FamilyDeps {
   /** The shared board container (board.html's #board). */
   boardElement: HTMLElement;
-  getGameState(): GameState | null;
-  getMyPlayerId(): string | null;
+  getGameState: () => GameState | null;
+  getMyPlayerId: () => string | null;
   /** Instant, assertive raw-text announcement (cursor narration). */
-  announce(text: string): void;
+  announce: (text: string) => void;
   /** Full-key translator (seat/effect names are package keys). */
-  tSync(key: string, vars?: Record<string, unknown>): string;
+  tSync: (key: string, vars?: Record<string, unknown>) => string;
   /** The "move token" earcon, one call per visible hop. */
-  onStep(): void;
+  onStep: () => void;
   /** Animation went idle: release gated announcements + advance the turn sequencer. */
-  onIdle(): void;
-  motionDisabled(): boolean;
+  onIdle: () => void;
+  motionDisabled: () => boolean;
   /** Move keyboard focus to the board container (after a cursor jump). */
-  focusBoard(): void;
+  focusBoard: () => void;
 }
 
 /** A family's live surfaces: its navigation board and its animation pacing. */

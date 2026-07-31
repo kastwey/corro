@@ -341,7 +341,7 @@ export class Board {
    * @param triggerEvents fire the square-selected callbacks (spatial sound cue).
    * @param announceMove speak the destination square (interrupting current speech).
    */
-  setActiveIndex(i: number, triggerEvents: boolean = true, announceMove: boolean = true) {
+  setActiveIndex(i: number, triggerEvents = true, announceMove = true) {
 	const squares = this.getSquares();
 	if (i < 0 || i >= squares.length) return;
 	const el = this.element.querySelector(`.square[data-index="${i}"]`) as HTMLElement | null;

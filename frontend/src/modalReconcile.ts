@@ -70,7 +70,7 @@ const DEFAULT_BID_WINDOW_SECONDS = 10;
 /** Parse a TimeSpan-style "hh:mm:ss(.fff)" string into whole seconds. */
 function parseTimeoutSeconds(bidTimeout: string | undefined): number {
 	if (typeof bidTimeout === 'string') {
-		const m = bidTimeout.match(/(\d+):(\d+):(\d+)/);
+		const m = /(\d+):(\d+):(\d+)/.exec(bidTimeout);
 		if (m) return (+m[1]) * 3600 + (+m[2]) * 60 + (+m[3]);
 	}
 	return DEFAULT_BID_WINDOW_SECONDS;
@@ -155,7 +155,7 @@ export function desiredModal(
 	}
 
 	const auction = state.activeAuction;
-	if (auction && auction.isActive) {
+	if (auction?.isActive) {
 		// A player who already passed has opted out: no modal for them (the game stays
 		// blocked until the auction ends, but they no longer bid). Everyone else — including
 		// the player who declined the purchase that started it — still bids.
