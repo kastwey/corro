@@ -202,7 +202,7 @@ public partial class CorroRulebook : ICorroRulebook
 		context.Logger?.LogDebug("Movement: {OldPosition} -> {NewPosition}", oldPosition, newPosition);
 
 		// Remember the throw so utility rent can multiply by it (4× / 10×).
-		context.LastDiceTotal = dice.StandardTotal;
+		context.Property.LastDiceTotal = dice.StandardTotal;
 
 		// Resolve the square the player landed on (rent, tax, card, or a purchase offer).
 		await ProcessLandingEffectsAsync(player, newPosition, context);

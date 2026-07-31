@@ -210,7 +210,6 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 				GameState = _gameState,
 				Helper = _gameHelper,
 				Settings = _settings,
-				RentRules = _rentRules,
 				Random = _random,
 				// A restored game whose package wasn't re-attached falls back to the snapshot's
 				// board (with the family's default rules), like it always did.
@@ -219,10 +218,16 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 				Announcer = _announcer,
 				Presenter = this,
 				Logger = _logger,
-				// Lets card effects (e.g. "go back 3 spaces") trigger landing effects
-				// without a rulebook ↔ card dependency cycle.
-				ProcessLanding = (p, idx, ctx) => _rulebook.ProcessLandingEffectsAsync(p, idx, ctx),
-				ResolveDeferredExpressMove = ctx => _rulebook.ResolveDeferredExpressMoveAsync(ctx)
+				// The property family's own slice. Filled for every game (it is cheap and keeps the
+				// context uniform), but only property ever reads it.
+				Property = new PropertyTurnContext
+				{
+					RentRules = _rentRules,
+					// Lets card effects (e.g. "go back 3 spaces") trigger landing effects without a
+					// rulebook ↔ card dependency cycle.
+					ProcessLanding = (p, idx, ctx) => _rulebook.ProcessLandingEffectsAsync(p, idx, ctx),
+					ResolveDeferredExpressMove = ctx => _rulebook.ResolveDeferredExpressMoveAsync(ctx),
+				},
 			};
 
 			// Dispatch command to appropriate handler

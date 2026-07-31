@@ -83,7 +83,7 @@ public class CardOutcomeApplierTests
 		Assert.Equal(before, TestFixtures.TotalMoney(state));
 
 		// The modifier must not leak into a later landing.
-		Assert.Null(ctx.PendingRentModifier);
+		Assert.Null(ctx.Property.PendingRentModifier);
 	}
 
 	[Fact]
@@ -107,7 +107,7 @@ public class CardOutcomeApplierTests
 		Assert.Equal(0, paid % 10);
 		Assert.Equal(1500 + paid, b.Money);
 		Assert.Equal(before, TestFixtures.TotalMoney(state));
-		Assert.Null(ctx.PendingRentModifier);
+		Assert.Null(ctx.Property.PendingRentModifier);
 	}
 
 	[Fact]

@@ -35,7 +35,7 @@ public partial class CorroRulebook
 
 		var oldPosition = player.Position;
 		await MovePlayerAsync(player, movement, context);
-		context.LastDiceTotal = pending.Die1 + pending.Die2;
+		context.Property.LastDiceTotal = pending.Die1 + pending.Die2;
 		await ProcessLandingEffectsAsync(player, player.Position, context);
 		var landing = AnalyzeLanding(player.Position, player.Id, context);
 		var (nextId, nextName) = await HandleTurnProgressionAsync(
@@ -80,7 +80,7 @@ public partial class CorroRulebook
 		var destination1 = At(dice.Die1);
 		var destination2 = At(dice.Die2);
 		var destinationBoth = At(dice.StandardTotal);
-		context.LastDiceTotal = dice.StandardTotal;
+		context.Property.LastDiceTotal = dice.StandardTotal;
 
 		int? RentAt(Square? square)
 		{

@@ -123,7 +123,12 @@ internal static class TestFixtures
 			Settings = settings ?? new GameSettings(),
 			// The identity shuffle: deterministic decks, like the E2E environment.
 			Random = new CorroServer.Services.Rules.ScriptedRandomSource(),
-			RentRules = rentRules ?? CorroServer.Models.Corro.RulesConfig.ClassicRules,
+			Property = new CorroServer.Services.Commands.PropertyTurnContext
+			{
+				RentRules = rentRules ?? CorroServer.Models.Corro.RulesConfig.ClassicRules,
+				ProcessLanding = processLanding,
+				ResolveDeferredExpressMove = resolveDeferredExpressMove,
+			},
 			// Same shape the families publish at game start: board + rules (rules defaulted).
 			FamilyRuntime =
 				raceBoard is not null
@@ -139,8 +144,6 @@ internal static class TestFixtures
 			Announce = (key, vars) => announcer.Announce(key, vars),
 			Announcer = announcer,
 			Presenter = new CapturingPresenter(notifyCardDrawn),
-			ProcessLanding = processLanding,
-			ResolveDeferredExpressMove = resolveDeferredExpressMove
 		};
 	}
 

@@ -69,9 +69,9 @@ public class CardActions : ICardActions
 		// Resolve the destination square (announce landing, charge rent, draw a nested
 		// card, etc.) exactly like normal movement. Wired through the context to avoid
 		// a construction-time dependency cycle between cards and the rulebook.
-		if (context.ProcessLanding != null)
+		if (context.Property.ProcessLanding != null)
 		{
-			await context.ProcessLanding(player, targetPosition, context);
+			await context.Property.ProcessLanding(player, targetPosition, context);
 		}
 
 		return new CardEffect
