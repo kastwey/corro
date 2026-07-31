@@ -1314,7 +1314,7 @@ async function initBoard() {
 	// Helper to show/hide debt waiting notification for other players
 	function updateDebtWaitingNotification(gs: GameState): void {
 	const myPlayerId = gameManager.getMyPlayerId();
-	const pendingDebts = gs.pendingDebts || [];
+	const pendingDebts = gs.pendingDebts ?? [];
 
 	// Find if any OTHER player has debts
 	const otherPlayerDebts = pendingDebts.filter(d => d.debtorId !== myPlayerId);
@@ -2027,7 +2027,7 @@ async function initBoard() {
 	getMyPlayerId: () => gameManager.getMyPlayerId() ?? undefined,
 	getPlayerMoney: (id: string) => gameManager.getPlayerMoney(id),
 	getPlayerReleasePasses: (id: string) => gameManager.getPlayer(id)?.releasePasses || 0,
-	getPendingDebts: () => gameManager.getCurrentGameState()?.pendingDebts || [],
+	getPendingDebts: () => gameManager.getCurrentGameState()?.pendingDebts ?? [],
 	getFreeParkingPot: () => gameManager.getFreeParkingPot(),
 	getBankBuildingInventory: () => {
 		const state = gameManager.getCurrentGameState();

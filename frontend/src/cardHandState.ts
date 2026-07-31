@@ -33,6 +33,10 @@ export function localHandChanged(
 ): boolean {
 	const previous = localHandInstanceIds(before, playerId);
 	const next = localHandInstanceIds(after, playerId);
+	// NOT `previous?.length !== next?.length`: with BOTH null that reads undefined !== undefined,
+	// falls through, and the Set below would be built from null. The explicit null checks are
+	// what let the lines after this block assume two real arrays.
+	// eslint-disable-next-line @typescript-eslint/prefer-optional-chain
 	if (previous === null || next === null || previous.length !== next.length) {
 		return previous !== null && next !== null;
 	}

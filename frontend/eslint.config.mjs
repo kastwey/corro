@@ -68,14 +68,8 @@ export default tseslint.config(
 			// select value, an empty player name and a blank translation must all fall through to
 			// their default, which `??` would keep. `ignorePrimitives.string` skips exactly that
 			// ambiguity and still reports the cases where `||` is simply the wrong operator.
-			// ── Adoption backlog ────────────────────────────────────────────────────────────
-			// These two are correct and stay ON, but their autofixer declines these particular
-			// sites because the rewrite could change behaviour, and rewriting boolean logic by
-			// hand across ~54 places is how a subtle bug gets in. They are WARNINGS so the gate
-			// below still blocks real defects while the backlog stays visible and shrinks as the
-			// files are touched — rather than being switched off and forgotten.
-			'@typescript-eslint/prefer-optional-chain': 'warn',
-			'@typescript-eslint/prefer-nullish-coalescing': ['warn', {
+			'@typescript-eslint/prefer-optional-chain': 'error',
+			'@typescript-eslint/prefer-nullish-coalescing': ['error', {
 				// Numbers carry the same ambiguity as strings here: `attempt || 1` and
 				// `count || fallback` mean "no useful value yet", and 0 is one of those.
 				ignorePrimitives: { string: true, number: true },

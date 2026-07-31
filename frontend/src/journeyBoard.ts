@@ -478,7 +478,7 @@ export class JourneyBoard {
 	private reconcileCoupDialog(gs: GameState): void {
 		const coup = gs.journey?.pendingCoup;
 		const myId = this.deps.getMyPlayerId();
-		const key = coup && coup.victimId === myId ? `${coup.attackerId}:${coup.hazardKind}` : null;
+		const key = coup?.victimId === myId ? `${coup.attackerId}:${coup.hazardKind}` : null;
 		if (key === this.coupShownFor) return;
 
 		if (key === null) {

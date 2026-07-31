@@ -42,7 +42,7 @@ export function groupStatusMessage(targetSquare: Square | undefined, ctx: GroupS
 		} else {
 			const owner = ctx.players.find(p => p.id === sq.ownerId);
 			const ownerName = owner?.name || ctx.t('unknown_player');
-			const list = otherOwners.get(ownerName) || [];
+			const list = otherOwners.get(ownerName) ?? [];
 			list.push(sq.name);
 			otherOwners.set(ownerName, list);
 		}

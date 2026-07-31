@@ -39,7 +39,7 @@ class TurnIndicator {
 
 		// Insert directly above the board grid (inside its frame).
 		const board = document.getElementById('board');
-		if (board && board.parentElement) {
+		if (board?.parentElement) {
 			board.parentElement.insertBefore(this.container, board);
 		} else {
 			document.body.prepend(this.container);

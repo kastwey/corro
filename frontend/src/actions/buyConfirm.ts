@@ -42,7 +42,7 @@ export type BuyConfirmDecision = 'open' | 'noPending' | 'inFlight' | 'cannotAffo
  */
 export function decideBuyConfirm(input: BuyConfirmInput): BuyConfirmDecision {
 	const { pendingPurchase: pp, myId, myMoney, inFlightSquare } = input;
-	if (!pp || pp.playerId !== myId) return 'noPending';
+	if (pp?.playerId !== myId) return 'noPending';
 	if (inFlightSquare === pp.squareIndex) return 'inFlight';
 	if (myMoney < pp.price) return 'cannotAfford';
 	return 'open';

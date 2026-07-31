@@ -851,8 +851,12 @@ class UnifiedLobbyUI {
 		// The host's seat pick (race boards only; the fieldset stays hidden for property).
 		const hostSeatId = getSelectedRadio('#seat-list', 'seat') ?? undefined;
 		// Classic pairs: only offered (and only submitted) for 4-seat race boards.
+		// Left UNDEFINED rather than false when unticked: the field is then omitted from the
+		// request entirely, which is what tells the server "this board has no classic pairs".
 		const raceTeams = getElement<HTMLInputElement>('race-teams')?.checked
-			&& !getElement('teams-group')?.classList.contains('hidden') || undefined;
+			&& !getElement('teams-group')?.classList.contains('hidden')
+			? true
+			: undefined;
 
 		// Journey team mode: only when the combo is offered and a count is picked.
 		const teamCount = (!getElement('team-count-group')?.classList.contains('hidden')
@@ -881,7 +885,8 @@ class UnifiedLobbyUI {
 			hostSeatId,
 			raceTeams,
 			teamCount,
-			voiceChatEnabled: getElement<HTMLInputElement>('voice-chat-enabled')?.checked || undefined,
+			// Undefined (not false) when unticked, so the field is omitted from the request.
+			voiceChatEnabled: getElement<HTMLInputElement>('voice-chat-enabled')?.checked ? true : undefined,
 			settings: this.readGameSettings()
 		};
 

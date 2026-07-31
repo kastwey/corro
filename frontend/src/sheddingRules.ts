@@ -65,7 +65,7 @@ export function canPlayCard(gs: GameState, myId: string, instanceId: string): Sh
 	const card = instance ? sheddingCatalog(gs).get(instance.cardId) : null;
 	if (!instance || !card) return { playable: false, reasonKey: 'game.shedding_unknown_card' };
 
-	if (shedding.pendingDrawnPlay && shedding.pendingDrawnPlay.playerId === myId
+	if (shedding.pendingDrawnPlay?.playerId === myId
 		&& shedding.pendingDrawnPlay.instanceId !== instanceId) {
 		return { playable: false, reasonKey: 'game.shedding_only_drawn' };
 	}

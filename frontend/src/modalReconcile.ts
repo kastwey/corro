@@ -129,12 +129,12 @@ export function desiredModal(
 
 	// Race family: the only blocking choice is "which piece moves?" (mine only).
 	const racePending = state.race?.pendingMove;
-	if (racePending && racePending.playerId === myPlayerId) {
+	if (racePending?.playerId === myPlayerId) {
 		return { kind: 'raceChoice', data: racePending };
 	}
 
 	const bus = state.pendingBusChoice;
-	if (bus && bus.playerId === myPlayerId) {
+	if (bus?.playerId === myPlayerId) {
 		const squares = state.squares ?? [];
 		const both = bus.die1 + bus.die2;
 		return {

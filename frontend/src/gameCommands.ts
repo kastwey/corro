@@ -42,7 +42,7 @@ export function ownsWholeColorGroup(
 ): boolean {
 	if (!color || !playerId) return false;
 	const target = color.toLowerCase();
-	const group = squares.filter(s => s.color && s.color.toLowerCase() === target);
+	const group = squares.filter(s => s.color?.toLowerCase() === target);
 	if (group.length === 0) return false;
 	return group.every(s => s.ownerId === playerId);
 }
@@ -128,7 +128,7 @@ export class GameCommands {
 	groupNext(activeIndex: number, group: string, forward = true): boolean {
 		if (!group || group.trim() === '') return false;
 		const clean = String(group).toLowerCase().replace(/[^a-z]/g, '');
-		const arr = this.opts.getGroupMap().get(clean) || [];
+		const arr = this.opts.getGroupMap().get(clean) ?? [];
 		if (arr.length === 0) return true;
 		const curIdx = arr.indexOf(activeIndex);
 		let next: number;
@@ -231,7 +231,7 @@ export class GameCommands {
 			: '';
 
 		// Check if there are pending debts
-		const pendingDebts = this.opts.getPendingDebts?.() || [];
+		const pendingDebts = this.opts.getPendingDebts?.() ?? [];
 		if (pendingDebts.length > 0) {
 			// Find the debtor (player with debts)
 			const debtorId = pendingDebts[0].debtorId;

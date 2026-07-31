@@ -125,9 +125,7 @@ class VisualNarrative {
 		const text = this.translate(event);
 		if (text) this.pending.push({ text, meta });
 		this.playEffect(meta);
-		if (this.flushTimer === null) {
-			this.flushTimer = window.setTimeout(() => this.flush(), 0);
-		}
+		this.flushTimer ??= window.setTimeout(() => this.flush(), 0);
 	}
 
 	private translate(event: AnnouncementEvent): string {

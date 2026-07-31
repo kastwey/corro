@@ -544,7 +544,7 @@ export class RovingToolbarList {
 			return;
 		}
 		e.preventDefault();
-		if (this.contextMenu && this.contextMenu.owner === item) return;
+		if (this.contextMenu?.owner === item) return;
 		this.openContextMenu(item);
 	}
 

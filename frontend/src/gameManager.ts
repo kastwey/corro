@@ -468,7 +468,7 @@ export class GameManager {
 	// === STATE ACCESS ===
 
 	getAllPlayers(): Player[] {
-		return this.GameState?.players || [];
+		return this.GameState?.players ?? [];
 	}
 
 	/** The re-entry code of the local player (null until the join ack delivers it). */
@@ -485,7 +485,7 @@ export class GameManager {
 	}
 
 	getSquares(): Square[] {
-		const squares = this.GameState?.squares || [];
+		const squares = this.GameState?.squares ?? [];
 		// Resolve each square's display name to the player's language, with fallbacks so a package
 		// board that doesn't name every square is never blank: a card square reads as its deck's
 		// name, and corners get a generic label from their behaviour.
@@ -498,7 +498,7 @@ export class GameManager {
 	}
 
 	getPlayer(id: string): Player | null {
-		return this.GameState?.players?.find(p => p.id === id) || null;
+		return this.GameState?.players?.find(p => p.id === id) ?? null;
 	}
 
 	getCurrentPlayer(): Player | null {

@@ -33,7 +33,7 @@ function readStored(): Theme | null {
 }
 
 function systemPreference(): Theme {
-	return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+	return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 export function currentTheme(): Theme {

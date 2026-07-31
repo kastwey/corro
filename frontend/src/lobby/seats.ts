@@ -29,7 +29,7 @@ export function getUsedSeats(players: readonly LobbyPlayer[] | undefined | null)
 export function installTakenGuard(container: HTMLElement): void {
 	container.onchange = ev => {
 		const input = ev.target as HTMLInputElement | null;
-		if (!input || input.type !== 'radio') return;
+		if (input?.type !== 'radio') return;
 		if (input.dataset.taken !== '1') {
 			container.dataset.lastValid = input.value;
 			return;

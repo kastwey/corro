@@ -381,7 +381,7 @@ export class ExplodingBoard {
 	private maybeOpenDefusePicker(gs: GameState): void {
 		const myId = this.deps.getMyPlayerId();
 		const bomb = gs.exploding?.pendingBomb;
-		if (!myId || !bomb || bomb.playerId !== myId) {
+		if (!myId || bomb?.playerId !== myId) {
 			this.cancelDefusePickerTimer();
 			this.bombPickerFor = null;
 			return;
@@ -403,7 +403,7 @@ export class ExplodingBoard {
 		const gs = this.deps.getGameState();
 		const myId = this.deps.getMyPlayerId();
 		const bomb = gs?.exploding?.pendingBomb;
-		if (!gs || !myId || !bomb || bomb.playerId !== myId || bomb.instanceId !== instanceId) {
+		if (!gs || !myId || bomb?.playerId !== myId || bomb.instanceId !== instanceId) {
 			if (this.bombPickerFor === instanceId) this.bombPickerFor = null;
 			return;
 		}

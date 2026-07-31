@@ -59,7 +59,7 @@ class ActionBar {
 
 		// Insert above the board (after the turn indicator if present).
 		const board = document.getElementById('board');
-		if (board && board.parentElement) {
+		if (board?.parentElement) {
 			board.parentElement.insertBefore(section, board);
 		} else {
 			document.body.prepend(section);

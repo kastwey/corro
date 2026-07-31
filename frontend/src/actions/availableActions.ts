@@ -132,7 +132,7 @@ export function deriveActionContext(
 		activeAuctionForMe: !!auction?.isActive && !iPassedAuction,
 		incomingTrade: !!trade?.isActive && trade.targetId === myId,
 		myPendingTrade: !!trade?.isActive && trade.initiatorId === myId,
-		hasDebt: (gs?.pendingDebts || []).some(d => d.debtorId === myId),
+		hasDebt: (gs?.pendingDebts ?? []).some(d => d.debtorId === myId),
 		ownsProperties: (me?.properties?.length ?? 0) > 0,
 		otherPlayers: otherPlayerCount > 0,
 		movementSettling: isMyTokenMoving,

@@ -602,9 +602,7 @@ let queue: AnnouncerQueue | null = null;
 
 /** Create (or reuse) the page announcer and return its announce function. */
 export function createAnnouncer(): AnnounceFn {
-	if (!queue) {
-		queue = new AnnouncerQueue();
-	}
+	queue ??= new AnnouncerQueue();
 	const instance = queue;
 	return (event: AnnouncementEvent, options?: AnnounceOptions) => instance.announce(event, options);
 }

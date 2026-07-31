@@ -67,7 +67,7 @@ test('renderHouseRules renders a choice as a radio group with the default checke
 	assert.match(html, /type="radio"[^>]*name="rule-stacking"/);
 	// Exactly one radio is checked, and it is the default option.
 	const checked = /value="([^"]+)"[^>]*checked/.exec(html);
-	assert.ok(checked && checked[1] === 'sameType', 'the default option is pre-selected');
+	assert.ok(checked?.[1] === 'sameType', 'the default option is pre-selected');
 	assert.equal((html.match(/checked/g) ?? []).length, 1);
 });
 

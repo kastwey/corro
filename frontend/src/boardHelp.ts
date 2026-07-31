@@ -111,14 +111,14 @@ export function renderMarkdown(md: string, contentsLabel = 'Contents'): string {
 		const bullet = /^[-*]\s+(.*)$/.exec(line);
 		if (bullet) {
 			flushPara();
-			if (!list || list.type !== 'ul') { flushList(); list = { type: 'ul', items: [] }; }
+			if (list?.type !== 'ul') { flushList(); list = { type: 'ul', items: [] }; }
 			list.items.push(bullet[1]);
 			continue;
 		}
 		const ordered = /^\d+\.\s+(.*)$/.exec(line);
 		if (ordered) {
 			flushPara();
-			if (!list || list.type !== 'ol') { flushList(); list = { type: 'ol', items: [] }; }
+			if (list?.type !== 'ol') { flushList(); list = { type: 'ol', items: [] }; }
 			list.items.push(ordered[1]);
 			continue;
 		}
@@ -175,7 +175,7 @@ export async function loadBoardHelp(token: string, langs: string[]): Promise<voi
 			const resp = await fetch(`/api/packages/${encodeURIComponent(token)}/help/${encodeURIComponent(lang)}`);
 			if (!resp.ok) continue; // package ships no guide for this language
 			const md = await resp.text();
-			if (md && md.trim()) { helpHtml = renderMarkdown(md, tSync('game.help_contents')); return; }
+			if (md?.trim()) { helpHtml = renderMarkdown(md, tSync('game.help_contents')); return; }
 		} catch (error) {
 			console.debug('[help] board guide load failed for', lang, error);
 		}

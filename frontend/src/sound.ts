@@ -121,7 +121,7 @@ class SoundManager {
 
 		// Configure parameters
 		source.buffer = buffer;
-		source.loop = options.loop || false;
+		source.loop = options.loop ?? false;
 		source.playbackRate.value = Math.max(0.25, Math.min(4.0, options.pitch || 1.0)); // Pitch control
 		gainNode.gain.value = Math.max(0, Math.min(1, options.volume || 1.0));
 		pannerNode.pan.value = Math.max(-1, Math.min(1, options.pan || 0));
@@ -207,7 +207,7 @@ class SoundManager {
 		// Create new source (required after stop())
 		const source = this.audioContext.createBufferSource();
 		source.buffer = sound.buffer;
-		source.loop = sound.source?.loop || false;
+		source.loop = sound.source?.loop ?? false;
 		source.playbackRate.value = sound.currentPitch; // Keep the original pitch
 
 		// Reconnect
