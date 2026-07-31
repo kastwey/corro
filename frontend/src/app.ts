@@ -49,7 +49,10 @@ import { connectionPanel } from './connectionPanel.js';
 import { initThemeToggle } from './themeToggle.js';
 import { initSoundToggle, type SoundToggleController } from './soundToggle.js';
 import { groupStatusMessage } from './groupStatus.js';
-import { desiredModal, desiredTriviaDialog, triviaDialogKey as triviaDialogKeyOf } from './modalReconcile.js';
+import {
+	busChoiceKey as busChoiceKeyOf, desiredModal, desiredTriviaDialog,
+	raceChoiceKey as raceChoiceKeyOf, triviaDialogKey as triviaDialogKeyOf,
+} from './modalReconcile.js';
 import type {
   AuctionModalData,
 	BusChoiceModalData,
@@ -82,7 +85,7 @@ import { FocusTrap } from './focusTrap.js';
 import { copyToClipboard } from './lobby/ui.js';
 import type { RaceBoard } from './raceBoard.js';
 import { familyFor, type FamilyDeps, type FamilyView, type RaceFamilyView, type TriviaFamilyView } from './gameFamilies.js';
-import { triviaNodeLabel, triviaPositionSuffix } from './triviaBoard.js';
+import { triviaDestinationLabel, triviaJudgeLines, triviaQuestionTitle } from './triviaDialogText.js';
 import { familyHasTrades, isToolbarlessFamily } from './familyTraits.js';
 import { describeMoveOption, describePieceOrigin, seatDisplayName, type RaceCursor } from './raceGeometry.js';
 import { busDestinationLabel } from './busChoice.js';
@@ -1425,8 +1428,6 @@ async function initBoard() {
   // content so we only reopen (and re-announce) when the pending step actually changes.
   /** The trivia dialog currently on screen, as its reconcile key; null when none is. */
   let openTriviaDialogKey: string | null = null;
-  const racePendingKey = (p: PendingRaceMove) =>
-	`${p.kind}:${p.steps}:${p.options.map(o => `${o.pieceIndex}>${o.toLocation}${o.toSquare}`).join(',')}`;
   // Grace before the choice dialog takes focus, so the screen reader finishes the roll
   // announcement ("sacas un 6") before the dialog entry interrupts it. Short: field
   // testing found a longer pause reads as a hang.
@@ -1511,7 +1512,7 @@ async function initBoard() {
   }
 
 	function openBusChoiceModal(data: BusChoiceModalData): void {
-		const key = `${data.fromPosition}:${data.die1}:${data.die2}`;
+		const key = busChoiceKeyOf(data);
 		if (busChoiceKey === key) return;
 		busChoiceKey = key;
 		if (busChoiceOpenTimer !== null) window.clearTimeout(busChoiceOpenTimer);
@@ -1591,7 +1592,7 @@ async function initBoard() {
   }
 
   function openRaceChoiceModal(pending: PendingRaceMove): void {
-	const key = racePendingKey(pending);
+	const key = raceChoiceKeyOf(pending);
 	if (raceChoiceKey === key) return; // already showing exactly this choice
 	raceChoiceKey = key;
 	if (raceChoiceOpenTimer !== null) { clearTimeout(raceChoiceOpenTimer); raceChoiceOpenTimer = null; }
@@ -1727,15 +1728,11 @@ async function initBoard() {
 	  title: tSync('game.trivia_choose_destination'),
 	  modal: false,
 	  plainButtons: true,
-	  buttons: options.map((node, i) => {
-		const base = board ? triviaNodeLabel(board, node, tSync) : node;
-		const pos = board ? triviaPositionSuffix(board, node, tSync) : '';
-		return {
-		  label: pos ? `${base}, ${pos}` : base,
-		  variant: i === 0 ? 'primary' as const : 'secondary' as const,
-		  action: () => pick(node),
-		};
-	  }),
+	  buttons: options.map((node, i) => ({
+		label: triviaDestinationLabel(board, node, tSync),
+		variant: i === 0 ? 'primary' as const : 'secondary' as const,
+		action: () => pick(node),
+	  })),
 	});
   }
 
@@ -1743,7 +1740,7 @@ async function initBoard() {
 	const mode = gs.triviaRules?.answerMode ?? 'judge';
 	if (mode === 'choice') {
 	  dialogManager.show({
-		title: q.prompt || tSync('game.trivia_choice_title'),
+		title: triviaQuestionTitle(q, 'game.trivia_choice_title', tSync),
 		plainButtons: true,
 		dismissable: false, // mandatory: you must answer, so Escape can't strand your own turn
 		buttons: q.choices.map((choice, i) => ({
@@ -1774,7 +1771,7 @@ async function initBoard() {
 	// input takes focus directly (initialFocus) so NVDA reads the title then lands on the field,
 	// with no 3-way focus bounce that left it stuck and silent before.
 	dialogManager.show({
-	  title: q.prompt || tSync('game.trivia_answer_title'),
+	  title: triviaQuestionTitle(q, 'game.trivia_answer_title', tSync),
 	  contentElement: content,
 	  initialFocus: input,
 	  plainButtons: true,
@@ -1785,25 +1782,22 @@ async function initBoard() {
 
   function openTriviaJudge(gs: GameState, q: TriviaPendingQuestion): void {
 	const content = document.createElement('div');
-	// The QUESTION first (and emphasised): the judge can't rule "right or wrong" without seeing
-	// what was asked. It leads the content so a screen reader reads it right after the title.
-	if (q.prompt) {
-	  const question = document.createElement('p');
-	  question.className = 'trivia-judge-question';
-	  const strong = document.createElement('strong');
-	  strong.textContent = tSync('game.trivia_judge_question', { prompt: q.prompt });
-	  question.appendChild(strong);
-	  content.appendChild(question);
-	}
-	const answered = document.createElement('p');
 	const answererName = gs.players.find(p => p.id === q.playerId)?.name ?? '';
-	answered.textContent = tSync('game.trivia_answered', { player: answererName, answer: q.submitted ?? '' });
-	content.appendChild(answered);
-	if (q.correctAnswer) {
-	  const reveal = document.createElement('p');
-	  reveal.textContent = tSync('game.trivia_reveal', { correct: q.correctAnswer });
-	  content.appendChild(reveal);
-	}
+	// The lines come already ordered and worded (triviaDialogText): question, what was answered,
+	// and the answer key when the pack ships one. The FIRST is emphasised — the judge can't rule
+	// "right or wrong" without seeing what was asked, so it leads for the screen reader too.
+	triviaJudgeLines(q, answererName, tSync).forEach((line, index) => {
+	  const paragraph = document.createElement('p');
+	  if (index === 0 && q.prompt) {
+		paragraph.className = 'trivia-judge-question';
+		const strong = document.createElement('strong');
+		strong.textContent = line;
+		paragraph.appendChild(strong);
+	  } else {
+		paragraph.textContent = line;
+	  }
+	  content.appendChild(paragraph);
+	});
 	dialogManager.show({
 	  title: tSync('game.trivia_judge_title', { answer: q.submitted ?? '' }),
 	  contentElement: content,

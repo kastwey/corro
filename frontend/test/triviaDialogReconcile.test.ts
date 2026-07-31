@@ -80,3 +80,43 @@ test('the key stays stable for the same dialog and changes when the dialog does'
 	// "Nothing should be open" has no key, which is what closes whatever was.
 	assert.equal(triviaDialogKey({ kind: 'none' }), null);
 });
+
+// ── The other two choice dialogs reconcile on the same idea ────────────────────────────────
+
+test('a replaced race choice gets a new key; the same offer keeps its own', async () => {
+	const { raceChoiceKey } = await import('../src/modalReconcile.js');
+	const base = {
+		playerId: 'ana', kind: 'roll', steps: 6,
+		options: [{ pieceIndex: 0, toLocation: 'circuit', toSquare: 12 }],
+	} as any;
+
+	// Same offer, different object: the dialog must be left alone rather than re-announced.
+	assert.equal(raceChoiceKey(base), raceChoiceKey({ ...base, options: [...base.options] }));
+
+	// The regression this exists for: a chained bonus replaces the pending move with NEW steps,
+	// and a boolean "is it open?" guard left the previous roll's options on screen while the
+	// voice asked for the bonus move.
+	assert.notEqual(raceChoiceKey(base), raceChoiceKey({ ...base, steps: 3 }));
+	assert.notEqual(raceChoiceKey(base), raceChoiceKey({ ...base, kind: 'bonus' }));
+	assert.notEqual(raceChoiceKey(base), raceChoiceKey({
+		...base, options: [{ pieceIndex: 1, toLocation: 'circuit', toSquare: 12 }],
+	}));
+	// A second option is a different offer even though the first is unchanged.
+	assert.notEqual(raceChoiceKey(base), raceChoiceKey({
+		...base, options: [...base.options, { pieceIndex: 1, toLocation: 'goal', toSquare: 0 }],
+	}));
+});
+
+test('a Bus choice is identified by its dice and where they are counted from', async () => {
+	const { busChoiceKey } = await import('../src/modalReconcile.js');
+	const base = { fromPosition: 10, die1: 2, die2: 5 };
+
+	assert.equal(busChoiceKey(base), busChoiceKey({ ...base }));
+	// The three destinations follow from these, so any of them changing is a different offer.
+	assert.notEqual(busChoiceKey(base), busChoiceKey({ ...base, fromPosition: 11 }));
+	assert.notEqual(busChoiceKey(base), busChoiceKey({ ...base, die1: 3 }));
+	assert.notEqual(busChoiceKey(base), busChoiceKey({ ...base, die2: 6 }));
+	// Swapped dice offer the same pair of single-die moves but are NOT the same choice: die1 and
+	// die2 are distinct buttons, so the picker must re-render rather than mislabel them.
+	assert.notEqual(busChoiceKey(base), busChoiceKey({ fromPosition: 10, die1: 5, die2: 2 }));
+});

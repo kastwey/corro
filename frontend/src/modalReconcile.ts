@@ -268,3 +268,28 @@ export function desiredTriviaDialog(
 
 	return { kind: 'none' };
 }
+
+// ── Content fingerprints for the choice dialogs ─────────────────────────────────────────────
+//
+// The race and Bus pickers reconcile the same way the trivia dialogs do, and for the same reason:
+// the key must describe WHAT is being offered, not merely that something is. A boolean "is the
+// dialog open?" guard once left a previous roll's options on screen while the voice asked the
+// player to move the bonus steps — the pending move had been replaced, but the flag had not
+// changed. Comparing content instead makes a replaced choice re-render and an unchanged one stay
+// put (so it never re-announces or steals focus mid-read).
+
+/** Fingerprint of a pending race move: its kind, its distance, and every option it offers. */
+export function raceChoiceKey(pending: PendingRaceMove): string {
+	const options = pending.options
+		.map(option => `${option.pieceIndex}>${option.toLocation}${option.toSquare}`)
+		.join(',');
+	return `${pending.kind}:${pending.steps}:${options}`;
+}
+
+/**
+ * Fingerprint of a pending Bus choice. The two dice and where they are counted from fully
+ * determine the three destinations, so they identify the offer without recomputing it.
+ */
+export function busChoiceKey(choice: { fromPosition: number; die1: number; die2: number }): string {
+	return `${choice.fromPosition}:${choice.die1}:${choice.die2}`;
+}
