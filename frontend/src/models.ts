@@ -86,7 +86,6 @@ export interface PendingPurchase {
   squareIndex: number;
   squareName: string;
   price: number;
-  wasDoublesRoll?: boolean;
 }
 
 /** One side of a trade as stored in the authoritative state: square indices + cash + cards. */
