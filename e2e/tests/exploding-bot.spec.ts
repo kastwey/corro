@@ -22,6 +22,10 @@ async function startHumanVsBot(browser: Browser) {
 	await nameDialog.locator('#bot-name-input').fill('Bot Minero');
 	await nameDialog.locator('.btn-primary').click();
 	await startGame(ana, [ana]);
+	// A match now starts IN the page the table was showing, so "the board is up" no longer implies
+	// "the deal has landed". Anchor on the known opening hand before touching it: these tests count
+	// cards from wherever they start, and a baseline read mid-deal is off by one for the whole test.
+	await expect(ana.locator('.hand-card:not(.hand-card--info)')).toHaveCount(8);
 	return ana;
 }
 
@@ -62,12 +66,14 @@ test('a bot pays a Favor directed at it without wedging the game', async ({ brow
 	// Pico prestado, the package's Favor card.
 	const cards = ana.locator('.hand-card:not(.hand-card--info)');
 	const anaTurn = ana.locator('.exploding-seat--turn .exploding-seat__name', { hasText: 'Ana' });
-	let expectedCards = await cards.count();
 	for (let turn = 0; turn < 15; turn++) {
 		await expect(anaTurn).toBeVisible();
+		// Sampled HERE, once the turn is back with Ana — not once before the loop. The hand also
+		// changes while the bot plays between her turns, so a baseline captured earlier is already
+		// stale by the first draw, and every assertion after it is off by one.
+		const before = await cards.count();
 		await ana.locator('.hand-panel__draw').click();
-		expectedCards++;
-		await expect(cards).toHaveCount(expectedCards);
+		await expect(cards).toHaveCount(before + 1);
 		await expect(anaTurn).toBeVisible();
 	}
 	const favor = ana.locator('.hand-card:not(.hand-card--info)', { hasText: 'Pico prestado' }).first();

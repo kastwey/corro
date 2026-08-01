@@ -16,7 +16,8 @@ import {
 } from './lobby/contentLanguage.js';
 import { familyHasBots } from './familyTraits.js';
 import { winningSide } from './endScreen.js';
-import type { GameInfo, GameState } from './models.js';
+import { applyHouseRuleValues, readHouseRuleValues, renderHouseRules } from './houseRules.js';
+import type { GameInfo, GameState, PackageUploadResponse } from './models.js';
 
 export interface TableViewDeps {
 	t: (key: string, vars?: Record<string, unknown>) => string;
@@ -26,6 +27,10 @@ export interface TableViewDeps {
 	start: () => Promise<void>;
 	/** Host-only: change the deck the whole table plays with. */
 	setContentLanguage?: (language: string) => Promise<void>;
+	/** The board's declared house rules, or null when this table's package offers none. */
+	loadRules?: (packageToken: string) => Promise<PackageUploadResponse | null>;
+	/** Host-only: keep these rule values for the next match. */
+	saveRules?: (values: Record<string, boolean | number | string>) => Promise<void>;
 	/** Host-only: seat a bot (an empty name lets the server pick one), or send one away. */
 	addBot?: () => void;
 	removeBot?: (playerId: string) => Promise<void>;
@@ -69,6 +74,10 @@ export class TableView {
 	private lastMatchLine: HTMLElement | null = null;
 	private standingsButton: HTMLButtonElement | null = null;
 	private lastMatch: GameState | null = null;
+	private rulesBox: HTMLDetailsElement | null = null;
+	private rulesFields: HTMLElement | null = null;
+	/** The package whose rules are on screen, so they are fetched and built once per table. */
+	private rulesPackageToken: string | null = null;
 	private starting = false;
 
 	init(deps: TableViewDeps): void {
@@ -93,6 +102,8 @@ export class TableView {
 		this.copyLinkButton = document.getElementById('table-copy-link') as HTMLButtonElement | null;
 		this.addBotButton = document.getElementById('table-add-bot') as HTMLButtonElement | null;
 		this.leaveButton = document.getElementById('table-leave') as HTMLButtonElement | null;
+		this.rulesBox = document.getElementById('table-rules') as HTMLDetailsElement | null;
+		this.rulesFields = document.getElementById('table-rules-fields');
 		this.lastMatchBox = document.getElementById('table-last-match');
 		this.lastMatchLine = document.getElementById('table-last-match-line');
 		this.standingsButton = document.getElementById('table-standings') as HTMLButtonElement | null;
@@ -146,7 +157,56 @@ export class TableView {
 		this.renderContentLanguage(table);
 		this.renderBotChair(table);
 		this.renderLastMatch(table);
+		void this.renderRules(table);
 		this.render();
+	}
+
+	/**
+	 * The board's own house rules, for the NEXT match — the host's to change while nothing is
+	 * running. Built once per table (the package's rule catalogue does not change under it) and
+	 * opened on the values the last match was played with, not on the board's defaults.
+	 *
+	 * Offered to the host alone. A guest reading a rule they cannot change, in a panel that
+	 * repaints under them whenever the host moves something, is worse than the board's own guide.
+	 */
+	private async renderRules(table: GameInfo): Promise<void> {
+		if (!this.rulesBox || !this.rulesFields || !this.deps) return;
+		const token = table.packageToken ?? null;
+		const offered = !!token && this.deps.isHost() && !!this.deps.loadRules && !!this.deps.saveRules;
+		if (!offered) {
+			this.rulesBox.hidden = true;
+			return;
+		}
+		if (this.rulesPackageToken !== token) {
+			this.rulesPackageToken = token;
+			const pkg = await this.deps.loadRules!(token!);
+			const rules = pkg?.houseRules ?? [];
+			if (rules.length === 0) {
+				// A board that declares no rules has nothing to offer here.
+				this.rulesBox.hidden = true;
+				this.rulesFields.replaceChildren();
+				return;
+			}
+			this.rulesFields.innerHTML = renderHouseRules(
+				pkg!.ruleGroups ?? [], rules, key => this.deps!.t(key));
+			this.rulesFields.addEventListener('change', () => void this.saveRules());
+			this.rulesBox.hidden = false;
+		}
+		// Re-applied on every authoritative table, so a host who changed them in another tab — or
+		// whose own change was refused — sees what the server actually holds.
+		if (!this.rulesBox.hidden) {
+			applyHouseRuleValues(this.rulesFields, table.ruleValues);
+		}
+	}
+
+	private async saveRules(): Promise<void> {
+		if (!this.rulesFields || !this.deps?.saveRules) return;
+		try {
+			await this.deps.saveRules(readHouseRuleValues(this.rulesFields));
+			this.deps.announce(this.deps.t('table.rulesSaved'));
+		} catch (error) {
+			this.deps.announce(this.deps.explainError?.(error) ?? this.deps.t('table.rulesFailed'));
+		}
 	}
 
 	/**

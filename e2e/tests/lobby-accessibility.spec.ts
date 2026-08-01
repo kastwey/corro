@@ -203,7 +203,7 @@ test('home, dark theme, runtime language and create/join validation states are A
 	// a click can land before init() has attached its handlers (and be undone by its final
 	// showView), which is a race the old in-place retranslation never had.
 	await expect(host.locator('#your-games-empty, #your-games-list li').first()).toBeVisible();
-	await expect(host.locator('#home-heading')).toHaveText('Your games');
+	await expect(host.locator('#home-heading')).toHaveText(appI18n('en').lobby.savedGames.heading as string);
 	await expect(host.locator('[data-site-tagline]')).toHaveText('Play together, play your way.');
 	await expect(corro).toHaveAttribute('aria-label', appI18n('en').footer.corroNewWindowLabel as string);
 	await expect(license).toHaveAttribute('aria-label', appI18n('en').footer.licenseNewWindowLabel as string);

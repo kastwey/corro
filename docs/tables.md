@@ -110,11 +110,28 @@ the new match surface exactly as it does today when a game starts.
    way out. Tokens and seats never lived in the waiting room — they are picked in the
    create/join forms, which is part of asking to sit down, and stayed there. `view-waiting` is
    gone; the lobby is your tables, the create form and the join form.
-4. **Rules at the table, then the rename** — the create form's board picker and rule fields
-   are reused as "settings for the next match" (nearly free: `packageToken`, `ruleValues` and
-   `settings` already live on the document and are already re-read at every start). The
-   vocabulary sweep (mesa/partida, "your tables") comes last, so a rename never fights a
-   behaviour change.
+4. ~~**Rules at the table, then the rename.**~~ **Done.** The host edits the board's declared
+   house rules from the table, for the next match: stored raw on the document, applied over the
+   package defaults at start through the catalogue that already did it. The lobby's vocabulary
+   followed — it speaks of tables now, while a *match* is still a match, which is what it is.
+
+   The BOARD itself is deliberately not changeable between matches. Every player's piece and
+   seat belong to the package, so swapping it would invalidate them; a group that wants a
+   different game creates a table for it. Worth revisiting once seats can be re-picked at the
+   table.
+
+## The rules of the next match
+
+The board's declared house rules are the host's to change while nothing is running, from the
+table. They are stored raw (`ruleValues`) and applied over the package's defaults when a match
+starts, through the same catalogue that already did it — validating them a second time on the
+way in would only be a second place to get the rules wrong. Mid-match they are locked: changing
+them under a live game would mean two rulebooks in one match.
+
+The panel opens on what the LAST match was played with rather than on the board's defaults, so
+changing one thing does not silently reset the rest. It is offered to the host alone: a guest
+reading a rule they cannot change, in a panel that repaints whenever the host moves something,
+is worse served than by the board's own guide.
 
 ## Open questions, deliberately not answered yet
 

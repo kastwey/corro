@@ -464,6 +464,10 @@ async function initBoard() {
 		setContentLanguage: language => gameClient.setContentLanguage({
 			gameId, hostId: playerSession.playerId, language,
 		}),
+		loadRules: token => gameClient.getPackageSummary(token),
+		saveRules: ruleValues => gameClient.setTableRules({
+			gameId, hostId: playerSession.playerId, ruleValues,
+		}),
 		addBot: () => promptForBotName({
 			t: key => tSync(key),
 			rollName: current => randomBotName(key => tSync(key), current),

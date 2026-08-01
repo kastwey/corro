@@ -101,6 +101,13 @@
 	  <!-- Team boards: the host arranges everyone before there is a game to play; the rest of
 		   the table watches the same picture, read-only. -->
 	  <div id="table-team-panel" class="team-panel hidden" hidden></div>
+
+	  <!-- The board's own house rules, for the NEXT match. A table plays again and again, and
+		   the game that just ended is exactly when a group decides to change them. -->
+	  <details id="table-rules" class="rules-details" hidden>
+		<summary data-i18n="table.rulesHeading">Rules for the next match</summary>
+		<div id="table-rules-fields"></div>
+	  </details>
 	  <p class="table-view__actions">
 		<button type="button" id="table-start-btn" class="primary-button" data-i18n="table.start" hidden>Start the next match</button>
 		<span id="table-waiting-host" class="loading" data-i18n="lobby.waitingForHost" hidden>Waiting for host to start the game...</span>

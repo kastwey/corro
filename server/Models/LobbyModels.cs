@@ -86,6 +86,16 @@ public record SetContentLanguageRequest
 	public required string Language { get; init; }
 }
 
+/// <summary>Host request: set the board's house-rule values for the NEXT match, from a table
+/// with nothing running. Applied over the package defaults when that match starts.</summary>
+public record SetTableRulesRequest
+{
+	public required string GameId { get; init; }
+	public required string HostId { get; init; }
+	/// <summary>ruleId -> value, exactly as the create form sends it. Null clears them.</summary>
+	public Dictionary<string, System.Text.Json.JsonElement>? RuleValues { get; init; }
+}
+
 /// <summary>Host request: seat a bot in the waiting room (families with a bot policy only).</summary>
 public record AddBotRequest
 {

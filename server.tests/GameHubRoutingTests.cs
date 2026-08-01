@@ -597,6 +597,75 @@ public class GameHubRoutingTests
 		Assert.False(clients.Group("lobby_g1").Received("ContentLanguageChanged"));
 	}
 
+	// A table plays again and again, so the rules it starts from must be editable between matches —
+	// the game that just ended is exactly when a group decides that auctions were a mistake.
+	[Fact]
+	public async Task Host_can_change_the_house_rules_for_the_next_match()
+	{
+		var repository = new CapturingRepository();
+		repository.Seed(WaitingForbiddenGame());
+		var registry = new GameSessionRegistry(
+			new FakeHubContext(), repository, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
+		var hub = CreateLobbyHub(repository, registry, out var clients);
+		registry.MapConnectionToGame(hub.Context.ConnectionId, "g1");
+		registry.AuthenticateConnection(hub.Context.ConnectionId, "host");
+
+		await hub.SetTableRules(new SetTableRulesRequest
+		{
+			GameId = "g1",
+			HostId = "host",
+			RuleValues = new() { ["auctions"] = JsonSerializer.SerializeToElement(false) },
+		});
+
+		Assert.False(repository.Created!.RuleValues!["auctions"].GetBoolean());
+		Assert.True(clients.Group("lobby_g1").Received("LobbyUpdated"));
+	}
+
+	[Fact]
+	public async Task Guest_cannot_change_the_house_rules()
+	{
+		var repository = new CapturingRepository();
+		repository.Seed(WaitingForbiddenGame());
+		var registry = new GameSessionRegistry(
+			new FakeHubContext(), repository, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
+		var hub = CreateLobbyHub(repository, registry, out var clients);
+		registry.MapConnectionToGame(hub.Context.ConnectionId, "g1");
+		registry.AuthenticateConnection(hub.Context.ConnectionId, "guest");
+
+		await hub.SetTableRules(new SetTableRulesRequest
+		{
+			GameId = "g1",
+			HostId = "host",
+			RuleValues = new() { ["auctions"] = JsonSerializer.SerializeToElement(false) },
+		});
+
+		Assert.Null(repository.Created!.RuleValues);
+		Assert.True(clients.Caller.Received("Error"));
+	}
+
+	[Fact]
+	public async Task The_house_rules_are_locked_while_a_match_is_running()
+	{
+		// Changing them under a live game would mean two different rulebooks in one match.
+		var repository = new CapturingRepository();
+		repository.Seed(WaitingForbiddenGame() with { Status = GameStatus.Active });
+		var registry = new GameSessionRegistry(
+			new FakeHubContext(), repository, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
+		var hub = CreateLobbyHub(repository, registry, out var clients);
+		registry.MapConnectionToGame(hub.Context.ConnectionId, "g1");
+		registry.AuthenticateConnection(hub.Context.ConnectionId, "host");
+
+		await hub.SetTableRules(new SetTableRulesRequest
+		{
+			GameId = "g1",
+			HostId = "host",
+			RuleValues = new() { ["auctions"] = JsonSerializer.SerializeToElement(false) },
+		});
+
+		Assert.Null(repository.Created!.RuleValues);
+		Assert.True(clients.Caller.Received("Error"));
+	}
+
 	[Fact]
 	public async Task Reloaded_waiting_player_rejoins_live_lobby_broadcasts()
 	{

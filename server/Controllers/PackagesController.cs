@@ -141,6 +141,19 @@ public class PackagesController : ControllerBase
 	}
 
 	/// <summary>
+	/// The summary of a package that is ALREADY staged, by its token — the same shape staging and
+	/// uploading return, without staging anything again. A table's own page asks for it: it knows
+	/// which package it plays but was never the one that staged it, and the host needs the board's
+	/// declared house rules to change them before the next match.
+	/// </summary>
+	[HttpGet("{token}")]
+	public ActionResult<PackageUploadResponse> Summary(string token)
+	{
+		var definition = _store.GetDefinition(token);
+		return definition is null ? NotFound() : Ok(Summarize(token, definition));
+	}
+
+	/// <summary>
 	/// The unlock codes the caller presented in the request header, normalized the same way the manifest
 	/// codes are (trimmed, lower-cased) so the comparison is forgiving. Empty when the header is absent —
 	/// including in unit tests with no HttpContext, where only public boards are then visible.

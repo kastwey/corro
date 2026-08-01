@@ -55,6 +55,26 @@ function renderRule(rule: HouseRuleDef, translate: (key: string) => string): str
 	return `<div class="form-group"><label><input type="checkbox" data-rule-id="${id}" data-rule-type="toggle"${checked}> ${label}</label></div>`;
 }
 
+/**
+ * Puts previously chosen values back into freshly rendered inputs, which otherwise show the
+ * package's defaults. A table keeps the host's choices between matches, so the panel it offers
+ * for the next game must open on the rules the last one was played with, not on the board's.
+ * Rules the saved map says nothing about keep their default.
+ */
+export function applyHouseRuleValues(
+	container: HTMLElement,
+	values: Record<string, boolean | number | string> | null | undefined,
+): void {
+	if (!values) return;
+	container.querySelectorAll<HTMLInputElement>('[data-rule-id]').forEach(el => {
+		const value = values[el.dataset.ruleId!];
+		if (value === undefined) return;
+		if (el.dataset.ruleType === 'number') el.value = String(Number(value));
+		else if (el.dataset.ruleType === 'choice') el.checked = el.value === String(value);
+		else el.checked = value === true;
+	});
+}
+
 /** Reads the rendered rule inputs back into a {ruleId: value} map: boolean for toggles,
  *  number for numbers, the selected option id (string) for a choice's radio group. */
 export function readHouseRuleValues(container: HTMLElement): Record<string, boolean | number | string> {

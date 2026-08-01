@@ -34,6 +34,10 @@ function mount(): void {
 			</p>
 			<ul id="table-players"></ul>
 			<button type="button" id="table-add-bot" hidden>Add a bot</button>
+			<details id="table-rules" hidden>
+				<summary>Rules</summary>
+				<div id="table-rules-fields"></div>
+			</details>
 			<button type="button" id="table-start-btn" hidden>Start</button>
 			<span id="table-waiting-host" hidden>Waiting for the host</span>
 			<button type="button" id="table-leave">Leave</button>
@@ -251,6 +255,51 @@ test('a table that has not played yet says nothing about a last match', () => {
 
 	assert.equal((document.getElementById('table-last-match') as HTMLElement).hidden, true);
 	assert.equal(document.getElementById('table-last-match-line')!.textContent, '');
+});
+
+// A table plays again and again, and the game that just ended is exactly when a group decides
+// the rules were wrong. The panel opens on what the LAST match was played with, not on the
+// board's defaults, so changing one thing does not silently reset the rest.
+test('the host edits the board rules for the next match, starting from the current ones', async () => {
+	const saved: Record<string, boolean | number | string>[] = [];
+	const view = newView({
+		isHost: () => true,
+		loadRules: async () => ({
+			houseRules: [
+				{ id: 'auctions', type: 'toggle', default: true },
+				{ id: 'startingMoney', type: 'number', default: 1500 },
+			],
+		}) as any,
+		saveRules: async values => { saved.push(values); },
+	});
+
+	view.setTable(table({ packageToken: 'pkg', ruleValues: { auctions: false } }));
+	await new Promise(resolve => setTimeout(resolve, 0));
+
+	const box = document.getElementById('table-rules') as HTMLElement;
+	assert.equal(box.hidden, false);
+	const auctions = document.querySelector<HTMLInputElement>('#table-rules-fields [data-rule-id="auctions"]')!;
+	assert.equal(auctions.checked, false, 'opens on the value this table already holds');
+
+	auctions.checked = true;
+	auctions.dispatchEvent(new (globalThis as any).window.Event('change', { bubbles: true }));
+	await new Promise(resolve => setTimeout(resolve, 0));
+
+	assert.equal(saved.length, 1);
+	assert.equal(saved[0].auctions, true);
+	assert.equal(saved[0].startingMoney, 1500, 'the untouched rules travel with the change');
+});
+
+test('a guest is never shown the rule editor, and neither is a board that declares no rules', async () => {
+	const guest = newView({ isHost: () => false, loadRules: async () => ({ houseRules: [] }) as any, saveRules: async () => {} });
+	guest.setTable(table({ packageToken: 'pkg' }));
+	await new Promise(resolve => setTimeout(resolve, 0));
+	assert.equal((document.getElementById('table-rules') as HTMLElement).hidden, true);
+
+	const host = newView({ isHost: () => true, loadRules: async () => ({ houseRules: [] }) as any, saveRules: async () => {} });
+	host.setTable(table({ packageToken: 'pkg' }));
+	await new Promise(resolve => setTimeout(resolve, 0));
+	assert.equal((document.getElementById('table-rules') as HTMLElement).hidden, true);
 });
 
 test('a guest is told what they are waiting for instead of being given a dead button', () => {

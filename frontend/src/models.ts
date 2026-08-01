@@ -849,6 +849,8 @@ export interface GameInfo {
   packageToken?: string;
   /** The family this table is set up to play ("property", "exploding"…), known even at rest. */
   gameType?: string | null;
+  /** The host's chosen house-rule values for the next match (ruleId -> value). */
+  ruleValues?: Record<string, boolean | number | string> | null;
   /** The match that just finished, kept while the table rests so its result outlives it. */
   lastMatch?: GameState | null;
   /** How many matches this table has finished. */

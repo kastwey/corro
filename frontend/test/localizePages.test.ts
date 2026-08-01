@@ -46,12 +46,16 @@ test('the Spanish page carries Spanish copy, not the English fallback it was bui
 	const english = out.read('index.html');
 
 	const strings = flatten(JSON.parse(readFileSync(join(root, 'i18n/locales/es.json'), 'utf-8')));
+	const englishStrings = flatten(JSON.parse(readFileSync(join(root, 'i18n/locales/en.json'), 'utf-8')));
 	// A key whose two languages genuinely differ, so the assertion cannot pass by coincidence.
+	// Read from the locale files rather than spelled out here: the copy is the product's to
+	// reword, and a test that pins the words breaks every time somebody improves them.
 	assert.notEqual(strings['lobby.createGame'], undefined);
+	assert.notEqual(strings['lobby.createGame'], englishStrings['lobby.createGame']);
 	assert.match(spanish, new RegExp(strings['lobby.createGame'] as string));
-	assert.doesNotMatch(spanish, /Create New Game/);
+	assert.doesNotMatch(spanish, new RegExp(englishStrings['lobby.createGame'] as string));
 	// …and the English page is untouched by the Spanish pass.
-	assert.match(english, /Create New Game/);
+	assert.match(english, new RegExp(englishStrings['lobby.createGame'] as string));
 });
 
 test('translated attributes are applied too, not just element text', () => {

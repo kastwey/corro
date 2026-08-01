@@ -234,6 +234,63 @@ public partial class GameHub
 		}
 	}
 
+	/// <summary>
+	/// The host changes the board's house rules for the NEXT match, from the table. A table plays
+	/// again and again, and a group that has just finished one game is exactly when it decides that
+	/// auctions were a mistake — so the values it starts from must be editable while nothing is
+	/// running. They are stored raw: the rule CATALOG belongs to the package, and start already
+	/// applies these over its defaults through it (GameDefinitionAdapter.EffectiveSettings), so
+	/// validating them twice here would only be a second place to get the rules wrong.
+	/// </summary>
+	public async Task SetTableRules(SetTableRulesRequest request)
+	{
+		try
+		{
+			if (request is null
+				|| !LobbyInput.IsIdentifier(request.GameId)
+				|| !LobbyInput.IsIdentifier(request.HostId))
+			{
+				await Clients.Caller.SendAsync("Error", "INVALID_LOBBY_REQUEST");
+				return;
+			}
+			if (!IsConnectionAuthenticated(out var callerId, out var callerGameId)
+				|| callerId != request.HostId
+				|| callerGameId != request.GameId)
+			{
+				await Clients.Caller.SendAsync("Error", "HOST_ONLY");
+				return;
+			}
+
+			var game = await _gameRepository.LoadGameAsync(request.GameId);
+			if (game is null)
+			{
+				await Clients.Caller.SendAsync("Error", "GAME_NOT_FOUND");
+				return;
+			}
+			if (game.HostId != request.HostId)
+			{
+				await Clients.Caller.SendAsync("Error", "HOST_ONLY");
+				return;
+			}
+			// Mid-match the rules are already in effect; changing them under a live game would mean
+			// two different rulebooks in one match.
+			if (game.Status != GameStatus.WaitingForPlayers)
+			{
+				await Clients.Caller.SendAsync("Error", "GAME_ALREADY_STARTED");
+				return;
+			}
+
+			var savedGame = await _gameRepository.UpdateGameAsync(game with { RuleValues = request.RuleValues });
+			_registry.CacheDocument(game.GameId, savedGame);
+			await Clients.Group($"lobby_{game.GameId}").SendAsync("LobbyUpdated", savedGame.Sanitized());
+		}
+		catch (Exception ex)
+		{
+			_logger?.LogError(ex, "Error in SetTableRules");
+			await Clients.Caller.SendAsync("Error", "SET_TABLE_RULES_FAILED");
+		}
+	}
+
 	/// <summary>Restore an authenticated waiting-room connection after a reload. A REST read can
 	/// repaint the room, but only this authenticated hub join restores live lobby broadcasts.</summary>
 	public async Task<GameDocument> ReconnectLobby(

@@ -587,6 +587,25 @@ export class UnifiedGameClient {
 	}
 
 	/**
+	 * The summary of an ALREADY staged package, by token — the same shape staging returns, without
+	 * staging anything again. A table asks for it: it knows which package it plays but was never
+	 * the page that staged it, and the host needs the board's declared rules to change them.
+	 * Null when the server no longer holds that package.
+	 */
+	async getPackageSummary(token: string): Promise<PackageUploadResponse | null> {
+		const response = await fetch(`/api/packages/${encodeURIComponent(token)}`);
+		if (!response.ok) return null;
+		return await response.json() as PackageUploadResponse;
+	}
+
+	/** Host only: the board's house-rule values for the NEXT match at this table. */
+	async setTableRules(request: {
+		gameId: string; hostId: string; ruleValues?: Record<string, boolean | number | string>;
+	}): Promise<void> {
+		await this.invoke('SetTableRules', request);
+	}
+
+	/**
 	 * Uploads a .corro package and stages it on the server, returning its token (passed to
 	 * createGame), localized name, and rule defaults. Throws with the server's message on a
 	 * rejected upload (too large / not a valid package).
