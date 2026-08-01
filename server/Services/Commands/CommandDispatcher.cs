@@ -159,10 +159,25 @@ public class CommandDispatcher
 		return command.MutatesState ? "AUCTION_IN_PROGRESS" : null;
 	}
 
-	/// <summary>While a Bus choice is pending, only that answer and read-only queries may mutate.</summary>
+	/// <summary>
+	/// A pending Bus choice blocks THE PLAYER WHO OWES IT, and nobody else.
+	///
+	/// Unlike a trade or an auction, this is not a table-wide event: it is one player deciding how
+	/// their own bonus die moves them. Freezing everyone meant a rival mortgaging a property, or
+	/// answering a trade, was told to "choose your bonus-die movement" for a die they never threw —
+	/// and could do nothing until that player got around to deciding.
+	///
+	/// The owner still cannot slip past it: every mutating command of theirs except the answer is
+	/// refused, so the choice cannot be abandoned half-made.
+	/// </summary>
 	public static string? CheckBusChoiceFreeze(GameCommand command, GameState state)
 	{
-		if (state.PendingBusChoice is null || command is BusChoiceCommand)
+		if (state.PendingBusChoice is not { } pending || command is BusChoiceCommand)
+		{
+			return null;
+		}
+
+		if (command.PlayerId != pending.PlayerId)
 		{
 			return null;
 		}
@@ -172,9 +187,10 @@ public class CommandDispatcher
 
 	/// <summary>
 	/// The pre-dispatch gate, in order: turn ownership first (a turn-bound command from anyone
-	/// but the current player never runs, whatever the client did), then the three freezes —
-	/// while a trade, an auction or a Bus choice is pending, only the commands that RESOLVE it
-	/// (plus read-only queries) may mutate. The auction freeze matters twice over: the player who
+	/// but the current player never runs, whatever the client did), then the three freezes. A
+	/// pending trade or auction is a TABLE event: while one is open, only the commands that resolve
+	/// it (plus read-only queries) may mutate, for anybody. A pending Bus choice is one player's
+	/// own decision and freezes only them. The auction freeze matters twice over: the player who
 	/// declined the purchase is still the turn holder, so without it they could roll again on
 	/// doubles (playtest #9) or open a trade that freezes the auction's own bids (playtest #6).
 	/// Each check stays a pure static method, unit-tested without constructing a dispatcher.

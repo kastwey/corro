@@ -123,9 +123,18 @@ function busDestination(squares: Square[], from: number, spaces: number): BusDes
 export function desiredModal(
 	state: GameState | null | undefined,
 	myPlayerId: string | null,
-	now: number = Date.now()
+	now: number = Date.now(),
+	/**
+	 * The squares as the PLAYER reads them, i.e. with their names resolved to the player's
+	 * language (GameManager.getSquares). The authoritative `state.squares` carry the board's
+	 * canonical names, so reading them directly made a trade review offer "Orion Hyperspace
+	 * Station" to a Spanish player whose whole board says "Estación Hiperespacial Orión".
+	 * Falls back to the raw squares, which is still better than no name at all.
+	 */
+	localizedSquares?: Square[],
 ): DesiredModal {
 	if (!state) return { kind: 'none' };
+	const readableSquares = localizedSquares ?? state.squares ?? [];
 
 	// Race family: the only blocking choice is "which piece moves?" (mine only).
 	const racePending = state.race?.pendingMove;
@@ -135,7 +144,7 @@ export function desiredModal(
 
 	const bus = state.pendingBusChoice;
 	if (bus?.playerId === myPlayerId) {
-		const squares = state.squares ?? [];
+		const squares = readableSquares;
 		const both = bus.die1 + bus.die2;
 		return {
 			kind: 'busChoice',
@@ -181,7 +190,7 @@ export function desiredModal(
 
 	const trade = state.activeTrade;
 	if (trade && trade.isActive && myPlayerId) {
-		const squares = state.squares ?? [];
+		const squares = readableSquares;
 		if (trade.targetId === myPlayerId) {
 			return {
 				kind: 'tradeReview',

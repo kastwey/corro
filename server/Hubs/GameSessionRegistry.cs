@@ -542,6 +542,20 @@ public sealed class GameSessionRegistry
 				return;
 			}
 
+			// The auction may already be over: a winning bid nobody could match, or the last rival
+			// passing, resolves it through the normal command path. The bid timer is retired by the
+			// state change that follows (ArmOrCancelAuctionTimer), but a tick already in flight
+			// cannot be recalled — it would issue EndAuctionCommand against nothing, and the
+			// resulting NO_ACTIVE_AUCTION error was broadcast to EVERY player as if something had
+			// gone wrong with an auction that in fact ended correctly. There is simply nothing to do.
+			if (gameService.GameState?.ActiveAuction is null or { IsActive: false })
+			{
+				_logger?.LogDebug(
+					"EndAuctionViaCommand: auction for {GameId} already resolved; ignoring the {Reason} tick",
+					gameId, reason);
+				return;
+			}
+
 			_logger?.LogInformation("EndAuctionViaCommand: Ending auction for {GameId} (reason: {Reason})", gameId, reason);
 
 			var command = new EndAuctionCommand { PlayerId = currentTurn, Reason = reason };

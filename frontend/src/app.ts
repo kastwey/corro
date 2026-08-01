@@ -1476,7 +1476,10 @@ async function initBoard() {
 	// idempotent (no-op if already open or if I passed this square), and the desiredModal
 	// check ensures there really is an auction I may rejoin before reopening anything.
 	function reenterAuction(): void {
-	const desired = desiredModal(gameManager.getCurrentGameState(), gameManager.getMyPlayerId());
+	// getSquares() resolves every name to this player's language; the raw state carries the
+	// board's canonical ones, which would show through in the trade review.
+	const desired = desiredModal(gameManager.getCurrentGameState(), gameManager.getMyPlayerId(),
+		Date.now(), gameManager.getSquares());
 	if (desired.kind === 'auction') openAuctionModal(desired.data);
 	}
 
@@ -1846,7 +1849,8 @@ async function initBoard() {
 	}
 
 	function reconcileModals(gs: GameState | null | undefined): void {
-	const desired = desiredModal(gs, gameManager.getMyPlayerId());
+	const desired = desiredModal(gs, gameManager.getMyPlayerId(),
+		Date.now(), gameManager.getSquares());
 
 	// Race and Bus share the one non-modal choice surface; reconcile them as alternatives
 	// so one closer can never dismiss the picker the other just opened.

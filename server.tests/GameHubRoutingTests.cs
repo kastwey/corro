@@ -138,7 +138,13 @@ public class GameHubRoutingTests
 		var service = new FakeGameService(
 			new AuctionEndedResponse { SquareIndex = 1, SquareName = "Square 1", PropertySold = true, WinnerId = "a", WinningBid = 12 })
 		{
-			GameStateOverride = new GameState { CurrentTurn = "a" }
+			// A LIVE auction, which is the only situation in which the bid timer legitimately
+			// fires; a tick arriving after one already resolved is ignored (see the test below).
+			GameStateOverride = new GameState
+			{
+				CurrentTurn = "a",
+				ActiveAuction = new AuctionState { SquareIndex = 1, SquareName = "Square 1", InitiatorPlayerId = "a" },
+			},
 		};
 
 		var hubContext = new FakeHubContext();
@@ -153,6 +159,38 @@ public class GameHubRoutingTests
 		Assert.True(hubContext.GroupProxy.Received("CommandResponse"));
 		// ...AND the full state must be broadcast so ownership/money/turn repaint everywhere.
 		Assert.True(service.NotifyStateChangedCalled);
+	}
+
+	/// <summary>
+	/// Live-play report: a bid nobody could match ended the auction, and a moment later every
+	/// player was shown the server insisting there was no active auction.
+	///
+	/// The bid timer runs on its own clock. When the auction resolves through the normal command
+	/// path the timer is retired by the state change that follows, but a tick already in flight
+	/// cannot be recalled — it issued EndAuctionCommand against nothing, and the NO_ACTIVE_AUCTION
+	/// error was broadcast to the whole group as if the auction had failed.
+	/// </summary>
+	[Fact]
+	public async Task BidTimeout_AfterTheAuctionAlreadyResolved_IsIgnoredInsteadOfErroringTheTable()
+	{
+		var gameId = "g-" + Guid.NewGuid().ToString("N");
+		var service = new FakeGameService(
+			new AuctionEndedResponse { SquareIndex = 1, SquareName = "Square 1", PropertySold = true, WinnerId = "a", WinningBid = 12 })
+		{
+			// The auction is over: the winning bid was accepted and the state already reflects it.
+			GameStateOverride = new GameState { CurrentTurn = "a", ActiveAuction = null },
+		};
+
+		var hubContext = new FakeHubContext();
+		var timer = new RaisableAuctionTimer();
+		var registry = new GameSessionRegistry(hubContext, new FakeRepository(), timer, TestFixtures.NewPackageRestorer());
+		registry.RegisterService(gameId, service);
+
+		await timer.RaiseBidTimeout(gameId);
+
+		Assert.Null(service.LastCommand);
+		Assert.False(hubContext.GroupProxy.Received("CommandResponse"),
+			"a resolved auction must not tell the table that anything went wrong");
 	}
 
 	[Fact]
