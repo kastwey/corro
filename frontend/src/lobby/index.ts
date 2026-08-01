@@ -9,6 +9,7 @@ import {
 import { gameClient } from '../gameClient.js';
 import { hasUnlockCode, addUnlockCode } from '../unlockCodes.js';
 import { i18nBinder } from '../i18nBinder.js';
+import { isLobbyPathFor, lobbyPathFor } from '../languageUrl.js';
 import { randomBotName } from '../botNames.js';
 import { familyHasBots } from '../familyTraits.js';
 import { teamDisplayName } from '../enginePalette.js';
@@ -331,7 +332,13 @@ class UnifiedLobbyUI {
 	}
 
 	private handleGameStarted(data: { gameId: string }): void {
-		window.location.href = `board.html?gameId=${data.gameId}`;
+		// Leaving the waiting room for the board is a page navigation, so this connection dies and
+		// the board's opens a moment later. Warn the server first: otherwise everyone hears the
+		// player leave and then "you have reconnected to the game" — reconnection earcon included —
+		// seconds into a game nobody ever left. The navigation happens either way.
+		void gameClient.declareHandoff().finally(() => {
+			window.location.href = `board.html?gameId=${data.gameId}`;
+		});
 	}
 
 	private async refreshGameState(): Promise<void> {
@@ -357,9 +364,20 @@ class UnifiedLobbyUI {
 		const getCurrentLang = () => (window as any).i18next?.language || 'en';
 		selector.value = getCurrentLang();
 
-		applyBtn.addEventListener('click', async () => {
-			const { changeLanguage } = await import('../i18nBinder.js');
-			await changeLanguage(selector.value);
+		applyBtn.addEventListener('click', () => {
+			const language = selector.value;
+			// Each language has its own pre-translated lobby, so applying one is navigation, not a
+			// DOM pass: the player lands on the page that was BUILT in that language (URL, <html lang>
+			// and text all agreeing) instead of a Spanish-looking English page. The choice is saved
+			// first because the root page redirects by cookie — a stale one would send a player who
+			// just asked for English straight back to Spanish. The query string and hash travel along
+			// so an invite link survives the switch.
+			if (isLobbyPathFor(window.location.pathname, language)) {
+				void i18nBinder.changeLanguage(language);
+				return;
+			}
+			i18nBinder.rememberLanguage(language);
+			window.location.assign(`${lobbyPathFor(language)}${window.location.search}${window.location.hash}`);
 		});
 	}
 

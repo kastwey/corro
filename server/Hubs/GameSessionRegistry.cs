@@ -31,6 +31,9 @@ public sealed class GameSessionRegistry
 	private readonly ConcurrentDictionary<string, GameStatePersister> _persisters = new();
 	// Coalesce concurrent deletion requests (game-over, host action and retention) per game.
 	private readonly ConcurrentDictionary<string, Lazy<Task<bool>>> _deletions = new();
+	// Connections that announced they are about to be replaced by the same player's next page
+	// (the waiting room handing over to the board). See DeclareHandoff.
+	private readonly ConcurrentDictionary<string, byte> _handoffConnections = new();
 
 	private readonly IHubContext<GameHub> _hub;
 	private readonly IGameRepository _repository;
@@ -101,6 +104,21 @@ public sealed class GameSessionRegistry
 	public bool TryRemoveGameConnection(string connectionId, out string gameId) => _connectionGameMap.TryRemove(connectionId, out gameId!);
 	public bool TryRemoveAuthConnection(string connectionId, out string playerId) => _authenticatedConnections.TryRemove(connectionId, out playerId!);
 	public bool TryRemoveLobbyConnection(string connectionId, out string gameId) => _lobbyConnections.TryRemove(connectionId, out gameId!);
+
+	/// <summary>
+	/// Records that this connection is about to be replaced by the same player's next page, so its
+	/// death is a handover rather than a departure. Leaving the waiting room for the board is a full
+	/// page navigation: the old connection dies and a new one authenticates a moment later, which
+	/// otherwise reads exactly like a drop and a reconnection — the whole table hears "X went away"
+	/// and the player themselves "you have reconnected", seconds into a game they never left.
+	/// </summary>
+	public void DeclareHandoff(string connectionId) => _handoffConnections[connectionId] = 0;
+
+	/// <summary>
+	/// Whether this connection's death was announced in advance, clearing the record. Every
+	/// connection disconnects eventually, so consuming it there is what keeps this from growing.
+	/// </summary>
+	public bool TryConsumeHandoff(string connectionId) => _handoffConnections.TryRemove(connectionId, out _);
 
 	/// <summary>The authenticated connection + its game for a connection, or false when not authenticated.</summary>
 	public bool IsAuthenticated(string connectionId, out string? playerId, out string? gameId)

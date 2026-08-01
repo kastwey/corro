@@ -105,6 +105,22 @@ export class I18nBinder {
 	}
 
 	/**
+	* Records a player's language choice without touching the page they are on.
+	*
+	* The lobby switches language by navigating to that language's own pre-translated page, so
+	* retranslating the page it is about to leave would only buy a visible flicker. The cookie still
+	* has to be written BEFORE the navigation: the root page redirects by cookie, so a stale one
+	* would bounce a player who just asked for English straight back into Spanish.
+	*/
+	rememberLanguage(language: string): void {
+	if (!this.config.supportedLanguages.includes(language)) {
+		console.warn(`Language ${language} is not supported`);
+		return;
+	}
+	this.saveLanguageToCookie(language);
+	}
+
+	/**
 	* Detects the initial language: cookie > browser > default
 	*/
 	private detectInitialLanguage(): string {

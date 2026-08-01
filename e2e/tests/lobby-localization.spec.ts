@@ -53,6 +53,27 @@ test('a first visit follows the browser language, with no choice saved yet', asy
 	await flushAxeAudit(page);
 });
 
+test('applying a language takes the player to that language own page, and it sticks', async ({ browser }) => {
+	// The selector used to retranslate the page in place, leaving a Spanish lobby served from the
+	// English URL: nothing to share, nothing to bookmark, and a reload was the only way to agree.
+	const page = await newPlayerPage(browser, 'es-ES');
+	await page.goto('/');
+	await expect(page).toHaveURL(/\/es\/$/);
+
+	await page.locator('#language-selector').selectOption('en');
+	await page.locator('#language-apply-btn').click();
+
+	await expect(page).toHaveURL(new RegExp(`${E2E_BASE_URL}/?$`));
+	await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+
+	// The choice must be SAVED before the navigation: the root page redirects by cookie, so a stale
+	// one would bounce the player straight back into the language they just left.
+	await page.goto('/');
+	await expect(page).toHaveURL(new RegExp(`${E2E_BASE_URL}/?$`));
+	await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+	await flushAxeAudit(page);
+});
+
 test('an English browser stays on the default page, so a crawler can index it', async ({ browser }) => {
 	// The redirect is decided in the BROWSER, from a cookie or navigator.language. A crawler
 	// sends no cookie and reports English, so it is never bounced and always indexes `/` —

@@ -16,6 +16,7 @@ import {
 	newPlayerPage,
 	packageManifest,
 } from '../helpers/game';
+import { E2E_BASE_URL } from '../playwright.config';
 
 const TRACK_BOARD = 'snakes-and-ladders';
 const FORBIDDEN_BOARD = 'forbidden-words';
@@ -112,13 +113,13 @@ for (const board of [
 		await expect(select).toHaveValue('es');
 		await flushAxeAudit(page);
 
-		// Once the host makes an explicit deck choice, changing their personal interface must not
-		// silently rewrite it. Only the option labels follow the interface locale.
+		// The host's explicit deck choice is theirs to keep, and nothing about their own interface
+		// rewrites it: the labels stay in the interface language while the VALUE stays as chosen.
+		// (Applying an interface language leaves this form altogether for that language's own lobby
+		// — one URL per language — which lobby-localization.spec.ts covers.)
 		await select.selectOption('en');
-		await page.locator('#language-selector').selectOption('en');
-		await page.locator('#language-apply-btn').click();
 		await expect(select).toHaveValue('en');
-		await expect(select.locator('option')).toHaveText(['English', 'Spanish']);
+		await expect(select.locator('option')).toHaveText(['Inglés', 'Español']);
 		await flushAxeAudit(page);
 
 		// A board whose content is NOT language-split offers no choice at all.
@@ -189,13 +190,14 @@ test('home, dark theme, runtime language and create/join validation states are A
 	expect(brandBox.y + brandBox.height).toBeLessThan(preferencesBox.y);
 
 	// Initial Spanish/light home is scanned by gotoLobbyHome; now exercise the other palette and
-	// a live language rebind before entering the forms.
+	// the English lobby the selector navigates to, before entering the forms.
 	await host.locator('#theme-toggle').click();
 	await expect(host.locator('html')).toHaveAttribute('data-theme', 'dark');
 	await expect(brand.locator('.brand-logo__image--light')).toBeHidden();
 	await expect(brand.locator('.brand-logo__image--dark')).toBeVisible();
 	await host.locator('#language-selector').selectOption('en');
 	await host.locator('#language-apply-btn').click();
+	await expect(host).toHaveURL(new RegExp(`${E2E_BASE_URL}/?$`));
 	await expect(host.locator('#home-heading')).toHaveText('Your games');
 	await expect(host.locator('[data-site-tagline]')).toHaveText('Play together, play your way.');
 	await expect(corro).toHaveAttribute('aria-label', appI18n('en').footer.corroNewWindowLabel as string);

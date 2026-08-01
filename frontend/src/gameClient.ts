@@ -31,6 +31,9 @@ function unlockHeaders(candidate?: string): Record<string, string> {
 	return value ? { [UNLOCK_HEADER]: value } : {};
 }
 
+/** How long a handover warning may hold up the navigation that follows it (see declareHandoff). */
+const HANDOFF_WARNING_TIMEOUT_MS = 1500;
+
 // Type for server announcements (frontend translates)
 export interface AnnouncementEvent {
 	key: string;  // Translation key (e.g., "game.dice_rolled")
@@ -427,6 +430,27 @@ export class UnifiedGameClient {
 
 	async joinGameWithAuth(gameId: string, playerId: string, playerSecretId: string): Promise<void> {
 		await this.invoke("JoinGameWithAuth", gameId, playerId, playerSecretId);
+	}
+
+	/**
+	 * Warns the server that this page is about to navigate to another page of the same game, so the
+	 * disconnection that follows reads as a handover instead of the player walking away.
+	 *
+	 * Best effort by construction. A page that is already disconnected has nothing to hand over, and
+	 * a warning that does not come straight back is abandoned rather than reconnected for: losing it
+	 * costs the false "left / came back" pair this prevents, while waiting on it would hold the
+	 * player out of a game that has already started.
+	 */
+	async declareHandoff(): Promise<void> {
+		if (!this.isConnected || !this.connection) return;
+		try {
+			await Promise.race([
+				this.connection.invoke('DeclareHandoff'),
+				new Promise(resolve => setTimeout(resolve, HANDOFF_WARNING_TIMEOUT_MS)),
+			]);
+		} catch (error) {
+			console.error('Error invoking DeclareHandoff:', error);
+		}
 	}
 
 	/** Sends an in-game chat message (authenticated with the player's secret, like the rejoin). */

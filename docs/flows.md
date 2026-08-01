@@ -107,6 +107,12 @@ Bots are outside the engine:
    (`PostStartAsync`). The service adopts that state and broadcasts it (projected).
 3. Every client navigates to the board and builds its family view lazily on the first
    state it receives.
+4. That navigation is a **handover**, and each page says so (`DeclareHandoff`) before
+   leaving. Without the warning, the waiting room's dying connection and the board's new
+   one read as a drop plus a reconnection, so the table heard a player leave and that
+   player heard "you have reconnected" seconds into a game nobody had left. The warning
+   covers exactly one connection's death; a genuine drop, which announces nothing, still
+   marks the player away.
 
 ## 6. Reconnect / server restart
 
