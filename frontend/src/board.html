@@ -34,6 +34,7 @@
 	<link rel="stylesheet" href="css/visual-narrative.css" />
   <link rel="stylesheet" href="css/action-bar.css" />
   <link rel="stylesheet" href="css/end-screen.css" />
+  <link rel="stylesheet" href="css/table-view.css" />
   <link rel="stylesheet" href="css/race-board.css" />
   <link rel="stylesheet" href="css/track-board.css" />
   <link rel="stylesheet" href="css/journey-board.css" />
@@ -54,7 +55,25 @@
 	<p id="game-surface-intro" class="app-intro" data-i18n="game.surface_intro.loading" data-i18n-defer hidden>Focus will move automatically to the game's main area when loading finishes. Press Control plus F1 to view the shortcuts.</p>
 	<div id="voice-panel-mount"></div>
 
-	<div class="game-layout">
+	<!-- The table between matches: who is here, the code that brings someone else, and the
+		 host's way to start the next game. Chat and voice stay mounted above it, which is why
+		 this lives on the game page instead of sending everyone back to the lobby. -->
+	<section id="table-view" class="table-view" hidden>
+	  <h2 id="table-heading" class="table-view__heading" tabindex="-1" data-i18n="table.heading">At the table</h2>
+	  <p class="table-view__intro" data-i18n="table.intro">No game is running. Talk, wait for the others, or let the host start the next match.</p>
+	  <p class="table-view__invite">
+		<span data-i18n="table.inviteLabel">Invite code:</span>
+		<strong id="table-code"></strong>
+		<button type="button" id="table-copy-code" class="secondary-button" data-i18n="table.copyCode" hidden>Copy code</button>
+	  </p>
+	  <h3 class="table-view__players-heading" data-i18n="table.playersHeading">Who is here</h3>
+	  <ul id="table-players" class="table-view__players player-list"></ul>
+	  <p class="table-view__actions">
+		<button type="button" id="table-start-btn" class="primary-button" data-i18n="table.start" hidden>Start the next match</button>
+	  </p>
+	</section>
+
+	<div class="game-layout" id="game-layout">
 	  <div class="game-layout__board">
 		<div class="board-frame">
 		  <!-- The turn indicator is inserted dynamically above the board. -->

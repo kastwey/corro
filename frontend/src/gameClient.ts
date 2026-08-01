@@ -67,7 +67,9 @@ export interface GameClientEvents {
 	'teamAssigned': { gameId: string; playerId: string; playerName: string; teamIndex: number | null };
 	'teamsFilled': { gameId: string };
 	'contentLanguageChanged': { gameId: string; language: string };
-	'lobbyState': { gameId: string; status: string; players: any[] };
+	'lobbyState': { gameId: string; status: string; inviteCode?: string; players: any[] };
+	/** The match ended and its TABLE is back at rest, with the roster that is still sitting at it. */
+	'matchEnded': GameInfo;
 	'playerJoined': { playerId: string; playerName: string };
 	'playerLeft': { playerId: string };
 	'gameStateChanged': GameState;
@@ -220,8 +222,12 @@ export class UnifiedGameClient {
 			this.emit('playerLeft', data);
 		});
 
-		this.connection.on('LobbyState', (data: { gameId: string; status: string; players: any[] }) => {
+		this.connection.on('LobbyState', (data: { gameId: string; status: string; inviteCode?: string; players: any[] }) => {
 			this.emit('lobbyState', data);
+		});
+
+		this.connection.on('MatchEnded', (table: GameInfo) => {
+			this.emit('matchEnded', table);
 		});
 
 		// Game events

@@ -124,6 +124,10 @@ Bots are outside the engine:
 3. The package and the voice room survive, because both belong to the table rather than to
    the match that just ended. Deleting a table — the host's action or the retention sweep —
    is what still releases them.
+4. Closing the end screen hands the page to the **table view**: same document, so the chat
+   and voice panels are never remounted and a conversation carries straight on. The host
+   starts the next match from there; everyone's page swaps back to the board, with no
+   navigation anywhere in the round trip.
 
 ## 7. Reconnect / server restart
 

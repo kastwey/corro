@@ -141,6 +141,12 @@ written before the jump, because the root page redirects by cookie. The **board*
 single URL (a private session, indexed by nobody) and translates at runtime, resolving its
 language before the first paint so a screen reader never starts in the wrong voice.
 
+The game page hosts two surfaces that take turns: the **board** and the **table**
+(`tableView.ts`, see [tables.md](tables.md)). The table is what it shows while no match is
+running — the roster, the invite code, and the host's way to start the next game. They swap
+inside one document on purpose: the chat and voice panels are mounted here, and a navigation
+between matches would tear down the LiveKit connection and cut the conversation in half.
+
 ## Testing the client
 
 `frontend/test/` runs `node:test` with jsdom: game surfaces, the hand panel, the status

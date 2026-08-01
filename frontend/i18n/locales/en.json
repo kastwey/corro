@@ -1594,7 +1594,7 @@
     "end_col_rank": "#",
     "end_col_player": "Player",
     "end_you": "(you)",
-    "end_back_home": "Back to home",
+    "end_back_to_table": "Back to the table",
     "mortgage_title": "Mortgage Property",
     "mortgage_select": "Select a property to mortgage:",
     "mortgage_value": "Mortgage value: {{value, money}}",
@@ -1658,6 +1658,17 @@
     "help_cmd_card_help": "Read the focused card's help",
     "help_cmd_barrier": "Go to the next barrier on the circuit (yours or anyone's)",
     "help_cmd_barrier_prev": "Go to the previous barrier"
+  },
+  "table": {
+    "heading": "At the table",
+    "intro": "No game is running. Talk, wait for the others, or let the host start the next match.",
+    "inviteLabel": "Invite code:",
+    "copyCode": "Copy code",
+    "playersHeading": "Who is here",
+    "start": "Start the next match",
+    "start_failed": "The match could not be started.",
+    "code_copied": "Invite code copied.",
+    "code_copy_failed": "The invite code could not be copied."
   },
   "common": {
     "ok": "OK",

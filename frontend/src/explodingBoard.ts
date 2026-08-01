@@ -473,7 +473,11 @@ export class ExplodingBoard {
 			const color = escapeHtml(rawColor);
 			const ink = contrastingTextColor(rawColor);
 			const name = escapeHtml(player?.name ?? seat.playerId);
-			const turn = gs.currentTurn === seat.playerId ? ' exploding-seat--turn' : '';
+			// A buried miner does not hold the turn, whatever the last state left in currentTurn
+			// when the game ended. Painting them as if they did also stacked the turn colour under
+			// the faded "exploded" treatment, and the name stopped being readable — which is how
+			// this was found, once the end screen stopped covering the table on its way home.
+			const turn = gs.currentTurn === seat.playerId && !seat.retired ? ' exploding-seat--turn' : '';
 			const dead = seat.retired ? ' exploding-seat--exploded' : '';
 			const cards = seat.retired ? '💥' : `🂠 ${seat.handCount}`;
 			return `<div class="exploding-seat${turn}${dead}" data-player-id="${escapeHtml(seat.playerId)}" style="--seat-color:${color};--seat-ink:${ink}">`

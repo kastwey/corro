@@ -412,6 +412,16 @@ public sealed class GameSessionRegistry
 		});
 		_persistedDocuments[gameId] = saved;
 
+		// Everyone still connected has stopped playing at this table and is now just sitting at it,
+		// so they move into its waiting-room group. Without this the host's NEXT match would be
+		// announced to a group none of them is in, and the table would look abandoned from inside.
+		foreach (var connectionId in GameConnectionIds(gameId))
+		{
+			MapLobbyConnection(connectionId, gameId);
+			try { await _hub.Groups.AddToGroupAsync(connectionId, $"lobby_{gameId}"); }
+			catch (Exception ex) { _logger?.LogWarning(ex, "Could not seat connection {ConnectionId} at table {GameId}", connectionId, gameId); }
+		}
+
 		// The table is at rest and everyone in it should know, whether or not they were looking at
 		// the board when it happened.
 		await _hub.Clients.Group(gameId).SendAsync("MatchEnded", saved.Sanitized());

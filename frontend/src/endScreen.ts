@@ -92,11 +92,23 @@ function escapeHtml(s: string): string {
 
 let shown = false;
 
+/** Forget that a match's end screen was shown, so the NEXT match at this table can show its own. */
+export function resetEndScreen(): void {
+	shown = false;
+}
+
 /**
- * Show the end screen once. Subsequent gameStateUpdated pushes (the server may emit a few
- * more before the game is deleted) are ignored thanks to the once-guard.
+ * Show the end screen once. Subsequent gameStateUpdated pushes (the server emits a few more as
+ * the match is retired) are ignored thanks to the once-guard.
+ *
+ * `onDismissed` runs when the player closes it, by button or Escape. That is the way back to
+ * the table: a finished match no longer ends the group that played it, so nobody is sent home.
  */
-export function showEndScreen(state: GameState, myPlayerId: string | null): void {
+export function showEndScreen(
+	state: GameState,
+	myPlayerId: string | null,
+	options: { onDismissed: () => void },
+): void {
 	if (shown) return;
 	shown = true;
 
@@ -145,11 +157,11 @@ export function showEndScreen(state: GameState, myPlayerId: string | null): void
 		// back-home button was readable), and focus starts at the title.
 		documentMode: true,
 		buttons: [{
-			label: t('end_back_home'),
+			label: t('end_back_to_table'),
 			variant: 'primary',
 			action: () => dialogManager.close(),
 		}],
-		// Closing the finished game (button or Escape) returns to the home page.
-		onClose: () => { window.location.href = '/'; },
+		// Closing the finished match (button or Escape) hands the page back to the table.
+		onClose: options.onDismissed,
 	});
 }

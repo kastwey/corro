@@ -1594,7 +1594,7 @@
     "end_col_rank": "#",
     "end_col_player": "Jugador",
     "end_you": "(tú)",
-    "end_back_home": "Volver al inicio",
+    "end_back_to_table": "Volver a la mesa",
     "mortgage_title": "Hipotecar Propiedad",
     "mortgage_select": "Selecciona una propiedad para hipotecar:",
     "mortgage_value": "Valor de hipoteca: {{value, money}}",
@@ -1658,6 +1658,17 @@
     "help_cmd_card_help": "Leer la ayuda de la carta seleccionada",
     "help_cmd_barrier": "Ir a la siguiente barrera del circuito (tuya o de otros)",
     "help_cmd_barrier_prev": "Ir a la barrera anterior"
+  },
+  "table": {
+    "heading": "En la mesa",
+    "intro": "No hay ninguna partida en marcha. Charla, espera a los demás o deja que el anfitrión empiece la siguiente.",
+    "inviteLabel": "Código de invitación:",
+    "copyCode": "Copiar el código",
+    "playersHeading": "Quién está aquí",
+    "start": "Empezar la siguiente partida",
+    "start_failed": "No se ha podido empezar la partida.",
+    "code_copied": "Código de invitación copiado.",
+    "code_copy_failed": "No se ha podido copiar el código de invitación."
   },
   "common": {
     "ok": "Aceptar",

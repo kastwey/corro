@@ -1,0 +1,74 @@
+/* table-view.css — the table between matches, on the game page.
+ *
+ * The roster styling mirrors the waiting room's (lobby.css) rather than importing it: the game
+ * page does not load the lobby's stylesheet, and pulling all of it in for four rules would drag
+ * along every form and view rule with it. These few are duplicated on purpose and knowingly.
+ */
+
+.table-view {
+	max-width: 44rem;
+	margin: 1rem auto;
+	padding: 1.25rem;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+}
+
+.table-view__heading {
+	margin-top: 0;
+}
+
+.table-view__intro {
+	color: var(--text-muted);
+}
+
+.table-view__invite {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.table-view__players {
+	list-style: none;
+	padding: 0;
+	margin: 0.5rem 0 1rem;
+}
+
+.table-view .player-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.5rem 0;
+	border-bottom: 1px solid var(--border);
+}
+
+.table-view .player-item:last-child {
+	border-bottom: none;
+}
+
+.table-view .player-info {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+
+.table-view .player-info .token-icon {
+	width: 1.3rem;
+	height: 1.3rem;
+}
+
+.table-view .player-name {
+	font-weight: 500;
+	color: var(--text);
+}
+
+.table-view .player-token-name {
+	color: var(--accent);
+	font-size: 0.85rem;
+}
+
+.table-view .player-status {
+	color: var(--text-muted);
+	font-size: 0.85rem;
+}

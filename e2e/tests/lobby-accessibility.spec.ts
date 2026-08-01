@@ -198,6 +198,11 @@ test('home, dark theme, runtime language and create/join validation states are A
 	await host.locator('#language-selector').selectOption('en');
 	await host.locator('#language-apply-btn').click();
 	await expect(host).toHaveURL(new RegExp(`${E2E_BASE_URL}/?$`));
+	// Applying a language NAVIGATES to that language's own lobby, so what follows must wait for
+	// the new page to finish booting — the same readiness anchor gotoLobbyHome uses. Without it,
+	// a click can land before init() has attached its handlers (and be undone by its final
+	// showView), which is a race the old in-place retranslation never had.
+	await expect(host.locator('#your-games-empty, #your-games-list li').first()).toBeVisible();
 	await expect(host.locator('#home-heading')).toHaveText('Your games');
 	await expect(host.locator('[data-site-tagline]')).toHaveText('Play together, play your way.');
 	await expect(corro).toHaveAttribute('aria-label', appI18n('en').footer.corroNewWindowLabel as string);

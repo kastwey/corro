@@ -29,7 +29,8 @@ import { showHelpDialog } from './helpDialog.js';
 import { showGameRulesDialog } from './gameRulesDialog.js';
 import { buildPropertyRulesLines } from './rulesSummaries.js';
 import { loadBoardHelp, showBoardHelpDialog, initHelpButton } from './boardHelp.js';
-import { showEndScreen } from './endScreen.js';
+import { resetEndScreen, showEndScreen } from './endScreen.js';
+import { tableView } from './tableView.js';
 import { turnIndicator } from './turnIndicator.js';
 import { cardReveal } from './cardReveal.js';
 import { squareGroupLabel } from './localizeSquare.js';
@@ -446,6 +447,19 @@ async function initBoard() {
 			voicePanel.setDeploymentAvailable(false);
 		}
 	}
+
+	// The table this page belongs to (docs/tables.md). It is shown whenever no match is running —
+	// between two games, or on arriving at a table that has not started one — and the board takes
+	// the page back when one starts. Deliberately NOT a separate page: chat and voice are mounted
+	// here, and a navigation would drop the LiveKit connection and cut the conversation in half.
+	tableView.init({
+		t: (key, vars) => tSync(key, vars as Record<string, any> | undefined),
+		isHost: () => playerSession.isHost,
+		start: () => gameClient.startGame({ gameId, hostId: playerSession.playerId }),
+		announce: (key, vars = {}, instant = false) =>
+			announce(createAnnouncement(key, vars), { instant }),
+		copyCode: code => copyToClipboard(code, 'table-copy-code'),
+	});
 
 	announce(createAnnouncement('game.loading_board', {}));
 
@@ -1192,7 +1206,12 @@ async function initBoard() {
 		// the goal (and the winning line be spoken) before the screen covers the board. The
 		// once-guard inside ignores any further state pushes before deletion.
 		if (gs.isGameOver) {
-		showEndScreen(gs, gameManager.getMyPlayerId());
+		// Closing it hands the page to the table, where the group already is. Focus moves to the
+		// table's heading: the dialog that had it is gone, and focus must land somewhere said out
+		// loud rather than fall back to the document.
+		showEndScreen(gs, gameManager.getMyPlayerId(), {
+			onDismissed: () => tableView.show({ focus: true }),
+		});
 		}
 	});
 	// Now that authoritative state is applied (and any token hop has started), let the gate
@@ -1970,6 +1989,36 @@ async function initBoard() {
 	gameClient.on('chatHistory', ms => chatPanel.setHistory(ms));
 	gameClient.on('voiceChatEnabledChanged', data => voicePanel.setGameEnabled(data.enabled, true));
 	gameClient.on('voiceParticipantMutedByHost', data => voicePanel.handleHostMute(data));
+
+	// ── The table, between matches ────────────────────────────────────────────
+	// Arriving at a table with no match running: the server answers an authenticated join with
+	// the roster instead of a state. Focus is NOT moved — this is where the page starts, and the
+	// startup flow already decides what to read first.
+	gameClient.on('lobbyState', table => {
+		tableView.setPlayers(table.players ?? []);
+		tableView.setInviteCode(table.inviteCode);
+		tableView.show();
+	});
+	// Someone arrived or left while we sit here.
+	gameClient.on('lobbyUpdated', table => {
+		if (!tableView.isVisible()) return;
+		tableView.setPlayers(table.players ?? []);
+		tableView.setInviteCode(table.inviteCode);
+	});
+	// The match is over and its table is back at rest. The end screen is already up (the final
+	// state raised it); the table is revealed BEHIND it, so dismissing the dialog lands on it
+	// rather than on an empty board.
+	gameClient.on('matchEnded', table => {
+		tableView.setPlayers(table.players ?? []);
+		tableView.setInviteCode(table.inviteCode);
+		tableView.show();
+	});
+	// The host started the next one: the board takes the page back, and the end screen of the
+	// PREVIOUS match is forgotten so this one can raise its own.
+	gameClient.on('gameStarted', () => {
+		resetEndScreen();
+		tableView.hide();
+	});
 
 	// Try to connect automatically and join the game
 	try {

@@ -15,6 +15,7 @@ let dialogManager: typeof import('../src/dialogManager.js').dialogManager;
 let showHelpDialog: typeof import('../src/helpDialog.js').showHelpDialog;
 let showBoardHelpDialog: typeof import('../src/boardHelp.js').showBoardHelpDialog;
 let showEndScreen: typeof import('../src/endScreen.js').showEndScreen;
+let resetEndScreen: typeof import('../src/endScreen.js').resetEndScreen;
 
 before(async () => {
 	setupDom();
@@ -22,7 +23,7 @@ before(async () => {
 	({ dialogManager } = await import('../src/dialogManager.js'));
 	({ showHelpDialog } = await import('../src/helpDialog.js'));
 	({ showBoardHelpDialog } = await import('../src/boardHelp.js'));
-	({ showEndScreen } = await import('../src/endScreen.js'));
+	({ showEndScreen, resetEndScreen } = await import('../src/endScreen.js'));
 });
 
 function dialog(): HTMLDialogElement {
@@ -86,7 +87,7 @@ test('a game dialog on the SAME reused element restores the operating semantics'
 });
 
 // LAST on purpose: showEndScreen has a module-level once-guard, so it can only run once
-// per process.
+// per process (resetEndScreen clears it between matches at a table).
 test('the END SCREEN is a reading dialog too (banner + standings must be browseable)', async () => {
 	showEndScreen({
 		winnerId: 'A', winnerName: 'Ana', isGameOver: true,
@@ -94,7 +95,7 @@ test('the END SCREEN is a reading dialog too (banner + standings must be browsea
 			{ id: 'A', name: 'Ana', finishPlace: 1 },
 			{ id: 'B', name: 'Berto', finishPlace: 2 },
 		],
-	} as any, 'B');
+	} as any, 'B', { onDismissed: () => {} });
 	const dlg = dialog();
 	assert.equal(dlg.open, true);
 	assert.ok(dlg.classList.contains('dialog-end-screen'));
@@ -105,4 +106,40 @@ test('the END SCREEN is a reading dialog too (banner + standings must be browsea
 	assert.equal(document.activeElement, dlg.querySelector('.dialog-title'),
 		'reading starts at the title, not on the back-home button');
 	assert.ok(dlg.querySelector('.end-screen__standings'), 'the standings table rendered');
+	dialogManager.close();
+});
+
+// The end of a match is no longer the end of the group that played it: closing the screen hands
+// the page back to their table, and the NEXT match must be able to raise a screen of its own.
+test('closing the end screen reports the dismissal instead of leaving the game', async () => {
+	resetEndScreen();
+	let dismissed = 0;
+	showEndScreen({
+		winnerId: 'A', winnerName: 'Ana', isGameOver: true,
+		players: [{ id: 'A', name: 'Ana', finishPlace: 1 }],
+	} as any, 'A', { onDismissed: () => { dismissed++; } });
+
+	dialogManager.close();
+
+	assert.equal(dismissed, 1);
+});
+
+test('the once-guard is per MATCH: a reset lets the next game show its own end screen', async () => {
+	resetEndScreen();
+	const showOne = () => showEndScreen({
+		winnerId: 'A', winnerName: 'Ana', isGameOver: true,
+		players: [{ id: 'A', name: 'Ana', finishPlace: 1 }],
+	} as any, 'A', { onDismissed: () => {} });
+
+	showOne();
+	dialogManager.close();
+	// Without a reset the guard still holds: the same match's later state pushes must not
+	// re-open a screen the player has already dismissed.
+	showOne();
+	assert.equal(dialog().open, false);
+
+	resetEndScreen();
+	showOne();
+	assert.equal(dialog().open, true);
+	dialogManager.close();
 });

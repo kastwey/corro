@@ -84,11 +84,16 @@ the new match surface exactly as it does today when a game starts.
 
 ## Phases
 
-1. **Server, first** — retire instead of delete. Shippable on its own: nothing user-visible
-   except that a finished game no longer vanishes from your list. *(This phase.)*
-2. **Client** — the end dialog returns to the table; the table view moves onto the game page
-   with chat and voice mounted once; "start another" lives there.
-3. **Rules at the table, then the rename** — the create form's board picker and rule fields
+1. ~~**Server, first** — retire instead of delete.~~ **Done.**
+2. ~~**Client** — the end dialog returns to the table; the table view lives on the game page
+   with chat and voice mounted once; "start another" lives there.~~ **Done.** The table shows
+   who is here, the invite code, and the host's way to start the next match, and the page
+   swaps between it and the board without ever navigating.
+3. **The setup controls move in** — tokens, seats, teams, the shared deck language and bots
+   still live in the lobby's waiting room, so the FIRST match of a table is still set up there
+   and only later ones happen at the table. Moving them in is what finally deletes
+   `view-waiting`, and what makes joining land people at the table directly.
+4. **Rules at the table, then the rename** — the create form's board picker and rule fields
    are reused as "settings for the next match" (nearly free: `packageToken`, `ruleValues` and
    `settings` already live on the document and are already re-read at every start). The
    vocabulary sweep (mesa/partida, "your tables") comes last, so a rename never fights a

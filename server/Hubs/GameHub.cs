@@ -229,12 +229,21 @@ public partial class GameHub : Hub
 			// If game is still in lobby, send lobby state
 			if (game.Status == GameStatus.WaitingForPlayers)
 			{
+				// A player authenticated to a table with no match running IS in its waiting room,
+				// whichever page they are looking at. Putting them in that group is what makes the
+				// table live for them: the roster as people arrive, and the host's next match.
+				_registry.MapLobbyConnection(Context.ConnectionId, gameId);
+				await Groups.AddToGroupAsync(Context.ConnectionId, $"lobby_{gameId}");
+
 				_logger?.LogDebug("Game {GameId} still in lobby, sending LobbyState", gameId);
 				await Clients.Caller.SendAsync("LobbyState", new
 				{
 					GameId = gameId,
 					Status = game.Status.ToString(),
-					Players = game.Players.Select(p => new { p.Id, p.Name, p.Token, p.IsHost, p.IsReady }).ToList()
+					// The code that brings someone else to this table. Anyone already seated may pass
+					// it on, so it travels with the state that says they are seated.
+					game.InviteCode,
+					Players = game.Players.Select(p => new { p.Id, p.Name, p.Token, p.IsHost, p.IsBot, p.IsReady }).ToList()
 				});
 				await Clients.Caller.SendAsync("GameJoined", new { GameId = gameId, PlayerId = playerId, RejoinCode = player.RejoinCode });
 				return;
