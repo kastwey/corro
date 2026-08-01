@@ -587,15 +587,14 @@ export class UnifiedGameClient {
 	}
 
 	/**
-	 * The summary of an ALREADY staged package, by token — the same shape staging returns, without
-	 * staging anything again. A table asks for it: it knows which package it plays but was never
-	 * the page that staged it, and the host needs the board's declared rules to change them.
-	 * Null when the server no longer holds that package.
+	 * The package THIS table plays: its pieces, its rule catalogue, its player range. Asked over
+	 * the hub rather than by token over REST, because a staged package lives in the process and a
+	 * table outlives processes — only the server, holding the game document, can put it back. It
+	 * does so here, which is also what makes the package's translations and guide fetchable again,
+	 * so this is the first thing a table asks for.
 	 */
-	async getPackageSummary(token: string): Promise<PackageUploadResponse | null> {
-		const response = await fetch(`/api/packages/${encodeURIComponent(token)}`);
-		if (!response.ok) return null;
-		return await response.json() as PackageUploadResponse;
+	async getTablePackage(): Promise<PackageUploadResponse | null> {
+		return await this.invoke<PackageUploadResponse | null>('GetTablePackage');
 	}
 
 	/** Host only: the board's house-rule values for the NEXT match at this table. */

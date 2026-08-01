@@ -27,8 +27,8 @@ export interface TableViewDeps {
 	start: () => Promise<void>;
 	/** Host-only: change the deck the whole table plays with. */
 	setContentLanguage?: (language: string) => Promise<void>;
-	/** The board's declared house rules, or null when this table's package offers none. */
-	loadRules?: (packageToken: string) => Promise<PackageUploadResponse | null>;
+	/** This table's package (rules, pieces), or null when the server cannot produce it. */
+	loadRules?: () => Promise<PackageUploadResponse | null>;
 	/** Host-only: keep these rule values for the next match. */
 	saveRules?: (values: Record<string, boolean | number | string>) => Promise<void>;
 	/** Host-only: seat a bot (an empty name lets the server pick one), or send one away. */
@@ -184,7 +184,7 @@ export class TableView {
 		}
 		if (this.rulesPackageToken !== token) {
 			this.rulesPackageToken = token;
-			const pkg = await this.deps.loadRules!(token!);
+			const pkg = await this.deps.loadRules!();
 			const rules = pkg?.houseRules ?? [];
 			if (rules.length === 0) {
 				// A board that declares no rules has nothing to offer here.

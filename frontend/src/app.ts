@@ -464,7 +464,7 @@ async function initBoard() {
 		setContentLanguage: language => gameClient.setContentLanguage({
 			gameId, hostId: playerSession.playerId, language,
 		}),
-		loadRules: token => gameClient.getPackageSummary(token),
+		loadRules: () => gameClient.getTablePackage(),
 		saveRules: ruleValues => gameClient.setTableRules({
 			gameId, hostId: playerSession.playerId, ruleValues,
 		}),
@@ -2082,20 +2082,23 @@ async function initBoard() {
 	const preloadTablePackage = (packageToken: string | null | undefined): void => {
 		if (!packageToken || packageI18nLoaded) return;
 		packageI18nLoaded = true;
-		void Promise.all([
-			loadPackageAssets(packageToken),
-			// The board's PIECES, which only the package knows. The game state carries them once a
-			// match runs, but a table has no state — and without them the roster names everyone's
-			// piece by its raw translation key.
-			gameClient.getPackageSummary(packageToken).then(pkg => {
+		// The package FIRST, and through the hub: it carries the board's pieces (which only the
+		// package knows, and which a table cannot read off a game state it does not have), and
+		// asking re-stages the package when the process no longer holds it. Its translations and
+		// guide are served by token, so they can only be fetched once that has happened — after a
+		// server restart the table otherwise named every piece by its raw id.
+		void gameClient.getTablePackage()
+			.then(pkg => {
 				if (pkg?.tokens) setPackageTokens(pkg.tokens);
-			}),
-		]).then(() => {
-			void i18nBinder.applyI18n();
-			// applyI18n only reaches `data-i18n` markup, and the roster is built imperatively:
-			// rebuild it now that the package's own words exist.
-			if (currentTable) applyTable(currentTable);
-		});
+				return loadPackageAssets(packageToken);
+			})
+			.then(() => {
+				void i18nBinder.applyI18n();
+				// applyI18n only reaches `data-i18n` markup, and the roster is built imperatively:
+				// rebuild it now that the package's own words exist.
+				if (currentTable) applyTable(currentTable);
+			})
+			.catch(error => console.error('Could not load the table package:', error));
 	};
 
 	// Arriving at a table with no match running: the server answers an authenticated join with

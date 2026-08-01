@@ -597,6 +597,63 @@ public class GameHubRoutingTests
 		Assert.False(clients.Group("lobby_g1").Received("ContentLanguageChanged"));
 	}
 
+	// A table outlives the process that staged its board. Reported from a real session: after a
+	// restart the roster named every player's piece by its raw id ("stout pint" for stout_pint),
+	// because the pieces only ever reached the client through a staged package the server no longer
+	// held. Asking through the hub — which has the game document — puts it back.
+	[Fact]
+	public async Task A_table_gets_its_package_even_after_the_process_forgot_it()
+	{
+		var repository = new CapturingRepository();
+		var store = new CorroPackageStore(
+			new CompositeSoundPackProvider(new DefaultSoundPackProvider()),
+			Path.Combine(Path.GetTempPath(), "corro_table_pkg_" + Guid.NewGuid().ToString("N")));
+		var restorer = new CorroServer.Services.Corro.PackageRestorer(
+			store,
+			new CorroServer.Services.Corro.ShippedPackageProvider(CorroTestPaths.PackagesRoot()),
+			new CorroServer.Services.Corro.LocalFilePackageBlobStore());
+		var token = "forbidden-" + Guid.NewGuid().ToString("N");
+		await store.StageFromDirectoryAsync(token, CorroTestPaths.PackageDir("forbidden-words"));
+		repository.Seed(WaitingForbiddenGame() with
+		{
+			PackageToken = token,
+			ShippedBoardId = "forbidden-words",
+		});
+		var registry = new GameSessionRegistry(
+			new FakeHubContext(), repository, new FakeAuctionTimer(), restorer);
+		var hub = CreateLobbyHub(repository, registry, out _, store, restorer);
+		registry.MapConnectionToGame(hub.Context.ConnectionId, "g1");
+		registry.AuthenticateConnection(hub.Context.ConnectionId, "host");
+
+		var staged = await hub.GetTablePackage();
+		Assert.NotEmpty(staged!.Tokens);
+
+		// The process forgets it — a restart, or a staging that expired.
+		store.Release(token);
+		Assert.Null(store.GetDefinition(token));
+
+		var restored = await hub.GetTablePackage();
+		Assert.NotNull(restored);
+		Assert.NotEmpty(restored!.Tokens);
+		// The SAME token, so the endpoints that serve the package's words and guide by token work
+		// again too — that is the other half of what a restart broke.
+		Assert.Equal(token, restored.Token);
+		store.Release(token);
+	}
+
+	[Fact]
+	public async Task An_unauthenticated_connection_gets_no_package()
+	{
+		var repository = new CapturingRepository();
+		repository.Seed(WaitingForbiddenGame());
+		var registry = new GameSessionRegistry(
+			new FakeHubContext(), repository, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
+		var hub = CreateLobbyHub(repository, registry, out var clients);
+
+		Assert.Null(await hub.GetTablePackage());
+		Assert.True(clients.Caller.Received("Error"));
+	}
+
 	// A table plays again and again, so the rules it starts from must be editable between matches —
 	// the game that just ended is exactly when a group decides that auctions were a mistake.
 	[Fact]
@@ -709,7 +766,8 @@ public class GameHubRoutingTests
 		IGameRepository repository,
 		GameSessionRegistry registry,
 		out FakeClients clients,
-		CorroPackageStore? packageStore = null)
+		CorroPackageStore? packageStore = null,
+		CorroServer.Services.Corro.PackageRestorer? restorer = null)
 	{
 		clients = new FakeClients();
 		return new GameHub(
@@ -717,7 +775,7 @@ public class GameHubRoutingTests
 			new FakeGameServiceFactory(),
 			new FakeAuctionTimer(),
 			packageStore ?? new CorroPackageStore(new CompositeSoundPackProvider(new DefaultSoundPackProvider())),
-			TestFixtures.NewPackageRestorer(),
+			restorer ?? TestFixtures.NewPackageRestorer(),
 			registry,
 			NullLogger<GameHub>.Instance)
 		{

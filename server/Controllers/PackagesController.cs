@@ -141,19 +141,6 @@ public class PackagesController : ControllerBase
 	}
 
 	/// <summary>
-	/// The summary of a package that is ALREADY staged, by its token — the same shape staging and
-	/// uploading return, without staging anything again. A table's own page asks for it: it knows
-	/// which package it plays but was never the one that staged it, and the host needs the board's
-	/// declared house rules to change them before the next match.
-	/// </summary>
-	[HttpGet("{token}")]
-	public ActionResult<PackageUploadResponse> Summary(string token)
-	{
-		var definition = _store.GetDefinition(token);
-		return definition is null ? NotFound() : Ok(Summarize(token, definition));
-	}
-
-	/// <summary>
 	/// The unlock codes the caller presented in the request header, normalized the same way the manifest
 	/// codes are (trimmed, lower-cased) so the comparison is forgiving. Empty when the header is absent —
 	/// including in unit tests with no HttpContext, where only public boards are then visible.
@@ -172,30 +159,7 @@ public class PackagesController : ControllerBase
 	}
 
 	private static PackageUploadResponse Summarize(string token, CorroServer.Models.Corro.GameDefinition definition)
-	{
-		var family = CorroServer.Services.Corro.Families.GameFamilies.For(definition.Manifest.GameType);
-		return new()
-		{
-			Token = token,
-			GameType = string.IsNullOrWhiteSpace(definition.Manifest.GameType) ? "property" : definition.Manifest.GameType,
-			Name = new Dictionary<string, string>(definition.Manifest.Name),
-			Settings = GameDefinitionAdapter.ToSettings(definition),
-			RuleGroups = definition.Manifest.RuleGroups,
-			HouseRules = definition.Manifest.HouseRules,
-			Tokens = definition.Manifest.Tokens,
-			MinPlayers = definition.Manifest.Players.Min,
-			MaxPlayers = definition.Manifest.Players.Max,
-			Seats = definition.RaceBoard?.Seats
-				.Select(s => new LobbySeatInfo { Id = s.Id, Color = s.Color, NameKey = s.NameKey })
-				.ToList() ?? new(),
-			// The family answers both: no content languages unless it splits content by language,
-			// and no required team count unless it plays only in teams.
-			ContentLanguages = family.ContentLanguages(definition).ToList(),
-			RequiredTeamCount = family.RequiredTeamCount,
-			// The board's create-time notice key (if any). NOT the unlock code — that never leaves the server.
-			Warning = definition.Manifest.Warning,
-		};
-	}
+		=> CorroServer.Services.Corro.PackageSummaries.For(token, definition);
 
 	/// <summary>
 	/// Serves a staged package's own translation file (<c>i18n/{lang}.json</c>) so the client can

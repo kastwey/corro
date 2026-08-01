@@ -235,6 +235,36 @@ public partial class GameHub
 	}
 
 	/// <summary>
+	/// The package this table plays: its pieces, its rule catalogue, its player range. Asked
+	/// through the hub rather than by token over REST for one reason — a staged package lives in
+	/// the PROCESS, and a table outlives processes. Only the game document knows where its board
+	/// came from, so this re-stages it when it is no longer in memory, exactly as starting a match
+	/// does. Without that, a table opened after a restart named every player's piece by its raw id
+	/// and offered the host no rules.
+	///
+	/// Re-staging also puts the package's own translations and guide back within reach of the
+	/// endpoints that serve them by token, so this is what the table asks FIRST.
+	/// </summary>
+	public async Task<PackageUploadResponse?> GetTablePackage()
+	{
+		if (!IsConnectionAuthenticated(out _, out var gameId))
+		{
+			await Clients.Caller.SendAsync("Error", "NOT_AUTHENTICATED");
+			return null;
+		}
+
+		var game = await _gameRepository.LoadGameAsync(gameId!);
+		var token = game?.GameState?.PackageToken ?? game?.PackageToken;
+		if (game is null || string.IsNullOrEmpty(token))
+		{
+			return null;
+		}
+
+		var definition = _packageStore.GetDefinition(token) ?? await _packageRestorer.ReStageAsync(game);
+		return definition is null ? null : PackageSummaries.For(token, definition);
+	}
+
+	/// <summary>
 	/// The host changes the board's house rules for the NEXT match, from the table. A table plays
 	/// again and again, and a group that has just finished one game is exactly when it decides that
 	/// auctions were a mistake — so the values it starts from must be editable while nothing is
