@@ -333,6 +333,9 @@ test('exploding: draw the bomb, defuse and tuck it, then explode into a win', as
 	// that brings someone else, and the host starts the next match from where they already are.
 	await ana.locator('.dialog-end-screen .btn-primary').click();
 	await expect(ana.locator('#table-view')).toBeVisible();
+	// The finished board goes away with it: leaving it on screen behind the table was invisible
+	// to a test that only checked the table had appeared.
+	await expect(ana.locator('#game-layout')).toBeHidden();
 	await expect(ana.locator('#table-players li')).toHaveCount(2);
 	await expect(ana.locator('#table-code')).not.toBeEmpty();
 	await flushAxeAudit(ana);

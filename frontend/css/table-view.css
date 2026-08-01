@@ -5,6 +5,14 @@
  * along every form and view rule with it. These few are duplicated on purpose and knowingly.
  */
 
+/* The board's layout sets `display: grid`, which BEATS the `hidden` attribute's user-agent rule:
+ * without this the board stays on screen underneath the table — an empty grid at a table nobody
+ * is playing at, and a live one behind the table when a match ends. Same per-component pattern
+ * the action bar and the voice controls already use. */
+.game-layout[hidden] {
+	display: none;
+}
+
 .table-view {
 	max-width: 44rem;
 	margin: 1rem auto;

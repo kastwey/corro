@@ -115,7 +115,10 @@
 	  </p>
 	</section>
 
-	<div class="game-layout" id="game-layout">
+	<!-- Starts hidden: this page serves a TABLE or a MATCH, and which one is only known when the
+		 server answers. Showing the board first flashed an empty grid at everyone who was only
+		 sitting down at their table. -->
+	<div class="game-layout" id="game-layout" hidden>
 	  <div class="game-layout__board">
 		<div class="board-frame">
 		  <!-- The turn indicator is inserted dynamically above the board. -->

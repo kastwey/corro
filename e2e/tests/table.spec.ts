@@ -12,6 +12,38 @@ import { createGame, expectAnnouncement, joinGame, newPlayerPage } from '../help
 const PROPERTY_BOARD = 'galactic-empire';
 const TRACK_BOARD = 'snakes-and-ladders';
 
+// Reported from a real session: creating a table landed on an empty board. The page focused the
+// board container on load — a habit from when it only ever served matches — so a player who was
+// merely sitting down at their table was parked inside a role="application" with nothing in it:
+// nothing painted, nothing to arrow through, and no browse mode either, because NVDA builds no
+// virtual buffer inside an application.
+test('creating a table lands ON the table, with no empty board in sight', async ({ browser }) => {
+	const ana = await newPlayerPage(browser);
+	await createGame(ana, 'Ana', TRACK_BOARD);
+
+	await expect(ana.locator('#table-view')).toBeVisible();
+	await expect(ana.locator('#game-layout')).toBeHidden();
+	await expect(ana.locator('#table-heading')).toBeFocused();
+});
+
+test('joining a table lands there too, and the board only appears with a match in it', async ({ browser }) => {
+	const ana = await newPlayerPage(browser);
+	const berto = await newPlayerPage(browser);
+	const code = await createGame(ana, 'Ana', TRACK_BOARD);
+
+	await joinGame(berto, code, 'Berto');
+	await expect(berto.locator('#table-view')).toBeVisible();
+	await expect(berto.locator('#game-layout')).toBeHidden();
+
+	await ana.locator('#table-start-btn').click();
+	for (const page of [ana, berto]) {
+		await expect(page.locator('#game-layout')).toBeVisible();
+		await expect(page.locator('#table-view')).toBeHidden();
+		// …and the keyboard enters the game, which is the whole point of a board appearing.
+		await expect(page.locator('#board')).toBeFocused();
+	}
+});
+
 test('the host changes the board rules for the next match, and the change sticks', async ({ browser }) => {
 	const ana = await newPlayerPage(browser);
 	await createGame(ana, 'Ana', PROPERTY_BOARD);

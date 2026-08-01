@@ -1104,8 +1104,12 @@ async function initBoard() {
 	// after the gate is armed and releases on settle.
 	let pendingCardReveal: CardDrawnNotification | null = null;
 	let packageI18nLoaded = false;
-	/** Set when a match starts on a page that was showing the table; see the gameStarted handler. */
-	let focusGameOnNextState = false;
+	/**
+	 * Whether the next authoritative state should claim the keyboard for the game surface. Armed
+	 * from the start — a page opened straight into a running match must land in it, exactly as it
+	 * always did — and re-armed when a match begins at a table (see the gameStarted handler).
+	 */
+	let focusGameOnNextState = true;
 
 	/**
 	 * A package brings its own WORDS (the board's vocabulary and announcements) and its own GUIDE
@@ -1122,6 +1126,9 @@ async function initBoard() {
 
 	gameManager.on('gameStateUpdated', (gs) => {
 	if (!gs) return;
+	// A running match owns the page. Said on every state, not only when one starts, so a page
+	// opened straight into a game reveals the board even though no table ever hid it.
+	if (!gs.isGameOver) tableView.hide();
 	setCardArtPackageToken(gs.packageToken);
 	voicePanel.setGameEnabled(!!gs.voiceChatEnabled);
 
@@ -2091,7 +2098,13 @@ async function initBoard() {
 
 	gameClient.on('lobbyState', table => {
 		applyTable(table);
-		tableView.show();
+		// This is the page's answer to "what is here?", so the table takes the keyboard — but only
+		// if nothing else holds it. On a reconnection mid-conversation the player is somewhere on
+		// purpose (the chat box, the voice roster) and must not be yanked out of it.
+		const nobodyHasFocus = !document.activeElement || document.activeElement === document.body;
+		tableView.show({ focus: nobodyHasFocus });
+		// The board is not what this page is showing, so nothing may claim it later either.
+		focusGameOnNextState = false;
 		preloadTablePackage(table.packageToken);
 	});
 	// Someone arrived or left, the host changed the shared deck or moved somebody between teams.
@@ -2348,10 +2361,12 @@ async function initBoard() {
 	// body root so Tab circulates the whole page without ever leaving it.
 	new FocusTrap({ getRoot: () => document.body, scopeToOpenModal: true }).activate();
 
-	// initial focus: put the real DOM focus on the board container so keyboard
-	// navigation works immediately. The cursor itself is placed on my token once
-	// the server state arrives (see the gameStateUpdated handler).
-	setTimeout(() => board.focus(), 0);
+	// NO initial focus here. This page serves a TABLE or a MATCH, and which one is only known
+	// when the server answers, so focus waits for that answer: the first game state claims it for
+	// the board (focusGameOnNextState, armed below), and a table that has no match running claims
+	// it for its own heading. Focusing the board on load meant that whoever was merely sitting
+	// down at their table landed inside an empty role="application" — nothing painted, nothing to
+	// arrow through, and no browse mode either, because NVDA builds no buffer inside one.
 }
 
 void initBoard();
