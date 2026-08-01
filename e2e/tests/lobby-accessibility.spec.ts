@@ -223,8 +223,9 @@ test('home, dark theme, runtime language and create/join validation states are A
 	await expect(host.locator('#error-message')).toContainText('Please select a token');
 	await host.locator('#create-form input.token-radio').first().dispatchEvent('click');
 	await host.locator('#create-button').click();
-	await expect(host.locator('#lobby-created')).toBeVisible();
-	const inviteCode = (await host.locator('#lobby-code').textContent())!.trim();
+	// Creating lands the host at their TABLE, on the game page.
+	await expect(host.locator('#table-view')).toBeVisible();
+	const inviteCode = (await host.locator('#table-code').textContent())!.trim();
 
 	const guest = await newPlayerPage(browser);
 	await gotoLobbyHome(guest);
@@ -245,11 +246,14 @@ test('home, dark theme, runtime language and create/join validation states are A
 	await expect(guest.locator('#error-message')).toContainText(/ficha/i);
 	await guest.locator('#join-token-list input.token-radio:not([data-taken])').first().dispatchEvent('click');
 	await guest.locator('#join-final-button').click();
-	await expect(guest.locator('#lobby-joined')).toBeVisible();
-	await expect(host.locator('#host-player-list')).toContainText('Berto');
+	// The guest lands at the same table, and the host sees them arrive there.
+	await expect(guest.locator('#table-view')).toBeVisible();
+	await expect(host.locator('#table-players')).toContainText('Berto');
+	await flushAxeAudit(guest);
 
 	// A guest gets the remove-only saved-game variant (the host gets delete, covered below).
-	await guest.locator('#waiting-back-btn').dispatchEvent('click');
+	// Leaving the table returns to the lobby, where their saved game is waiting.
+	await guest.locator('#table-leave').click();
 	await expect(guest.locator('#view-home')).toBeVisible();
 	const guestSaved = guest.locator('#your-games-list .saved-game-item');
 	await expect(guestSaved.locator('.saved-game-remove')).toBeVisible();
@@ -392,13 +396,13 @@ test('an unlocked hidden shipped package can be selected and used to create a ga
 	await expect(host.locator('#create-form input.token-radio[value="circle"]')).toBeChecked();
 	await flushAxeAudit(host);
 	await notice.locator('.btn-primary').click();
-	await expect(host.locator('#lobby-created')).toBeVisible();
-	const inviteCode = (await host.locator('#lobby-code').textContent())!.trim();
+	await expect(host.locator('#table-view')).toBeVisible();
+	const inviteCode = (await host.locator('#table-code').textContent())!.trim();
 
 	// Joining never requires the unlock code: the invite identifies an already-created game.
 	const guest = await newPlayerPage(browser);
 	await joinGame(guest, inviteCode, 'Berto');
-	await host.locator('#start-game-btn').click();
+	await host.locator('#table-start-btn').click();
 	await expect.poll(() => host.url()).toMatch(/board\.html/);
 	await expect.poll(() => guest.url()).toMatch(/board\.html/);
 	await expect(host.locator('#board .track-cell[data-square="12"]')).toBeVisible();
@@ -416,14 +420,14 @@ test('saved-game card, resume, dark palette and delete confirmation states are A
 			value: { writeText: async () => {} },
 		});
 	});
-	await page.locator('#copy-code-btn').dispatchEvent('click');
-	await expect(page.locator('#copy-code-btn')).toContainText(/Copiado|Copied/);
+	await page.locator('#table-copy-code').dispatchEvent('click');
+	await expect(page.locator('#table-copy-code')).toContainText(/Copiado|Copied/);
 	await flushAxeAudit(page);
-	await page.locator('#copy-link-btn').dispatchEvent('click');
-	await expect(page.locator('#copy-link-btn')).toContainText(/Copiado|Copied/);
+	await page.locator('#table-copy-link').dispatchEvent('click');
+	await expect(page.locator('#table-copy-link')).toContainText(/Copiado|Copied/);
 	await flushAxeAudit(page);
 
-	await page.locator('#waiting-back-btn').dispatchEvent('click');
+	await page.locator('#table-leave').click();
 	await expect(page.locator('#view-home')).toBeVisible();
 	const saved = page.locator('#your-games-list .saved-game-item');
 	await expect(saved).toHaveCount(1);
@@ -432,9 +436,10 @@ test('saved-game card, resume, dark palette and delete confirmation states are A
 
 	await page.locator('#theme-toggle').click();
 	await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+	// Resuming a table with no match running takes you back to the table itself.
 	await saved.locator('.saved-game-resume').dispatchEvent('click');
-	await expect(page.locator('#lobby-created')).toBeVisible();
-	await page.locator('#waiting-back-btn').dispatchEvent('click');
+	await expect(page.locator('#table-view')).toBeVisible();
+	await page.locator('#table-leave').click();
 	await expect(page.locator('#view-home')).toBeVisible();
 	await expect(saved).toHaveCount(1);
 

@@ -20,6 +20,27 @@ export function chooseContentLanguage(
 		?? '';
 }
 
+/**
+ * Fill a deck-language selector with the package's languages, named in the reader's own
+ * interface language, and select the active one. Shared by the create form and the table, which
+ * offer the same choice at two different moments.
+ */
+export function fillContentLanguageSelect(
+	select: HTMLSelectElement,
+	languages: readonly string[],
+	selected: string,
+	translate: (key: string) => string,
+): void {
+	select.replaceChildren();
+	for (const language of languages) {
+		const option = document.createElement('option');
+		option.value = language;
+		option.textContent = contentLanguageName(language, translate);
+		select.appendChild(option);
+	}
+	select.value = selected;
+}
+
 /** Name a supported deck language in the LISTENER's interface language, so a Spanish
  *  player reads "Inglés" for an English deck. */
 export function contentLanguageName(

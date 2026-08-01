@@ -51,6 +51,13 @@ played is the one it is most likely to play again, and the conversation belongs 
 Deletion is now what happens to a **table**: the host's own action, or the retention sweep
 (unchanged — it keys on `lastUpdated`, which a retirement bumps).
 
+## Getting there
+
+Creating or joining goes straight to the table's page. The lobby keeps what is genuinely
+lobby: the list of your tables, the create form, and the join form — where the piece and the
+seat are picked, because they are part of asking to sit down. Resuming a table with no match
+running lands there too, through the same door.
+
 ## Where people live
 
 Today the waiting room is a view of the lobby page and the game is `board.html`. The table
@@ -89,10 +96,17 @@ the new match surface exactly as it does today when a game starts.
    with chat and voice mounted once; "start another" lives there.~~ **Done.** The table shows
    who is here, the invite code, and the host's way to start the next match, and the page
    swaps between it and the board without ever navigating.
-3. **The setup controls move in** — tokens, seats, teams, the shared deck language and bots
-   still live in the lobby's waiting room, so the FIRST match of a table is still set up there
-   and only later ones happen at the table. Moving them in is what finally deletes
-   `view-waiting`, and what makes joining land people at the table directly.
+3. ~~**The setup controls move in.**~~ **Mostly done.** Creating or joining now lands people at
+   the table, which carries the invite code and link, each player's own re-entry code, the
+   shared deck (the host's to change, everyone else's to read), the bot chair and the way out.
+   Tokens and seats never lived in the waiting room — they are picked in the create/join forms,
+   and stayed there.
+
+   **What is left:** arranging TEAMS. That panel is a roving list with its own focus plan, and
+   it has not moved, so a team board still stops at the lobby's waiting room — the one
+   condition in `enterTable`, and the only thing keeping `view-waiting` alive. A table knows
+   its family (`gameType` on the document) precisely so its page can offer the family's setup
+   without staging the package to ask.
 4. **Rules at the table, then the rename** — the create form's board picker and rule fields
    are reused as "settings for the next match" (nearly free: `packageToken`, `ruleValues` and
    `settings` already live on the document and are already re-read at every start). The

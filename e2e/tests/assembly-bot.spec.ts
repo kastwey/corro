@@ -17,12 +17,12 @@ test('the host seats a bot; it installs a module unattended and hands the turn b
 	const ana = await newPlayerPage(browser);
 	await createGame(ana, 'Ana', BOARD);
 
-	await ana.click('#add-bot-btn');
+	await ana.click('#table-add-bot');
 	const nameDialog = ana.locator('.game-dialog.dialog-bot-name');
 	await expect(nameDialog).toBeVisible();
 	await nameDialog.locator('#bot-name-input').fill('Chatarrín');
 	await nameDialog.locator('.btn-primary').click();
-	await expect(ana.locator('#host-player-list')).toContainText('Chatarrín');
+	await expect(ana.locator('#table-players')).toContainText('Chatarrín');
 
 	await startGame(ana, [ana]);
 

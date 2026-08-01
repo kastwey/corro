@@ -369,13 +369,17 @@ export async function createGame(
 			await expect(notice).toBeVisible();
 			await notice.locator('.btn-primary').click();
 		}
-		const codeEl = page.locator('#lobby-code');
+		// Creating lands at the TABLE — the game page, where the group waits with the chat and
+		// the voice room — except on a team board, which still stops at the lobby's waiting room
+		// because arranging the teams has not moved yet (docs/tables.md). Only one of the two
+		// exists per page, so the combined selector resolves wherever the host ended up.
+		const codeEl = page.locator('#table-code, #lobby-code');
 		try {
 			await expect(codeEl).not.toBeEmpty();
 		} catch (e) {
 			const visibleError = (await page.locator('#error-message').textContent().catch(() => null))?.trim();
 			throw new Error(
-				`createGame: #lobby-code stayed empty after clicking create.\n`
+				`createGame: the invite code stayed empty after clicking create.\n`
 				+ `Visible lobby error: ${visibleError || '(none)'}\n`
 				+ `Console tail:\n- ${consoleLog.slice(-15).join('\n- ') || '(silent)'}\n${e}`);
 		}
@@ -407,7 +411,8 @@ export async function joinGame(
 		await page.locator(`#join-seat-list input[value="${opts.seat}"]`).dispatchEvent('click');
 	}
 	await page.click('#join-final-button');
-	await expect(page.locator('#lobby-joined')).toBeVisible();
+	// Joining lands at the table (or the waiting room, on a team board — see createGame).
+	await expect(page.locator('#table-view, #lobby-joined')).toBeVisible();
 }
 
 /**
@@ -415,7 +420,8 @@ export async function joinGame(
  * In the E2E environment the turn order is the JOIN order, so the host moves first.
  */
 export async function startGame(host: Page, allPages: Page[]): Promise<void> {
-	await host.click('#start-game-btn');
+	// From the table (the game page) or, on a team board, from the lobby's waiting room.
+	await host.locator('#table-start-btn, #start-game-btn').click();
 	for (const page of allPages) {
 		await page.waitForURL(/board\.html/);
 		// Family-agnostic readiness: spatial families render their cells, card families

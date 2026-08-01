@@ -38,13 +38,13 @@ test('a re-entry code recovers the seat from a fresh browser; a live seat refuse
 
 	const code = await createGame(ana, 'Ana', BOARD);
 
-	// The waiting room shows the HOST her own re-entry code, with a copy button.
-	const hostCodeEl = ana.locator('#created-rejoin-mount .invite-code__value');
+	// The table shows the HOST her own re-entry code, with a copy button.
+	const hostCodeEl = ana.locator('#table-rejoin-mount .invite-code__value');
 	await expect(hostCodeEl).toHaveText(/^[A-HJ-NP-Z2-9]{8}$/);
 
 	await joinGame(berto, code, 'Berto');
 	// …and the GUEST his (different) one.
-	const bertoCodeEl = berto.locator('#joined-rejoin-mount .invite-code__value');
+	const bertoCodeEl = berto.locator('#table-rejoin-mount .invite-code__value');
 	await expect(bertoCodeEl).toHaveText(/^[A-HJ-NP-Z2-9]{8}$/);
 	const bertoCode = (await bertoCodeEl.textContent())!.trim();
 	expect(bertoCode).not.toBe((await hostCodeEl.textContent())!.trim());

@@ -1666,9 +1666,10 @@
     "copyCode": "Copiar el código",
     "playersHeading": "Quién está aquí",
     "start": "Empezar la siguiente partida",
+    "leave": "Salir de la mesa",
     "start_failed": "No se ha podido empezar la partida.",
-    "code_copied": "Código de invitación copiado.",
-    "code_copy_failed": "No se ha podido copiar el código de invitación."
+    "copied": "Copiado.",
+    "copy_failed": "No se ha podido copiar."
   },
   "common": {
     "ok": "Aceptar",

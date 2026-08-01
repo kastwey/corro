@@ -21,26 +21,26 @@ test('the host seats a bot; it plays its whole turn unattended and hands the tur
 
 	// The bot takes a chair: the host NAMES it in the dialog (or rolls the silly-name
 	// hat), it shows tagged in the room — and counts towards the start guard.
-	await ana.click('#add-bot-btn');
+	await ana.click('#table-add-bot');
 	const nameDialog = ana.locator('.game-dialog.dialog-bot-name');
 	await expect(nameDialog).toBeVisible();
 	await nameDialog.locator('#bot-name-random').click();
 	await expect(nameDialog.locator('#bot-name-input')).not.toHaveValue(''); // the hat filled it
 	await nameDialog.locator('#bot-name-input').fill('Doña Rotonda');
 	await nameDialog.locator('.btn-primary').click();
-	await expect(ana.locator('#host-player-list')).toContainText('Doña Rotonda');
-	await expect(ana.locator('#host-player-list')).toContainText('(bot)');
+	await expect(ana.locator('#table-players')).toContainText('Doña Rotonda');
+	await expect(ana.locator('#table-players')).toContainText('(bot)');
 
 	// The host-only remove control is another waiting-room state: remove the bot, verify the
 	// chair returns, then seat it again so the gameplay half of this scenario remains unchanged.
-	await ana.locator('#host-player-list .player-item', { hasText: 'Doña Rotonda' })
+	await ana.locator('#table-players .player-item', { hasText: 'Doña Rotonda' })
 		.locator('.player-item__remove-bot').dispatchEvent('click');
-	await expect(ana.locator('#host-player-list')).not.toContainText('Doña Rotonda');
-	await ana.locator('#add-bot-btn').dispatchEvent('click');
+	await expect(ana.locator('#table-players')).not.toContainText('Doña Rotonda');
+	await ana.locator('#table-add-bot').dispatchEvent('click');
 	const replacementDialog = ana.locator('.game-dialog.dialog-bot-name');
 	await replacementDialog.locator('#bot-name-input').fill('Doña Rotonda');
 	await replacementDialog.locator('.btn-primary').click();
-	await expect(ana.locator('#host-player-list')).toContainText('Doña Rotonda');
+	await expect(ana.locator('#table-players')).toContainText('Doña Rotonda');
 
 	await startGame(ana, [ana]);
 

@@ -15,20 +15,34 @@ before(() => {
 });
 
 /** The game page's two surfaces: the table, and everything the board lives in. */
-function mount(): { table: HTMLElement; game: HTMLElement } {
+function mount(): void {
 	document.body.innerHTML = `
 		<section id="table-view" hidden>
 			<h2 id="table-heading" tabindex="-1">At the table</h2>
 			<p><strong id="table-code"></strong>
 			<button type="button" id="table-copy-code" hidden>Copy code</button></p>
+			<p><span id="table-invite-url"></span>
+			<button type="button" id="table-copy-link" hidden>Copy link</button></p>
+			<div id="table-rejoin-mount"></div>
+			<div id="table-content-language-group" hidden>
+				<select id="table-content-language"></select>
+			</div>
+			<p id="table-content-language-current" hidden></p>
 			<ul id="table-players"></ul>
+			<button type="button" id="table-add-bot" hidden>Add a bot</button>
 			<button type="button" id="table-start-btn" hidden>Start</button>
+			<span id="table-waiting-host" hidden>Waiting for the host</span>
+			<button type="button" id="table-leave">Leave</button>
 		</section>
 		<p id="game-surface-intro">Focus will move to your hand.</p>
 		<div id="game-layout"></div>`;
+}
+
+/** A table document as the server sanitizes it. */
+function table(overrides: Partial<import('../src/models.js').GameInfo> = {}): any {
 	return {
-		table: document.getElementById('table-view') as HTMLElement,
-		game: document.getElementById('game-layout') as HTMLElement,
+		gameId: 'g1', hostId: 'a', inviteCode: 'ABCD', status: 'WaitingForPlayers',
+		maxPlayers: 4, players: [], ...overrides,
 	};
 }
 
@@ -50,18 +64,19 @@ beforeEach(() => {
 });
 
 test('showing the table puts the board away, and hiding it gives the page back', () => {
-	const { table, game } = { table: document.getElementById('table-view')!, game: document.getElementById('game-layout')! };
+	const root = document.getElementById('table-view')!;
+	const game = document.getElementById('game-layout')!;
 	const view = newView();
 
 	const intro = document.getElementById('game-surface-intro') as HTMLElement;
 
 	view.show();
-	assert.equal(table.hidden, false);
+	assert.equal(root.hidden, false);
 	assert.equal(game.hidden, true, 'the board must not sit behind the table');
 	assert.equal(intro.hidden, true, 'no telling people where focus goes in a game that is not running');
 
 	view.hide();
-	assert.equal(table.hidden, true);
+	assert.equal(root.hidden, true);
 	assert.equal(game.hidden, false);
 	assert.equal(intro.hidden, false);
 });
@@ -82,10 +97,12 @@ test('arriving at the table does not steal the reading position; coming back to 
 test('the roster names everyone, their piece, and who is the host', () => {
 	const view = newView();
 
-	view.setPlayers([
-		{ id: 'a', name: 'Ana', token: 'disc', isHost: true } as any,
-		{ id: 'b', name: 'Berto', token: 'star', isBot: true } as any,
-	]);
+	view.setTable(table({
+		players: [
+			{ id: 'a', name: 'Ana', token: 'disc', isHost: true },
+			{ id: 'b', name: 'Berto', token: 'star', isBot: true },
+		],
+	}));
 
 	const items = document.querySelectorAll('#table-players .player-item');
 	assert.equal(items.length, 2);
@@ -98,13 +115,116 @@ test('the roster names everyone, their piece, and who is the host', () => {
 test('a rebuilt roster replaces the previous one instead of piling up', () => {
 	const view = newView();
 
-	view.setPlayers([{ id: 'a', name: 'Ana', token: 'disc' } as any]);
-	view.setPlayers([
-		{ id: 'a', name: 'Ana', token: 'disc' } as any,
-		{ id: 'b', name: 'Berto', token: 'star' } as any,
-	]);
+	view.setTable(table({ players: [{ id: 'a', name: 'Ana', token: 'disc' }] }));
+	view.setTable(table({
+		players: [
+			{ id: 'a', name: 'Ana', token: 'disc' },
+			{ id: 'b', name: 'Berto', token: 'star' },
+		],
+	}));
 
 	assert.equal(document.querySelectorAll('#table-players .player-item').length, 2);
+});
+
+test('the host may send a bot away from the roster; nobody may send a person away', () => {
+	const removed: string[] = [];
+	const view = newView({ isHost: () => true, removeBot: async id => { removed.push(id); } });
+
+	view.setTable(table({
+		players: [
+			{ id: 'a', name: 'Ana', token: 'disc', isHost: true },
+			{ id: 'bot', name: 'Crupier', token: 'star', isBot: true },
+		],
+	}));
+
+	const buttons = document.querySelectorAll('#table-players .player-item__remove-bot');
+	assert.equal(buttons.length, 1, 'only the bot row carries the control');
+	(buttons[0] as HTMLButtonElement).click();
+	assert.deepEqual(removed, ['bot']);
+});
+
+test('a guest is never offered the bot controls', () => {
+	const view = newView({ isHost: () => false, removeBot: async () => {} });
+
+	view.setTable(table({
+		players: [{ id: 'bot', name: 'Crupier', token: 'star', isBot: true }],
+		gameType: 'property',
+	}));
+
+	assert.equal(document.querySelectorAll('#table-players .player-item__remove-bot').length, 0);
+	assert.equal((document.getElementById('table-add-bot') as HTMLButtonElement).hidden, true);
+});
+
+test('the empty chair is offered only where a bot can actually sit', () => {
+	const chair = () => (document.getElementById('table-add-bot') as HTMLButtonElement).hidden;
+	const view = newView({ isHost: () => true, addBot: () => {} });
+
+	// A family with a bot brain, with room left.
+	view.setTable(table({ gameType: 'property', maxPlayers: 4, players: [{ id: 'a', name: 'Ana', token: 'disc' }] }));
+	assert.equal(chair(), false);
+
+	// The same family, full.
+	view.setTable(table({
+		gameType: 'property', maxPlayers: 2,
+		players: [{ id: 'a', name: 'Ana', token: 'disc' }, { id: 'b', name: 'Berto', token: 'star' }],
+	}));
+	assert.equal(chair(), true);
+
+	// A family with no bots at all.
+	view.setTable(table({ gameType: 'trivia', maxPlayers: 4, players: [{ id: 'a', name: 'Ana', token: 'disc' }] }));
+	assert.equal(chair(), true);
+});
+
+test('the shared deck is the host\'s to change and everyone else\'s to read', () => {
+	const group = () => document.getElementById('table-content-language-group') as HTMLElement;
+	const summary = () => document.getElementById('table-content-language-current') as HTMLElement;
+	const chosen: string[] = [];
+
+	const host = newView({ isHost: () => true, setContentLanguage: async l => { chosen.push(l); } });
+	host.setTable(table({ contentLanguages: ['en', 'es'], language: 'es' }));
+	assert.equal(group().hidden, false);
+	assert.equal(summary().hidden, true);
+	const select = document.getElementById('table-content-language') as HTMLSelectElement;
+	assert.equal(select.value, 'es');
+	select.value = 'en';
+	select.dispatchEvent(new (globalThis as any).window.Event('change'));
+	assert.deepEqual(chosen, ['en']);
+
+	const guest = newView({ isHost: () => false, setContentLanguage: async () => {} });
+	guest.setTable(table({ contentLanguages: ['en', 'es'], language: 'es' }));
+	assert.equal(group().hidden, true);
+	assert.equal(summary().hidden, false, 'a guest still learns which deck the table plays with');
+});
+
+test('a board whose content is not language-split offers no deck at all', () => {
+	const view = newView({ isHost: () => true, setContentLanguage: async () => {} });
+
+	view.setTable(table({ contentLanguages: [] }));
+
+	assert.equal((document.getElementById('table-content-language-group') as HTMLElement).hidden, true);
+	assert.equal((document.getElementById('table-content-language-current') as HTMLElement).hidden, true);
+});
+
+test('the re-entry code is shown with a way to copy it, and nothing when there is none', () => {
+	const withCode = newView({ rejoinCode: () => 'ZZZ9', copy: async () => true });
+	withCode.setTable(table());
+	const mountEl = document.getElementById('table-rejoin-mount') as HTMLElement;
+	assert.match(mountEl.textContent ?? '', /ZZZ9/);
+	assert.ok(mountEl.querySelector('#table-copy-rejoin'));
+
+	const without = newView({ rejoinCode: () => null });
+	without.setTable(table());
+	assert.equal((document.getElementById('table-rejoin-mount') as HTMLElement).textContent, '');
+});
+
+test('a guest is told what they are waiting for instead of being given a dead button', () => {
+	const hint = () => document.getElementById('table-waiting-host') as HTMLElement;
+
+	newView({ isHost: () => false }).show();
+	assert.equal(hint().hidden, false);
+
+	newView({ isHost: () => true }).show();
+	assert.equal(hint().hidden, true);
 });
 
 test('only the host is offered the next match, and the control is absent for everyone else', () => {
@@ -137,15 +257,20 @@ test('starting the next match asks the server, and says so out loud when it refu
 	assert.deepEqual(spoken, ['table.start_failed']);
 });
 
-test('the invite code shows only when there is one to pass on', () => {
+test('the code and the link that bring someone else show only when there is one to pass on', () => {
 	const view = newView();
-	const copy = document.getElementById('table-copy-code') as HTMLButtonElement;
+	const copyCode = document.getElementById('table-copy-code') as HTMLButtonElement;
+	const copyLink = document.getElementById('table-copy-link') as HTMLButtonElement;
 
-	view.setInviteCode('ABCD');
+	view.setTable(table({ inviteCode: 'ABCD' }));
 	assert.equal(document.getElementById('table-code')!.textContent, 'ABCD');
-	assert.equal(copy.hidden, false);
+	assert.match(document.getElementById('table-invite-url')!.textContent ?? '', /\?code=ABCD$/);
+	assert.equal(copyCode.hidden, false);
+	assert.equal(copyLink.hidden, false);
 
-	view.setInviteCode(null);
+	view.setTable(table({ inviteCode: '' }));
 	assert.equal(document.getElementById('table-code')!.textContent, '');
-	assert.equal(copy.hidden, true);
+	assert.equal(document.getElementById('table-invite-url')!.textContent, '');
+	assert.equal(copyCode.hidden, true);
+	assert.equal(copyLink.hidden, true);
 });

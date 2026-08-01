@@ -66,10 +66,33 @@
 		<strong id="table-code"></strong>
 		<button type="button" id="table-copy-code" class="secondary-button" data-i18n="table.copyCode" hidden>Copy code</button>
 	  </p>
+	  <p class="table-view__invite">
+		<span data-i18n="lobby.inviteLink">Invite link:</span>
+		<span id="table-invite-url"></span>
+		<button type="button" id="table-copy-link" class="secondary-button" data-i18n="lobby.copyLink" hidden>Copy link</button>
+	  </p>
+
+	  <!-- The player's own re-entry code: the one thing worth writing down, since it recovers
+		   this seat from any browser if the saved session is lost. -->
+	  <div id="table-rejoin-mount"></div>
+
+	  <!-- Language-split content (a word deck, a question deck): one shared choice for the whole
+		   table, which the host may change until a match starts. Everyone else reads it. -->
+	  <div class="form-group" id="table-content-language-group" hidden>
+		<label for="table-content-language" data-i18n="lobby.contentLanguage">Content language:</label>
+		<select id="table-content-language" aria-describedby="table-content-language-hint"></select>
+		<p id="table-content-language-hint" class="form-hint" data-i18n="lobby.contentLanguageWaitingHint">The host may change this shared deck until the game starts.</p>
+	  </div>
+	  <p id="table-content-language-current" hidden></p>
+
 	  <h3 class="table-view__players-heading" data-i18n="table.playersHeading">Who is here</h3>
 	  <ul id="table-players" class="table-view__players player-list"></ul>
+	  <!-- Bot seats (families with a bot brain): the host fills empty chairs. -->
+	  <button type="button" id="table-add-bot" class="secondary-button" data-i18n="lobby.addBot" hidden>Add a bot</button>
 	  <p class="table-view__actions">
 		<button type="button" id="table-start-btn" class="primary-button" data-i18n="table.start" hidden>Start the next match</button>
+		<span id="table-waiting-host" class="loading" data-i18n="lobby.waitingForHost" hidden>Waiting for host to start the game...</span>
+		<button type="button" id="table-leave" class="secondary-button" data-i18n="table.leave">Leave the table</button>
 	  </p>
 	</section>
 

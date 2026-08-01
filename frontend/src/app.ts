@@ -31,6 +31,8 @@ import { buildPropertyRulesLines } from './rulesSummaries.js';
 import { loadBoardHelp, showBoardHelpDialog, initHelpButton } from './boardHelp.js';
 import { resetEndScreen, showEndScreen } from './endScreen.js';
 import { tableView } from './tableView.js';
+import { promptForBotName } from './lobby/botNameForm.js';
+import { randomBotName } from './botNames.js';
 import { turnIndicator } from './turnIndicator.js';
 import { cardReveal } from './cardReveal.js';
 import { squareGroupLabel } from './localizeSquare.js';
@@ -456,9 +458,29 @@ async function initBoard() {
 		t: (key, vars) => tSync(key, vars as Record<string, any> | undefined),
 		isHost: () => playerSession.isHost,
 		start: () => gameClient.startGame({ gameId, hostId: playerSession.playerId }),
+		setContentLanguage: language => gameClient.setContentLanguage({
+			gameId, hostId: playerSession.playerId, language,
+		}),
+		addBot: () => promptForBotName({
+			t: key => tSync(key),
+			rollName: current => randomBotName(key => tSync(key), current),
+			returnFocusTo: 'table-add-bot',
+			show: options => dialogManager.show(options),
+			close: () => dialogManager.close(),
+			onSubmit: name => void gameClient.addBot({
+				gameId, hostId: playerSession.playerId, name,
+			}),
+		}),
+		removeBot: botId => gameClient.removeBot({
+			gameId, hostId: playerSession.playerId, playerId: botId,
+		}),
+		leave: () => { window.location.href = '/'; },
 		announce: (key, vars = {}, instant = false) =>
 			announce(createAnnouncement(key, vars), { instant }),
-		copyCode: code => copyToClipboard(code, 'table-copy-code'),
+		copy: (text, buttonId) => copyToClipboard(text, buttonId),
+		// Read at render time, not captured: the code is minted on the first authenticated join,
+		// so the session may gain one after this page started.
+		rejoinCode: () => GameSessionStore.getGame(gameId)?.rejoinCode ?? null,
 	});
 
 	announce(createAnnouncement('game.loading_board', {}));
@@ -1046,6 +1068,21 @@ async function initBoard() {
 	// after the gate is armed and releases on settle.
 	let pendingCardReveal: CardDrawnNotification | null = null;
 	let packageI18nLoaded = false;
+	/** Set when a match starts on a page that was showing the table; see the gameStarted handler. */
+	let focusGameOnNextState = false;
+
+	/**
+	 * A package brings its own WORDS (the board's vocabulary and announcements) and its own GUIDE
+	 * (F1). Both are fetched together, once, from wherever this page learns the token first: the
+	 * table it is waiting at, or the first state of a match it walked straight into.
+	 */
+	const loadPackageAssets = (packageToken: string): Promise<void> => {
+		const lang = i18nBinder.getCurrentLanguage();
+		const fallbackLangs = i18nBinder.getSupportedLanguages().filter(l => l !== lang);
+		// The player's language first, then the others as a fallback.
+		void loadBoardHelp(packageToken, [lang, ...fallbackLangs]);
+		return i18nBinder.loadPackageResources(packageToken);
+	};
 
 	gameManager.on('gameStateUpdated', (gs) => {
 	if (!gs) return;
@@ -1082,8 +1119,7 @@ async function initBoard() {
 	setBoardVocabulary(gs, i18nBinder.getCurrentLanguage());
 	if (gs.packageToken && !packageI18nLoaded) {
 		packageI18nLoaded = true;
-		const lang = i18nBinder.getCurrentLanguage();
-		void i18nBinder.loadPackageResources(gs.packageToken).then(() => {
+		void loadPackageAssets(gs.packageToken).then(() => {
 		setBoardVocabulary(gs, i18nBinder.getCurrentLanguage()); // now resolve package group names
 		void i18nBinder.applyI18n();
 		if (hasRenderedWithServerData) {
@@ -1105,10 +1141,6 @@ async function initBoard() {
 		const fresh = gameManager.getCurrentGameState();
 		if (fresh) ensureFamilyView(fresh.gameType)?.onStateUpdated(fresh);
 		});
-		// Load the board's guide (rules + how to play) for F1 / the Help button — the player's
-		// language first, then the others as a fallback.
-		const fallbackLangs = i18nBinder.getSupportedLanguages().filter(l => l !== lang);
-		void loadBoardHelp(gs.packageToken, [lang, ...fallbackLangs]);
 	}
 
 	// Surface the re-entry code once the join ack has delivered it (idempotent).
@@ -1212,6 +1244,12 @@ async function initBoard() {
 		showEndScreen(gs, gameManager.getMyPlayerId(), {
 			onDismissed: () => tableView.show({ focus: true }),
 		});
+		}
+		// A match that started while this page was at its table: the surface is built now, so
+		// focus can go through the board container, which forwards it to the family's home.
+		if (focusGameOnNextState && !gs.isGameOver) {
+		focusGameOnNextState = false;
+		setTimeout(() => board.focus(), 0);
 		}
 	});
 	// Now that authoritative state is applied (and any token hop has started), let the gate
@@ -1991,33 +2029,50 @@ async function initBoard() {
 	gameClient.on('voiceParticipantMutedByHost', data => voicePanel.handleHostMute(data));
 
 	// ── The table, between matches ────────────────────────────────────────────
+	/**
+	 * Fetch the board's words and guide while the table is still waiting. A match no longer begins
+	 * with a page load, so a game's first announcements can now be spoken before its package would
+	 * have arrived — the bank reporting its stock in the engine's generic nouns instead of the
+	 * board's, or F1 opening an empty guide. The table knows which package it is about to play, so
+	 * the game's voice is ready before the game is.
+	 */
+	const preloadTablePackage = (packageToken: string | null | undefined): void => {
+		if (!packageToken || packageI18nLoaded) return;
+		packageI18nLoaded = true;
+		void loadPackageAssets(packageToken).then(() => i18nBinder.applyI18n());
+	};
+
 	// Arriving at a table with no match running: the server answers an authenticated join with
 	// the roster instead of a state. Focus is NOT moved — this is where the page starts, and the
 	// startup flow already decides what to read first.
 	gameClient.on('lobbyState', table => {
-		tableView.setPlayers(table.players ?? []);
-		tableView.setInviteCode(table.inviteCode);
+		tableView.setTable(table);
 		tableView.show();
+		preloadTablePackage(table.packageToken);
 	});
-	// Someone arrived or left while we sit here.
+	// Someone arrived or left, or the host changed the shared deck, while we sit here.
 	gameClient.on('lobbyUpdated', table => {
 		if (!tableView.isVisible()) return;
-		tableView.setPlayers(table.players ?? []);
-		tableView.setInviteCode(table.inviteCode);
+		tableView.setTable(table);
 	});
 	// The match is over and its table is back at rest. The end screen is already up (the final
 	// state raised it); the table is revealed BEHIND it, so dismissing the dialog lands on it
 	// rather than on an empty board.
 	gameClient.on('matchEnded', table => {
-		tableView.setPlayers(table.players ?? []);
-		tableView.setInviteCode(table.inviteCode);
+		tableView.setTable(table);
 		tableView.show();
+		preloadTablePackage(table.packageToken);
 	});
 	// The host started the next one: the board takes the page back, and the end screen of the
 	// PREVIOUS match is forgotten so this one can raise its own.
 	gameClient.on('gameStarted', () => {
 		resetEndScreen();
 		tableView.hide();
+		// Focus must ENTER the game, exactly as it does on a fresh page load. It is claimed on the
+		// first state rather than here: the family's home surface (a card family's hand) is built
+		// from that state, and focusing the board container before it exists would leave a keyboard
+		// player parked outside their own hand.
+		focusGameOnNextState = true;
 	});
 
 	// Try to connect automatically and join the game

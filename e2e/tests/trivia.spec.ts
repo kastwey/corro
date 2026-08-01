@@ -32,7 +32,7 @@ test('trivia: roll, pick a headquarters, answer, the judge rules, a wedge is ear
 
 	const code = await createGame(ana, 'Ana', BOARD);
 	// Trivia ships no bot policy (a bot can't judge), so the host's "add bot" chair stays hidden.
-	await expect(ana.locator('#add-bot-btn')).toBeHidden();
+	await expect(ana.locator('#table-add-bot')).toBeHidden();
 	await joinGame(berto, code, 'Berto');
 	await startGame(ana, [ana, berto]);
 	// Both players' pieces paint at the centre: the themed token icon on a colour chip, wrapped by

@@ -847,6 +847,8 @@ export interface GameInfo {
   contentLanguages?: string[];
   /** Token of the .corro package backing this game; set for a package board. */
   packageToken?: string;
+  /** The family this table is set up to play ("property", "exploding"…), known even at rest. */
+  gameType?: string | null;
   /** The board's player tokens (id + SVG + name key); absent => the joiner uses the 8 built-ins. */
   tokens?: TokenInfo[];
   /** A race board's seats (squadron colours) so the joiner can pick one; absent otherwise. */

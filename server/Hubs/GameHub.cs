@@ -236,15 +236,11 @@ public partial class GameHub : Hub
 				await Groups.AddToGroupAsync(Context.ConnectionId, $"lobby_{gameId}");
 
 				_logger?.LogDebug("Game {GameId} still in lobby, sending LobbyState", gameId);
-				await Clients.Caller.SendAsync("LobbyState", new
-				{
-					GameId = gameId,
-					Status = game.Status.ToString(),
-					// The code that brings someone else to this table. Anyone already seated may pass
-					// it on, so it travels with the state that says they are seated.
-					game.InviteCode,
-					Players = game.Players.Select(p => new { p.Id, p.Name, p.Token, p.IsHost, p.IsBot, p.IsReady }).ToList()
-				});
+				// The whole sanitized table, exactly as LobbyUpdated sends it. It used to be a
+				// bespoke roster payload, which meant every field the table view needed — the invite
+				// code, the shared deck, the team count — had to be added to it one at a time while
+				// the very same document was already being broadcast on the next change.
+				await Clients.Caller.SendAsync("LobbyState", game.Sanitized());
 				await Clients.Caller.SendAsync("GameJoined", new { GameId = gameId, PlayerId = playerId, RejoinCode = player.RejoinCode });
 				return;
 			}

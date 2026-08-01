@@ -42,6 +42,15 @@ public record GameDocument
 	[JsonPropertyName("packageToken")]
 	public string? PackageToken { get; init; }
 
+	/// <summary>
+	/// The family this table is set up to play ("property", "exploding", "forbidden"…), taken from
+	/// the staged package when the table is created. A table knows what game it is FOR even while
+	/// no match is running, which is what lets its own page offer the family's setup — a bot chair
+	/// where bots exist, and nothing where they don't — without staging the package to ask.
+	/// </summary>
+	[JsonPropertyName("gameType")]
+	public string? GameType { get; init; }
+
 	/// <summary>For a shipped board: its package id, so the game can be re-staged from server/Packages
 	/// on restore (after a restart). Null for an uploaded board.</summary>
 	[JsonPropertyName("shippedBoardId")]

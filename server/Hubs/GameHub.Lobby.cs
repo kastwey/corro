@@ -109,6 +109,9 @@ public partial class GameHub
 				Language = request.Language,
 				ContentLanguages = contentLanguages,
 				PackageToken = request.PackageToken,
+				// What this table is set up to play, recorded now so its own page can offer the
+				// family's setup later without re-staging the package to find out.
+				GameType = stagedDefinition?.Manifest.GameType,
 				ShippedBoardId = origin?.ShippedId,
 				PackageBlobKey = origin?.BlobKey,
 				RuleValues = request.RuleValues,
@@ -892,6 +895,9 @@ public partial class GameHub
 			{
 				Status = GameStatus.Active,
 				GameState = gameService.GameState,
+				// Repairs a table created before the family was recorded, and keeps it truthful if
+				// the board ever changes between matches.
+				GameType = definition.Manifest.GameType,
 				// The previous match's result stops being the news the moment there is a game to look
 				// at instead. Kept only while the table is at rest.
 				LastMatch = null,

@@ -28,14 +28,14 @@ import { tokenIconHtml, setPackageTokens } from '../tokenIcons.js';
 import { initThemeToggle } from '../themeToggle.js';
 import { initializeSiteBranding } from '../siteBranding.js';
 import { applyRuleSettings, readRuleSettings } from './ruleFields.js';
-import { buildBotNameForm } from './botNameForm.js';
+import { promptForBotName } from './botNameForm.js';
 import { createPlayerIdentity } from './playerListItem.js';
 import { RovingToolbarList } from '../accessibleList.js';
 import {
 	teamPanelFocusPlan, teamRosterStatus,
 	type PendingTeamFocus, type PreservedTeamFocus,
 } from './teamRoster.js';
-import { chooseContentLanguage, contentLanguageName } from './contentLanguage.js';
+import { chooseContentLanguage, contentLanguageName, fillContentLanguageSelect } from './contentLanguage.js';
 import {
 	t, translateServerError, showLoading, showError,
 	showSection, hideSection, showView, focusFirstField, getElement, getInputValue, getSelectedRadio,
@@ -626,14 +626,7 @@ class UnifiedLobbyUI {
 		languages: readonly string[],
 		selected: string,
 	): void {
-		select.innerHTML = '';
-		for (const language of languages) {
-			const option = document.createElement('option');
-			option.value = language;
-			option.textContent = contentLanguageName(language, t);
-			select.appendChild(option);
-		}
-		select.value = selected;
+		fillContentLanguageSelect(select, languages, selected, t);
 	}
 
 	/**
@@ -729,35 +722,14 @@ class UnifiedLobbyUI {
 	 * server falls back to its plain "Bot N".
 	 */
 	private promptBotName(): void {
-		const { content, input, submit } = buildBotNameForm({
+		promptForBotName({
 			t,
-			rollName: (current) => randomBotName(key => i18nBinder.tSync(key), current),
-			onSubmit: (name) => {
-				dialogManager.close();
-				void this.addBot(name);
-			},
-		});
-
-		dialogManager.show({
-			title: t('lobby.botNameTitle'),
-			contentElement: content,
-			className: 'dialog-bot-name',
-			// Focus returns to the Add-bot chair on close — passed explicitly because a
-			// screen-reader activation of the button may not leave DOM focus on it.
+			rollName: current => randomBotName(key => i18nBinder.tSync(key), current),
 			returnFocusTo: 'add-bot-btn',
-			buttons: [
-				{
-					label: 'Cancel', i18nKey: 'common.cancel', variant: 'secondary',
-					action: () => dialogManager.close(),
-				},
-				{
-					label: 'Add', i18nKey: 'lobby.botNameAdd', variant: 'primary',
-					action: submit,
-				},
-			],
+			show: options => dialogManager.show(options),
+			close: () => dialogManager.close(),
+			onSubmit: name => void this.addBot(name),
 		});
-		// Land ON the name box (the dialog's own initial focus goes to a button at ~50ms).
-		window.setTimeout(() => input.focus(), 80);
 	}
 
 	private async addBot(name?: string): Promise<void> {
@@ -1398,7 +1370,22 @@ class UnifiedLobbyUI {
 		}
 	}
 
+	/**
+	 * Take the player to their TABLE — the game page, where the group waits together with the
+	 * chat and the voice room already mounted (docs/tables.md). Returns true when that navigation
+	 * was started, so the caller leaves the lobby's own waiting room alone.
+	 *
+	 * Team boards are the exception, and the last thing keeping `view-waiting` alive: arranging
+	 * the teams is a roving list with its own focus plan, and it has not moved yet.
+	 */
+	private enterTable(game: GameInfo): boolean {
+		if ((game.teamCount ?? 0) >= 2) return false;
+		window.location.href = `board.html?gameId=${game.gameId}`;
+		return true;
+	}
+
 	private showGameCreated(game: GameInfo, inviteCode: string): void {
+		if (this.enterTable(game)) return;
 		updateUrlWithGame(game.gameId);
 		showSection('lobby-created');
 		hideSection('lobby-joined');
@@ -1409,6 +1396,7 @@ class UnifiedLobbyUI {
 	}
 
 	private showGameJoined(game: GameInfo): void {
+		if (this.enterTable(game)) return;
 		updateUrlWithGame(game.gameId);
 		hideSection('lobby-created');
 		showSection('lobby-joined');

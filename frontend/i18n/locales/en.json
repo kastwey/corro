@@ -1666,9 +1666,10 @@
     "copyCode": "Copy code",
     "playersHeading": "Who is here",
     "start": "Start the next match",
+    "leave": "Leave the table",
     "start_failed": "The match could not be started.",
-    "code_copied": "Invite code copied.",
-    "code_copy_failed": "The invite code could not be copied."
+    "copied": "Copied.",
+    "copy_failed": "It could not be copied."
   },
   "common": {
     "ok": "OK",

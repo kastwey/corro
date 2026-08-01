@@ -23,6 +23,51 @@ export interface BotNameForm {
 	submit: () => void;
 }
 
+/**
+ * Ask for the bot's name in a dialog and add it. Shared by the two places a host can seat one —
+ * the table's own page and the lobby's waiting room — so the keyboard contract is written once:
+ * Enter or the Add button submit the same value, Cancel closes, and focus returns to the chair
+ * that was activated (passed explicitly, because a screen-reader activation may leave no DOM
+ * focus on it).
+ */
+export function promptForBotName(opts: {
+	t: (key: string) => string;
+	rollName: (current: string) => string;
+	/** The chair to return focus to when the dialog closes. */
+	returnFocusTo: string;
+	show: (options: {
+		title: string;
+		contentElement: HTMLElement;
+		className: string;
+		returnFocusTo: string;
+		buttons: { label: string; i18nKey: string; variant: 'primary' | 'secondary'; action: () => void }[];
+	}) => void;
+	close: () => void;
+	onSubmit: (name: string | undefined) => void;
+}): void {
+	const { content, input, submit } = buildBotNameForm({
+		t: opts.t,
+		rollName: opts.rollName,
+		onSubmit: name => {
+			opts.close();
+			opts.onSubmit(name);
+		},
+	});
+
+	opts.show({
+		title: opts.t('lobby.botNameTitle'),
+		contentElement: content,
+		className: 'dialog-bot-name',
+		returnFocusTo: opts.returnFocusTo,
+		buttons: [
+			{ label: 'Cancel', i18nKey: 'common.cancel', variant: 'secondary', action: opts.close },
+			{ label: 'Add', i18nKey: 'lobby.botNameAdd', variant: 'primary', action: submit },
+		],
+	});
+	// Land ON the name box (the dialog's own initial focus goes to a button at ~50ms).
+	window.setTimeout(() => input.focus(), 80);
+}
+
 export function buildBotNameForm(opts: BotNameFormOptions): BotNameForm {
 	const { t, rollName, onSubmit } = opts;
 
