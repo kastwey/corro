@@ -31,19 +31,18 @@ test.beforeEach(async () => {
 	await resetDice();
 });
 
-test('voice chat: host enables it, players join unmuted, query speakers, adjust volume and moderate once', async ({ browser }) => {
+test('voice chat: every game offers it, the host closes and reopens it, players join unmuted, query speakers, adjust volume and moderate once', async ({ browser }) => {
 	const ana = await newPlayerPage(browser);
 	const berto = await newPlayerPage(browser);
 
-	// The deployment capability makes the create-time host choice visible and operable.
+	// Voice belongs to the DEPLOYMENT, not to a decision made before anyone knows they will want
+	// to talk: creating a game asks nothing about it, and every game the relay can serve offers
+	// the room from the start.
 	await gotoLobbyHome(ana);
 	await ana.click('#go-create-btn');
-	await expect(ana.locator('#voice-chat-group')).toBeVisible();
-	await expect(ana.locator('#voice-chat-enabled')).not.toBeChecked();
-	await ana.locator('#voice-chat-enabled').check();
+	await expect(ana.locator('#voice-chat-group')).toHaveCount(0);
 	await flushAxeAudit(ana);
 
-	// This game starts with voice off so the in-game host activation path is covered too.
 	const code = await createGame(ana, 'Ana', 'galactic-empire');
 	await joinGame(berto, code, 'Berto');
 	await startGame(ana, [ana, berto]);
@@ -78,12 +77,18 @@ test('voice chat: host enables it, players join unmuted, query speakers, adjust 
 	await expect(ana.locator('#voice-disclaimer-text')).toBeFocused();
 	await flushAxeAudit(ana);
 	await ana.locator('#voice-disclaimer-dismiss').click();
-	await expect(ana.locator('#voice-status')).toHaveText(es.voice_off);
+	await expect(ana.locator('#voice-status')).toHaveText(es.voice_ready);
 	await flushAxeAudit(ana);
 
-	// Only the host sees availability control. SignalR broadcasts the authoritative switch
-	// to both clients and each hears it through the normal announcer.
-	await ana.getByRole('button', { name: es.voice_enable }).click();
+	// Only the host holds the switch, and it is authoritative for the table in both directions:
+	// a room nobody is using can be closed, and — the case that matters — a table that decides
+	// mid-game that it wants to talk can have it opened again. Each client hears the change
+	// through the normal announcer.
+	await ana.getByRole('button', { name: es.voice_disable, exact: true }).click();
+	await expect(ana.locator('#voice-status')).toHaveText(es.voice_off);
+	await expectAnnouncement(berto, exact(es.voice_disabled));
+	await flushAxeAudit(ana);
+	await ana.getByRole('button', { name: es.voice_enable, exact: true }).click();
 	await expect(ana.locator('#voice-status')).toHaveText(es.voice_ready);
 	await expect(berto.locator('#voice-toggle')).toHaveClass(/voice-toggle--enabled/);
 	await expectAnnouncement(berto, exact(es.voice_enabled));

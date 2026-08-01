@@ -9,8 +9,11 @@ namespace CorroServer.Tests;
 
 public class GameHubVoiceTests
 {
+	// Voice is a property of the deployment, and creating a game asks nothing about it. A host who
+	// was never offered the choice must not be left unable to make it: every game the relay can
+	// serve opens with the room available, and the host closes or reopens it from inside the game.
 	[Fact]
-	public async Task CreateLobby_PersistsVoiceWhenTheDeploymentSupportsIt()
+	public async Task CreateLobby_OffersVoiceWheneverTheDeploymentSupportsIt()
 	{
 		var h = BuildLobbyHarness(voiceConfigured: true);
 
@@ -19,7 +22,6 @@ public class GameHubVoiceTests
 			HostName = "Host",
 			HostToken = "disc",
 			Board = "Test game",
-			VoiceChatEnabled = true,
 		});
 
 		var response = Assert.IsType<CreateGameResponse>(
@@ -29,8 +31,9 @@ public class GameHubVoiceTests
 	}
 
 	[Fact]
-	public async Task CreateLobby_RejectsVoiceWhenTheDeploymentDoesNotSupportIt()
+	public async Task CreateLobby_LeavesVoiceOffWhenTheDeploymentHasNoRelay()
 	{
+		// Nothing to offer and nothing to render: the game is created exactly as it always was.
 		var h = BuildLobbyHarness(voiceConfigured: false);
 
 		await h.Hub.CreateGameLobby(new CreateGameRequest
@@ -38,11 +41,12 @@ public class GameHubVoiceTests
 			HostName = "Host",
 			HostToken = "disc",
 			Board = "Test game",
-			VoiceChatEnabled = true,
 		});
 
-		Assert.Equal("VOICE_NOT_CONFIGURED", h.Clients.Caller.LastError());
-		Assert.False(h.Clients.Caller.Received("GameCreated"));
+		var response = Assert.IsType<CreateGameResponse>(
+			Assert.Single(h.Clients.Caller.Sends, send => send.Method == "GameCreated").Args[0]);
+		Assert.False(response.Game.VoiceChatEnabled);
+		Assert.False((await h.Repository.LoadGameAsync(response.GameId))!.VoiceChatEnabled);
 	}
 
 	[Fact]

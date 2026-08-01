@@ -37,8 +37,6 @@
     "contentLanguageWaitingHint": "El anfitrión puede cambiar este mazo común hasta que empiece la partida.",
     "contentLanguageCurrent": "Idioma del contenido: {{language}}.",
     "contentLanguageChanged": "El idioma del contenido ahora es {{language}}.",
-    "voiceChat": "Activar el chat de voz para esta partida",
-    "voiceChatHint": "Cada jugador decide si se une cuando empieza la partida.",
     "teamsNone": "Sin equipos",
     "teamsOf": "{{teams}} equipos de {{size}}",
     "teamsHeading": "Equipos",

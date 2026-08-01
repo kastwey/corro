@@ -37,8 +37,6 @@
     "contentLanguageWaitingHint": "The host may change this shared deck until the game starts.",
     "contentLanguageCurrent": "Content language: {{language}}.",
     "contentLanguageChanged": "The content language is now {{language}}.",
-    "voiceChat": "Enable voice chat for this game",
-    "voiceChatHint": "Players choose whether to join after the game starts.",
     "teamsNone": "No teams",
     "teamsOf": "{{teams}} teams of {{size}}",
     "teamsHeading": "Teams",

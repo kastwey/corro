@@ -905,8 +905,6 @@ export interface CreateGameRequest {
   raceTeams?: boolean;
   /** Team mode: how many equal teams (a divisor of the exact player count). */
   teamCount?: number;
-  /** Initial host choice for the optional voice room. */
-  voiceChatEnabled?: boolean;
 }
 
 /** A group heading for the rules panel (id referenced by house rules + an i18n name key). */

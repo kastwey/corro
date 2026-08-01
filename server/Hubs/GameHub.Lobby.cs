@@ -44,12 +44,6 @@ public partial class GameHub
 				Board = boardName,
 				Language = LobbyInput.NormalizeLanguage(request.Language),
 			};
-			if (request.VoiceChatEnabled && _voiceService?.IsConfigured != true)
-			{
-				await Clients.Caller.SendAsync("Error", "VOICE_NOT_CONFIGURED");
-				return;
-			}
-
 			var gameId = IdGenerator.GameId();
 			var inviteCode = IdGenerator.InviteCode();
 			var hostId = IdGenerator.PlayerId();
@@ -120,7 +114,12 @@ public partial class GameHub
 				RuleValues = request.RuleValues,
 				RaceTeams = request.RaceTeams,
 				TeamCount = request.TeamCount is 0 ? null : request.TeamCount,
-				VoiceChatEnabled = request.VoiceChatEnabled,
+				// Voice is a property of the DEPLOYMENT, not a per-game decision made before anyone
+				// knows they will want it: a game created without it could never be given it later,
+				// which is exactly when a table discovers it wants to talk. Every game where the
+				// relay exists therefore offers the room from the start, and the host opens or
+				// closes it from inside the game. Joining stays each player's own choice.
+				VoiceChatEnabled = _voiceService?.IsConfigured == true,
 				Settings = request.Settings ?? new GameSettings(),
 				Players = new List<LobbyPlayer>
 				{

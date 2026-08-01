@@ -114,20 +114,6 @@ class UnifiedLobbyUI {
 		}
 	}
 
-	private async loadVoiceAvailability(): Promise<void> {
-		try {
-			const response = await fetch('/api/config/voice');
-			const available = response.ok && !!(await response.json() as { available?: boolean }).available;
-			const group = getElement('voice-chat-group');
-			if (group) {
-				group.hidden = !available;
-				group.classList.toggle('hidden', !available);
-			}
-		} catch {
-			// Voice is optional. A failed public capability probe leaves the form hidden.
-		}
-	}
-
 	private async connectToServer(): Promise<void> {
 		try {
 			await gameClient.connect();
@@ -175,7 +161,6 @@ class UnifiedLobbyUI {
 		this.setupCopyCodeButton();
 		this.setupStartGameButton();
 		this.setupUnlockShortcut();
-		void this.loadVoiceAvailability();
 	}
 
 	/**
@@ -903,8 +888,6 @@ class UnifiedLobbyUI {
 			hostSeatId,
 			raceTeams,
 			teamCount,
-			// Undefined (not false) when unticked, so the field is omitted from the request.
-			voiceChatEnabled: getElement<HTMLInputElement>('voice-chat-enabled')?.checked ? true : undefined,
 			settings: this.readGameSettings()
 		};
 
