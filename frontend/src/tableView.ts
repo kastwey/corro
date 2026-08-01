@@ -34,8 +34,14 @@ export interface TableViewDeps {
 	/** Host-only: seat a bot (an empty name lets the server pick one), or send one away. */
 	addBot?: () => void;
 	removeBot?: (playerId: string) => Promise<void>;
-	/** Leave this table and go back to the lobby. */
-	leave?: () => void;
+	/** Go back to the lobby, keeping this seat. */
+	backToLobby?: () => void;
+	/** Give this seat up for good (confirmed by the caller). */
+	abandon?: () => void;
+	/** Host only: end the table for everyone (confirmed by the caller). */
+	deleteTable?: () => void;
+	/** Host only: hand the sceptre to another human at this table. */
+	makeHost?: (playerId: string) => Promise<void>;
 	/** Open the full standings of a finished match (the same end screen it raised). */
 	showStandings?: (match: GameState) => void;
 	/** Speak a line through the game's own announcer (never a second live region). */
@@ -69,7 +75,9 @@ export class TableView {
 	private copyCodeButton: HTMLButtonElement | null = null;
 	private copyLinkButton: HTMLButtonElement | null = null;
 	private addBotButton: HTMLButtonElement | null = null;
-	private leaveButton: HTMLButtonElement | null = null;
+	private backButton: HTMLButtonElement | null = null;
+	private abandonButton: HTMLButtonElement | null = null;
+	private deleteButton: HTMLButtonElement | null = null;
 	private lastMatchBox: HTMLElement | null = null;
 	private lastMatchLine: HTMLElement | null = null;
 	private standingsButton: HTMLButtonElement | null = null;
@@ -105,7 +113,9 @@ export class TableView {
 		this.copyCodeButton = document.getElementById('table-copy-code') as HTMLButtonElement | null;
 		this.copyLinkButton = document.getElementById('table-copy-link') as HTMLButtonElement | null;
 		this.addBotButton = document.getElementById('table-add-bot') as HTMLButtonElement | null;
-		this.leaveButton = document.getElementById('table-leave') as HTMLButtonElement | null;
+		this.backButton = document.getElementById('table-back') as HTMLButtonElement | null;
+		this.abandonButton = document.getElementById('table-abandon') as HTMLButtonElement | null;
+		this.deleteButton = document.getElementById('table-delete') as HTMLButtonElement | null;
 		this.rulesBox = document.getElementById('table-rules') as HTMLDetailsElement | null;
 		this.rulesFields = document.getElementById('table-rules-fields');
 		this.lastMatchBox = document.getElementById('table-last-match');
@@ -114,7 +124,9 @@ export class TableView {
 
 		this.startButton?.addEventListener('click', () => void this.startMatch());
 		this.addBotButton?.addEventListener('click', () => this.deps?.addBot?.());
-		this.leaveButton?.addEventListener('click', () => this.deps?.leave?.());
+		this.backButton?.addEventListener('click', () => this.deps?.backToLobby?.());
+		this.abandonButton?.addEventListener('click', () => this.deps?.abandon?.());
+		this.deleteButton?.addEventListener('click', () => this.deps?.deleteTable?.());
 		this.standingsButton?.addEventListener('click', () => {
 			if (this.lastMatch) this.deps?.showStandings?.(this.lastMatch);
 		});
@@ -272,6 +284,17 @@ export class TableView {
 				remove.addEventListener('click', () => void this.deps?.removeBot?.(player.id));
 				item.appendChild(remove);
 			}
+			// The sceptre can be handed over on purpose, not only by leaving — and only to another
+			// person: a bot cannot host a table.
+			if (host && !player.isBot && !player.isHost && this.deps.makeHost) {
+				const promote = document.createElement('button');
+				promote.type = 'button';
+				promote.className = 'secondary-button player-item__make-host';
+				promote.textContent = t('table.makeHost');
+				promote.setAttribute('aria-label', t('table.makeHostOf').replace('{{name}}', player.name));
+				promote.addEventListener('click', () => void this.deps?.makeHost?.(player.id));
+				item.appendChild(promote);
+			}
 			this.players.appendChild(item);
 		}
 	}
@@ -380,6 +403,10 @@ export class TableView {
 			this.startButton.setAttribute('aria-disabled', this.starting ? 'true' : 'false');
 		}
 		if (this.waitingHint) this.waitingHint.hidden = host;
+		// Ending the table for everybody is the host's privilege; leaving it is anybody's.
+		if (this.deleteButton) this.deleteButton.hidden = !host || !this.deps.deleteTable;
+		if (this.abandonButton) this.abandonButton.hidden = !this.deps.abandon;
+		if (this.backButton) this.backButton.hidden = !this.deps.backToLobby;
 	}
 
 	private async startMatch(): Promise<void> {

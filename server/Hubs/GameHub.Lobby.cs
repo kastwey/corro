@@ -235,6 +235,165 @@ public partial class GameHub
 	}
 
 	/// <summary>
+	/// A player gives up their seat for good.
+	///
+	/// Distinct from disconnecting (which keeps the seat and is how you come back) and from
+	/// forfeiting a match (which retires you from the GAME and leaves you at the table). This is
+	/// the one that ends the relationship: the seat goes, the re-entry code stops resolving with
+	/// it, and if the table is left with nobody it is deleted rather than lingering for the
+	/// retention sweep. Someone who leaves mid-match forfeits first, through the same command path
+	/// a player who forfeits by hand takes, so the turn moves on and the family's own retirement
+	/// rules apply instead of a seat vanishing from under the rulebook.
+	/// </summary>
+	public async Task LeaveTable()
+	{
+		try
+		{
+			if (!IsConnectionAuthenticated(out var playerId, out var gameId))
+			{
+				await Clients.Caller.SendAsync("Error", "NOT_AUTHENTICATED");
+				return;
+			}
+
+			// Still playing? Then this is a forfeit as well as a departure.
+			if (_registry.TryGetService(gameId!, out var service)
+				&& service.GameState is { IsGameOver: false } state
+				&& state.Players.Any(p => p.Id == playerId && !p.IsBankrupt))
+			{
+				await RunCommandAsync(gameId!, service, new DeclareBankruptcyCommand { PlayerId = playerId! });
+			}
+
+			string? leaverName = null;
+			string? newHostId = null;
+			// Under the per-game lock: two people leaving at the same instant must not each save a
+			// table that still seats the other.
+			var saved = await _registry.MutateDocumentAsync(gameId!, document =>
+			{
+				var leaver = document.Players.FirstOrDefault(p => p.Id == playerId);
+				if (leaver is null)
+				{
+					return null; // already gone (a double click, a retried call)
+				}
+				leaverName = leaver.Name;
+				var remaining = document.Players.Where(p => p.Id != playerId).ToList();
+				// The sceptre passes to the next HUMAN by arrival order — the roster IS arrival
+				// order. A bot cannot host, and a player who is merely disconnected still holds
+				// their seat, so being away does not cost them their place in that queue.
+				newHostId = document.HostId == playerId
+					? remaining.FirstOrDefault(p => !p.IsBot)?.Id
+					: document.HostId;
+				return document with
+				{
+					Players = remaining.Select(p => p with { IsHost = p.Id == newHostId }).ToList(),
+					HostId = newHostId ?? document.HostId,
+				};
+			});
+
+			if (saved is null)
+			{
+				await Clients.Caller.SendAsync("Error", "GAME_NOT_FOUND");
+				return;
+			}
+
+			// Nobody human left: the table goes with them. A table of bots is not a table, and an
+			// empty one would only sit there until the retention sweep noticed.
+			if (!saved.Players.Any(p => !p.IsBot))
+			{
+				await Clients.Group(gameId!).SendAsync("GameDeleted", new { GameId = gameId });
+				await Clients.Group($"lobby_{gameId}").SendAsync("GameDeleted", new { GameId = gameId });
+				await _registry.DeleteGameAsync(gameId!, saved);
+				_logger?.LogInformation("Table {GameId} deleted: its last player left", gameId);
+				return;
+			}
+
+			// The table hears who left, and who is holding the sceptre now.
+			var newHostName = saved.Players.FirstOrDefault(p => p.Id == saved.HostId)?.Name;
+			await Clients.Group(gameId!).SendAsync("PlayerLeftTable", new
+			{
+				GameId = gameId,
+				PlayerId = playerId,
+				PlayerName = leaverName,
+				NewHostId = newHostId != null && newHostId != playerId ? saved.HostId : null,
+				NewHostName = newHostId != null && newHostId != playerId ? newHostName : null,
+			});
+			await Clients.Group(gameId!).SendAsync("LobbyUpdated", saved.Sanitized());
+			await Clients.Group($"lobby_{gameId}").SendAsync("LobbyUpdated", saved.Sanitized());
+		}
+		catch (Exception ex)
+		{
+			_logger?.LogError(ex, "Error in LeaveTable");
+			await Clients.Caller.SendAsync("Error", "LEAVE_TABLE_FAILED");
+		}
+	}
+
+	/// <summary>
+	/// The host hands the sceptre to somebody else without leaving. The same succession a
+	/// departure performs, done on purpose: only the host may, only to a human who is actually at
+	/// this table, and never to a bot.
+	/// </summary>
+	public async Task TransferHost(string newHostId)
+	{
+		try
+		{
+			if (!IsConnectionAuthenticated(out var playerId, out var gameId))
+			{
+				await Clients.Caller.SendAsync("Error", "NOT_AUTHENTICATED");
+				return;
+			}
+
+			string? refusal = null;
+			var saved = await _registry.MutateDocumentAsync(gameId!, document =>
+			{
+				if (document.HostId != playerId)
+				{
+					refusal = "HOST_ONLY";
+					return null;
+				}
+				var target = document.Players.FirstOrDefault(p => p.Id == newHostId);
+				if (target is null || target.IsBot)
+				{
+					refusal = "PLAYER_NOT_FOUND";
+					return null;
+				}
+				if (target.Id == playerId)
+				{
+					return null; // already the host: nothing to say
+				}
+				return document with
+				{
+					Players = document.Players.Select(p => p with { IsHost = p.Id == newHostId }).ToList(),
+					HostId = newHostId,
+				};
+			});
+
+			if (refusal is not null)
+			{
+				await Clients.Caller.SendAsync("Error", refusal);
+				return;
+			}
+			if (saved is null)
+			{
+				await Clients.Caller.SendAsync("Error", "GAME_NOT_FOUND");
+				return;
+			}
+
+			await Clients.Group(gameId!).SendAsync("HostChanged", new
+			{
+				GameId = gameId,
+				HostId = saved.HostId,
+				HostName = saved.Players.FirstOrDefault(p => p.Id == saved.HostId)?.Name,
+			});
+			await Clients.Group(gameId!).SendAsync("LobbyUpdated", saved.Sanitized());
+			await Clients.Group($"lobby_{gameId}").SendAsync("LobbyUpdated", saved.Sanitized());
+		}
+		catch (Exception ex)
+		{
+			_logger?.LogError(ex, "Error in TransferHost");
+			await Clients.Caller.SendAsync("Error", "TRANSFER_HOST_FAILED");
+		}
+	}
+
+	/// <summary>
 	/// The package this table plays: its pieces, its rule catalogue, its player range. Asked
 	/// through the hub rather than by token over REST for one reason — a staged package lives in
 	/// the PROCESS, and a table outlives processes. Only the game document knows where its board

@@ -253,7 +253,7 @@ test('home, dark theme, runtime language and create/join validation states are A
 
 	// A guest gets the remove-only saved-game variant (the host gets delete, covered below).
 	// Leaving the table returns to the lobby, where their saved game is waiting.
-	await guest.locator('#table-leave').click();
+	await guest.locator('#table-back').click();
 	await expect(guest.locator('#view-home')).toBeVisible();
 	const guestSaved = guest.locator('#your-games-list .saved-game-item');
 	await expect(guestSaved.locator('.saved-game-remove')).toBeVisible();
@@ -427,7 +427,7 @@ test('saved-game card, resume, dark palette and delete confirmation states are A
 	await expect(page.locator('#table-copy-link')).toContainText(/Copiado|Copied/);
 	await flushAxeAudit(page);
 
-	await page.locator('#table-leave').click();
+	await page.locator('#table-back').click();
 	await expect(page.locator('#view-home')).toBeVisible();
 	const saved = page.locator('#your-games-list .saved-game-item');
 	await expect(saved).toHaveCount(1);
@@ -439,7 +439,7 @@ test('saved-game card, resume, dark palette and delete confirmation states are A
 	// Resuming a table with no match running takes you back to the table itself.
 	await saved.locator('.saved-game-resume').dispatchEvent('click');
 	await expect(page.locator('#table-view')).toBeVisible();
-	await page.locator('#table-leave').click();
+	await page.locator('#table-back').click();
 	await expect(page.locator('#view-home')).toBeVisible();
 	await expect(saved).toHaveCount(1);
 

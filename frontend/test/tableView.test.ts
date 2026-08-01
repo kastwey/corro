@@ -41,7 +41,9 @@ function mount(): void {
 			</details>
 			<button type="button" id="table-start-btn" hidden>Start</button>
 			<span id="table-waiting-host" hidden>Waiting for the host</span>
-			<button type="button" id="table-leave">Leave</button>
+			<button type="button" id="table-back">Back to the lobby</button>
+			<button type="button" id="table-abandon">Leave this table</button>
+			<button type="button" id="table-delete" hidden>Delete the table</button>
 		</section>
 		<p id="game-surface-intro">Focus will move to your hand.</p>
 		<div id="game-layout"></div>`;
@@ -338,6 +340,71 @@ test('a guest is never shown the rule editor, and neither is a board that declar
 	host.setTable(table({ packageToken: 'pkg' }));
 	await new Promise(resolve => setTimeout(resolve, 0));
 	assert.equal((document.getElementById('table-rules') as HTMLElement).hidden, true);
+});
+
+// Three different goodbyes, named and offered as three different things: going back to the
+// lobby keeps your seat, leaving gives it up for good, and deleting ends the table for everyone.
+test('everyone may leave; only the host may end the table for the rest', () => {
+	const del = () => (document.getElementById('table-delete') as HTMLButtonElement).hidden;
+
+	const guest = newView({ isHost: () => false, backToLobby: () => {}, abandon: () => {}, deleteTable: () => {} });
+	guest.show();
+	assert.equal((document.getElementById('table-back') as HTMLButtonElement).hidden, false);
+	assert.equal((document.getElementById('table-abandon') as HTMLButtonElement).hidden, false);
+	assert.equal(del(), true, 'a guest cannot end the table');
+
+	const host = newView({ isHost: () => true, backToLobby: () => {}, abandon: () => {}, deleteTable: () => {} });
+	host.show();
+	assert.equal(del(), false);
+});
+
+test('the three goodbyes call three different things', () => {
+	const called: string[] = [];
+	const view = newView({
+		isHost: () => true,
+		backToLobby: () => called.push('back'),
+		abandon: () => called.push('abandon'),
+		deleteTable: () => called.push('delete'),
+	});
+	view.show();
+
+	(document.getElementById('table-back') as HTMLButtonElement).click();
+	(document.getElementById('table-abandon') as HTMLButtonElement).click();
+	(document.getElementById('table-delete') as HTMLButtonElement).click();
+
+	assert.deepEqual(called, ['back', 'abandon', 'delete']);
+});
+
+test('the host can hand the sceptre to another person, and to nobody else', () => {
+	const promoted: string[] = [];
+	const view = newView({ isHost: () => true, makeHost: async id => { promoted.push(id); } });
+
+	view.setTable(table({
+		players: [
+			{ id: 'a', name: 'Ana', token: 'disc', isHost: true },
+			{ id: 'b', name: 'Berto', token: 'star' },
+			{ id: 'bot', name: 'Crupier', token: 'moon', isBot: true },
+		],
+	}));
+
+	const buttons = document.querySelectorAll<HTMLButtonElement>('#table-players .player-item__make-host');
+	// Not on the host's own row (they already hold it), and never on a bot's.
+	assert.equal(buttons.length, 1);
+	buttons[0].click();
+	assert.deepEqual(promoted, ['b']);
+});
+
+test('a guest is never offered the sceptre to hand out', () => {
+	const view = newView({ isHost: () => false, makeHost: async () => {} });
+
+	view.setTable(table({
+		players: [
+			{ id: 'a', name: 'Ana', token: 'disc', isHost: true },
+			{ id: 'b', name: 'Berto', token: 'star' },
+		],
+	}));
+
+	assert.equal(document.querySelectorAll('#table-players .player-item__make-host').length, 0);
 });
 
 test('a guest is told what they are waiting for instead of being given a dead button', () => {

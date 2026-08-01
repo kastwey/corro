@@ -7,6 +7,7 @@
 
 import { test, expect } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
+import { E2E_BASE_URL } from '../playwright.config';
 import {
 	appI18n, createGame, expectAnnouncement, joinGame, newPlayerPage, packageI18n,
 } from '../helpers/game';
@@ -58,6 +59,69 @@ test('joining a table lands there too, and the board only appears with a match i
 		// …and the keyboard enters the game, which is the whole point of a board appearing.
 		await expect(page.locator('#board')).toBeFocused();
 	}
+});
+
+test('leaving a table passes the sceptre on, and the table hears both', async ({ browser }) => {
+	const ana = await newPlayerPage(browser);
+	const berto = await newPlayerPage(browser);
+	const carla = await newPlayerPage(browser);
+	const code = await createGame(ana, 'Ana', TRACK_BOARD);
+	await joinGame(berto, code, 'Berto');
+	await joinGame(carla, code, 'Carla');
+
+	// Nobody but the host is offered the way to end the table for everyone.
+	await expect(berto.locator('#table-delete')).toBeHidden();
+	await expect(ana.locator('#table-delete')).toBeVisible();
+
+	// The host leaves: the sceptre goes to the next person who arrived, not to the last.
+	await ana.locator('#table-abandon').click();
+	const confirm = ana.locator('.game-dialog.dialog-confirm, .game-dialog');
+	await confirm.getByRole('button', { name: appI18n('es').table.abandonConfirmYes as string }).click();
+	// The lobby is served per language (/ or /es/), so assert the PLACE, not the address.
+	await expect(ana.locator('#view-home')).toBeVisible();
+
+	for (const page of [berto, carla]) {
+		await expect(page.locator('#table-players li')).toHaveCount(2);
+		await expectAnnouncement(page, /Ana ha abandonado la mesa/i);
+		await expectAnnouncement(page, /Berto es el anfitrión/i);
+	}
+	// And the sceptre is not just spoken: Berto can now start a match, Carla still cannot.
+	await expect(berto.locator('#table-start-btn')).toBeVisible();
+	await expect(carla.locator('#table-start-btn')).toBeHidden();
+	await expect(berto.locator('#table-delete')).toBeVisible();
+});
+
+test('the host can hand the sceptre over without leaving', async ({ browser }) => {
+	const ana = await newPlayerPage(browser);
+	const berto = await newPlayerPage(browser);
+	const code = await createGame(ana, 'Ana', TRACK_BOARD);
+	await joinGame(berto, code, 'Berto');
+
+	await ana.locator('#table-players .player-item__make-host').click();
+
+	await expect(berto.locator('#table-start-btn')).toBeVisible();
+	await expect(ana.locator('#table-start-btn')).toBeHidden();
+	// Ana is still sitting at her table — she gave the sceptre away, not her seat.
+	await expect(ana.locator('#table-players li')).toHaveCount(2);
+	await expectAnnouncement(ana, /Berto es el anfitrión/i);
+});
+
+test('the host deleting the table takes everyone home with it', async ({ browser }) => {
+	const ana = await newPlayerPage(browser);
+	const berto = await newPlayerPage(browser);
+	const code = await createGame(ana, 'Ana', TRACK_BOARD);
+	await joinGame(berto, code, 'Berto');
+
+	await ana.locator('#table-delete').click();
+	// Scoped to the dialog: its confirm button carries the same words as the one that opened it.
+	await ana.locator('.game-dialog')
+		.getByRole('button', { name: appI18n('es').table.deleteConfirmYes as string }).click();
+
+	// Nobody is left staring at a page with nothing behind it.
+	await expect(ana.locator('#view-home')).toBeVisible();
+	await expect(berto.locator('#view-home')).toBeVisible();
+	// …and it is gone from the list too, not offering a way back into nothing.
+	await expect(berto.locator('#your-games-empty')).toBeVisible();
 });
 
 test('the host changes the board rules for the next match, and the change sticks', async ({ browser }) => {

@@ -43,44 +43,56 @@ public partial class GameHub
 				return;
 			}
 
-			var response = await gameService.ExecuteCommandAsync(command);
-
-			// A response is private to the caller unless it says otherwise: everyone else learns
-			// what happened through the announcements and the new state. The few that must reach a
-			// player who sent no command declare it themselves (ServerResponse.ReachesEveryPlayer),
-			// each with its own reason — so this stays a routing decision, not a list of type names
-			// the hub has to keep in step with the responses.
-			if (response.ReachesEveryPlayer)
-			{
-				await Clients.Group(gameId!).SendAsync("CommandResponse", response);
-			}
-			else
-			{
-				await Clients.Caller.SendAsync("CommandResponse", response);
-			}
-			// ExecuteCommandAsync does not return until this command's GameEvents batch has
-			// been sent. Keep the authoritative snapshot here, after that flush (and after the
-			// response handlers that arm movement), so no ordinary handler can make a hand or
-			// board repaint overtake its narration. Mid-command snapshots use the explicitly
-			// ordered CheckpointTurnSegmentAsync path instead.
-			await gameService.NotifyStateChangedAsync();
-
-			// Declining a pending purchase (by ending the turn or re-rolling) can start an
-			// auction. That must reach EVERY player so their auction UI opens and the timers
-			// run, so we broadcast it to the whole group here rather than only to the caller.
-			if (response is PropertyDeclinedResponse { AuctionStarted: true })
-			{
-				await BroadcastAuctionStartAsync(gameId!, gameService);
-			}
-
-			// Free finished games so they don't accumulate in memory.
-			await _registry.CleanupIfGameOverAsync(gameId!, gameService);
+			await RunCommandAsync(gameId!, gameService, command);
 		}
 		catch (Exception ex)
 		{
 			_logger?.LogError(ex, "Error in ExecuteCommand");
 			await Clients.Caller.SendAsync("Error", "COMMAND_EXECUTION_ERROR");
 		}
+	}
+
+	/// <summary>
+	/// Dispatch one already-authorised command and do everything that must follow it: route the
+	/// response, flush the authoritative snapshot, open an auction the command started, and retire
+	/// the match if it ended. Extracted so a command the SERVER raises on a player's behalf — a
+	/// forfeit when they abandon a table mid-match — takes exactly the same path as one they sent
+	/// themselves, instead of a private shortcut that silently skips the snapshot or the cleanup.
+	/// </summary>
+	private async Task RunCommandAsync(string gameId, IGameService gameService, GameCommand command)
+	{
+		var response = await gameService.ExecuteCommandAsync(command);
+
+		// A response is private to the caller unless it says otherwise: everyone else learns
+		// what happened through the announcements and the new state. The few that must reach a
+		// player who sent no command declare it themselves (ServerResponse.ReachesEveryPlayer),
+		// each with its own reason — so this stays a routing decision, not a list of type names
+		// the hub has to keep in step with the responses.
+		if (response.ReachesEveryPlayer)
+		{
+			await Clients.Group(gameId).SendAsync("CommandResponse", response);
+		}
+		else
+		{
+			await Clients.Caller.SendAsync("CommandResponse", response);
+		}
+		// ExecuteCommandAsync does not return until this command's GameEvents batch has
+		// been sent. Keep the authoritative snapshot here, after that flush (and after the
+		// response handlers that arm movement), so no ordinary handler can make a hand or
+		// board repaint overtake its narration. Mid-command snapshots use the explicitly
+		// ordered CheckpointTurnSegmentAsync path instead.
+		await gameService.NotifyStateChangedAsync();
+
+		// Declining a pending purchase (by ending the turn or re-rolling) can start an
+		// auction. That must reach EVERY player so their auction UI opens and the timers
+		// run, so we broadcast it to the whole group here rather than only to the caller.
+		if (response is PropertyDeclinedResponse { AuctionStarted: true })
+		{
+			await BroadcastAuctionStartAsync(gameId, gameService);
+		}
+
+		// Free finished games so they don't accumulate in memory.
+		await _registry.CleanupIfGameOverAsync(gameId, gameService);
 	}
 
 	/// <summary>

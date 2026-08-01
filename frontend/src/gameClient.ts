@@ -71,6 +71,13 @@ export interface GameClientEvents {
 	'lobbyState': GameInfo;
 	/** The match ended and its TABLE is back at rest, with the roster that is still sitting at it. */
 	'matchEnded': GameInfo;
+	/** Somebody gave up their seat for good; `newHostName` is set when the sceptre moved with them. */
+	'playerLeftTable': {
+		gameId: string; playerId: string; playerName: string;
+		newHostId?: string | null; newHostName?: string | null;
+	};
+	/** The host handed the sceptre over without leaving. */
+	'hostChanged': { gameId: string; hostId: string; hostName?: string | null };
 	'playerJoined': { playerId: string; playerName: string };
 	'playerLeft': { playerId: string };
 	'gameStateChanged': GameState;
@@ -229,6 +236,14 @@ export class UnifiedGameClient {
 
 		this.connection.on('MatchEnded', (table: GameInfo) => {
 			this.emit('matchEnded', table);
+		});
+
+		this.connection.on('PlayerLeftTable', (data: GameClientEvents['playerLeftTable']) => {
+			this.emit('playerLeftTable', data);
+		});
+
+		this.connection.on('HostChanged', (data: GameClientEvents['hostChanged']) => {
+			this.emit('hostChanged', data);
 		});
 
 		// Game events
@@ -595,6 +610,20 @@ export class UnifiedGameClient {
 	 */
 	async getTablePackage(): Promise<PackageUploadResponse | null> {
 		return await this.invoke<PackageUploadResponse | null>('GetTablePackage');
+	}
+
+	/**
+	 * Give up this seat for good: forfeits a match in progress, hands the sceptre on if this was
+	 * the host, and deletes the table when nobody is left at it. Not the same as disconnecting,
+	 * which keeps the seat and is how a player comes back.
+	 */
+	async leaveTable(): Promise<void> {
+		await this.invoke('LeaveTable');
+	}
+
+	/** Host only: hand the sceptre to another human at this table. */
+	async transferHost(newHostId: string): Promise<void> {
+		await this.invoke('TransferHost', newHostId);
 	}
 
 	/** Host only: the board's house-rule values for the NEXT match at this table. */

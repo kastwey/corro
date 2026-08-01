@@ -245,6 +245,15 @@ async function initBoard() {
 	return;
 	}
 
+	/**
+	 * Whether I am the host RIGHT NOW. The saved session only records who created the table, and
+	 * the sceptre moves: a host who leaves passes it on, and a host can hand it over on purpose.
+	 * Read from the authoritative table whenever one arrives, so the controls that belong to the
+	 * host follow the table rather than a stale note this browser wrote when it first sat down.
+	 */
+	let hostId: string | null = playerSession.isHost ? playerSession.playerId : null;
+	const amHost = (): boolean => hostId === playerSession.playerId;
+
 	// === Visual controls: dice button, theme toggle, sound toggle, players panel ===
 	// Load the persisted sound preference up front so the toggle button paints the
 	// correct initial state.
@@ -407,6 +416,9 @@ async function initBoard() {
 	if (connectionMount) {
 	connectionPanel.init(connectionMount, {
 		onLeaveGame: confirmLeaveGame,
+		// Two sizes of goodbye: forfeiting THIS match leaves you at the table for the next one,
+		// while leaving the table gives the seat up for good.
+		onLeaveTable: () => confirmLeaveTable(gameId),
 		// Disconnecting drops the connection AND returns to the lobby, rather than leaving the
 		// player staring at a frozen board with no way out (live-play report).
 		onDisconnect: () => { void gameManager.disconnect().then(() => { window.location.href = '/'; }); },
@@ -434,7 +446,7 @@ async function initBoard() {
 			t: (key, vars) => tSync(key, vars),
 			gameId,
 			getMyPlayerId: () => playerSession.playerId,
-			isHost: () => playerSession.isHost,
+			isHost: () => amHost(),
 			requestToken: () => gameClient.requestVoiceToken(),
 			setEnabled: enabled => gameClient.setVoiceChatEnabled(enabled),
 			muteParticipant: playerId => gameClient.muteVoiceParticipant(playerId),
@@ -459,7 +471,7 @@ async function initBoard() {
 	// here, and a navigation would drop the LiveKit connection and cut the conversation in half.
 	tableView.init({
 		t: (key, vars) => tSync(key, vars as Record<string, any> | undefined),
-		isHost: () => playerSession.isHost,
+		isHost: () => amHost(),
 		start: () => gameClient.startGame({ gameId, hostId: playerSession.playerId }),
 		setContentLanguage: language => gameClient.setContentLanguage({
 			gameId, hostId: playerSession.playerId, language,
@@ -481,7 +493,10 @@ async function initBoard() {
 		removeBot: botId => gameClient.removeBot({
 			gameId, hostId: playerSession.playerId, playerId: botId,
 		}),
-		leave: () => { window.location.href = '/'; },
+		backToLobby: () => { window.location.href = '/'; },
+		abandon: () => confirmLeaveTable(gameId),
+		deleteTable: () => confirmDeleteTable(gameId, playerSession),
+		makeHost: id => gameClient.transferHost(id),
 		// The same end screen the match raised, on demand. The once-guard is cleared first: it
 		// exists to stop repeated state pushes re-opening a dismissed screen, not to stop a
 		// player from asking to see the result again.
@@ -509,7 +524,7 @@ async function initBoard() {
 	// is the hard part, not the markup.
 	teamPanel.init(document.getElementById('table-team-panel'), {
 		t: key => tSync(key),
-		isHost: () => playerSession.isHost,
+		isHost: () => amHost(),
 		teamName: index => teamDisplayName(index, (key, vars) => tSync(key, vars)),
 		assign: (playerId, teamIndex) => gameClient.assignTeam({
 			gameId, hostId: playerSession.playerId, playerId, teamIndex,
@@ -979,16 +994,77 @@ async function initBoard() {
 			variant: 'danger',
 			action: async () => {
 			dialogManager.close();
-			// Leaving the game sends the player home, rather than stranding them on the board
-			// as a spectator (live-play report). The bankruptcy/retirement fires first.
+			// Forfeiting is about THIS match, not about the group: the player stays at their
+			// table and plays the next one. (It used to send them home, back when a finished
+			// game was the end of everything — there was nowhere else to be.) Whoever does
+			// want out has "leave the table" beside this, and the lobby is a click away.
 			await gameManager.declareBankruptcy();
-			window.location.href = '/';
 			},
 		},
 		{
 			label: 'Cancel',
 			i18nKey: 'game.conn_leave_confirm_no',
 			variant: 'secondary',
+			action: () => dialogManager.close(),
+		},
+		],
+	});
+	}
+
+	/**
+	 * Giving up the seat for good — not the same as forfeiting a match (which leaves you at the
+	 * table) or going back to the lobby (which keeps your seat). Confirmed, because the re-entry
+	 * code dies with it and there is no undo.
+	 */
+	function confirmLeaveTable(tableId: string): void {
+	dialogManager.show({
+		title: tSync('table.abandonConfirmTitle'),
+		content: `<p>${tSync('table.abandonConfirmMessage')}</p>`,
+		buttons: [
+		{
+			label: 'Leave', i18nKey: 'table.abandonConfirmYes', variant: 'danger',
+			action: async () => {
+			dialogManager.close();
+			try {
+				await gameClient.leaveTable();
+				// The seat is gone, so this browser's note about it must go too — otherwise the
+				// table sits in "your tables" offering a way back into somewhere they left.
+				GameSessionStore.removeGame(tableId);
+				window.location.href = '/';
+			} catch {
+				announce(createAnnouncement('_raw', { text: tSync('table.abandonFailed') }), { instant: true });
+			}
+			},
+		},
+		{
+			label: 'Cancel', i18nKey: 'game.conn_leave_confirm_no', variant: 'secondary',
+			action: () => dialogManager.close(),
+		},
+		],
+	});
+	}
+
+	/** Host only: end the table for everyone. Confirmed whether or not a match is running. */
+	function confirmDeleteTable(tableId: string, session: { playerId: string; playerSecretId: string }): void {
+	dialogManager.show({
+		title: tSync('table.deleteConfirmTitle'),
+		content: `<p>${tSync('table.deleteConfirmMessage')}</p>`,
+		buttons: [
+		{
+			label: 'Delete', i18nKey: 'table.deleteConfirmYes', variant: 'danger',
+			action: async () => {
+			dialogManager.close();
+			try {
+				await gameClient.deleteGame(tableId, session.playerId, session.playerSecretId);
+				GameSessionStore.removeGame(tableId);
+				window.location.href = '/';
+			} catch {
+				announce(createAnnouncement('_raw', { text: tSync('table.abandonFailed') }), { instant: true });
+			}
+			},
+		},
+		{
+			label: 'Cancel', i18nKey: 'game.conn_leave_confirm_no', variant: 'secondary',
 			action: () => dialogManager.close(),
 		},
 		],
@@ -2108,25 +2184,67 @@ async function initBoard() {
 	let currentTable: GameInfo | null = null;
 	const applyTable = (table: GameInfo): void => {
 		currentTable = table;
+		// Who holds the sceptre is the table's to say, not this browser's.
+		hostId = table.hostId ?? hostId;
 		tableView.setTable(table);
 		teamPanel.render(table);
+		// Voice belongs to the TABLE, so its switch is read from the table document. The game
+		// state that used to carry it simply does not exist between matches, which left the panel
+		// believing the room was closed at the very moment a group most wants to talk.
+		voicePanel.setGameEnabled(!!table.voiceChatEnabled);
+	};
+
+	/** Hand the page to the table: its own controls in, the match's out. */
+	const enterTableView = (table: GameInfo, options: { focus?: boolean } = {}): void => {
+		applyTable(table);
+		// The dice button lives in the page HEADER, outside the board's layout, so hiding the
+		// board never hid it: at a table it sat there answering "it is not your turn" — at a
+		// table where nobody has a turn at all. Every game state sets its visibility again.
+		diceControl.setVisible(false);
+		tableView.show(options);
+		preloadTablePackage(table.packageToken);
 	};
 
 	gameClient.on('lobbyState', table => {
-		applyTable(table);
 		// This is the page's answer to "what is here?", so the table takes the keyboard — but only
 		// if nothing else holds it. On a reconnection mid-conversation the player is somewhere on
 		// purpose (the chat box, the voice roster) and must not be yanked out of it.
 		const nobodyHasFocus = !document.activeElement || document.activeElement === document.body;
-		tableView.show({ focus: nobodyHasFocus });
+		enterTableView(table, { focus: nobodyHasFocus });
 		// The board is not what this page is showing, so nothing may claim it later either.
 		focusGameOnNextState = false;
-		preloadTablePackage(table.packageToken);
 	});
 	// Someone arrived or left, the host changed the shared deck or moved somebody between teams.
 	gameClient.on('lobbyUpdated', table => {
 		if (!tableView.isVisible()) return;
 		applyTable(table);
+	});
+	// Somebody gave up their seat. The roster repaint is silent, so the table is told — including
+	// who is holding the sceptre now, which is the part that changes what people can do.
+	gameClient.on('playerLeftTable', data => {
+		announce(createAnnouncement('_raw', {
+			text: tSync('table.playerLeft').replace('{{name}}', data.playerName),
+		}), { instant: true });
+		if (data.newHostId) {
+			hostId = data.newHostId;
+			announce(createAnnouncement('_raw', {
+				text: tSync('table.hostChanged').replace('{{name}}', data.newHostName ?? ''),
+			}), { instant: true });
+			if (currentTable) applyTable(currentTable);
+		}
+	});
+	gameClient.on('hostChanged', data => {
+		hostId = data.hostId;
+		announce(createAnnouncement('_raw', {
+			text: tSync('table.hostChanged').replace('{{name}}', data.hostName ?? ''),
+		}), { instant: true });
+		if (currentTable) applyTable(currentTable);
+	});
+	// The table is gone — the host ended it, or its last player left. Nobody stays on a page that
+	// no longer has anything behind it.
+	gameClient.on('gameDeleted', () => {
+		GameSessionStore.removeGame(gameId);
+		window.location.href = '/';
 	});
 	// A team move is silent in the repaint that carries it, so the table is told out loud.
 	gameClient.on('teamAssigned', data => teamPanel.announceAssigned(data));
@@ -2140,11 +2258,7 @@ async function initBoard() {
 	// The match is over and its table is back at rest. The end screen is already up (the final
 	// state raised it); the table is revealed BEHIND it, so dismissing the dialog lands on it
 	// rather than on an empty board.
-	gameClient.on('matchEnded', table => {
-		applyTable(table);
-		tableView.show();
-		preloadTablePackage(table.packageToken);
-	});
+	gameClient.on('matchEnded', table => enterTableView(table));
 	// The host started the next one: the board takes the page back, and the end screen of the
 	// PREVIOUS match is forgotten so this one can raise its own.
 	gameClient.on('gameStarted', () => {

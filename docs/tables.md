@@ -133,6 +133,34 @@ changing one thing does not silently reset the rest. It is offered to the host a
 reading a rule they cannot change, in a panel that repaints whenever the host moves something,
 is worse served than by the board's own guide.
 
+## Leaving, and who holds the sceptre
+
+Three goodbyes, named as three different things because they are:
+
+- **Back to the lobby** keeps the seat. So does disconnecting — that is how a player comes back.
+- **Leave the match** retires you from the game in progress, through the same command a player
+  who forfeits by hand sends, and leaves you AT the table for the next one.
+- **Leave the table** gives the seat up for good: it forfeits a running match on the way out, the
+  re-entry code stops resolving with the seat, and the host's sceptre passes on.
+
+The sceptre goes to the next HUMAN in arrival order — the roster IS arrival order, so no
+timestamp is needed. A bot never inherits it; a player who is merely disconnected still holds
+their seat and keeps their place in that queue, since being away for a minute should not cost
+someone the table. The host can also hand it over on purpose, which is the same succession done
+deliberately.
+
+When the last person leaves, the table is deleted rather than left for the retention sweep — and
+a table holding only bots counts as empty, because nobody could ever start a game at it again.
+The host may also delete a table outright, with a match running or not; that one always asks
+first.
+
+All of this is a read-modify-write on one document, so it goes through
+`GameSessionRegistry.MutateDocumentAsync`, which serializes changes per game. Two people leaving
+at the same instant is not hypothetical: without the lock each reads a table that still seats the
+other and the second write puts the first one's seat back. The tests for that hold a repository
+that yields around every read and write, so they actually interleave — they fail with the lock
+removed, which is the only thing that makes them worth having.
+
 ## Open questions, deliberately not answered yet
 
 - **A table has no hurry.** The waiting room is a "we're about to start" screen; a table is a

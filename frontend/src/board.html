@@ -114,7 +114,11 @@
 	  <p class="table-view__actions">
 		<button type="button" id="table-start-btn" class="primary-button" data-i18n="table.start" hidden>Start the next match</button>
 		<span id="table-waiting-host" class="loading" data-i18n="lobby.waitingForHost" hidden>Waiting for host to start the game...</span>
-		<button type="button" id="table-leave" class="secondary-button" data-i18n="table.leave">Leave the table</button>
+		<!-- Three different things, named as three different things. Going back to the lobby keeps
+			 your seat; abandoning gives it up for good; deleting ends the table for everyone. -->
+		<button type="button" id="table-back" class="secondary-button" data-i18n="table.backToLobby">Back to the lobby</button>
+		<button type="button" id="table-abandon" class="secondary-button" data-i18n="table.abandon">Leave this table</button>
+		<button type="button" id="table-delete" class="secondary-button" data-i18n="table.delete" hidden>Delete the table</button>
 	  </p>
 	</section>
 

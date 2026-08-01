@@ -34,6 +34,8 @@ public sealed class GameSessionRegistry
 	// Connections that announced they are about to be replaced by the same player's next page
 	// (the waiting room handing over to the board). See DeclareHandoff.
 	private readonly ConcurrentDictionary<string, byte> _handoffConnections = new();
+	// One gate per game for read-modify-write changes to its document (see MutateDocumentAsync).
+	private readonly ConcurrentDictionary<string, SemaphoreSlim> _documentLocks = new();
 
 	private readonly IHubContext<GameHub> _hub;
 	private readonly IGameRepository _repository;
@@ -214,6 +216,44 @@ public sealed class GameSessionRegistry
 		return saved;
 	}
 
+	/// <summary>
+	/// Read-modify-write a game document under a per-game lock, so two clients changing the same
+	/// table at the same moment cannot each save a version that still contains the other's change.
+	///
+	/// The read happens INSIDE the lock and goes to the repository, never to the cache: the whole
+	/// point is to see what the previous writer just saved. Two people leaving a table at the same
+	/// instant is the case this exists for — without it the second write puts the first one's seat
+	/// back, and a table nobody is sitting at survives because each of them saw the other.
+	///
+	/// `mutate` returns null when it decides there is nothing to change. Returns the saved document
+	/// (or the untouched one), or null when the game no longer exists.
+	/// </summary>
+	public async Task<GameDocument?> MutateDocumentAsync(string gameId, Func<GameDocument, GameDocument?> mutate)
+	{
+		var gate = _documentLocks.GetOrAdd(gameId, _ => new SemaphoreSlim(1, 1));
+		await gate.WaitAsync();
+		try
+		{
+			var document = await _repository.LoadGameAsync(gameId);
+			if (document is null)
+			{
+				return null;
+			}
+			var mutated = mutate(document);
+			if (mutated is null)
+			{
+				return document;
+			}
+			var saved = await _repository.UpdateGameAsync(mutated);
+			_persistedDocuments[gameId] = saved;
+			return saved;
+		}
+		finally
+		{
+			gate.Release();
+		}
+	}
+
 	/// <summary>Persist the host's platform-level voice switch through the same document cache
 	/// used by state/chat writes, so a concurrent game snapshot cannot restore an older value.</summary>
 	public async Task<GameDocument?> SetVoiceChatEnabledAsync(string gameId, bool enabled)
@@ -339,6 +379,7 @@ public sealed class GameSessionRegistry
 			}
 		}
 
+		_documentLocks.TryRemove(gameId, out _);
 		_logger?.LogInformation("Game {GameId} permanently deleted", gameId);
 		return true;
 	}
