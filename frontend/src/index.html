@@ -6,15 +6,19 @@
 	<title>All Welcome</title>
 
 	<script>
-		// Apply the saved/system theme before first paint to avoid a flash.
+		// Language before first paint, mirroring the theme block above. A screen reader picks its
+		// voice from this attribute, so it must never be wrong even briefly — and it is the one part
+		// of localization that CAN be resolved synchronously, since the strings themselves are
+		// fetched. i18nBinder re-applies the same value once those arrive.
 		(function () {
-			try {
-				var t = localStorage.getItem('corro-theme');
-				if (t !== 'dark' && t !== 'light') {
-					t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
-				}
-				document.documentElement.setAttribute('data-theme', t);
-			} catch (e) { /* ignore */ }
+		  try {
+			var m = document.cookie.match(/(?:^|;\s*)corro_language=([^;]*)/);
+			var lang = m ? decodeURIComponent(m[1]) : '';
+			if (lang !== 'en' && lang !== 'es') {
+			  lang = (navigator.language || 'en').slice(0, 2) === 'es' ? 'es' : 'en';
+			}
+			document.documentElement.lang = lang;
+		  } catch (e) { /* the binder sets it again once the strings load */ }
 		})();
 	</script>
 

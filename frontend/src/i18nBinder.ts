@@ -163,18 +163,18 @@ export class I18nBinder {
 		// Load translation resources
 		const resources: any = {};
 	  
-		for (const lang of this.config.supportedLanguages) {
+		// In PARALLEL: these are independent files, and fetching them one after another doubled
+		// the time the page spends withholding its text.
+		await Promise.all(this.config.supportedLanguages.map(async lang => {
 		try {
 			const response = await fetch(`${this.config.resourcesPath}/${lang}.json`);
 			if (response.ok) {
-			resources[lang] = {
-				translation: await response.json()
-			};
+			resources[lang] = { translation: await response.json() };
 			}
 		} catch (error) {
 			console.warn(`Failed to load translations for ${lang}:`, error);
 		}
-		}
+		}));
 
 		await i18next.init({
 		lng: initialLanguage,
