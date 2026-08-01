@@ -90,17 +90,19 @@ export class PlayerPanel {
 	}
 
 	/**
-	 * Move keyboard focus into the panel, landing on the current player's row
-	 * (fallback: the first row). Returns false if the panel has no rows yet.
+	 * Move keyboard focus into the panel, always landing on the FIRST row. Returns false if the
+	 * panel has no rows yet.
+	 *
+	 * It used to land on whoever's turn it was, which made the entry point move around the list
+	 * from one press to the next — and with it, whether NVDA announced entering focus mode. A
+	 * screen-reader user cannot build a habit on a panel that behaves differently depending on
+	 * whose turn it is, so the entry point is fixed: Ctrl+P is always the top of the list, and
+	 * whose turn it is is answered by the turn key (T) and by each row's own label.
 	 */
 	focus(): boolean {
-		if (!this.nav || !this.deps) return false;
-		const items = this.nav.getItems();
-		if (items.length === 0) return false;
-		const currentId = this.deps.getCurrentTurnId();
-		let idx = items.findIndex(it => it.dataset.playerId === currentId);
-		if (idx < 0) idx = 0;
-		return this.nav.focusItem(idx);
+		if (!this.nav) return false;
+		if (this.nav.getItems().length === 0) return false;
+		return this.nav.focusItem(0);
 	}
 
 	/** Mirror voice presence without adding controls or an aria-live stream to player rows. */

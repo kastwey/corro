@@ -8,9 +8,8 @@ import type { Player, Square } from '../src/models.js';
  * DOM tests for the always-visible, interactive players panel. Each player is a
  * roving-tabindex row (.player-card) with a per-row action toolbar (Information /
  * Propose trade / Go to player) reached with Right arrow / Shift+F10, mirroring the
- * manage-properties and notifications lists. Ctrl+P (panel.focus()) lands on the
- * current player's row. Actions fire their callback WITHOUT closing anything, since
- * the panel is persistent.
+ * manage-properties and notifications lists. Ctrl+P (panel.focus()) always lands on the FIRST
+ * row. Actions fire their callback WITHOUT closing anything, since the panel is persistent.
  */
 
 function sq(id: number, name: string): Square {
@@ -429,4 +428,27 @@ test('property games keep the money line untouched', () => {
 	const rows = Array.from(document.querySelectorAll('.player-card')) as HTMLElement[];
 	assert.equal(rows[0].querySelector('.player-card__seat'), null);
 	assert.match(rows[0].getAttribute('aria-label')!, /Money: 1500 euros/);
+});
+
+
+test('Ctrl+P always lands on the first row, whoever is playing', () => {
+	// It used to land on the current player, so the entry point moved around the list between
+	// presses — and with it, whether NVDA announced entering focus mode. A screen-reader user
+	// cannot build a habit on a panel whose entry point depends on whose turn it is.
+	const first = () => document.querySelector('.player-card') as HTMLElement;
+
+	const { panel } = makePanel({ getCurrentTurnId: () => 'B' });
+	assert.equal(panel.focus(), true);
+	assert.equal(document.activeElement, first(), 'focus landed away from the top of the list');
+
+	// The roving tabindex follows, so Tab and the arrow keys continue from the same place the
+	// screen reader was left on.
+	assert.equal(first().tabIndex, 0);
+});
+
+test('focusing an empty panel reports failure instead of throwing', () => {
+	// Ctrl+P can be pressed before the first state arrives; the caller falls back to the board.
+	const { panel } = makePanel({}, []);
+
+	assert.equal(panel.focus(), false);
 });

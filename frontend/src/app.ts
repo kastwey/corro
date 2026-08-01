@@ -1992,8 +1992,12 @@ async function initBoard() {
 	// initial render
 	renderPlayers();
 
-	// build the group map (squares indexed by their group's colour value) for group-navigation shortcuts
-	const groupMap = buildGroupSquareIndex(gameManager.getSquares());
+	// The group-navigation shortcuts (jump to the next brown square) are built from the game's
+	// SQUARES and GROUPS, which arrive with the first authoritative state — not necessarily before
+	// this line. Built once here, a client whose state landed a moment later got no colour keys at
+	// all for the rest of the session, and a rejoin (state re-sent after startup) never repaired
+	// them. Which is why the same board worked for one player and never for another.
+	let groupMap = buildGroupSquareIndex(gameManager.getSquares());
 
 	// load keymap (served by the server as the single source of truth — see EngineKeymap)
 	let keyMap: Record<string, any> = {};
@@ -2001,9 +2005,18 @@ async function initBoard() {
 	// still playable, so this must never block startup.
 	try { const kmResp = await fetch('/api/config/keymap'); if (kmResp.ok) keyMap = await kmResp.json(); }
 	catch { /* keep the built-in bindings */ }
-	// The board's group-navigation shortcuts are package-specific (each board brings its own colours),
-	// so build them from the game's groups and merge them over the static engine keymap.
+
+	// Rebuilt from every authoritative state, so the shortcuts exist as soon as the board does and
+	// survive a reconnect. `keyMap` is mutated in place because the key handler reads it live, and
+	// `groupMap` is read through a getter for the same reason.
+	const refreshGroupShortcuts = (): void => {
+	groupMap = buildGroupSquareIndex(gameManager.getSquares());
+	// The board's group shortcuts are package-specific (each board brings its own colours), so
+	// they merge over the static engine keymap rather than replacing it.
 	Object.assign(keyMap, buildGroupKeyMap(gameManager.getCurrentGameState()?.groups));
+	};
+	refreshGroupShortcuts();
+	gameManager.on('gameStateUpdated', refreshGroupShortcuts);
 
 	// global announcer already created
 
