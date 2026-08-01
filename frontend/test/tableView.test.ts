@@ -19,6 +19,7 @@ function mount(): void {
 	document.body.innerHTML = `
 		<section id="table-view" hidden>
 			<h2 id="table-heading" tabindex="-1">At the table</h2>
+			<p id="table-intro" data-i18n="table.introGuest">No game is running.</p>
 			<p><strong id="table-code"></strong>
 			<button type="button" id="table-copy-code" hidden>Copy code</button></p>
 			<p><span id="table-invite-url"></span>
@@ -118,6 +119,43 @@ test('the roster names everyone, their piece, and who is the host', () => {
 	assert.match(first, /Ana/);
 	assert.match(first, /lobby\.playerHost/, 'the host is named as such');
 	assert.match(items[1].textContent ?? '', /lobby\.playerBot/);
+});
+
+// Reported from a real session: the roster read "Kastwey, game.token_stout_pint, (anfitrión)".
+// A package's piece names live in ITS translation bundle, which a table loads a moment after it
+// paints — and getTokenName's fallback was being dropped, so the key itself reached the screen.
+test('the roster names each piece, and never prints a raw translation key', () => {
+	const named = newView({ t: key => (key === 'game.token_disc' ? 'Disco' : key) });
+	named.setTable(table({ players: [{ id: 'a', name: 'Ana', token: 'disc' }] }));
+	assert.match(document.querySelector('#table-players .player-item')!.textContent ?? '', /Disco/);
+
+	// A package piece whose bundle has not arrived yet: a readable fallback, never the key.
+	const unresolved = newView();
+	unresolved.setTable(table({ players: [{ id: 'a', name: 'Ana', token: 'stout_pint' }] }));
+	const text = document.querySelector('#table-players .player-item')!.textContent ?? '';
+	assert.match(text, /Ana/);
+	assert.doesNotMatch(text, /game\.token_/, 'a translation key must never reach the screen');
+});
+
+test('the table speaks to whoever is reading it, and a first game is not "another" one', () => {
+	const intro = () => document.getElementById('table-intro')!;
+	const start = () => document.getElementById('table-start-btn') as HTMLButtonElement;
+
+	const host = newView({ isHost: () => true });
+	host.setTable(table());
+	host.show();
+	// Telling the host to wait for the host is the copy that gave this away.
+	assert.equal(intro().getAttribute('data-i18n'), 'table.introHost');
+	assert.equal(start().textContent, 'table.start');
+
+	// …and once this table has played, the next one is another one.
+	host.setTable(table({ matchesPlayed: 2 }));
+	assert.equal(start().textContent, 'table.startAnother');
+
+	const guest = newView({ isHost: () => false });
+	guest.setTable(table());
+	guest.show();
+	assert.equal(intro().getAttribute('data-i18n'), 'table.introGuest');
 });
 
 test('a rebuilt roster replaces the previous one instead of piling up', () => {

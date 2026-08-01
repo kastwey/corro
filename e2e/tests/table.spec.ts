@@ -7,7 +7,9 @@
 
 import { test, expect } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
-import { createGame, expectAnnouncement, joinGame, newPlayerPage } from '../helpers/game';
+import {
+	appI18n, createGame, expectAnnouncement, joinGame, newPlayerPage, packageI18n,
+} from '../helpers/game';
 
 const PROPERTY_BOARD = 'galactic-empire';
 const TRACK_BOARD = 'snakes-and-ladders';
@@ -24,6 +26,17 @@ test('creating a table lands ON the table, with no empty board in sight', async 
 	await expect(ana.locator('#table-view')).toBeVisible();
 	await expect(ana.locator('#game-layout')).toBeHidden();
 	await expect(ana.locator('#table-heading')).toBeFocused();
+
+	// Reported from a real session: "Kastwey, game.token_stout_pint, (anfitrión)". A package's
+	// piece names live in ITS bundle, which the table loads a moment after painting, so the
+	// roster has to be rebuilt when those words arrive — and never print a key meanwhile.
+	const roster = ana.locator('#table-players');
+	await expect(roster).toContainText(packageI18n(TRACK_BOARD, 'es').tokens.star as string);
+	await expect(roster).not.toContainText(/game\.token_|tokens\./);
+
+	// And the copy is written for whoever reads it: the host is not waiting for the host.
+	await expect(ana.locator('#table-intro')).toHaveText(appI18n('es').table.introHost as string);
+	await expect(ana.locator('#table-start-btn')).toHaveText(appI18n('es').table.start as string);
 });
 
 test('joining a table lands there too, and the board only appears with a match in it', async ({ browser }) => {
@@ -34,6 +47,9 @@ test('joining a table lands there too, and the board only appears with a match i
 	await joinGame(berto, code, 'Berto');
 	await expect(berto.locator('#table-view')).toBeVisible();
 	await expect(berto.locator('#game-layout')).toBeHidden();
+	// A guest IS waiting for the host, and is told so instead of being given a dead button.
+	await expect(berto.locator('#table-intro')).toHaveText(appI18n('es').table.introGuest as string);
+	await expect(berto.locator('#table-start-btn')).toBeHidden();
 
 	await ana.locator('#table-start-btn').click();
 	for (const page of [ana, berto]) {

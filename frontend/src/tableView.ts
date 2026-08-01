@@ -74,6 +74,9 @@ export class TableView {
 	private lastMatchLine: HTMLElement | null = null;
 	private standingsButton: HTMLButtonElement | null = null;
 	private lastMatch: GameState | null = null;
+	private intro: HTMLElement | null = null;
+	/** How many matches this table has finished: the first game is not "another" one. */
+	private matchesPlayed = 0;
 	private rulesBox: HTMLDetailsElement | null = null;
 	private rulesFields: HTMLElement | null = null;
 	/** The package whose rules are on screen, so they are fetched and built once per table. */
@@ -89,6 +92,7 @@ export class TableView {
 		// to tell people about a surface that is not there.
 		this.surfaceIntro = document.getElementById('game-surface-intro');
 		this.heading = document.getElementById('table-heading');
+		this.intro = document.getElementById('table-intro');
 		this.players = document.getElementById('table-players') as HTMLUListElement | null;
 		this.code = document.getElementById('table-code');
 		this.inviteUrl = document.getElementById('table-invite-url');
@@ -151,6 +155,7 @@ export class TableView {
 
 	/** Apply an authoritative table document: the roster, the ways in, and the shared deck. */
 	setTable(table: GameInfo): void {
+		this.matchesPlayed = table.matchesPlayed ?? 0;
 		this.renderPlayers(table);
 		this.renderInvites(table);
 		this.renderRejoinCode();
@@ -246,7 +251,13 @@ export class TableView {
 			item.appendChild(createPlayerIdentity({
 				tokenKey,
 				playerName: player.name,
-				tokenName: getTokenName(tokenKey, key => t(key)),
+				// getTokenName resolves a PACKAGE key and falls back to a readable name; the
+				// fallback has to be honoured or an unresolved key is printed as itself, which is
+				// what a table showed before its package's words had arrived.
+				tokenName: getTokenName(tokenKey, (key, fallback) => {
+					const translated = t(key);
+					return translated === key ? fallback ?? key : translated;
+				}),
 				statusText: '',
 				hostText: player.isHost ? ` ${t('lobby.playerHost')}` : '',
 				botText: player.isBot ? ` ${t('lobby.playerBot')}` : '',
@@ -345,13 +356,27 @@ export class TableView {
 
 	private render(): void {
 		if (!this.deps) return;
+		const t = this.deps.t;
 		const host = this.deps.isHost();
+
+		// Written for whoever is reading it. The host is not waiting for the host, and telling
+		// them to wait for themselves is the kind of copy that makes a product feel unfinished.
+		// The key is swapped along with the text so a language change re-translates the RIGHT one.
+		if (this.intro) {
+			const key = host ? 'table.introHost' : 'table.introGuest';
+			this.intro.setAttribute('data-i18n', key);
+			this.intro.textContent = t(key);
+		}
+
 		// Only the host starts matches, and the control is absent — not disabled — for everyone
 		// else: a dead button in the tab order is noise, and there is nothing to explain. What a
 		// guest gets instead is the plain truth about what they are waiting for.
 		if (this.startButton) {
+			// A table that has never played is not starting "another" game.
+			const key = this.matchesPlayed > 0 ? 'table.startAnother' : 'table.start';
 			this.startButton.hidden = !host;
-			this.startButton.textContent = this.deps.t('table.start');
+			this.startButton.setAttribute('data-i18n', key);
+			this.startButton.textContent = t(key);
 			this.startButton.setAttribute('aria-disabled', this.starting ? 'true' : 'false');
 		}
 		if (this.waitingHint) this.waitingHint.hidden = host;

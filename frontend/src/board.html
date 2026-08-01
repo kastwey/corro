@@ -61,7 +61,10 @@
 		 this lives on the game page instead of sending everyone back to the lobby. -->
 	<section id="table-view" class="table-view" hidden>
 	  <h2 id="table-heading" class="table-view__heading" tabindex="-1" data-i18n="table.heading">At the table</h2>
-	  <p class="table-view__intro" data-i18n="table.intro">No game is running. Talk, wait for the others, or let the host start the next match.</p>
+	  <!-- Written for whoever is reading it: the host is not waiting for the host. Both the key
+		   and the text are set from the table (see tableView.ts), the way the game-surface
+		   introduction does it, so a language change still re-translates the right line. -->
+	  <p class="table-view__intro" id="table-intro" data-i18n="table.introGuest">No game is running. Talk while the others arrive; the host starts when you are ready.</p>
 	  <p class="table-view__invite">
 		<span data-i18n="table.inviteLabel">Invite code:</span>
 		<strong id="table-code"></strong>

@@ -2082,7 +2082,20 @@ async function initBoard() {
 	const preloadTablePackage = (packageToken: string | null | undefined): void => {
 		if (!packageToken || packageI18nLoaded) return;
 		packageI18nLoaded = true;
-		void loadPackageAssets(packageToken).then(() => i18nBinder.applyI18n());
+		void Promise.all([
+			loadPackageAssets(packageToken),
+			// The board's PIECES, which only the package knows. The game state carries them once a
+			// match runs, but a table has no state — and without them the roster names everyone's
+			// piece by its raw translation key.
+			gameClient.getPackageSummary(packageToken).then(pkg => {
+				if (pkg?.tokens) setPackageTokens(pkg.tokens);
+			}),
+		]).then(() => {
+			void i18nBinder.applyI18n();
+			// applyI18n only reaches `data-i18n` markup, and the roster is built imperatively:
+			// rebuild it now that the package's own words exist.
+			if (currentTable) applyTable(currentTable);
+		});
 	};
 
 	// Arriving at a table with no match running: the server answers an authenticated join with
