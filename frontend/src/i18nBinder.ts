@@ -108,7 +108,17 @@ export class I18nBinder {
 	* Detects the initial language: cookie > browser > default
 	*/
 	private detectInitialLanguage(): string {
-	// 1. First check cookie
+	// 0. The page's OWN declaration wins. A pre-translated page (the lobby, built per language)
+	// already carries its language in <html lang>, and the board's pre-paint script puts the
+	// player's there. Guessing again from the cookie or the browser could disagree with the text
+	// actually on screen and re-translate a page that was already right — the very flicker this
+	// whole path exists to remove.
+	const declared = document.documentElement.lang;
+	if (declared && this.config.supportedLanguages.includes(declared)) {
+		return declared;
+	}
+
+	// 1. Then the player's saved choice
 	const cookieLanguage = this.getLanguageFromCookie();
 	if (cookieLanguage && this.config.supportedLanguages.includes(cookieLanguage)) {
 		return cookieLanguage;
