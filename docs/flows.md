@@ -114,7 +114,18 @@ Bots are outside the engine:
    covers exactly one connection's death; a genuine drop, which announces nothing, still
    marks the player away.
 
-## 6. Reconnect / server restart
+## 6. Ending a game (the table stays)
+
+1. The rulebook sets `GameState.IsGameOver`; the final state is broadcast and the client
+   shows the end screen from it.
+2. The match is then **retired, not deleted** (see [tables.md](tables.md)): clocks stopped,
+   service dropped, the final snapshot moved from `gameState` to `lastMatch`, the status back
+   to waiting, and `MatchEnded` broadcast to everyone in the game.
+3. The package and the voice room survive, because both belong to the table rather than to
+   the match that just ended. Deleting a table — the host's action or the retention sweep —
+   is what still releases them.
+
+## 7. Reconnect / server restart
 
 1. The full `GameState` is persisted to Cosmos as you play (via the background
    `GameStatePersister`).

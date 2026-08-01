@@ -235,19 +235,17 @@ public sealed class GameSessionRegistry
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
 	/// <summary>
-	/// Stop timers and drop the in-memory game service for a game being deleted from the lobby. Returns
-	/// the removed service (already un-tracked) so the caller can end it; null when none was live.
+	/// Stop the clocks and drop the in-memory game service. Returns the removed service (already
+	/// un-tracked) so the caller can dispose it; null when none was live.
+	///
+	/// Deliberately does NOT touch the voice room: a match ends far more often than a table does,
+	/// and the conversation is the table's, not the match's.
 	/// </summary>
-	public async Task<IGameService?> TearDownGameAsync(string gameId)
+	private async Task<IGameService?> StopLiveMatchAsync(string gameId)
 	{
 		_timers.StopTimers(gameId);
 		_nopeWindow?.Cancel(gameId);
 		_forbiddenTimer?.Cancel(gameId);
-		if (_voiceService?.IsConfigured == true)
-		{
-			try { await _voiceService.DeleteRoomAsync(gameId); }
-			catch (Exception ex) { _logger?.LogWarning(ex, "Could not delete voice room for game {GameId}", gameId); }
-		}
 		if (_gameServices.TryRemove(gameId, out var service))
 		{
 			try { await service.EndGameAsync(); }
@@ -255,6 +253,19 @@ public sealed class GameSessionRegistry
 			return service;
 		}
 		return null;
+	}
+
+	/// <summary>
+	/// Stop live work for a game being deleted: the match AND the room it was talking in.
+	/// </summary>
+	public async Task<IGameService?> TearDownGameAsync(string gameId)
+	{
+		if (_voiceService?.IsConfigured == true)
+		{
+			try { await _voiceService.DeleteRoomAsync(gameId); }
+			catch (Exception ex) { _logger?.LogWarning(ex, "Could not delete voice room for game {GameId}", gameId); }
+		}
+		return await StopLiveMatchAsync(gameId);
 	}
 
 	/// <summary>
@@ -333,9 +344,18 @@ public sealed class GameSessionRegistry
 	}
 
 	/// <summary>
-	/// Removes, finishes and DELETES a game once it is over so it neither leaks in <c>_gameServices</c>
-	/// nor lingers in Cosmos. Game-over is read from the authoritative <see cref="GameState.IsGameOver"/>
-	/// flag (set by the rulebook for both a manual bankruptcy and an auto-forced one).
+	/// Retires a finished match and leaves its TABLE standing. Game-over is read from the
+	/// authoritative <see cref="GameState.IsGameOver"/> flag (set by the rulebook for both a manual
+	/// bankruptcy and an auto-forced one).
+	///
+	/// A finished match used to delete everything, which made the last roll of a game the end of the
+	/// group that played it: the chat, the seats, the invite code and the voice room all went with
+	/// it, and playing again meant starting from an empty form. The people are the durable part, so
+	/// they are what survives. What is disposed of is the match: its clocks, its in-memory service
+	/// and its live snapshot — which is not thrown away but moved to <c>LastMatch</c>, so the result
+	/// outlives the game that produced it.
+	///
+	/// Deletion is still what happens to a TABLE, from the host's own action or the retention sweep.
 	/// </summary>
 	public async Task CleanupIfGameOverAsync(string gameId, IGameService gameService)
 	{
@@ -348,8 +368,57 @@ public sealed class GameSessionRegistry
 			return;
 		}
 
-		try { await DeleteGameAsync(gameId); }
-		catch (Exception ex) { _logger?.LogError(ex, "Error deleting finished game {GameId}", gameId); }
+		try { await RetireMatchAsync(gameId, state); }
+		catch (Exception ex) { _logger?.LogError(ex, "Error retiring the finished match of table {GameId}", gameId); }
+	}
+
+	/// <summary>
+	/// Ends the live match and returns the table to rest: clocks stopped, service dropped, the final
+	/// snapshot moved from <c>GameState</c> to <c>LastMatch</c> and the status back to waiting. The
+	/// package is NOT released and the voice room is NOT deleted — both belong to the table, which is
+	/// still there and, most likely, about to play again.
+	///
+	/// Returns the saved table document, or null when there was nothing persisted to retire.
+	/// </summary>
+	public async Task<GameDocument?> RetireMatchAsync(string gameId, GameState finalState)
+	{
+		var removed = await StopLiveMatchAsync(gameId);
+		if (removed is IDisposable disposable)
+		{
+			disposable.Dispose();
+		}
+
+		// EndGameAsync may have queued one last snapshot. Wait for it, and drop the persister, so a
+		// late write cannot put the finished match back into the table as if it were still running.
+		if (_persisters.TryRemove(gameId, out var persister))
+		{
+			try { await persister.WaitForIdleAsync(); }
+			catch (Exception ex) { _logger?.LogError(ex, "Error flushing persister for game {GameId}", gameId); }
+		}
+
+		var document = await _repository.LoadGameAsync(gameId)
+			?? (_persistedDocuments.TryGetValue(gameId, out var cached) ? cached : null);
+		if (document == null)
+		{
+			return null;
+		}
+
+		var saved = await _repository.UpdateGameAsync(document with
+		{
+			Status = GameStatus.WaitingForPlayers,
+			GameState = null,
+			LastMatch = finalState,
+			MatchesPlayed = document.MatchesPlayed + 1,
+		});
+		_persistedDocuments[gameId] = saved;
+
+		// The table is at rest and everyone in it should know, whether or not they were looking at
+		// the board when it happened.
+		await _hub.Clients.Group(gameId).SendAsync("MatchEnded", saved.Sanitized());
+
+		_logger?.LogInformation(
+			"Match {Number} retired for table {GameId}; the table remains", saved.MatchesPlayed, gameId);
+		return saved;
 	}
 
 	// ── Wiring (moved verbatim from the Hub's static callbacks) ───────────────

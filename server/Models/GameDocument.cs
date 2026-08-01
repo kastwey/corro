@@ -96,6 +96,23 @@ public record GameDocument
 	public GameState? GameState { get; init; } // Null while the lobby is waiting for players.
 
 	/// <summary>
+	/// The snapshot of the match that just finished, kept after it is retired — the same state the
+	/// end screen is built from, so the result survives the match that produced it and a player who
+	/// reconnects afterwards still learns how it ended.
+	///
+	/// This is where the live snapshot MOVES on game over: the table stops playing (GameState back to
+	/// null) without losing what happened, and at roughly no cost in document size. Cleared when the
+	/// next match starts, because by then there is a game to look at instead.
+	/// </summary>
+	[JsonPropertyName("lastMatch")]
+	public GameState? LastMatch { get; init; }
+
+	/// <summary>How many matches this table has finished. Ordinal for the next one, and the honest
+	/// way to tell a table that has never played from one between games.</summary>
+	[JsonPropertyName("matchesPlayed")]
+	public int MatchesPlayed { get; init; }
+
+	/// <summary>
 	/// Copy safe to SEND TO CLIENTS: every player's credentials (secret id, re-entry code)
 	/// are stripped. Persistence always stores the full document; any hub message carrying
 	/// a GameDocument (LobbyUpdated, create/join/start responses) must go through this —
@@ -110,6 +127,10 @@ public record GameDocument
 		Players = Players.Select(p => p with { PlayerSecretId = "", RejoinCode = null }).ToList(),
 		GameState = GameState is null ? null
 			: Services.Corro.Families.GameFamilies.For(GameState.GameType).ProjectFor(GameState, null),
+		// A finished match is projected exactly like a live one. Nothing in the end screen needs a
+		// rival's hand, and "the game is over" is not a reason to relax the family's own contract.
+		LastMatch = LastMatch is null ? null
+			: Services.Corro.Families.GameFamilies.For(LastMatch.GameType).ProjectFor(LastMatch, null),
 	};
 }
 

@@ -880,7 +880,7 @@ public partial class GameHub
 				teams: arrangedTeams);
 			if (gameService.GameState is { } packageState)
 			{
-				packageState.PackageToken = packageToken; // released on game over; the client's sound pack id
+				packageState.PackageToken = packageToken; // released with the table; the client's sound pack id
 				packageState.VoiceChatEnabled = game.VoiceChatEnabled;
 			}
 
@@ -892,6 +892,9 @@ public partial class GameHub
 			{
 				Status = GameStatus.Active,
 				GameState = gameService.GameState,
+				// The previous match's result stops being the news the moment there is a game to look
+				// at instead. Kept only while the table is at rest.
+				LastMatch = null,
 				// Persist the EFFECTIVE settings (house-rule values applied) so the stored document is
 				// truthful and any later reader (including restore) sees the real in-effect rules.
 				Settings = settings
@@ -1015,8 +1018,9 @@ public partial class GameHub
 			await Clients.Group(gameId).SendAsync("GameDeleted", new { GameId = gameId });
 			await Clients.Group($"lobby_{gameId}").SendAsync("GameDeleted", new { GameId = gameId });
 
-			// Use the same complete teardown as game-over and scheduled retention: live state and
-			// persisters stop first, Cosmos is deleted next, then an unshared uploaded blob is released.
+			// The same complete teardown scheduled retention uses — and the only path that still runs
+			// it, now that a finished match retires instead of deleting: live state and persisters
+			// stop first, Cosmos is deleted next, then an unshared uploaded blob is released.
 			await _registry.DeleteGameAsync(gameId, game);
 
 			foreach (var connId in _registry.GameConnectionIds(gameId))
