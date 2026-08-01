@@ -15,7 +15,8 @@ import {
 	chooseContentLanguage, contentLanguageName, fillContentLanguageSelect,
 } from './lobby/contentLanguage.js';
 import { familyHasBots } from './familyTraits.js';
-import type { GameInfo } from './models.js';
+import { winningSide } from './endScreen.js';
+import type { GameInfo, GameState } from './models.js';
 
 export interface TableViewDeps {
 	t: (key: string, vars?: Record<string, unknown>) => string;
@@ -30,8 +31,15 @@ export interface TableViewDeps {
 	removeBot?: (playerId: string) => Promise<void>;
 	/** Leave this table and go back to the lobby. */
 	leave?: () => void;
+	/** Open the full standings of a finished match (the same end screen it raised). */
+	showStandings?: (match: GameState) => void;
 	/** Speak a line through the game's own announcer (never a second live region). */
-	announce: (key: string, vars?: Record<string, unknown>, instant?: boolean) => void;
+	announce: (text: string) => void;
+	/**
+	 * Turn a refused server call into the reason it refused, when it carries one. A table that
+	 * cannot start because somebody has no team must say THAT, not "it could not be started".
+	 */
+	explainError?: (error: unknown) => string | null;
 	/** Copy text, reporting whether it reached the clipboard. */
 	copy?: (text: string, buttonId: string) => Promise<boolean>;
 	/** This player's re-entry code for THIS table, or null when they have none saved. */
@@ -57,6 +65,10 @@ export class TableView {
 	private copyLinkButton: HTMLButtonElement | null = null;
 	private addBotButton: HTMLButtonElement | null = null;
 	private leaveButton: HTMLButtonElement | null = null;
+	private lastMatchBox: HTMLElement | null = null;
+	private lastMatchLine: HTMLElement | null = null;
+	private standingsButton: HTMLButtonElement | null = null;
+	private lastMatch: GameState | null = null;
 	private starting = false;
 
 	init(deps: TableViewDeps): void {
@@ -81,10 +93,16 @@ export class TableView {
 		this.copyLinkButton = document.getElementById('table-copy-link') as HTMLButtonElement | null;
 		this.addBotButton = document.getElementById('table-add-bot') as HTMLButtonElement | null;
 		this.leaveButton = document.getElementById('table-leave') as HTMLButtonElement | null;
+		this.lastMatchBox = document.getElementById('table-last-match');
+		this.lastMatchLine = document.getElementById('table-last-match-line');
+		this.standingsButton = document.getElementById('table-standings') as HTMLButtonElement | null;
 
 		this.startButton?.addEventListener('click', () => void this.startMatch());
 		this.addBotButton?.addEventListener('click', () => this.deps?.addBot?.());
 		this.leaveButton?.addEventListener('click', () => this.deps?.leave?.());
+		this.standingsButton?.addEventListener('click', () => {
+			if (this.lastMatch) this.deps?.showStandings?.(this.lastMatch);
+		});
 		this.copyCodeButton?.addEventListener('click', () =>
 			void this.copy(this.code?.textContent ?? '', 'table-copy-code'));
 		this.copyLinkButton?.addEventListener('click', () =>
@@ -127,7 +145,31 @@ export class TableView {
 		this.renderRejoinCode();
 		this.renderContentLanguage(table);
 		this.renderBotChair(table);
+		this.renderLastMatch(table);
 		this.render();
+	}
+
+	/**
+	 * What the table remembers of the game it just played. The end screen is raised once, live,
+	 * for whoever was there when it finished; this is how everyone else finds out — someone who
+	 * reconnected a minute later, or who dismissed it and wants to look again. Without it, a
+	 * dropped connection at the wrong moment meant never learning who won.
+	 */
+	private renderLastMatch(table: GameInfo): void {
+		if (!this.lastMatchBox || !this.lastMatchLine || !this.deps) return;
+		const match = table.lastMatch ?? null;
+		this.lastMatch = match;
+		this.lastMatchBox.hidden = !match;
+		if (this.standingsButton) this.standingsButton.hidden = !match || !this.deps.showStandings;
+		if (!match) {
+			this.lastMatchLine.textContent = '';
+			return;
+		}
+		const side = winningSide(match);
+		const winner = side.teamName ?? match.winnerName ?? '';
+		this.lastMatchLine.textContent = winner
+			? this.deps.t('table.lastMatchWinner').replace('{{winner}}', winner)
+			: this.deps.t('table.lastMatchNoWinner');
 	}
 
 	private renderPlayers(table: GameInfo): void {
@@ -261,10 +303,11 @@ export class TableView {
 		this.render();
 		try {
 			await this.deps.start();
-		} catch {
+		} catch (error) {
 			// The next match is the whole point of the button; failing silently would leave the
-			// host pressing it again with no idea why nothing happens.
-			this.deps.announce('table.start_failed', {}, true);
+			// host pressing it again with no idea why nothing happens — and the server's own
+			// reason ("somebody still has no team") is far more useful than a generic refusal.
+			this.deps.announce(this.deps.explainError?.(error) ?? this.deps.t('table.start_failed'));
 		} finally {
 			this.starting = false;
 			this.render();
@@ -274,7 +317,7 @@ export class TableView {
 	private async copy(text: string, buttonId: string): Promise<void> {
 		if (!this.deps?.copy || !text) return;
 		const copied = await this.deps.copy(text, buttonId);
-		this.deps.announce(copied ? 'table.copied' : 'table.copy_failed', {}, true);
+		this.deps.announce(this.deps.t(copied ? 'table.copied' : 'table.copy_failed'));
 	}
 }
 

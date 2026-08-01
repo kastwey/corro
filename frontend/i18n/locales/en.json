@@ -1667,6 +1667,9 @@
     "playersHeading": "Who is here",
     "start": "Start the next match",
     "leave": "Leave the table",
+    "lastMatchWinner": "Last match: {{winner}} won.",
+    "lastMatchNoWinner": "The last match ended with no winner.",
+    "viewStandings": "See the standings",
     "start_failed": "The match could not be started.",
     "copied": "Copied.",
     "copy_failed": "It could not be copied."

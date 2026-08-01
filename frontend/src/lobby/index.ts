@@ -2,7 +2,7 @@
  * Lobby - Main orchestrator for game creation and joining
  */
 import {
-	TokenKey, GameInfo, LobbyPlayer,
+	TokenKey, GameInfo,
 	CreateGameRequest, CreateGameResponse, JoinGameResponse, ResolvedJoinCode,
 	GameSettings, SavedGameInfo, PackageUploadResponse, ShippedBoard
 } from '../models.js';
@@ -10,17 +10,12 @@ import { gameClient } from '../gameClient.js';
 import { hasUnlockCode, addUnlockCode } from '../unlockCodes.js';
 import { i18nBinder } from '../i18nBinder.js';
 import { isLobbyPathFor, lobbyPathFor } from '../languageUrl.js';
-import { randomBotName } from '../botNames.js';
-import { familyHasBots } from '../familyTraits.js';
-import { teamDisplayName } from '../enginePalette.js';
-import { joinList } from '../listFormat.js';
-import { popupMenu } from '../popupMenu.js';
 import { renderHouseRules, readHouseRuleValues } from '../houseRules.js';
 import { GameSessionStore, SavedGame } from '../sessionUtils.js';
 import { dialogManager } from '../dialogManager.js';
 import { FocusTrap } from '../focusTrap.js';
 import {
-	convertTokenToSnakeCase, getUsedTokens, getTokenName, renderTokenSelector
+	convertTokenToSnakeCase, getUsedTokens, renderTokenSelector
 } from './tokens.js';
 import { renderSeatSelector, getUsedSeats } from './seats.js';
 import { LatestOnly } from './latestOnly.js';
@@ -28,25 +23,16 @@ import { tokenIconHtml, setPackageTokens } from '../tokenIcons.js';
 import { initThemeToggle } from '../themeToggle.js';
 import { initializeSiteBranding } from '../siteBranding.js';
 import { applyRuleSettings, readRuleSettings } from './ruleFields.js';
-import { promptForBotName } from './botNameForm.js';
-import { createPlayerIdentity } from './playerListItem.js';
-import { RovingToolbarList } from '../accessibleList.js';
-import {
-	teamPanelFocusPlan, teamRosterStatus,
-	type PendingTeamFocus, type PreservedTeamFocus,
-} from './teamRoster.js';
 import { chooseContentLanguage, contentLanguageName, fillContentLanguageSelect } from './contentLanguage.js';
 import {
 	t, translateServerError, showLoading, showError,
 	showSection, hideSection, showView, focusFirstField, getElement, getInputValue, getSelectedRadio,
-	copyToClipboard, updateUrlWithGame, clearUrlParams, getUrlParam, localizeBoardName, formatGameDate, parseHubErrorCode, isResumableToBoardStatus,
+	clearUrlParams, getUrlParam, localizeBoardName, formatGameDate, parseHubErrorCode, isTableAtRestStatus,
 	pickPackageName, renderBoardOptions, lobbyViewFromState, LobbyView
 } from './ui.js';
 
 class UnifiedLobbyUI {
 	private currentGame: GameInfo | null = null;
-	private currentPlayerId = '';
-	private isHost = false;
 	/** The shipped boards offered in the picker (engine boards served as packages). */
 	private shippedBoards: ShippedBoard[] = [];
 	/** The staged package for this game (a shipped board OR a custom upload) — always set once ready. */
@@ -56,12 +42,6 @@ class UnifiedLobbyUI {
 	/** The package operation Create must wait for. A user can select a board and submit before its
 	 *  POST+i18n chain settles; reading uploadedPackage earlier created the PREVIOUS game instead. */
 	private pendingPackageStage: Promise<void> = Promise.resolve();
-	/** Team member lists are rebuilt from authoritative lobby state; detach their delegated
-	 *  keyboard handlers before each rebuild. */
-	private teamListNavigators: RovingToolbarList[] = [];
-	/** Focus destination requested by an in-flight team move. Only the repaint that CONFIRMS the
-	 *  move consumes it, so unrelated repaints never drag the host's focus along. */
-	private pendingTeamFocus: PendingTeamFocus | null = null;
 	/** A manual deck choice must survive later interface-language changes. */
 	private contentLanguageExplicit = false;
 
@@ -128,22 +108,8 @@ class UnifiedLobbyUI {
 		gameClient.on('disconnected', () => showError(t('lobby.errors.disconnected')));
 		gameClient.on('gameCreated', (data) => this.handleGameCreated(data));
 		gameClient.on('gameJoined', (data) => this.handleGameJoined(data));
-		gameClient.on('playerJoined', (data) => this.handlePlayerJoined(data));
-		gameClient.on('lobbyUpdated', (data) => this.handleLobbyUpdated(data));
-		gameClient.on('teamAssigned', (data) => this.handleTeamAssigned(data));
-		gameClient.on('contentLanguageChanged', (data) => {
-			this.announceInLobby(t('lobby.contentLanguageChanged')
-				.replace('{{language}}', contentLanguageName(data.language, t)));
-		});
-		gameClient.on('gameStarted', (data) => this.handleGameStarted(data));
 		gameClient.on('gameDeleted', (data) => this.handleGameDeleted(data));
-		gameClient.on('teamsFilled', () => this.handleTeamsFilled());
-		gameClient.on('error', (msg) => {
-			// A refused move never repaints anything, so its focus request would otherwise wait
-			// around and pounce on the next unrelated update.
-			this.pendingTeamFocus = null;
-			showError(translateServerError(msg));
-		});
+		gameClient.on('error', (msg) => showError(translateServerError(msg)));
 
 		// Language change handler
 		window.addEventListener('languageChanged', () => {
@@ -157,9 +123,6 @@ class UnifiedLobbyUI {
 		this.setupBoardUpload();
 		this.setupCreateGameForm();
 		this.setupJoinGameForm();
-		this.setupCopyLinkButton();
-		this.setupCopyCodeButton();
-		this.setupStartGameButton();
 		this.setupUnlockShortcut();
 	}
 
@@ -266,9 +229,6 @@ class UnifiedLobbyUI {
 
 	private handleGameCreated(data: CreateGameResponse): void {
 		this.currentGame = data.game;
-		// The real hostId is in game.hostId, hostSecretId is only for authentication
-		this.currentPlayerId = data.game.hostId;
-		this.isHost = true;
 		const host = data.game.players.find(p => p.id === data.game.hostId);
 		const board = this.uploadedPackage ? this.localizePackageName(this.uploadedPackage.name) : '';
 		GameSessionStore.saveGame({
@@ -281,13 +241,11 @@ class UnifiedLobbyUI {
 			isHost: true,
 			rejoinCode: data.hostRejoinCode
 		});
-		this.showGameCreated(data.game, data.inviteCode);
+		this.enterTable(data.game);
 	}
 
 	private handleGameJoined(data: JoinGameResponse): void {
 		this.currentGame = data.game;
-		this.currentPlayerId = data.playerId;
-		this.isHost = false;
 		const me = data.game.players.find(p => p.id === data.playerId);
 		GameSessionStore.saveGame({
 			gameId: data.game.gameId,
@@ -299,44 +257,7 @@ class UnifiedLobbyUI {
 			isHost: false,
 			rejoinCode: data.rejoinCode
 		});
-		this.showGameJoined(data.game);
-	}
-
-	private handlePlayerJoined(_data: { playerId: string; playerName: string }): void {
-		if (this.currentGame) {
-			// Refresh game state to get updated player list
-			void this.refreshGameState();
-		}
-	}
-
-	private handleLobbyUpdated(game: GameInfo): void {
-		// Server sent updated game state, update our local state and UI
-		this.currentGame = game;
-		this.updatePlayerList(game.players);
-		this.renderWaitingContentLanguage(game);
-	}
-
-	private handleGameStarted(data: { gameId: string }): void {
-		// Leaving the waiting room for the board is a page navigation, so this connection dies and
-		// the board's opens a moment later. Warn the server first: otherwise everyone hears the
-		// player leave and then "you have reconnected to the game" — reconnection earcon included —
-		// seconds into a game nobody ever left. The navigation happens either way.
-		void gameClient.declareHandoff().finally(() => {
-			window.location.href = `board.html?gameId=${data.gameId}`;
-		});
-	}
-
-	private async refreshGameState(): Promise<void> {
-		if (!this.currentGame) return;
-		try {
-			const gameInfo = await gameClient.getGameByInviteCode(this.currentGame.gameId);
-			if (gameInfo) {
-				this.currentGame = gameInfo;
-				this.updatePlayerList(gameInfo.players);
-			}
-		} catch (error) {
-			console.error('Error refreshing game state:', error);
-		}
+		this.enterTable(data.game);
 	}
 
 	// === Form Setup ===
@@ -378,9 +299,6 @@ class UnifiedLobbyUI {
 		});
 		getElement<HTMLSelectElement>('content-language')?.addEventListener('change', () => {
 			this.contentLanguageExplicit = true;
-		});
-		getElement<HTMLSelectElement>('host-content-language')?.addEventListener('change', event => {
-			void this.setWaitingContentLanguage((event.target as HTMLSelectElement).value);
 		});
 	}
 
@@ -693,55 +611,6 @@ class UnifiedLobbyUI {
 		joinBtn?.addEventListener('click', joinHandler);
 	}
 
-	private setupCopyLinkButton(): void {
-		getElement('copy-link-btn')?.addEventListener('click', async () => {
-			const url = getElement('invite-url')?.textContent || '';
-			if (!url || !await copyToClipboard(url, 'copy-link-btn')) {
-				showError(t('lobby.errors.copyLink'));
-			}
-		});
-	}
-
-	private setupCopyCodeButton(): void {
-		getElement('copy-code-btn')?.addEventListener('click', async () => {
-			const code = getElement('lobby-code')?.textContent || '';
-			if (!code || !await copyToClipboard(code, 'copy-code-btn')) {
-				showError(t('lobby.errors.copyCode'));
-			}
-		});
-	}
-
-	private setupStartGameButton(): void {
-		getElement('start-game-btn')?.addEventListener('click', () => this.startGame());
-		getElement('add-bot-btn')?.addEventListener('click', () => this.promptBotName());
-	}
-
-	/**
-	 * Adding a bot asks for its NAME first: type one, or roll the hat («Dame uno
-	 * aleatorio») for a silly road-trip name in the host's language. Left empty, the
-	 * server falls back to its plain "Bot N".
-	 */
-	private promptBotName(): void {
-		promptForBotName({
-			t,
-			rollName: current => randomBotName(key => i18nBinder.tSync(key), current),
-			returnFocusTo: 'add-bot-btn',
-			show: options => dialogManager.show(options),
-			close: () => dialogManager.close(),
-			onSubmit: name => void this.addBot(name),
-		});
-	}
-
-	private async addBot(name?: string): Promise<void> {
-		if (!this.currentGame || !this.isHost) return;
-		try {
-			await gameClient.addBot({ gameId: this.currentGame.gameId, hostId: this.currentPlayerId, name });
-		} catch (error) {
-			console.error('Error adding bot:', error);
-			showError(t('lobby.errors.addBot'));
-		}
-	}
-
 	/**
 	 * Wires the top-level navigation between views: the home entry buttons (create /
 	 * join) and the "back to home" buttons on the create, join and waiting views. Going
@@ -927,23 +796,6 @@ class UnifiedLobbyUI {
 			console.error('   Error stack:', error?.stack);
 			const msg = translateServerError(error?.message || '');
 			showError(msg || t('lobby.errors.joinGame'));
-		} finally {
-			showLoading(false);
-		}
-	}
-
-	private async startGame(): Promise<void> {
-		if (!this.currentGame || !this.isHost) return showError(t('lobby.errors.hostOnly'));
-
-		try {
-			showLoading(true);
-			await gameClient.startGame({
-				gameId: this.currentGame.gameId,
-				hostId: this.currentPlayerId
-			});
-		} catch (error) {
-			console.error('Error starting game:', error);
-			showError(t('lobby.errors.startGame'));
 		} finally {
 			showLoading(false);
 		}
@@ -1197,13 +1049,18 @@ class UnifiedLobbyUI {
 		return li;
 	}
 
-	/** Resume a saved game: active games go to the board, pending ones back to the waiting room. */
+	/**
+	 * Resume a saved table. One destination either way: its own page shows the board when a match
+	 * is running there and the table when none is. A table with no match still goes through
+	 * ReconnectLobby first, which re-authenticates this browser's saved session before the page
+	 * that needs it loads.
+	 */
 	private resumeSavedGame(game: SavedGame, info?: SavedGameInfo): void {
-		if (isResumableToBoardStatus(info?.status)) {
-			window.location.href = `board.html?gameId=${game.gameId}`;
-		} else {
+		if (isTableAtRestStatus(info?.status)) {
 			void this.attemptReconnect(game);
+			return;
 		}
+		window.location.href = `board.html?gameId=${game.gameId}`;
 	}
 
 	/** Host-only: confirm then ask the server to permanently delete a game. */
@@ -1288,17 +1145,9 @@ class UnifiedLobbyUI {
 			}
 			if (gameState) {
 				this.currentGame = gameState as any;
-				this.currentPlayerId = session.playerId;
-				this.isHost = gameState.hostId === session.playerId;
-				if (this.isHost) {
-					// Pass the real invite code (not the gameId) so the shared link is
-					// `?code=<inviteCode>`. The join flow resolves it via
-					// GetByInviteCodeAsync, which only matches the inviteCode field —
-					// a `?code=<gameId>` link would always report "game not found".
-					this.showGameCreated(gameState as any, gameState.inviteCode);
-				} else {
-					this.showGameJoined(gameState as any);
-				}
+				// A table is resumed through its own page, whether or not a match is running there:
+				// it shows the board when there is one and the table when there is not.
+				this.enterTable(gameState as any);
 			} else {
 				GameSessionStore.removeGame(session.gameId);
 				clearUrlParams();
@@ -1372,466 +1221,12 @@ class UnifiedLobbyUI {
 
 	/**
 	 * Take the player to their TABLE — the game page, where the group waits together with the
-	 * chat and the voice room already mounted (docs/tables.md). Returns true when that navigation
-	 * was started, so the caller leaves the lobby's own waiting room alone.
-	 *
-	 * Team boards are the exception, and the last thing keeping `view-waiting` alive: arranging
-	 * the teams is a roving list with its own focus plan, and it has not moved yet.
+	 * chat, the voice room, the roster, the shared deck and, on a team board, the arrangement
+	 * (docs/tables.md). The lobby keeps what is genuinely lobby: your tables, and the forms for
+	 * creating one or asking to sit at somebody else's.
 	 */
-	private enterTable(game: GameInfo): boolean {
-		if ((game.teamCount ?? 0) >= 2) return false;
+	private enterTable(game: GameInfo): void {
 		window.location.href = `board.html?gameId=${game.gameId}`;
-		return true;
-	}
-
-	private showGameCreated(game: GameInfo, inviteCode: string): void {
-		if (this.enterTable(game)) return;
-		updateUrlWithGame(game.gameId);
-		showSection('lobby-created');
-		hideSection('lobby-joined');
-		showView('view-waiting', 'game-created-message');
-		this.updateGameInfo(game, inviteCode);
-		this.updatePlayerList(game.players);
-		this.renderRejoinCode('created-rejoin-mount', game.gameId);
-	}
-
-	private showGameJoined(game: GameInfo): void {
-		if (this.enterTable(game)) return;
-		updateUrlWithGame(game.gameId);
-		hideSection('lobby-created');
-		showSection('lobby-joined');
-		showView('view-waiting', 'game-joined-message');
-		this.updateGameInfo(game);
-		this.updatePlayerList(game.players);
-		this.renderRejoinCode('joined-rejoin-mount', game.gameId);
-	}
-
-	/**
-	 * The player's own RE-ENTRY code in the waiting room, with a copy button: the one
-	 * thing worth noting down — typed back in the code box it recovers this seat from
-	 * any browser (the saved-session localStorage may not survive).
-	 */
-	private renderRejoinCode(mountId: string, gameId: string): void {
-		const mount = getElement(mountId);
-		if (!mount) return;
-		const code = GameSessionStore.getGame(gameId)?.rejoinCode;
-		if (!code) { mount.innerHTML = ''; return; }
-		mount.innerHTML = '';
-
-		const box = document.createElement('div');
-		box.className = 'invite-code rejoin-code';
-		const title = document.createElement('h3');
-		title.textContent = t('lobby.rejoin.codeTitle');
-		const value = document.createElement('div');
-		value.className = 'invite-code__value';
-		value.id = `${mountId}-value`;
-		value.textContent = code;
-		const copyBtn = document.createElement('button');
-		copyBtn.className = 'copy-button';
-		copyBtn.id = `${mountId}-copy`;
-		copyBtn.textContent = t('lobby.rejoin.copy');
-		copyBtn.addEventListener('click', () => { void copyToClipboard(code, copyBtn.id); });
-		const hint = document.createElement('p');
-		hint.className = 'hint';
-		hint.textContent = t('lobby.rejoin.hint');
-		box.append(title, value, copyBtn, hint);
-		mount.appendChild(box);
-	}
-
-	private updateGameInfo(game: GameInfo, inviteCode?: string): void {
-		const codeEl = getElement('lobby-code');
-		const urlEl = getElement('invite-url');
-		const code = inviteCode || game.gameId;
-		if (codeEl) codeEl.textContent = code;
-		if (urlEl) urlEl.textContent = `${window.location.origin}?code=${code}`;
-		this.renderWaitingContentLanguage(game);
-	}
-
-	/** The waiting room keeps the selected deck visible to everyone. The host receives a
-	 * real select and every guest receives one flowing read-only sentence. */
-	private renderWaitingContentLanguage(game: GameInfo): void {
-		const languages = game.contentLanguages ?? [];
-		const selected = chooseContentLanguage(languages, game.language);
-		const hostGroup = getElement('host-content-language-group');
-		const hostSelect = getElement<HTMLSelectElement>('host-content-language');
-		const showHost = this.isHost && languages.length > 0 && !!selected;
-		if (hostGroup) {
-			hostGroup.hidden = !showHost;
-			hostGroup.classList.toggle('hidden', !showHost);
-		}
-		if (hostSelect && showHost) {
-			const focused = document.activeElement === hostSelect;
-			this.fillContentLanguageSelect(hostSelect, languages, selected);
-			if (focused) hostSelect.focus();
-		}
-
-		const guestSummary = getElement('joined-content-language');
-		const showGuest = !this.isHost && languages.length > 0 && !!selected;
-		if (guestSummary) {
-			guestSummary.hidden = !showGuest;
-			guestSummary.classList.toggle('hidden', !showGuest);
-			guestSummary.textContent = showGuest
-				? t('lobby.contentLanguageCurrent')
-					.replace('{{language}}', contentLanguageName(selected, t))
-				: '';
-		}
-	}
-
-	private async setWaitingContentLanguage(language: string): Promise<void> {
-		if (!this.currentGame || !this.isHost) return;
-		try {
-			await gameClient.setContentLanguage({
-				gameId: this.currentGame.gameId,
-				hostId: this.currentPlayerId,
-				language,
-			});
-		} catch (error) {
-			console.error('Error changing Forbidden Words language:', error);
-			this.renderWaitingContentLanguage(this.currentGame);
-			showError(t('lobby.errors.changeContentLanguage'));
-		}
-	}
-
-	private updatePlayerList(players: LobbyPlayer[]): void {
-		// Update both lists if they exist (host sees host-player-list, guest sees joined-player-list)
-		const hostContainer = getElement('host-player-list');
-		const guestContainer = getElement('joined-player-list');
-
-		// NOTE: no status check here — these lists only render in the WAITING room (an
-		// active game lives on board.html), and the hub payload's status encoding differs
-		// from the REST one, so comparing it here is a trap.
-		const updateContainer = (container: HTMLElement | null, interactive: boolean) => {
-			if (!container) return;
-			container.innerHTML = '';
-			players.forEach(player => {
-				const tokenKey = convertTokenToSnakeCase(player.token as unknown as string);
-				const tokenName = getTokenName(tokenKey, t);
-				const statusText = player.isReady
-					? t('lobby.playerReady', '(ready)')
-					: t('lobby.playerWaiting', '(waiting)');
-				const hostText = player.isHost ? ` ${t('lobby.playerHost', '(host)')}` : '';
-				const botText = player.isBot ? ` ${t('lobby.playerBot', '(bot)')}` : '';
-				const li = document.createElement('li');
-				li.className = 'player-item';
-				// The spans are laid out with a CSS flex `gap`, so there is NO real text
-				// node between them — only visual spacing. Screen readers (JAWS) ignore the
-				// gap and read adjacent spans glued together ("NúriaScottie Dog"). A normal
-				// space doesn't help because it collapses; we suffix each part with a comma
-				// plus a non-breaking space, which is a real, non-collapsible
-				// character in the accessibility tree, so each part is read distinctly.
-				li.appendChild(createPlayerIdentity({
-					tokenKey,
-					playerName: player.name,
-					tokenName,
-					statusText,
-					hostText,
-					botText,
-				}));
-				// The host can send a bot away while waiting.
-				if (interactive && player.isBot) {
-					const remove = document.createElement('button');
-					remove.type = 'button';
-					remove.className = 'secondary-button player-item__remove-bot';
-					remove.textContent = t('lobby.removeBot');
-					remove.setAttribute('aria-label', t('lobby.removeBotOf').replace('{{name}}', player.name));
-					remove.addEventListener('click', () => void this.removeBot(player.id));
-					li.appendChild(remove);
-				}
-				container.appendChild(li);
-			});
-		};
-
-		updateContainer(hostContainer, this.isHost);
-		updateContainer(guestContainer, false);
-		this.renderTeamPanels();
-		// The add-bot chair: host only, on a family that HAS bots (trivia/race/property ship no
-		// bot policy — the server rejects them), while there is room at the table. The host holds
-		// the selected package, whose gameType names the family.
-		const canAddBot = this.isHost
-			&& familyHasBots(this.uploadedPackage?.gameType)
-			&& players.length < (this.currentGame?.maxPlayers ?? 0);
-		const addBotBtn = getElement('add-bot-btn');
-		// Hiding the focused chair (the table just filled, e.g. after adding the last bot)
-		// would strand focus on <body>: hand it to Start first so the keyboard user keeps a
-		// sensible landing spot.
-		if (addBotBtn && !canAddBot && document.activeElement === addBotBtn) {
-			getElement('start-game-btn')?.focus();
-		}
-		addBotBtn?.classList.toggle('hidden', !canAddBot);
-	}
-
-	private async removeBot(playerId: string): Promise<void> {
-		if (!this.currentGame || !this.isHost) return;
-		try {
-			await gameClient.removeBot({ gameId: this.currentGame.gameId, hostId: this.currentPlayerId, playerId });
-		} catch (error) {
-			console.error('Error removing bot:', error);
-			showError(t('lobby.errors.addBot'));
-		}
-	}
-
-	// === Team mode (waiting room) ─ the host arranges, the room watches ===
-
-	/** The team's spoken identity ("Red team") — palette colour word by team index. */
-	private teamName(index: number): string {
-		return teamDisplayName(index, (k, v) => i18nBinder.tSync(k, v));
-	}
-
-	private renderTeamPanels(): void {
-		const game = this.currentGame;
-		const teamCount = game?.teamCount ?? 0;
-		const hostPanel = getElement('host-team-panel');
-		const guestPanel = getElement('joined-team-panel');
-		const preservedFocus = this.captureTeamPanelFocus();
-		this.destroyTeamListNavigators();
-		hostPanel?.classList.toggle('hidden', teamCount < 2);
-		guestPanel?.classList.toggle('hidden', teamCount < 2);
-		if (!game || teamCount < 2) return;
-		// The host's panel carries the controls; the guests' is the same picture, read-only.
-		if (hostPanel) this.renderTeamPanel(hostPanel, game, this.isHost);
-		if (guestPanel) this.renderTeamPanel(guestPanel, game, false);
-		this.restoreTeamPanelFocus(game, preservedFocus);
-	}
-
-	private renderTeamPanel(panel: HTMLElement, game: GameInfo, interactive: boolean): void {
-		const teamCount = game.teamCount!;
-		const teamSize = Math.floor(game.maxPlayers / teamCount);
-		const pool = game.players.filter(p => p.teamIndex == null);
-		panel.innerHTML = '';
-
-		const heading = document.createElement('h4');
-		heading.textContent = t('lobby.teamsHeading');
-		panel.appendChild(heading);
-
-		// One move for the whole room: the arrangement everybody normally wants, without
-		// walking the pool player by player. Only offered while there is somebody to deal.
-		if (interactive && game.players.length > 0) {
-			const shuffle = document.createElement('button');
-			shuffle.type = 'button';
-			shuffle.className = 'secondary-button team-panel__shuffle';
-			shuffle.textContent = t('lobby.fillTeamsRandomly');
-			shuffle.addEventListener('click', () => { void this.fillTeamsAtRandom(); });
-			panel.appendChild(shuffle);
-		}
-
-		for (let index = 0; index < teamCount; index++) {
-			const members = game.players.filter(p => p.teamIndex === index);
-			const teamName = this.teamName(index);
-			const box = document.createElement('fieldset');
-			box.className = 'team-box';
-			box.dataset.teamIndex = String(index);
-			const legend = document.createElement('legend');
-			legend.textContent = `${teamName} (${members.length}/${teamSize})`;
-			box.appendChild(legend);
-
-			const list = document.createElement('ul');
-			list.className = 'team-member-list';
-			list.setAttribute('aria-label', teamName);
-			for (const member of members) {
-				const item = document.createElement('li');
-				item.className = 'team-member';
-				item.dataset.playerId = member.id;
-				item.tabIndex = -1;
-				item.setAttribute('aria-label', t('lobby.teamMemberLabel')
-					.replace('{{name}}', member.name)
-					.replace('{{team}}', teamName));
-				const name = document.createElement('span');
-				name.className = 'team-member__name';
-				name.textContent = member.name;
-				item.appendChild(name);
-				if (interactive) {
-					const toolbar = document.createElement('div');
-					toolbar.className = 'team-member__actions';
-					toolbar.setAttribute('role', 'toolbar');
-					toolbar.setAttribute('aria-label', t('actions_for').replace('{{name}}', member.name));
-					const remove = document.createElement('button');
-					remove.type = 'button';
-					remove.className = 'secondary-button team-box__remove';
-					remove.tabIndex = -1;
-					remove.textContent = t('lobby.teamRemove');
-					remove.setAttribute('aria-label',
-						t('lobby.teamRemoveOf').replace('{{name}}', member.name));
-					remove.addEventListener('click', () => void this.assignTeam(member.id, null, index));
-					toolbar.appendChild(remove);
-					item.appendChild(toolbar);
-				}
-				list.appendChild(item);
-			}
-			box.appendChild(list);
-			const navigator = new RovingToolbarList({
-				list,
-				itemSelector: '.team-member',
-				toolbarButtonSelector: '.team-member__actions button',
-				menuLabel: () => t('lobby.teamMemberActionsMenu'),
-				menuClass: 'team-context-menu',
-				menuItemClass: 'team-context-menu__item',
-				// Keep visible popup content in the active main landmark.
-				menuHost: () => panel.closest<HTMLElement>('main') ?? panel,
-			});
-			navigator.refreshRovingTabindex();
-			this.teamListNavigators.push(navigator);
-
-			if (interactive && members.length < teamSize && pool.length > 0) {
-				const add = document.createElement('button');
-				add.type = 'button';
-				add.className = 'secondary-button team-box__add';
-				add.dataset.teamIndex = String(index);
-				add.textContent = t('lobby.teamAdd');
-				add.setAttribute('aria-label',
-					t('lobby.teamAddTo').replace('{{team}}', teamName));
-				add.addEventListener('click', () => this.openTeamPickMenu(add, index, pool));
-				box.appendChild(add);
-			}
-			panel.appendChild(box);
-		}
-
-		// Distinguish the current unassigned pool from seats whose players have not joined yet.
-		// An empty pool is not a complete roster until every configured team place is filled.
-		const poolLine = document.createElement('p');
-		poolLine.className = 'team-pool';
-		const roster = teamRosterStatus(game.players, game.maxPlayers);
-		if (roster.kind === 'unassigned') {
-			poolLine.textContent = t('lobby.teamPool')
-				.replace('{{names}}', roster.names.join(', '));
-		} else if (roster.kind === 'waiting') {
-			const key = roster.missing === 1
-				? 'lobby.teamRosterWaitingOne'
-				: 'lobby.teamRosterWaitingMany';
-			poolLine.textContent = t(key)
-				.replace('{{assigned}}', String(roster.assigned))
-				.replace('{{capacity}}', String(roster.capacity))
-				.replace('{{missing}}', String(roster.missing));
-		} else {
-			poolLine.textContent = t('lobby.teamPoolEmpty');
-		}
-		panel.appendChild(poolLine);
-	}
-
-	/** The host's "add player" menu: only the UNASSIGNED players are offered. */
-	private openTeamPickMenu(anchor: HTMLElement, teamIndex: number, pool: LobbyPlayer[]): void {
-		popupMenu.open({
-			ariaLabel: t('lobby.teamAddTo').replace('{{team}}', this.teamName(teamIndex)),
-			anchor,
-			items: pool.map(player => ({
-				label: player.name,
-				onSelect: () => void this.assignTeam(player.id, teamIndex, teamIndex),
-			})),
-			announce: text => this.announceInLobby(text),
-			onClose: () => anchor.focus(),
-		});
-	}
-
-	private async assignTeam(
-		playerId: string,
-		teamIndex: number | null,
-		preferredTeamIndex: number,
-	): Promise<void> {
-		if (!this.currentGame || !this.isHost) return;
-		this.pendingTeamFocus = { preferredTeamIndex, playerId, expectedTeamIndex: teamIndex };
-		try {
-			await gameClient.assignTeam({
-				gameId: this.currentGame.gameId,
-				hostId: this.currentPlayerId,
-				playerId,
-				teamIndex,
-			});
-		} catch (error) {
-			this.pendingTeamFocus = null;
-			console.error('Error assigning team:', error);
-			showError(t('lobby.errors.assignTeam'));
-		}
-	}
-
-	/** Deal the whole room into the teams; the server decides the arrangement. */
-	private async fillTeamsAtRandom(): Promise<void> {
-		if (!this.currentGame || !this.isHost) return;
-		try {
-			await gameClient.fillTeamsAtRandom({
-				gameId: this.currentGame.gameId,
-				hostId: this.currentPlayerId,
-			});
-		} catch (error) {
-			console.error('Error filling teams:', error);
-			showError(t('lobby.errors.fillTeams'));
-		}
-	}
-
-	/** The room hears the arrangement itself, team by team — the repaint alone is silent. */
-	private handleTeamsFilled(): void {
-		const game = this.currentGame;
-		if (!game?.teamCount) return;
-		const rosters: string[] = [];
-		for (let index = 0; index < game.teamCount; index++) {
-			const names = game.players.filter(player => player.teamIndex === index).map(player => player.name);
-			if (names.length === 0) continue;
-			rosters.push(t('lobby.teamRoster')
-				.replace('{{team}}', this.teamName(index))
-				.replace('{{players}}', joinList(names)));
-		}
-		this.announceInLobby(`${t('lobby.teamsFilled')} ${rosters.join(' ')}`.trim());
-	}
-
-	private destroyTeamListNavigators(): void {
-		for (const navigator of this.teamListNavigators) navigator.destroy();
-		this.teamListNavigators = [];
-	}
-
-	/** Capture a stable identity before authoritative state replaces the team DOM. */
-	private captureTeamPanelFocus(): PreservedTeamFocus | null {
-		const active = document.activeElement as HTMLElement | null;
-		if (!active?.closest('#host-team-panel, #joined-team-panel')) return null;
-		if (active.matches('.team-panel__shuffle')) return { kind: 'shuffle', teamIndex: -1 };
-		const box = active.closest<HTMLElement>('.team-box');
-		const teamIndex = Number(box?.dataset.teamIndex);
-		if (!Number.isInteger(teamIndex)) return null;
-		if (active.matches('.team-box__add')) return { kind: 'add', teamIndex };
-		const member = active.closest<HTMLElement>('.team-member');
-		const playerId = member?.dataset.playerId;
-		if (!playerId) return null;
-		return {
-			kind: active.matches('.team-member__actions button') ? 'action' : 'member',
-			teamIndex,
-			playerId,
-		};
-	}
-
-	private restoreTeamPanelFocus(game: GameInfo, preserved: PreservedTeamFocus | null): void {
-		const hostPanel = getElement('host-team-panel');
-		if (!hostPanel || !this.isHost) return;
-
-		const addButtons = Array.from(hostPanel.querySelectorAll<HTMLButtonElement>('.team-box__add'));
-		const plan = teamPanelFocusPlan(
-			this.pendingTeamFocus,
-			preserved,
-			game.players.map(player => ({ id: player.id, teamIndex: player.teamIndex ?? null })),
-			addButtons.map(button => Number(button.dataset.teamIndex)),
-			game.teamCount ?? 0,
-		);
-		this.pendingTeamFocus = plan.pending;
-		if (!plan.target) return;
-
-		if (plan.target.kind === 'shuffle') {
-			hostPanel.querySelector<HTMLElement>('.team-panel__shuffle')?.focus();
-			return;
-		}
-		if (plan.target.kind === 'add') {
-			const teamIndex = plan.target.teamIndex;
-			addButtons.find(button => Number(button.dataset.teamIndex) === teamIndex)?.focus();
-			return;
-		}
-		const row = hostPanel.querySelector<HTMLElement>(
-			`.team-member[data-player-id="${CSS.escape(plan.target.playerId)}"]`);
-		if (plan.target.kind === 'action') row?.querySelector<HTMLElement>('.team-member__actions button')?.focus();
-		else row?.focus();
-	}
-
-	/** The whole room hears every team move (the LobbyUpdated repaint is silent). */
-	private handleTeamAssigned(data: { playerId: string; playerName: string; teamIndex: number | null }): void {
-		this.announceInLobby(data.teamIndex == null
-			? t('lobby.teamUnassigned').replace('{{player}}', data.playerName)
-			: t('lobby.teamAssigned')
-				.replace('{{player}}', data.playerName)
-				.replace('{{team}}', this.teamName(data.teamIndex)));
 	}
 
 	private announceInLobby(text: string): void {
@@ -1882,7 +1277,6 @@ class UnifiedLobbyUI {
 				: i18nBinder.getCurrentLanguage();
 			this.renderCreateContentLanguages(this.uploadedPackage, preferred);
 		}
-		if (this.currentGame) this.renderWaitingContentLanguage(this.currentGame);
 		void this.refreshSavedGames();
 	}
 }

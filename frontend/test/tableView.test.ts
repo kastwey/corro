@@ -28,6 +28,10 @@ function mount(): void {
 				<select id="table-content-language"></select>
 			</div>
 			<p id="table-content-language-current" hidden></p>
+			<p id="table-last-match" hidden>
+				<span id="table-last-match-line"></span>
+				<button type="button" id="table-standings">See the standings</button>
+			</p>
 			<ul id="table-players"></ul>
 			<button type="button" id="table-add-bot" hidden>Add a bot</button>
 			<button type="button" id="table-start-btn" hidden>Start</button>
@@ -217,6 +221,38 @@ test('the re-entry code is shown with a way to copy it, and nothing when there i
 	assert.equal((document.getElementById('table-rejoin-mount') as HTMLElement).textContent, '');
 });
 
+// The end screen is raised once, live, for whoever was there when the match finished. This is
+// how everyone else finds out — someone who reconnected a minute later, or who dismissed it and
+// wants another look. Without it, a dropped connection at the wrong moment meant never learning
+// who won.
+test('the table remembers who won the last match, and offers the full standings', () => {
+	const opened: string[] = [];
+	const view = newView({
+		// A real template, so the winner's name is proven to be interpolated into it.
+		t: key => key === 'table.lastMatchWinner' ? 'Last match: {{winner}} won.' : key,
+		showStandings: match => opened.push(match.winnerId ?? ''),
+	});
+
+	view.setTable(table({
+		lastMatch: { winnerId: 'b', winnerName: 'Berto', isGameOver: true, players: [] } as any,
+	}));
+
+	const box = document.getElementById('table-last-match') as HTMLElement;
+	assert.equal(box.hidden, false);
+	assert.match(document.getElementById('table-last-match-line')!.textContent ?? '', /Berto/);
+	(document.getElementById('table-standings') as HTMLButtonElement).click();
+	assert.deepEqual(opened, ['b'], 'the standings are the finished match, not the live one');
+});
+
+test('a table that has not played yet says nothing about a last match', () => {
+	const view = newView({ showStandings: () => {} });
+
+	view.setTable(table());
+
+	assert.equal((document.getElementById('table-last-match') as HTMLElement).hidden, true);
+	assert.equal(document.getElementById('table-last-match-line')!.textContent, '');
+});
+
 test('a guest is told what they are waiting for instead of being given a dead button', () => {
 	const hint = () => document.getElementById('table-waiting-host') as HTMLElement;
 
@@ -255,6 +291,24 @@ test('starting the next match asks the server, and says so out loud when it refu
 	assert.equal(asked, 1);
 	// Failing silently would leave the host pressing a button with no idea why nothing happens.
 	assert.deepEqual(spoken, ['table.start_failed']);
+});
+
+test('a refusal the server explained is spoken as ITS reason, not as a generic failure', async () => {
+	// "Somebody still has no team" is the whole point of the message; "it could not be started"
+	// tells the host nothing they can act on.
+	const spoken: string[] = [];
+	const view = newView({
+		isHost: () => true,
+		start: async () => { throw new Error('TEAMS_INCOMPLETE'); },
+		explainError: () => 'Somebody still has no team',
+		announce: text => spoken.push(text),
+	});
+	view.show();
+
+	(document.getElementById('table-start-btn') as HTMLButtonElement).click();
+	await new Promise(resolve => setTimeout(resolve, 0));
+
+	assert.deepEqual(spoken, ['Somebody still has no team']);
 });
 
 test('the code and the link that bring someone else show only when there is one to pass on', () => {

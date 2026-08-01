@@ -71,6 +71,14 @@ best part of the idea. The game page also already owns what a table needs (the a
 panels, the keymap, the panel navigator, session recovery); the lobby owns forms, which stay
 where they are: create a table, join by code, and the list of your tables.
 
+## What the table remembers
+
+A retired match leaves its final snapshot in `lastMatch`, so the table can say who won and
+offer the full standings on demand. The end screen is raised once, live, for whoever was there
+when it finished; this is how everyone else finds out — someone who reconnected a minute later,
+or who dismissed it and wants another look. Without it, a dropped connection at the wrong moment
+meant never learning how the game ended.
+
 ## The end-of-match dialog
 
 It is already a dialog — winner, standings, `documentMode`, focus at the title. Two things
@@ -96,17 +104,12 @@ the new match surface exactly as it does today when a game starts.
    with chat and voice mounted once; "start another" lives there.~~ **Done.** The table shows
    who is here, the invite code, and the host's way to start the next match, and the page
    swaps between it and the board without ever navigating.
-3. ~~**The setup controls move in.**~~ **Mostly done.** Creating or joining now lands people at
-   the table, which carries the invite code and link, each player's own re-entry code, the
-   shared deck (the host's to change, everyone else's to read), the bot chair and the way out.
-   Tokens and seats never lived in the waiting room — they are picked in the create/join forms,
-   and stayed there.
-
-   **What is left:** arranging TEAMS. That panel is a roving list with its own focus plan, and
-   it has not moved, so a team board still stops at the lobby's waiting room — the one
-   condition in `enterTable`, and the only thing keeping `view-waiting` alive. A table knows
-   its family (`gameType` on the document) precisely so its page can offer the family's setup
-   without staging the package to ask.
+3. ~~**The setup controls move in.**~~ **Done.** Creating or joining lands people at the table,
+   which carries the invite code and link, each player's own re-entry code, the shared deck
+   (the host's to change, everyone else's to read), the bot chair, the team arrangement and the
+   way out. Tokens and seats never lived in the waiting room — they are picked in the
+   create/join forms, which is part of asking to sit down, and stayed there. `view-waiting` is
+   gone; the lobby is your tables, the create form and the join form.
 4. **Rules at the table, then the rename** — the create form's board picker and rule fields
    are reused as "settings for the next match" (nearly free: `packageToken`, `ruleValues` and
    `settings` already live on the document and are already re-read at every start). The

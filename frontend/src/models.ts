@@ -849,6 +849,10 @@ export interface GameInfo {
   packageToken?: string;
   /** The family this table is set up to play ("property", "exploding"…), known even at rest. */
   gameType?: string | null;
+  /** The match that just finished, kept while the table rests so its result outlives it. */
+  lastMatch?: GameState | null;
+  /** How many matches this table has finished. */
+  matchesPlayed?: number;
   /** The board's player tokens (id + SVG + name key); absent => the joiner uses the 8 built-ins. */
   tokens?: TokenInfo[];
   /** A race board's seats (squadron colours) so the joiner can pick one; absent otherwise. */

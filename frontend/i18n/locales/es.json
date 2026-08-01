@@ -1667,6 +1667,9 @@
     "playersHeading": "Quién está aquí",
     "start": "Empezar la siguiente partida",
     "leave": "Salir de la mesa",
+    "lastMatchWinner": "Última partida: ganó {{winner}}.",
+    "lastMatchNoWinner": "La última partida terminó sin ganador.",
+    "viewStandings": "Ver la clasificación",
     "start_failed": "No se ha podido empezar la partida.",
     "copied": "Copiado.",
     "copy_failed": "No se ha podido copiar."

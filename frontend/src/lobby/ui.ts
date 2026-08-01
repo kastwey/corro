@@ -72,13 +72,13 @@ export function formatGameDate(iso: string, lang?: string): string {
 }
 
 /**
- * Decides whether resuming a saved game should jump straight to the board (a game
- * already in progress) or reconnect to the waiting room. The status comes from the
- * server's SignalR payload, where the GameStatus enum is serialized SnakeCaseLower
- * (e.g. "active", "paused", "starting"), so the comparison MUST use snake_case.
+ * Whether a saved table has no match running, so resuming it means re-authenticating this
+ * browser's session at the table rather than walking into a game. The status comes from the
+ * server's SignalR payload, where the GameStatus enum is serialized SnakeCaseLower (e.g.
+ * "active", "paused", "waiting_for_players"), so the comparison MUST use snake_case.
  */
-export function isResumableToBoardStatus(status: string | undefined): boolean {
-	return status === 'active' || status === 'paused' || status === 'starting';
+export function isTableAtRestStatus(status: string | undefined): boolean {
+	return status === 'waiting_for_players';
 }
 
 /** Translate server error codes to readable messages */

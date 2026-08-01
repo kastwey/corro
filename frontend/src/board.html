@@ -35,6 +35,7 @@
   <link rel="stylesheet" href="css/action-bar.css" />
   <link rel="stylesheet" href="css/end-screen.css" />
   <link rel="stylesheet" href="css/table-view.css" />
+  <link rel="stylesheet" href="css/team-panel.css" />
   <link rel="stylesheet" href="css/race-board.css" />
   <link rel="stylesheet" href="css/track-board.css" />
   <link rel="stylesheet" href="css/journey-board.css" />
@@ -85,10 +86,21 @@
 	  </div>
 	  <p id="table-content-language-current" hidden></p>
 
+	  <!-- The table remembers the last game it played, so the result outlives the match — and a
+		   player who reconnects afterwards can still find out how it ended. -->
+	  <p class="table-view__last-match" id="table-last-match" hidden>
+		<span id="table-last-match-line"></span>
+		<button type="button" id="table-standings" class="secondary-button" data-i18n="table.viewStandings">See the standings</button>
+	  </p>
+
 	  <h3 class="table-view__players-heading" data-i18n="table.playersHeading">Who is here</h3>
 	  <ul id="table-players" class="table-view__players player-list"></ul>
 	  <!-- Bot seats (families with a bot brain): the host fills empty chairs. -->
 	  <button type="button" id="table-add-bot" class="secondary-button" data-i18n="lobby.addBot" hidden>Add a bot</button>
+
+	  <!-- Team boards: the host arranges everyone before there is a game to play; the rest of
+		   the table watches the same picture, read-only. -->
+	  <div id="table-team-panel" class="team-panel hidden" hidden></div>
 	  <p class="table-view__actions">
 		<button type="button" id="table-start-btn" class="primary-button" data-i18n="table.start" hidden>Start the next match</button>
 		<span id="table-waiting-host" class="loading" data-i18n="lobby.waitingForHost" hidden>Waiting for host to start the game...</span>

@@ -20,9 +20,9 @@ import {
 const BOARD = 'forbidden-words';
 
 async function assign(host: Page, teamIndex: number, playerName: string): Promise<void> {
-	await host.locator('#host-team-panel .team-box').nth(teamIndex).locator('.team-box__add').click();
+	await host.locator('#table-team-panel .team-box').nth(teamIndex).locator('.team-box__add').click();
 	await host.locator('[role="menu"] [role="menuitem"]').filter({ hasText: playerName }).click();
-	await expect(host.locator('#host-team-panel .team-box').nth(teamIndex)).toContainText(playerName);
+	await expect(host.locator('#table-team-panel .team-box').nth(teamIndex)).toContainText(playerName);
 }
 
 test.beforeEach(async () => {
@@ -33,19 +33,19 @@ test('an assigned host is not reported as a complete two-team roster', async ({ 
 	const host = await newPlayerPage(browser, 'es-ES');
 	await createGame(host, 'Ana', BOARD, { maxPlayers: 4, teamCount: 2 });
 
-	await expect(host.locator('#host-team-panel .team-box')).toHaveCount(2);
+	await expect(host.locator('#table-team-panel .team-box')).toHaveCount(2);
 	await assign(host, 0, 'Ana');
-	await expect(host.locator('#host-team-panel .team-box').nth(0).locator('legend')).toHaveText(/1\/2/);
-	await expect(host.locator('#host-team-panel .team-box').nth(1).locator('legend')).toHaveText(/0\/2/);
+	await expect(host.locator('#table-team-panel .team-box').nth(0).locator('legend')).toHaveText(/1\/2/);
+	await expect(host.locator('#table-team-panel .team-box').nth(1).locator('legend')).toHaveText(/0\/2/);
 	// Nobody else has joined, so no Add button can act yet; use the assigned row as the safe fallback.
-	await expect(host.locator('#host-team-panel .team-member').filter({ hasText: 'Ana' })).toBeFocused();
+	await expect(host.locator('#table-team-panel .team-member').filter({ hasText: 'Ana' })).toBeFocused();
 
 	const expected = (appI18n('es').lobby.teamRosterWaitingMany as string)
 		.replace('{{assigned}}', '1')
 		.replace('{{capacity}}', '4')
 		.replace('{{missing}}', '3');
-	await expect(host.locator('#host-team-panel .team-pool')).toHaveText(expected);
-	await expect(host.locator('#host-team-panel .team-pool')).not.toContainText('completos');
+	await expect(host.locator('#table-team-panel .team-pool')).toHaveText(expected);
+	await expect(host.locator('#table-team-panel .team-pool')).not.toContainText('completos');
 	await flushAxeAudit(host);
 });
 
@@ -60,16 +60,16 @@ test('shared Spanish cards, per-player UI and authoritative role actions', async
 		teamCount: 2,
 		contentLanguage: 'es',
 	});
-	await expect(ana.locator('#host-content-language-group')).toBeVisible();
-	await expect(ana.locator('#host-content-language')).toHaveValue('es');
+	await expect(ana.locator('#table-content-language-group')).toBeVisible();
+	await expect(ana.locator('#table-content-language')).toHaveValue('es');
 	await ana.reload();
-	await expect(ana.locator('#lobby-created')).toBeVisible();
-	await expect(ana.locator('#host-content-language')).toHaveValue('es');
+	await expect(ana.locator('#table-view')).toBeVisible();
+	await expect(ana.locator('#table-content-language')).toHaveValue('es');
 	await joinGame(berto, code, 'Berto');
 	await joinGame(carla, code, 'Carla');
 	await joinGame(david, code, 'David');
 	for (const page of [berto, carla, david]) {
-		await expect(page.locator('#joined-content-language')).toHaveText(
+		await expect(page.locator('#table-content-language-current')).toHaveText(
 			appI18n('es').lobby.contentLanguageCurrent.replace('{{language}}', appI18n('es').language.spanish),
 		);
 	}
@@ -77,22 +77,22 @@ test('shared Spanish cards, per-player UI and authoritative role actions', async
 	// The host can still change the shared deck while everyone is in the waiting room. Every
 	// listener sees and hears the authoritative update; the final Spanish choice survives start.
 	await berto.evaluate(() => { ((window as any).__announcements as string[]).length = 0; });
-	await ana.locator('#host-content-language').selectOption('en');
-	await expect(berto.locator('#joined-content-language')).toContainText('Inglés');
+	await ana.locator('#table-content-language').selectOption('en');
+	await expect(berto.locator('#table-content-language-current')).toContainText('Inglés');
 	await expectAnnouncement(berto, /idioma del contenido ahora es Inglés/);
-	await ana.locator('#host-content-language').selectOption('es');
-	await expect(berto.locator('#joined-content-language')).toContainText('Español');
+	await ana.locator('#table-content-language').selectOption('es');
+	await expect(berto.locator('#table-content-language-current')).toContainText('Español');
 
-	await expect(ana.locator('#host-team-panel .team-box')).toHaveCount(2);
+	await expect(ana.locator('#table-team-panel .team-box')).toHaveCount(2);
 	await assign(ana, 0, 'Ana');
-	await expect(ana.locator('#host-team-panel .team-box').nth(0).locator('.team-box__add')).toBeFocused();
+	await expect(ana.locator('#table-team-panel .team-box').nth(0).locator('.team-box__add')).toBeFocused();
 	await assign(ana, 0, 'Berto');
 	// Team zero is now full, so the vanished opener hands focus to the next usable Add button.
-	await expect(ana.locator('#host-team-panel .team-box').nth(1).locator('.team-box__add')).toBeFocused();
+	await expect(ana.locator('#table-team-panel .team-box').nth(1).locator('.team-box__add')).toBeFocused();
 
 	// Each team's players form one AccessibleList-style keyboard surface: arrows walk rows,
 	// Right enters the action toolbar, Left returns, and Shift+F10 mirrors actions in a menu.
-	const firstTeamRows = ana.locator('#host-team-panel .team-box').nth(0).locator('.team-member');
+	const firstTeamRows = ana.locator('#table-team-panel .team-box').nth(0).locator('.team-member');
 	await firstTeamRows.first().focus();
 	await ana.keyboard.press('ArrowDown');
 	await expect(firstTeamRows.nth(1)).toBeFocused();
@@ -110,11 +110,11 @@ test('shared Spanish cards, per-player UI and authoritative role actions', async
 	await expect(firstTeamRows.nth(1)).toBeFocused();
 
 	await assign(ana, 1, 'Carla');
-	await expect(ana.locator('#host-team-panel .team-box').nth(1).locator('.team-box__add')).toBeFocused();
+	await expect(ana.locator('#table-team-panel .team-box').nth(1).locator('.team-box__add')).toBeFocused();
 	await assign(ana, 1, 'David');
-	await expect(ana.locator('#host-team-panel .team-box').nth(1)
+	await expect(ana.locator('#table-team-panel .team-box').nth(1)
 		.locator('.team-member[data-player-id]').filter({ hasText: 'David' })).toBeFocused();
-	await expect(ana.locator('#host-team-panel .team-pool'))
+	await expect(ana.locator('#table-team-panel .team-pool'))
 		.toHaveText(appI18n('en').lobby.teamPoolEmpty as string);
 	await startGame(ana, [ana, berto, carla, david]);
 
@@ -328,19 +328,19 @@ test('the host can deal the whole room into the teams in one move', async ({ bro
 	await joinGame(carla, code, 'Carla');
 	await joinGame(david, code, 'David');
 
-	const shuffle = ana.locator('#host-team-panel .team-panel__shuffle');
+	const shuffle = ana.locator('#table-team-panel .team-panel__shuffle');
 	await expect(shuffle).toHaveText('Repartir los equipos al azar');
 	// Guests watch the same picture without the controls.
-	await expect(berto.locator('#joined-team-panel .team-panel__shuffle')).toHaveCount(0);
+	await expect(berto.locator('#table-team-panel .team-panel__shuffle')).toHaveCount(0);
 	await flushAxeAudit(ana);
 
 	await berto.evaluate(() => { ((window as any).__announcements as string[]).length = 0; });
 	await shuffle.click();
 
 	// Everybody is placed, the teams come out even, and the pool is empty.
-	await expect(ana.locator('#host-team-panel .team-box').nth(0).locator('legend')).toHaveText(/2\/2/);
-	await expect(ana.locator('#host-team-panel .team-box').nth(1).locator('legend')).toHaveText(/2\/2/);
-	await expect(ana.locator('#host-team-panel .team-pool'))
+	await expect(ana.locator('#table-team-panel .team-box').nth(0).locator('legend')).toHaveText(/2\/2/);
+	await expect(ana.locator('#table-team-panel .team-box').nth(1).locator('legend')).toHaveText(/2\/2/);
+	await expect(ana.locator('#table-team-panel .team-pool'))
 		.toHaveText(appI18n('es').lobby.teamPoolEmpty as string);
 	// The room HEARS the arrangement — the repaint alone says nothing to a screen reader.
 	await expectAnnouncement(berto, /Equipos repartidos al azar\..*Equipo Rojo: .*Equipo azul: /);

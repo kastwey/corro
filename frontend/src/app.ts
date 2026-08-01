@@ -31,8 +31,11 @@ import { buildPropertyRulesLines } from './rulesSummaries.js';
 import { loadBoardHelp, showBoardHelpDialog, initHelpButton } from './boardHelp.js';
 import { resetEndScreen, showEndScreen } from './endScreen.js';
 import { tableView } from './tableView.js';
+import { teamPanel } from './teamPanel.js';
 import { promptForBotName } from './lobby/botNameForm.js';
 import { randomBotName } from './botNames.js';
+import { teamDisplayName } from './enginePalette.js';
+import { contentLanguageName } from './lobby/contentLanguage.js';
 import { turnIndicator } from './turnIndicator.js';
 import { cardReveal } from './cardReveal.js';
 import { squareGroupLabel } from './localizeSquare.js';
@@ -62,7 +65,7 @@ import type {
 	TradeReviewModalData,
 	TradeWaitingModalData,
 } from './modalReconcile.js';
-import type { GameState, CardDrawnNotification } from './models.js';
+import type { GameInfo, GameState, CardDrawnNotification } from './models.js';
 import type { AnnouncementEvent } from './gameClient.js';
 import { gameManager } from './gameManager.js';
 import { gameClient } from './gameClient.js';
@@ -85,7 +88,7 @@ import type { SquareMenuAction } from './squareMenu.js';
 import { popupMenu } from './popupMenu.js';
 import type { PopupMenuItem } from './popupMenu.js';
 import { FocusTrap } from './focusTrap.js';
-import { copyToClipboard } from './lobby/ui.js';
+import { copyToClipboard, parseHubErrorCode, translateServerError } from './lobby/ui.js';
 import type { RaceBoard } from './raceBoard.js';
 import { familyFor, type FamilyDeps, type FamilyView, type RaceFamilyView, type TriviaFamilyView } from './gameFamilies.js';
 import { triviaDestinationLabel, triviaJudgeLines, triviaQuestionTitle } from './triviaDialogText.js';
@@ -475,12 +478,41 @@ async function initBoard() {
 			gameId, hostId: playerSession.playerId, playerId: botId,
 		}),
 		leave: () => { window.location.href = '/'; },
-		announce: (key, vars = {}, instant = false) =>
-			announce(createAnnouncement(key, vars), { instant }),
+		// The same end screen the match raised, on demand. The once-guard is cleared first: it
+		// exists to stop repeated state pushes re-opening a dismissed screen, not to stop a
+		// player from asking to see the result again.
+		showStandings: match => {
+			resetEndScreen();
+			showEndScreen(match, playerSession.playerId, {
+				onDismissed: () => tableView.show({ focus: true }),
+			});
+		},
+		announce: text => announce(createAnnouncement('_raw', { text }), { instant: true }),
+		// A refused hub call carries its reason as a code; the table speaks the reason.
+		explainError: error => {
+			const code = parseHubErrorCode(error);
+			return code ? translateServerError(code) : null;
+		},
 		copy: (text, buttonId) => copyToClipboard(text, buttonId),
 		// Read at render time, not captured: the code is minted on the first authenticated join,
 		// so the session may gain one after this page started.
 		rejoinCode: () => GameSessionStore.getGame(gameId)?.rejoinCode ?? null,
+	});
+
+	// Team boards arrange themselves at the table too — the host places everyone before there is
+	// a game to play. Its own module because the keyboard contract (roving members, per-person
+	// action toolbars, focus put back where the player left it after every authoritative repaint)
+	// is the hard part, not the markup.
+	teamPanel.init(document.getElementById('table-team-panel'), {
+		t: key => tSync(key),
+		isHost: () => playerSession.isHost,
+		teamName: index => teamDisplayName(index, (key, vars) => tSync(key, vars)),
+		assign: (playerId, teamIndex) => gameClient.assignTeam({
+			gameId, hostId: playerSession.playerId, playerId, teamIndex,
+		}),
+		fillAtRandom: () => gameClient.fillTeamsAtRandom({ gameId, hostId: playerSession.playerId }),
+		announce: text => announce(createAnnouncement('_raw', { text }), { instant: true }),
+		error: text => announce(createAnnouncement('_raw', { text }), { instant: true }),
 	});
 
 	announce(createAnnouncement('game.loading_board', {}));
@@ -2045,21 +2077,38 @@ async function initBoard() {
 	// Arriving at a table with no match running: the server answers an authenticated join with
 	// the roster instead of a state. Focus is NOT moved — this is where the page starts, and the
 	// startup flow already decides what to read first.
-	gameClient.on('lobbyState', table => {
+	/** One authoritative table document, applied to everything the table is made of. */
+	let currentTable: GameInfo | null = null;
+	const applyTable = (table: GameInfo): void => {
+		currentTable = table;
 		tableView.setTable(table);
+		teamPanel.render(table);
+	};
+
+	gameClient.on('lobbyState', table => {
+		applyTable(table);
 		tableView.show();
 		preloadTablePackage(table.packageToken);
 	});
-	// Someone arrived or left, or the host changed the shared deck, while we sit here.
+	// Someone arrived or left, the host changed the shared deck or moved somebody between teams.
 	gameClient.on('lobbyUpdated', table => {
 		if (!tableView.isVisible()) return;
-		tableView.setTable(table);
+		applyTable(table);
 	});
+	// A team move is silent in the repaint that carries it, so the table is told out loud.
+	gameClient.on('teamAssigned', data => teamPanel.announceAssigned(data));
+	gameClient.on('teamsFilled', () => teamPanel.announceFilled(currentTable));
+	// The shared deck belongs to the whole table, so a change is spoken to everyone — not only
+	// seen by whoever happens to be looking at the picker.
+	gameClient.on('contentLanguageChanged', data => announce(createAnnouncement('_raw', {
+		text: tSync('lobby.contentLanguageChanged')
+			.replace('{{language}}', contentLanguageName(data.language, key => tSync(key))),
+	}), { instant: true }));
 	// The match is over and its table is back at rest. The end screen is already up (the final
 	// state raised it); the table is revealed BEHIND it, so dismissing the dialog lands on it
 	// rather than on an empty board.
 	gameClient.on('matchEnded', table => {
-		tableView.setTable(table);
+		applyTable(table);
 		tableView.show();
 		preloadTablePackage(table.packageToken);
 	});
