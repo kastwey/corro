@@ -250,10 +250,18 @@ server that collects nothing owes no notice about it.
 
 ### The notice itself
 
-The TEXT ships with the app, in [`server/wwwroot/legal/privacy.en.md`](../server/wwwroot/legal/privacy.en.md)
+The TEXT ships with the app, in [`server/Legal/privacy.en.md`](../server/Legal/privacy.en.md)
 and its Spanish twin, because what Corro does with data is the same wherever it runs. Only the
 identity changes, and it is substituted into the `{{controller}}`, `{{jurisdiction}}` and
-`{{contact}}` placeholders when the page is served.
+`{{contact}}` placeholders when the notice is served.
+
+It lives in `server/Legal/` rather than under `wwwroot` for two reasons, and both are traps worth
+naming. `wwwroot` is **generated** — the frontend build wipes it and re-mirrors it from
+`frontend/dist` on every build, so anything else put there disappears at the next compile. And the
+file is a **template**: served as a static asset it would show a reader `{{controller}}` instead of
+your name. It travels in the publish artifact the same way the board packages do, and CI asserts
+both languages are in there, because a missing notice makes a configured deployment report having
+none — which also switches sign-in off.
 
 If you change what your deployment stores — another provider, an analytics script, anything — edit
 that markdown. The notice is a description of reality and stops being worth anything the moment it

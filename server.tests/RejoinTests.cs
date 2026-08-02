@@ -58,6 +58,36 @@ public class RejoinTests
 	}
 
 	[Fact]
+	public async Task A_seat_that_never_had_a_code_is_given_one_by_the_claim()
+	{
+		// The account path can reach a seat from before re-entry codes existed. It must not hand back
+		// an empty one: the code is the ONLY way home once the session is signed out, so the claim
+		// mints it in the same write that rotates the secret — and persists it, or the next claim
+		// would issue a different one and the player's copy would be wrong.
+		var repo = new InMemoryGameRepository();
+		await repo.CreateGameAsync(new GameDocument
+		{
+			Id = "game-OLD777",
+			GameId = "OLD777",
+			Status = GameStatus.Active,
+			HostId = "host",
+			InviteCode = "INV777",
+			Players = new List<LobbyPlayer>
+			{
+				new() { Id = "host", Name = "Ana", Token = "star", IsHost = true, PlayerSecretId = "s", RejoinCode = null, UserId = "user-ana" },
+			},
+		});
+
+		var result = await RejoinService.ClaimForUserAsync("OLD777", "user-ana", repo, NobodyConnected);
+
+		var minted = result.Session!.RejoinCode;
+		Assert.False(string.IsNullOrEmpty(minted), "a claim must never hand back an unusable code");
+		Assert.Equal(minted, result.UpdatedGame!.Players.Single().RejoinCode);
+		// And it is now a real code: claiming with it works.
+		Assert.Null((await RejoinService.ClaimAsync(minted, repo, NobodyConnected)).Error);
+	}
+
+	[Fact]
 	public async Task An_account_cannot_claim_a_seat_that_is_not_its_own()
 	{
 		// Berto's seat is anonymous, and no account may adopt it by asking. This is the whole

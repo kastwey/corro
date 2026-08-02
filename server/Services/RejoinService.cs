@@ -82,10 +82,17 @@ public static class RejoinService
 		}
 
 		var newSecret = IdGenerator.SecureId();
+		// A seat reached by ACCOUNT may never have been handed a re-entry code — games that predate
+		// the feature get one minted on first contact (see GameHub), and this can be that contact.
+		// Minted in the same write as the rotation so the claimer leaves with a working code rather
+		// than an empty one, which would strand them the day they sign out.
+		var rejoinCode = player.RejoinCode is { Length: > 0 } existing ? existing : IdGenerator.RejoinCode();
 		var updated = game with
 		{
 			Players = game.Players
-				.Select(p => p.Id == player.Id ? p with { PlayerSecretId = newSecret } : p)
+				.Select(p => p.Id == player.Id
+					? p with { PlayerSecretId = newSecret, RejoinCode = rejoinCode }
+					: p)
 				.ToList(),
 		};
 		var saved = await repository.UpdateGameAsync(updated);
@@ -103,7 +110,7 @@ public static class RejoinService
 				IsHost = player.IsHost,
 				Board = game.Board,
 				Status = game.Status,
-				RejoinCode = player.RejoinCode,
+				RejoinCode = rejoinCode,
 			},
 		};
 	}

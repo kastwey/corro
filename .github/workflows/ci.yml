@@ -225,6 +225,10 @@ jobs:
           test -f "$publish_dir/CorroServer.dll"
           test -f "$publish_dir/wwwroot/index.html"
           test -f "$publish_dir/wwwroot/board.html"
+          # The privacy notice. Absent, a deployment that HAS filled in its details still answers
+          # "no notice" — and sign-in is gated on the same flag, so the site quietly loses accounts.
+          test -f "$publish_dir/Legal/privacy.en.md"
+          test -f "$publish_dir/Legal/privacy.es.md"
 
           source_packages="$(find server/Packages -mindepth 2 -maxdepth 2 -name manifest.json -type f | wc -l)"
           published_packages="$(find "$publish_dir/Packages" -mindepth 2 -maxdepth 2 -name manifest.json -type f | wc -l)"

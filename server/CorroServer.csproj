@@ -41,6 +41,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- This deployment's privacy notice. It lives HERE and not in wwwroot for two reasons: wwwroot
+         is generated (the frontend build wipes and re-mirrors it from frontend/dist, so anything
+         else placed there is deleted on the next build), and this text is a TEMPLATE — served raw
+         it would show {{controller}} to a reader. The controller fills the placeholders in and
+         serves the result from /api/config/privacy. Copied so it travels in the publish artifact:
+         without it a configured deployment answers "no notice", which also takes sign-in down. -->
+    <Content Include="Legal\**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
         <!-- The canonical board keymap: embedded so the server is its single source of truth (served to
           the client, and the validator derives the reserved keys from it). Embedded (not Content) so
            it's available identically in prod and in the test assembly. -->

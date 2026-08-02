@@ -78,11 +78,15 @@ public class ConfigController : ControllerBase
 	}
 
 	/// <summary>The notice in the reader's language, falling back to English. The name is built
-	/// from a whitelist rather than the query string, so no request can walk out of the folder.</summary>
+	/// from a whitelist rather than the query string, so no request can walk out of the folder.
+	///
+	/// Read from the CONTENT root, not wwwroot: the text is a template with {{placeholders}} that
+	/// this method fills in, so serving it as a static file would show a reader the placeholders.
+	/// (wwwroot is also wiped and re-mirrored from frontend/dist on every build.)</summary>
 	private async Task<string?> ReadPolicyAsync(string language)
 	{
 		var lang = language == "es" ? "es" : "en";
-		var path = Path.Combine(_environment?.WebRootPath ?? "wwwroot", "legal", $"privacy.{lang}.md");
+		var path = Path.Combine(_environment?.ContentRootPath ?? ".", "Legal", $"privacy.{lang}.md");
 		return System.IO.File.Exists(path) ? await System.IO.File.ReadAllTextAsync(path) : null;
 	}
 

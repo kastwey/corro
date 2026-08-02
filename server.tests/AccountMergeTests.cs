@@ -173,7 +173,7 @@ public class AccountMergeTests
 		Assert.Equal(MergeOutcome.Merged, result.Outcome);
 		Assert.Equal(older.UserId, result.User!.UserId);
 		// One Google, and it is the survivor's own.
-		var google = Assert.Single(result.User.Identities.Where(i => i.Issuer == "google"));
+		var google = Assert.Single(result.User.Identities, i => i.Issuer == "google");
 		Assert.Equal("g-old", google.Subject);
 		// The absorbed Google login resolves to nothing, rather than to an account that is gone.
 		Assert.Null(await users.GetIdentityLinkAsync(IdentityKey.For("google", "g-new")));
