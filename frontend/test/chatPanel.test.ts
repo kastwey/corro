@@ -139,6 +139,29 @@ test('messages land in the list AND the persistent role="log" region', () => {
 	assert.deepEqual(recorded, ['Berto: buenas'], 'the same line is reviewable in global history');
 });
 
+// Reported live: reading down the table, right after its actions, NVDA said "Chat, grouping".
+// That was this region — empty, but NAMED, which makes it a stop in the browse buffer. A live
+// region never speaks its own label (an announcement is the text that arrived), so the name
+// bought nothing and cost a piece of furniture in the middle of the page.
+test('the spoken region is a mouth, not part of the page', () => {
+	assert.equal(log().getAttribute('aria-label'), null);
+	assert.equal(log().getAttribute('aria-labelledby'), null);
+	assert.equal(log().closest('main'), null, 'it belongs to <body>, outside the read content');
+});
+
+// And what it says must not stay said. The region is visually hidden but perfectly readable with
+// the virtual cursor, so an accumulating transcript would sit in the page to be re-read later —
+// the same trap announcer.ts avoids by wiping its regions after they have been spoken.
+test('a spoken line leaves the region once it has been said', async () => {
+	chatPanel.addMessage(msg({ playerName: 'Berto', text: 'buenas' }));
+	assert.match(log().textContent!, /Berto: buenas/, 'said first');
+
+	await new Promise(resolve => setTimeout(resolve, 3100));
+	assert.equal(log().textContent, '', 'and gone afterwards, leaving nothing to re-read');
+	// The history is not lost — it lives where a reader would go looking for it.
+	assert.equal(list().querySelector('li')!.textContent, 'Berto: buenas');
+});
+
 test('persisted chat history is added to global review once without live re-announcement', () => {
 	const old = msg({ id: 'old', playerName: 'Ana', text: 'mensaje guardado' });
 	chatPanel.setHistory([old]);

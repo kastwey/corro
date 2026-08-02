@@ -65,6 +65,11 @@ test('chat: mention autocompletes, both sides get it, history survives a reload'
 	await expect(unread).toBeVisible();
 	await expect(unread).toContainText('Ana');
 	await expect(berto.locator('#chat-toggle .chat-toggle__badge')).toHaveText('1');
+	// …and then the line LEAVES that region. It is visually hidden but perfectly readable with the
+	// virtual cursor, so an accumulating transcript would sit in the middle of Berto's page waiting
+	// to be read again. The panel is where the history lives.
+	await expect(berto.locator('#chat-log')).toBeEmpty({ timeout: 10_000 });
+	await expect(berto.locator('#chat-log')).not.toHaveAttribute('aria-label');
 	await flushAxeAudit(berto);
 
 	// Chat uses its own role=log for live speech but also records into the global review history.
