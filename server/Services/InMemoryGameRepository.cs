@@ -37,6 +37,20 @@ public sealed class InMemoryGameRepository : IGameRepository
 			.Take(maxCount)
 			.ToList());
 
+	public async Task<int> ReassignSeatsAsync(string fromUserId, string toUserId, CancellationToken ct = default)
+	{
+		var moved = 0;
+		foreach (var game in _games.Values.Where(g => g.Players.Any(p => p.UserId == fromUserId)).ToList())
+		{
+			var players = game.Players
+				.Select(p => p.UserId == fromUserId ? p with { UserId = toUserId } : p)
+				.ToList();
+			moved += players.Count(p => p.UserId == toUserId) - game.Players.Count(p => p.UserId == toUserId);
+			await UpdateGameAsync(game with { Players = players });
+		}
+		return moved;
+	}
+
 	public Task<GameDocument> CreateGameAsync(GameDocument game)
 	{
 		_games[Key(game.GameId)] = game;

@@ -26,6 +26,7 @@ import { openAccountSettings } from '../accountSettings.js';
 import { initializeSiteBranding } from '../siteBranding.js';
 import { initPrivacyNotice } from '../privacyNotice.js';
 import { showSecondAccountNotice } from '../secondAccountNotice.js';
+import { showMergedNotice } from '../mergedNotice.js';
 import { applyRuleSettings, readRuleSettings } from './ruleFields.js';
 import { chooseContentLanguage, contentLanguageName, fillContentLanguageSelect } from './contentLanguage.js';
 import {
@@ -102,19 +103,28 @@ class UnifiedLobbyUI {
 		// surprising thing this feature does, so it is explained rather than left to be discovered
 		// as "where did my tables go?".
 		const secondAccount = getUrlParam('secondAccount') === '1';
+		// Two accounts turned out to be one person and have just been joined.
+		const merged = getUrlParam('merged') === '1';
 		const linkCode = getUrlParam('linkResult');
 		const linkReturn = linkCode
 			? { code: linkCode, provider: getUrlParam('linkProvider') || '' }
 			: null;
-		if (signInFailed || linkReturn || secondAccount) {
+		if (signInFailed || linkReturn || secondAccount || merged) {
 			const url = new URL(window.location.href);
 			for (const marker of [
 				'signInError', 'linkResult', 'linkProvider',
 				'secondAccount', 'newProvider', 'existingProviders',
+				'merged', 'mergedTables',
 			]) {
 				url.searchParams.delete(marker);
 			}
 			window.history.replaceState({}, '', url.toString());
+		}
+		if (merged) {
+			showMergedNotice(
+				getUrlParam('linkProvider') ?? '',
+				(getUrlParam('existingProviders') ?? '').split(',').filter(Boolean),
+				Number(getUrlParam('mergedTables') ?? '0'));
 		}
 		if (secondAccount) {
 			// Both names travel in the URL: the one just used, and the one(s) on the account they

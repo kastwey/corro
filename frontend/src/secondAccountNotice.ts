@@ -10,8 +10,10 @@
 // go?", which is the worst possible way to learn it. So the server notices and the lobby explains
 // it — in the words of what to DO about it, not in the words of the rule behind it.
 //
-// Nothing is merged here, and nothing offers to. Joining two accounts stays what it has always
-// been: a deliberate act from inside a session that already holds both logins.
+// The way out is four steps from where they already are: add the other service from account
+// settings, and the two become one. That IS the deliberate act — signed into this account and
+// completing the other's login is what proves one person holds both — so nothing about the rule
+// has been relaxed to make it short.
 
 import { dialogManager } from './dialogManager.js';
 import { tSync } from './i18nBinder.js';
@@ -61,7 +63,6 @@ export function showSecondAccountNotice(newProvider: string, existingProviders: 
 		say('account.secondAccount.step2', existing, added),
 		say('account.secondAccount.step3', existing, added),
 		say('account.secondAccount.step4', existing, added),
-		say('account.secondAccount.step5', existing, added),
 	]) {
 		const step = document.createElement('li');
 		step.textContent = text;

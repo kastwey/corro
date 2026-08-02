@@ -56,6 +56,20 @@ public enum UnlinkOutcome
 /// <param name="User">The account after the change; null unless the outcome changed something.</param>
 public sealed record LinkResult(LinkOutcome Outcome, UserDocument? User);
 
+/// <summary>Why joining two accounts ended the way it did.</summary>
+public enum MergeOutcome
+{
+	/// <summary>They are now one account.</summary>
+	Merged,
+	/// <summary>That login belongs to nobody else, so there was nothing to join.</summary>
+	NothingToMerge,
+	AccountNotFound,
+}
+
+/// <param name="SeatsMoved">How many table seats changed hands; reported so the player is told
+/// what happened to their games rather than left to check.</param>
+public sealed record MergeResult(MergeOutcome Outcome, UserDocument? User, int SeatsMoved);
+
 /// <param name="Outcome">What happened.</param>
 /// <param name="User">The account after the change; null unless the outcome changed something.</param>
 public sealed record UnlinkResult(UnlinkOutcome Outcome, UserDocument? User);
@@ -176,6 +190,94 @@ public sealed class UserAccountService
 		}
 
 		return await _repository.OtherAccountProvidersForEmailAsync(email, user.UserId, ct);
+	}
+
+	/// <summary>
+	/// Join two accounts that turn out to be one person, keeping the OLDER one.
+	///
+	/// WHAT AUTHORISES IT is the same evidence that authorises linking, which is why this is not a
+	/// hole in the (issuer, subject) rule: the caller is signed into one account AND has just
+	/// completed a login that opens the other. Holding both is what proves they own both. Nothing
+	/// here is ever reached by asserting an email address.
+	///
+	/// WHICH ONE SURVIVES is the older, because the newer is almost always the one made seconds ago
+	/// by the login that started this — it has nothing in it, and the account with the history is
+	/// the one whose id other things already point at.
+	///
+	/// THE ORDER OF WRITES is chosen so a failure part-way through loses nothing:
+	///
+	///  1. seats move first. Interrupted here, the survivor has gained tables and the loser still
+	///     has its login — untidy, and every table is reachable.
+	///  2. then the loser's logins are re-pointed at the survivor, one at a time. Interrupted here,
+	///     the moved ones open the survivor and the rest still open the loser.
+	///  3. the empty account is deleted last. Interrupted here, nothing is lost: an account with no
+	///     logins is unreachable, but it holds nothing either.
+	///
+	/// The reverse order would strand tables under an account nobody can sign into, which is the one
+	/// outcome worth engineering against.
+	/// </summary>
+	public async Task<MergeResult> MergeAccountsAsync(
+		string signedInUserId,
+		ExternalIdentity provenIdentity,
+		Func<string, string, CancellationToken, Task<int>> reassignSeats,
+		DateTime utcNow,
+		CancellationToken ct = default)
+	{
+		var provenKey = IdentityKey.For(provenIdentity.Issuer, provenIdentity.Subject);
+		var provenLink = await _repository.GetIdentityLinkAsync(provenKey, ct);
+		if (provenLink is null || provenLink.UserId == signedInUserId)
+		{
+			// Nothing to merge: that login is unclaimed (an ordinary link) or already ours.
+			return new MergeResult(MergeOutcome.NothingToMerge, null, 0);
+		}
+
+		var signedIn = await _repository.GetUserAsync(signedInUserId, ct);
+		var other = await _repository.GetUserAsync(provenLink.UserId, ct);
+		if (signedIn is null || other is null)
+		{
+			return new MergeResult(MergeOutcome.AccountNotFound, null, 0);
+		}
+
+		var (survivor, absorbed) = signedIn.CreatedAtUtc <= other.CreatedAtUtc
+			? (signedIn, other)
+			: (other, signedIn);
+
+		var movedSeats = await reassignSeats(absorbed.UserId, survivor.UserId, ct);
+
+		var identities = survivor.Identities.ToList();
+		foreach (var identity in absorbed.Identities)
+		{
+			// One login per provider is the account's own rule; a duplicate provider means the
+			// survivor already has a way in through it, so the absorbed one is simply dropped.
+			if (identities.Any(i => string.Equals(i.Issuer, identity.Issuer, StringComparison.OrdinalIgnoreCase)))
+			{
+				await _repository.DeleteIdentityLinkAsync(IdentityKey.For(identity.Issuer, identity.Subject), ct);
+				continue;
+			}
+
+			identities.Add(identity);
+			await _repository.CreateOrGetIdentityLinkAsync(
+				new IdentityLinkDocument
+				{
+					Id = IdentityKey.For(identity.Issuer, identity.Subject),
+					IdentityKey = IdentityKey.For(identity.Issuer, identity.Subject),
+					UserId = survivor.UserId,
+					CreatedAtUtc = utcNow,
+				},
+				ct);
+		}
+
+		var merged = await _repository.UpsertUserAsync(
+			survivor with { Identities = identities, LastSignInUtc = utcNow },
+			ct);
+
+		await _repository.DeleteUserAsync(absorbed.UserId, ct);
+
+		_logger.LogInformation(
+			"Merged account {Absorbed} into {Survivor}: {Seats} seat(s) moved, {Logins} login(s) adopted.",
+			absorbed.UserId, survivor.UserId, movedSeats, absorbed.Identities.Count);
+
+		return new MergeResult(MergeOutcome.Merged, merged, movedSeats);
 	}
 
 	/// <summary>The account behind an established session, or null when it has since been erased.</summary>

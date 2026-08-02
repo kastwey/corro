@@ -381,6 +381,9 @@ public class GameHubSavedGamesTests
 				.Take(maxCount)
 				.ToList());
 
+		public Task<int> ReassignSeatsAsync(string fromUserId, string toUserId, CancellationToken ct = default)
+			=> Task.FromResult(0);
+
 		public Task<GameDocument?> GetByInviteCodeAsync(string inviteCode)
 		{
 			if (ThrowOnInviteLookup)

@@ -309,6 +309,8 @@ public class GameSessionRegistryTests
 		public Task<GameDocument?> GetByRejoinCodeAsync(string rejoinCode) => Task.FromResult<GameDocument?>(null);
 		public Task<IReadOnlyList<GameDocument>> GetGamesForUserAsync(string userId, int maxCount, CancellationToken ct = default)
 			=> Task.FromResult<IReadOnlyList<GameDocument>>(Array.Empty<GameDocument>());
+		public Task<int> ReassignSeatsAsync(string fromUserId, string toUserId, CancellationToken ct = default)
+			=> Task.FromResult(0);
 		public Task<GameDocument?> GetByInviteCodeAsync(string inviteCode) => Task.FromResult<GameDocument?>(null);
 		public Task<GameDocument> CreateGameAsync(GameDocument game) => Task.FromResult(game);
 		public Task<GameDocument> UpdateGameAsync(GameDocument game)

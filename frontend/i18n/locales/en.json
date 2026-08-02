@@ -64,12 +64,18 @@
       "body": "You already had an account here with this email address, opened with {{existing}}. Signing in with {{new}} has made a new, separate one — your tables and settings are on the {{existing}} account, and this one starts empty.",
       "why": "That is on purpose: two sign-in services reporting the same address are not proof of the same person, so we never join accounts by email.",
       "howHeading": "To put them together",
-      "step1": "Sign out of this account.",
-      "step2": "Sign in again with {{existing}}.",
-      "step3": "Open “Your account”.",
-      "step4": "Under “Ways to sign in”, press “Add {{new}}”.",
-      "step5": "Say yes on the {{new}} page. From then on, {{existing}} and {{new}} both open the same account.",
+      "step1": "Open “Your account”.",
+      "step2": "Under “Ways to sign in”, press “Add {{existing}}”.",
+      "step3": "Say yes on the {{existing}} page.",
+      "step4": "That is all: the two become one account, keeping everything from both, and either {{existing}} or {{new}} opens it from then on.",
       "dismiss": "Got it"
+    },
+    "merged": {
+      "heading": "Your accounts are now one",
+      "body": "{{existing}} and {{new}} both open this account from now on. Nothing was lost: everything that was on either of them is here.",
+      "tables": "{{count}} table(s) came across.",
+      "noTables": "There were no tables to bring across.",
+      "dismiss": "Good"
     }
   },
   "lobby": {

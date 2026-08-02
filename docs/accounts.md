@@ -45,10 +45,33 @@ The rule above has one genuinely surprising consequence: sign in with Google, th
 Microsoft using the same address, and you have **two accounts**. People meet that as "where did my
 tables go?", which is the worst possible way to learn it.
 
-So the server notices and the lobby explains it, in the words of what to DO rather than the words
-of the rule: sign out, sign back in with the first service, open *Your account*, press *Add* beside
-the other one, accept on its page. Nothing is merged and nothing offers to — linking stays a
-deliberate act from inside a session that already holds both logins.
+So the server notices, names both services (it can: it just found the other account) and explains
+the way out — which is four steps from where they already are: open *Your account*, press *Add
+Google*, accept on Google's page, and the two become one.
+
+That last step is a **merge**, and it does not weaken the rule above. What authorises it is exactly
+what authorises linking: being signed into one account AND completing a login that opens the other.
+Holding both is what proves one person owns both, and nothing here is ever reached by asserting an
+email address. `LinkIdentityAsync` still refuses to move a login for everyone else — that refusal
+is for the case where nobody has shown they own the account being taken from.
+
+### What a merge does, in order
+
+The **older** account survives, because the newer one is almost always the one made seconds ago by
+the login that started this, and the older is the one whose id other things already point at.
+
+1. **Seats move first** (`ReassignSeatsAsync`). Only the owner changes — the player id, the secret
+   and the re-entry code are untouched, so nobody at the table sees anything and a browser mid-game
+   carries on.
+2. **Then the logins are re-pointed** at the survivor, one at a time. A provider the survivor
+   already has is dropped rather than adopted: an account holds at most one login per provider.
+3. **The empty account is deleted last.**
+
+That order is chosen so a failure part-way through loses nothing. Interrupted after (1), the
+survivor has gained tables and the loser still has its login. Interrupted during (2), the moved
+logins open the survivor and the rest still open the loser. Interrupted before (3), an account with
+no logins is unreachable but holds nothing. The reverse order would strand tables under an account
+nobody can sign into, which is the one outcome worth engineering against.
 
 `ShouldSuggestLinkingAsync` says when, and each of its three conditions is a refusal to guess:
 

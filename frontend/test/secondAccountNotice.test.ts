@@ -32,12 +32,12 @@ test('it explains what happened and how to undo it, in order', () => {
 	showSecondAccountNotice('microsoft', ['google']);
 
 	const steps = dialog().querySelectorAll('ol li');
-	assert.equal(steps.length, 5, 'five steps, none of them optional');
+	assert.equal(steps.length, 4, 'four steps, none of them optional');
 	// An ordered list, so a screen reader says "1 of 5" — the position is half the instruction.
 	assert.ok(dialog().querySelector('ol'), 'the steps are a real ordered list');
 
 	const text = Array.from(steps).map(s => s.textContent ?? '');
-	assert.equal(text.filter(Boolean).length, 5, 'no step is blank');
+	assert.equal(text.filter(Boolean).length, 4, 'no step is blank');
 });
 
 // It is instructions to READ, not a form. documentMode keeps a screen reader in browse mode, where
@@ -75,7 +75,7 @@ test('an account with several sign-ins lists them all', () => {
 // The words are what this feature IS, so they are checked against the locale files rather than
 // trusted: a missing key would render a raw dotted path as a step somebody is asked to follow.
 test('every step is written in both languages', () => {
-	const keys = ['heading', 'body', 'why', 'howHeading', 'step1', 'step2', 'step3', 'step4', 'step5', 'dismiss'];
+	const keys = ['heading', 'body', 'why', 'howHeading', 'step1', 'step2', 'step3', 'step4', 'dismiss'];
 	for (const lang of ['en', 'es']) {
 		const locale = JSON.parse(
 			readFileSync(new URL(`../i18n/locales/${lang}.json`, import.meta.url), 'utf8'));

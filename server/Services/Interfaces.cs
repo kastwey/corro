@@ -165,6 +165,18 @@ public interface IGameRepository
 		string userId,
 		int maxCount,
 		CancellationToken ct = default);
+	/// <summary>
+	/// Hand every seat one account holds to another, when two accounts turn out to be one person.
+	/// Returns how many moved, which is what the caller reports and logs.
+	///
+	/// A seat is only ever RE-POINTED: the player id, the secret, the re-entry code and the game
+	/// itself are untouched, so nobody at the table sees anything change and a browser already
+	/// playing on that seat keeps working.
+	/// </summary>
+	Task<int> ReassignSeatsAsync(
+		string fromUserId,
+		string toUserId,
+		CancellationToken ct = default);
 	Task<GameDocument> CreateGameAsync(GameDocument game);
 	Task<GameDocument> UpdateGameAsync(GameDocument game);
 }

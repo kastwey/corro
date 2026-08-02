@@ -29,15 +29,21 @@ public class AuthController : ControllerBase
 	private readonly AuthProviderCatalog _catalog;
 	private readonly UserAccountService _accounts;
 	private readonly ILogger<AuthController> _logger;
+	private readonly Services.IGameRepository? _games;
 
+	/// <summary>The games repository is needed for ONE thing: when two accounts turn out to be one
+	/// person, their table seats have to change hands. Optional so a test that only exercises
+	/// sign-in does not have to supply a game store.</summary>
 	public AuthController(
 		AuthProviderCatalog catalog,
 		UserAccountService accounts,
-		ILogger<AuthController> logger)
+		ILogger<AuthController> logger,
+		Services.IGameRepository? games = null)
 	{
 		_catalog = catalog;
 		_accounts = accounts;
 		_logger = logger;
+		_games = games;
 	}
 
 	/// <summary>
@@ -264,6 +270,44 @@ public class AuthController : ControllerBase
 			}
 
 			var link = await _accounts.LinkIdentityAsync(userId, identity, DateTime.UtcNow, ct);
+
+			// That login already opens another account — and the player has just proved they hold
+			// BOTH, by being signed into this one and completing that login. Two accounts, one
+			// person: join them instead of refusing. The refusal stands for every other case, where
+			// nobody has shown they own the account being taken from.
+			if (link.Outcome == LinkOutcome.ClaimedByAnotherAccount)
+			{
+				var merge = await _accounts.MergeAccountsAsync(
+					userId,
+					identity,
+					// No game store wired (a sign-in-only test host): the accounts still join, and
+					// there are no seats to move.
+					(from, to, token) => _games?.ReassignSeatsAsync(from, to, token) ?? Task.FromResult(0),
+					DateTime.UtcNow,
+					ct);
+
+				if (merge.Outcome == MergeOutcome.Merged)
+				{
+					// The session may have been issued for the account that just disappeared, so
+					// re-issue it for the one that survived.
+					await HttpContext.SignInAsync(
+						AuthenticationExtensions.SessionScheme,
+						SessionPrincipal.For(merge.User!.UserId),
+						new AuthenticationProperties { IsPersistent = true });
+
+					// Name both sides, as the second-account notice does: "these two now open the
+					// same account" is only reassuring if you can see WHICH two.
+					return Redirect(MergedUrl(
+						returnUrl,
+						merge.SeatsMoved,
+						provider,
+						merge.User!.Identities
+							.Select(i => i.Issuer)
+							.Where(i => !string.Equals(i, provider, StringComparison.OrdinalIgnoreCase))
+							.ToList()));
+				}
+			}
+
 			return Redirect(LinkResultUrl(returnUrl, provider, link.Outcome));
 		}
 
@@ -346,6 +390,16 @@ public class AuthController : ControllerBase
 	/// URL for the same reason the link outcome is: a provider round-trip is a full page navigation
 	/// and leaves no response to put it in.
 	/// </summary>
+	/// <summary>Back where they started, saying the two accounts are now one — and how many tables
+	/// came across, because "did my games survive?" is the question they will actually have.</summary>
+	private static string MergedUrl(
+		string returnUrl, int seatsMoved, string provider, IReadOnlyList<string> otherProviders) =>
+		returnUrl
+		+ (returnUrl.Contains('?') ? "&" : "?")
+		+ "merged=1&mergedTables=" + seatsMoved
+		+ "&linkProvider=" + Uri.EscapeDataString(provider)
+		+ "&existingProviders=" + Uri.EscapeDataString(string.Join(',', otherProviders));
+
 	private static string SecondAccountUrl(
 		string returnUrl, string provider, IReadOnlyList<string> existingProviders) =>
 		returnUrl

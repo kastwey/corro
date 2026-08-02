@@ -156,6 +156,35 @@ public class CosmosGameRepository : IGameRepository
 		}
 	}
 
+	/// <summary>
+	/// Hand one account's seats to another. Read-modify-write per game rather than a bulk update,
+	/// because each game is its own partition and there is no server-side way to patch across them;
+	/// it also keeps every write going through the same path as the rest of the app, so a document
+	/// updated here is exactly a document updated anywhere else.
+	///
+	/// Runs once, when two accounts turn out to be one person. A player with hundreds of tables is
+	/// the worst case and it is still one pass.
+	/// </summary>
+	public async Task<int> ReassignSeatsAsync(string fromUserId, string toUserId, CancellationToken ct = default)
+	{
+		var moved = 0;
+		foreach (var game in await GetGamesForUserAsync(fromUserId, int.MaxValue, ct))
+		{
+			var players = game.Players
+				.Select(p => p.UserId == fromUserId ? p with { UserId = toUserId } : p)
+				.ToList();
+			var changed = game.Players.Count(p => p.UserId == fromUserId);
+			if (changed == 0)
+			{
+				continue;
+			}
+
+			await UpdateGameAsync(game with { Players = players });
+			moved += changed;
+		}
+		return moved;
+	}
+
 	public async Task<GameDocument> CreateGameAsync(GameDocument game)
 	{
 		try

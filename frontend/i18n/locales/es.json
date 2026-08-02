@@ -64,12 +64,18 @@
       "body": "Ya tenías una cuenta aquí con este correo, abierta con {{existing}}. Entrar con {{new}} ha creado otra nueva y separada: tus mesas y tus ajustes están en la de {{existing}}, y esta empieza vacía.",
       "why": "Es a propósito: que dos servicios de acceso digan el mismo correo no demuestra que sean la misma persona, así que nunca unimos cuentas por el correo.",
       "howHeading": "Para juntarlas",
-      "step1": "Cierra la sesión de esta cuenta.",
-      "step2": "Vuelve a entrar con {{existing}}.",
-      "step3": "Abre «Tu cuenta».",
-      "step4": "En «Formas de iniciar sesión», pulsa «Añadir {{new}}».",
-      "step5": "Acepta en la página de {{new}}. A partir de ahí, {{existing}} y {{new}} te abren la misma cuenta.",
+      "step1": "Abre «Tu cuenta».",
+      "step2": "En «Formas de iniciar sesión», pulsa «Añadir {{existing}}».",
+      "step3": "Acepta en la página de {{existing}}.",
+      "step4": "Ya está: las dos pasan a ser una sola cuenta, conservando todo lo de ambas, y a partir de ahí te la abren tanto {{existing}} como {{new}}.",
       "dismiss": "Entendido"
+    },
+    "merged": {
+      "heading": "Tus cuentas ya son una",
+      "body": "A partir de ahora, {{existing}} y {{new}} te abren esta misma cuenta. No se ha perdido nada: todo lo que había en cualquiera de las dos está aquí.",
+      "tables": "Se han traído {{count}} mesa(s).",
+      "noTables": "No había mesas que traer.",
+      "dismiss": "Bien"
     }
   },
   "lobby": {

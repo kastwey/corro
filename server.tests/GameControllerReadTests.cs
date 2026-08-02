@@ -53,6 +53,8 @@ public class GameControllerReadTests
 		public Task<GameDocument?> GetByRejoinCodeAsync(string rejoinCode) => Task.FromResult<GameDocument?>(null);
 		public Task<IReadOnlyList<GameDocument>> GetGamesForUserAsync(string userId, int maxCount, CancellationToken ct = default)
 			=> Task.FromResult<IReadOnlyList<GameDocument>>(Array.Empty<GameDocument>());
+		public Task<int> ReassignSeatsAsync(string fromUserId, string toUserId, CancellationToken ct = default)
+			=> Task.FromResult(0);
 		public Task<bool> DeleteGameAsync(string gameId) => throw new NotImplementedException();
 		public async IAsyncEnumerable<GameDocument> GetGamesLastUpdatedBeforeAsync(DateTime cutoffUtc, int maxCount, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
 		{
