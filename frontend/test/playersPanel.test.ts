@@ -452,3 +452,28 @@ test('focusing an empty panel reports failure instead of throwing', () => {
 
 	assert.equal(panel.focus(), false);
 });
+
+// The roster is a widget you operate — arrow between people, Right for their actions — not a
+// passage to read. Said out loud with role="application": inside one a screen reader builds no
+// virtual buffer, so arriving at a row reads THAT ROW instead of the row plus everything in it,
+// its action buttons included.
+test('the roster says it is a widget, without giving up being a list', () => {
+	const { mount } = makePanel();
+
+	const surface = mount.querySelector('[role="application"]') as HTMLElement;
+	const list = mount.querySelector('.players-panel__list') as HTMLElement;
+	const title = mount.querySelector('.players-panel__title') as HTMLElement;
+
+	assert.ok(surface, 'the roster is wrapped in an application surface');
+	assert.equal(list.getAttribute('role'), 'list', 'the count survives the mode change');
+	assert.equal(list.closest('[role="application"]'), surface);
+
+	// Named from the heading that is already there, rather than repeating the string.
+	assert.equal(surface.getAttribute('aria-labelledby'), title.id);
+	assert.ok(title.id);
+	assert.equal(list.hasAttribute('aria-label'), false);
+
+	// Scoped to the list: the panel's own landmark and title stay ordinary browsable page.
+	assert.equal(title.closest('[role="application"]'), null);
+	assert.equal(mount.querySelector('#players-panel')!.closest('[role="application"]'), null);
+});

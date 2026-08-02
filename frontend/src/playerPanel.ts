@@ -74,14 +74,31 @@ export class PlayerPanel {
 		aside.setAttribute('aria-label', t('players_panel_title'));
 
 		const title = document.createElement('h2');
+		title.id = 'players-panel-title';
 		title.className = 'players-panel__title';
 		title.textContent = t('players_panel_title');
+
+		// The roster is a WIDGET you operate — arrow between people, Right for their actions — not
+		// a passage to read, so it says so. Inside role="application" a screen reader builds no
+		// virtual buffer, and arriving at a row reads THAT ROW: the person, their money or board
+		// identity, where they are. Without it a row is a container like any other and gets read
+		// with everything inside it, its action buttons included.
+		//
+		// A WRAPPER, not the role on the <ul>: application would displace the list semantics, and
+		// "list, 4 items" is worth keeping. Named from the heading that is already there rather
+		// than repeating the string, and scoped to the list so the panel's own landmark and title
+		// stay ordinary browsable page. Same shape as the voice roster and the chat's messages.
+		const surface = document.createElement('div');
+		surface.className = 'players-panel__surface';
+		surface.setAttribute('role', 'application');
+		surface.setAttribute('aria-labelledby', title.id);
 
 		const list = document.createElement('ul');
 		list.className = 'players-panel__list';
 		list.setAttribute('role', 'list');
 
-		aside.append(title, list);
+		surface.appendChild(list);
+		aside.append(title, surface);
 		mount.appendChild(aside);
 
 		this.container = aside;
