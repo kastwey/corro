@@ -66,14 +66,45 @@ test('a bot pays a Favor directed at it without wedging the game', async ({ brow
 	// Pico prestado, the package's Favor card.
 	const cards = ana.locator('.hand-card:not(.hand-card--info)');
 	const anaTurn = ana.locator('.exploding-seat--turn .exploding-seat__name', { hasText: 'Ana' });
+	// Waiting for the turn to come BACK to Ana is the whole difficulty of this test, and the seat
+	// indicator cannot do it. `expect(anaTurn).toBeVisible()` asks "does the seat say Ana?", which
+	// is still true for the instant between her action and the repaint that moves the turn — so it
+	// returns immediately and the next click lands during the bot's ~50ms turn. From the trace of
+	// a failing run, eight milliseconds apart:
+	//
+	//   POLITE     "Escondes el gris… de vuelta en la galería. Turno de Bot Minero."
+	//   ASSERTIVE  "No es tu turno."                       ← the refused draw
+	//   ASSERTIVE  "Bot Minero roba una carta. Es tu turno."
+	//
+	// The server was right to refuse it and said so; the test was the one acting out of turn. It
+	// only shows up under a loaded machine (about one full-suite run in four, never in isolation),
+	// because the window is exactly the gap between the click and the repaint.
+	//
+	// So the wait hangs off the announcement log, which only ever GROWS and therefore cannot be
+	// missed by polling the way a transient DOM state can: the turn is Ana's again once the bot
+	// has taken one more draw than it had before she acted.
+	const botDraws = () => ana.evaluate(() =>
+		((window as unknown as { __announcements?: string[] }).__announcements ?? [])
+			.filter(line => /Bot Minero roba una carta/i.test(line)).length);
+	const afterBotPlays = async (before: number) =>
+		await expect.poll(botDraws, { timeout: 15_000 }).toBeGreaterThan(before);
+
+	// Hiding the bomb ENDED Ana's turn — this is where the failure actually began, before the loop
+	// had even started.
+	await afterBotPlays(0);
+
 	for (let turn = 0; turn < 15; turn++) {
-		await expect(anaTurn).toBeVisible();
 		// Sampled HERE, once the turn is back with Ana — not once before the loop. The hand also
 		// changes while the bot plays between her turns, so a baseline captured earlier is already
 		// stale by the first draw, and every assertion after it is off by one.
 		const before = await cards.count();
+		const botDrawsBefore = await botDraws();
 		await ana.locator('.hand-panel__draw').click();
 		await expect(cards).toHaveCount(before + 1);
+		// Her draw ended her turn too, so it is hers again only once the bot has answered. Anchored
+		// on the count taken just above rather than on the loop index, so a bot that needs two
+		// draws to get through a bomb cannot leave the counter running ahead of the turns.
+		await afterBotPlays(botDrawsBefore);
 		await expect(anaTurn).toBeVisible();
 	}
 	const favor = ana.locator('.hand-card:not(.hand-card--info)', { hasText: 'Pico prestado' }).first();
