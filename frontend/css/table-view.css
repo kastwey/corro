@@ -43,18 +43,34 @@
 	margin: 0.5rem 0 1rem;
 }
 
-/* The actions are a list in the accessibility tree and a row on screen. `list-style: none` is what
-   makes a browser drop the list semantics, which is why the markup carries an explicit role="list";
-   here we only take the bullets away. Wrapping, not scrolling: with the largest text sizes these
-   labels are long sentences, and a row that cannot wrap pushes "delete the table" off the screen. */
+/* The table's actions: an ARIA toolbar built by tableView.ts (see rovingToolbar.ts). The row lives
+   on the inner button box, since the toolbar element itself also holds the described-by hints.
+   Wrapping, not scrolling: at the largest text sizes these labels are whole sentences, and a row
+   that cannot wrap pushes "delete the table" off the side of the screen. */
 .table-view__actions {
+	margin: 1rem 0 0;
+}
+
+.table-actions-buttons {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
 	gap: 0.5rem;
-	list-style: none;
+}
+
+/* A refused action's reason is announced through aria-describedby, so it is kept out of the visual
+   flow — with a clip, NEVER display:none, which would take it out of the accessibility tree too. */
+.table-actions-hint {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
 	padding: 0;
-	margin: 1rem 0 0;
+	border: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+	white-space: nowrap;
 }
 
 .table-view .player-item {

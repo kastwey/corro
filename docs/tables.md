@@ -150,6 +150,10 @@ Three goodbyes, named as three different things because they are:
 - **Leave the table** gives the seat up for good: it forfeits a running match on the way out, the
   re-entry code stops resolving with the seat, and the host's sceptre passes on.
 
+They are one ARIA toolbar, built from what THIS reader may actually do (see
+`docs/accessibility.md`) — the host's start and delete are absent for a guest rather than sitting
+there disabled.
+
 The sceptre goes to the next HUMAN in arrival order — the roster IS arrival order, so no
 timestamp is needed. A bot never inherits it; a player who is merely disconnected still holds
 their seat and keeps their place in that queue, since being away for a minute should not cost

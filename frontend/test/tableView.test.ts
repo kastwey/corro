@@ -40,12 +40,7 @@ function mount(): void {
 				<div id="table-rules-fields"></div>
 			</details>
 			<p id="table-waiting-host" hidden>Waiting for the host</p>
-			<ul id="table-actions" role="list">
-				<li><button type="button" id="table-start-btn" hidden>Start</button></li>
-				<li><button type="button" id="table-back">Back to the lobby</button></li>
-				<li><button type="button" id="table-abandon">Leave this table</button></li>
-				<li><button type="button" id="table-delete" hidden>Delete the table</button></li>
-			</ul>
+			<div id="table-actions"></div>
 		</section>
 		<p id="game-surface-intro">Focus will move to your hand.</p>
 		<div id="game-layout"></div>`;
@@ -390,33 +385,56 @@ test('a guest is never shown the rule editor, and neither is a board that declar
 // Three different goodbyes, named and offered as three different things: going back to the
 // lobby keeps your seat, leaving gives it up for good, and deleting ends the table for everyone.
 test('everyone may leave; only the host may end the table for the rest', () => {
-	const del = () => (document.getElementById('table-delete') as HTMLButtonElement).hidden;
+	const offered = (id: string) => !!document.getElementById(id);
 
 	const guest = newView({ isHost: () => false, backToLobby: () => {}, abandon: () => {}, deleteTable: () => {} });
 	guest.show();
-	assert.equal((document.getElementById('table-back') as HTMLButtonElement).hidden, false);
-	assert.equal((document.getElementById('table-abandon') as HTMLButtonElement).hidden, false);
-	assert.equal(del(), true, 'a guest cannot end the table');
+	assert.equal(offered('table-back'), true);
+	assert.equal(offered('table-abandon'), true);
+	assert.equal(offered('table-delete'), false, 'a guest cannot end the table');
 
 	const host = newView({ isHost: () => true, backToLobby: () => {}, abandon: () => {}, deleteTable: () => {} });
 	host.show();
-	assert.equal(del(), false);
+	assert.equal(offered('table-delete'), true);
 });
 
-// The actions are an ARIA list, so a screen reader counts them ("list, 3 items"). A list item
-// holding nothing but a hidden button is STILL an item, so hiding the button alone would announce
-// choices that are not there — the count has to be the truth.
-test('an action that is not offered leaves no empty item behind in the list', () => {
-	const shown = () => Array.from(document.querySelectorAll('#table-actions li'))
-		.filter(item => !(item as HTMLElement).hidden).length;
+// The actions are DESCRIBED per render, not toggled in the markup: an action nobody is offered
+// simply does not exist. Hiding a button that is always in the document leaves something behind to
+// keep in sync by hand, and a screen reader counting the toolbar would count what is not there.
+test('an action that is not offered is absent, not hidden', () => {
+	const ids = () => Array.from(document.querySelectorAll('#table-actions button'))
+		.map(button => (button as HTMLElement).dataset.actionId);
 
 	const guest = newView({ isHost: () => false, backToLobby: () => {}, abandon: () => {}, deleteTable: () => {} });
 	guest.show();
-	assert.equal(shown(), 2, 'a guest is offered leaving, not starting or deleting');
+	assert.deepEqual(ids(), ['back', 'abandon'], 'a guest leaves; a guest does not start or delete');
 
 	const host = newView({ isHost: () => true, backToLobby: () => {}, abandon: () => {}, deleteTable: () => {} });
 	host.show();
-	assert.equal(shown(), 4);
+	assert.deepEqual(ids(), ['start', 'back', 'abandon', 'delete']);
+});
+
+// The bargain of a toolbar: it is ONE tab stop, and the reader is told "toolbar" on the way in so
+// they know the arrows mean something. That only holds if the arrows really move.
+test('the actions are one tab stop, and the arrows move between them', () => {
+	const view = newView({ isHost: () => true, backToLobby: () => {}, abandon: () => {}, deleteTable: () => {} });
+	view.show();
+
+	const bar = document.querySelector('#table-actions [role="toolbar"]') as HTMLElement;
+	assert.ok(bar, 'the actions are exposed as a toolbar');
+	assert.ok(bar.getAttribute('aria-label'), 'and it is named');
+
+	const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('#table-actions button'));
+	assert.deepEqual(buttons.map(b => b.tabIndex), [0, -1, -1, -1]);
+
+	const press = (key: string) => bar.dispatchEvent(
+		new (globalThis as any).window.KeyboardEvent('keydown', { key, bubbles: true }));
+	press('ArrowRight');
+	assert.deepEqual(buttons.map(b => b.tabIndex), [-1, 0, -1, -1]);
+	press('End');
+	assert.deepEqual(buttons.map(b => b.tabIndex), [-1, -1, -1, 0]);
+	press('Home');
+	assert.deepEqual(buttons.map(b => b.tabIndex), [0, -1, -1, -1]);
 });
 
 test('the three goodbyes call three different things', () => {
@@ -483,11 +501,11 @@ test('only the host is offered the next match, and the control is absent for eve
 	// explain to a player who simply is not the host.
 	const guest = newView({ isHost: () => false });
 	guest.show();
-	assert.equal((document.getElementById('table-start-btn') as HTMLButtonElement).hidden, true);
+	assert.equal(document.getElementById('table-start-btn'), null);
 
 	const host = newView({ isHost: () => true });
 	host.show();
-	assert.equal((document.getElementById('table-start-btn') as HTMLButtonElement).hidden, false);
+	assert.ok(document.getElementById('table-start-btn'));
 });
 
 test('starting the next match asks the server, and says so out loud when it refuses', async () => {

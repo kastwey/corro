@@ -39,10 +39,20 @@ test('creating a table lands ON the table, with no empty board in sight', async 
 	await expect(ana.locator('#table-intro')).toHaveText(appI18n('es').table.introHost as string);
 	await expect(ana.locator('#table-start-btn')).toHaveText(appI18n('es').table.start as string);
 
-	// The actions are a named ARIA list, so they are counted and reachable one Tab at a time —
-	// and the count must be the truth: an item holding a hidden button is still an item.
-	const actions = ana.getByRole('list', { name: appI18n('es').table.actionsLabel as string });
-	await expect(actions.getByRole('listitem')).toHaveCount(4); // start, back, leave, delete
+	// The actions are a named ARIA toolbar: announced as one, so the reader knows the arrows mean
+	// something here — which only holds if they really move. Nothing is hidden; an action that is
+	// not on offer is simply not built.
+	const actions = ana.getByRole('toolbar', { name: appI18n('es').table.actionsLabel as string });
+	await expect(actions.getByRole('button')).toHaveCount(4); // start, back, leave, delete
+
+	await ana.locator('#table-start-btn').focus();
+	const focusedId = () => ana.evaluate(() => document.activeElement?.id);
+	await ana.keyboard.press('ArrowRight');
+	expect(await focusedId()).toBe('table-back');
+	await ana.keyboard.press('End');
+	expect(await focusedId()).toBe('table-delete');
+	await ana.keyboard.press('Home');
+	expect(await focusedId()).toBe('table-start-btn');
 });
 
 test('joining a table lands there too, and the board only appears with a match in it', async ({ browser }) => {
@@ -56,9 +66,9 @@ test('joining a table lands there too, and the board only appears with a match i
 	// A guest IS waiting for the host, and is told so instead of being given a dead button.
 	await expect(berto.locator('#table-intro')).toHaveText(appI18n('es').table.introGuest as string);
 	await expect(berto.locator('#table-start-btn')).toBeHidden();
-	// …and the actions a guest is not offered leave no empty items behind to be counted.
-	await expect(berto.getByRole('list', { name: appI18n('es').table.actionsLabel as string })
-		.getByRole('listitem')).toHaveCount(2); // back, leave — no start, no delete
+	// …and the actions a guest is not offered are absent, not hidden: nothing to be counted.
+	await expect(berto.getByRole('toolbar', { name: appI18n('es').table.actionsLabel as string })
+		.getByRole('button')).toHaveCount(2); // back, leave — no start, no delete
 
 	await ana.locator('#table-start-btn').click();
 	for (const page of [ana, berto]) {

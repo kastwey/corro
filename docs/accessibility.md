@@ -69,20 +69,27 @@ inside a line in the listener's language, it rides as an i18n key and is resolve
   accessibility-critical work off `requestAnimationFrame` (it pauses in a background tab —
   the game must not stall because the player alt-tabbed).
 
-### A row of buttons is a list, not a toolbar
+### Groups of actions are toolbars (`rovingToolbar.ts`)
 
-`role="toolbar"` is not "several buttons side by side". It folds them into **one** tab stop
-reached by arrow keys, and focusing it drops NVDA into focus mode. That is right where it is
-used — the in-game action bar and the per-row actions in `accessibleList.ts`, which live inside
-an application surface, repeat per row and would otherwise flood the tab order.
+A `role="toolbar"` is **one tab stop** with ArrowLeft/Right + Home/End inside it. The reason
+that is not a trap is that a screen reader announces "toolbar" on the way in, which is exactly
+what tells the reader the arrows mean something here — so the bargain only holds if the arrows
+really work, and the buttons stay reachable in browse mode either way. (It does *not* force
+NVDA into focus mode; that is `role="application"`, which only the board wears.)
 
-It is wrong on a page being **read**. The table's actions are a plain `<ul role="list">`: a
-screen reader counts them, browse mode still works around them, and leaving or deleting the
-table is one Tab away instead of hidden behind an arrow key nobody thinks to press. `role="list"`
-is written explicitly because `list-style: none` makes browsers drop list semantics.
+The keyboard model lives in `rovingToolbar.ts` and is shared: the in-game action bar
+(`actions/actionBar.ts`) and the table's actions are the same machine with different contents.
 
-An action that is not offered is **removed with its `<li>`**, not just hidden inside one: an
-item holding a hidden button is still an item, and the announced count would be a lie.
+Two rules come with it:
+
+- **Buttons are described, not toggled.** A toolbar renders from a descriptor list computed for
+  whoever is reading it — only the host starts a match or ends a table. An action that is not on
+  offer is *absent*, not hidden: a button that is always in the document leaves a wrapper to be
+  kept in sync by hand, and anything counting the toolbar counts what is not there.
+- **Never the `disabled` attribute.** An action that is refusable-but-present carries
+  `aria-disabled` plus a described-by reason that is *spoken* on activation. "You are not the
+  host" is not a refusal, though — it is a different set of choices, so those buttons are simply
+  absent and a plain line says what the guest is waiting for.
 
 ## The accessible hand (`handPanel.ts`)
 

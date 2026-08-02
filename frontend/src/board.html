@@ -112,23 +112,11 @@
 		<div id="table-rules-fields"></div>
 	  </details>
 	  <p id="table-waiting-host" class="loading" data-i18n="lobby.waitingForHost" hidden>Waiting for host to start the game...</p>
-	  <!-- A real ARIA list, not a toolbar: this is a page being READ, and its actions are worth
-		   counting ("list, 4 items") and worth reaching one Tab at a time. A toolbar folds its
-		   buttons into a single tab stop behind arrow keys — right for the in-game action bar,
-		   which lives inside an application surface and repaints every turn, and wrong here, where
-		   it would hide leaving and deleting from anyone who never thinks to press Right, and would
-		   put NVDA into focus mode in the middle of a page meant to be browsed.
-		   role="list" survives the list-style:none the layout needs. Each button is wrapped so its
-		   own `hidden` can travel to the <li>: a list item holding a hidden button is still an item,
-		   and the count would lie. -->
-	  <ul class="table-view__actions" id="table-actions" role="list" data-i18n-attr:aria-label="table.actionsLabel" aria-label="What you can do at this table">
-		<li><button type="button" id="table-start-btn" class="primary-button" data-i18n="table.start" hidden>Start the next match</button></li>
-		<!-- Three different things, named as three different things. Going back to the lobby keeps
-			 your seat; abandoning gives it up for good; deleting ends the table for everyone. -->
-		<li><button type="button" id="table-back" class="secondary-button" data-i18n="table.backToLobby">Back to the lobby</button></li>
-		<li><button type="button" id="table-abandon" class="secondary-button" data-i18n="table.abandon">Leave this table</button></li>
-		<li><button type="button" id="table-delete" class="secondary-button" data-i18n="table.delete" hidden>Delete the table</button></li>
-	  </ul>
+	  <!-- The table's actions: an ARIA toolbar, built by tableView.ts from what THIS reader may
+		   actually do. They are not written here because they are not the same for everyone —
+		   only the host starts a match or ends the table — and a button that is sometimes absent
+		   is better described than hidden. See docs/accessibility.md. -->
+	  <div id="table-actions"></div>
 	</section>
 
 	<!-- Starts hidden: this page serves a TABLE or a MATCH, and which one is only known when the

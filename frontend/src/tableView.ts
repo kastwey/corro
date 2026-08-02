@@ -17,6 +17,7 @@ import {
 import { familyHasBots } from './familyTraits.js';
 import { winningSide } from './endScreen.js';
 import { applyHouseRuleValues, readHouseRuleValues, renderHouseRules } from './houseRules.js';
+import { RovingToolbar, type ToolbarItem } from './rovingToolbar.js';
 import type { GameInfo, GameState, PackageUploadResponse } from './models.js';
 
 export interface TableViewDeps {
@@ -77,14 +78,12 @@ export class TableView {
 	private deckGroup: HTMLElement | null = null;
 	private deckSelect: HTMLSelectElement | null = null;
 	private deckSummary: HTMLElement | null = null;
-	private startButton: HTMLButtonElement | null = null;
 	private waitingHint: HTMLElement | null = null;
 	private copyCodeButton: HTMLButtonElement | null = null;
 	private copyLinkButton: HTMLButtonElement | null = null;
 	private addBotButton: HTMLButtonElement | null = null;
-	private backButton: HTMLButtonElement | null = null;
-	private abandonButton: HTMLButtonElement | null = null;
-	private deleteButton: HTMLButtonElement | null = null;
+	/** The table's actions, described per render rather than toggled in the markup. */
+	private readonly actions = new RovingToolbar();
 	private lastMatchBox: HTMLElement | null = null;
 	private lastMatchLine: HTMLElement | null = null;
 	private standingsButton: HTMLButtonElement | null = null;
@@ -115,25 +114,28 @@ export class TableView {
 		this.deckGroup = document.getElementById('table-content-language-group');
 		this.deckSelect = document.getElementById('table-content-language') as HTMLSelectElement | null;
 		this.deckSummary = document.getElementById('table-content-language-current');
-		this.startButton = document.getElementById('table-start-btn') as HTMLButtonElement | null;
 		this.waitingHint = document.getElementById('table-waiting-host');
 		this.copyCodeButton = document.getElementById('table-copy-code') as HTMLButtonElement | null;
 		this.copyLinkButton = document.getElementById('table-copy-link') as HTMLButtonElement | null;
 		this.addBotButton = document.getElementById('table-add-bot') as HTMLButtonElement | null;
-		this.backButton = document.getElementById('table-back') as HTMLButtonElement | null;
-		this.abandonButton = document.getElementById('table-abandon') as HTMLButtonElement | null;
-		this.deleteButton = document.getElementById('table-delete') as HTMLButtonElement | null;
+
+		const actionsHost = document.getElementById('table-actions');
+		if (actionsHost) {
+			this.actions.mount(actionsHost, {
+				label: deps.t('table.actionsLabel'),
+				className: 'table-view__actions',
+				buttonClassName: 'secondary-button',
+				classPrefix: 'table-actions',
+				announce: text => deps.announce(text),
+			});
+		}
 		this.rulesBox = document.getElementById('table-rules') as HTMLDetailsElement | null;
 		this.rulesFields = document.getElementById('table-rules-fields');
 		this.lastMatchBox = document.getElementById('table-last-match');
 		this.lastMatchLine = document.getElementById('table-last-match-line');
 		this.standingsButton = document.getElementById('table-standings') as HTMLButtonElement | null;
 
-		this.startButton?.addEventListener('click', () => void this.startMatch());
 		this.addBotButton?.addEventListener('click', () => this.deps?.addBot?.());
-		this.backButton?.addEventListener('click', () => this.deps?.backToLobby?.());
-		this.abandonButton?.addEventListener('click', () => this.deps?.abandon?.());
-		this.deleteButton?.addEventListener('click', () => this.deps?.deleteTable?.());
 		this.standingsButton?.addEventListener('click', () => {
 			if (this.lastMatch) this.deps?.showStandings?.(this.lastMatch);
 		});
@@ -402,35 +404,58 @@ export class TableView {
 			this.intro.textContent = t(key);
 		}
 
-		// Only the host starts matches, and the control is absent — not disabled — for everyone
-		// else: a dead button in the tab order is noise, and there is nothing to explain. What a
-		// guest gets instead is the plain truth about what they are waiting for.
-		if (this.startButton) {
-			// A table that has never played is not starting "another" game.
-			const key = this.matchesPlayed > 0 ? 'table.startAnother' : 'table.start';
-			this.setActionVisible(this.startButton, host);
-			this.startButton.setAttribute('data-i18n', key);
-			this.startButton.textContent = t(key);
-			this.startButton.setAttribute('aria-disabled', this.starting ? 'true' : 'false');
-		}
 		if (this.waitingHint) this.waitingHint.hidden = host;
-		// Ending the table for everybody is the host's privilege; leaving it is anybody's.
-		this.setActionVisible(this.deleteButton, host && !!this.deps.deleteTable);
-		this.setActionVisible(this.abandonButton, !!this.deps.abandon);
-		this.setActionVisible(this.backButton, !!this.deps.backToLobby);
+		this.actions.setLabel(t('table.actionsLabel'));
+		this.actions.render(this.actionItems(host));
 	}
 
 	/**
-	 * Show or hide one of the table's actions. The actions are an ARIA list, and a list item
-	 * holding nothing but a hidden button is still counted: hiding only the button would have a
-	 * screen reader announce four choices where two exist. So the `hidden` travels to the item
-	 * whenever there is one (the button itself carries it in tests, which mount the buttons bare).
+	 * What THIS reader may do at the table, right now. Described rather than toggled: only the
+	 * host starts a match or ends the table, and an action that is not on offer is simply not in
+	 * the list — no button left in the document to be kept hidden, and nothing for a screen
+	 * reader to count that is not really there.
+	 *
+	 * The host's controls are ABSENT for a guest rather than disabled. The never-`disabled` rule
+	 * is about refusals a player could plausibly reach and deserves an explanation for; "you are
+	 * not the host" is not a refusal, it is a different set of choices. What a guest gets instead
+	 * is the line above, telling them plainly what they are waiting for.
 	 */
-	private setActionVisible(button: HTMLButtonElement | null, visible: boolean): void {
-		if (!button) return;
-		button.hidden = !visible;
-		const item = button.closest('li');
-		if (item) item.hidden = !visible;
+	private actionItems(host: boolean): ToolbarItem[] {
+		const t = (key: string) => this.deps!.t(key);
+		const items: ToolbarItem[] = [];
+
+		if (host) {
+			items.push({
+				id: 'start',
+				elementId: 'table-start-btn',
+				// A table that has never played is not starting "another" game.
+				label: t(this.matchesPlayed > 0 ? 'table.startAnother' : 'table.start'),
+				className: 'primary-button',
+				busy: this.starting,
+				onActivate: () => void this.startMatch(),
+			});
+		}
+		// Three different goodbyes, named as three different things: the lobby keeps your seat,
+		// leaving gives it up for good, and deleting ends the table for everyone.
+		if (this.deps!.backToLobby) {
+			items.push({
+				id: 'back', elementId: 'table-back', label: t('table.backToLobby'),
+				onActivate: () => this.deps!.backToLobby!(),
+			});
+		}
+		if (this.deps!.abandon) {
+			items.push({
+				id: 'abandon', elementId: 'table-abandon', label: t('table.abandon'),
+				onActivate: () => this.deps!.abandon!(),
+			});
+		}
+		if (host && this.deps!.deleteTable) {
+			items.push({
+				id: 'delete', elementId: 'table-delete', label: t('table.delete'),
+				onActivate: () => this.deps!.deleteTable!(),
+			});
+		}
+		return items;
 	}
 
 	private async startMatch(): Promise<void> {
