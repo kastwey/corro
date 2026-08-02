@@ -28,7 +28,6 @@ import {
 	t, translateServerError, showLoading, showError,
 	showSection, hideSection, showView, focusFirstField, getElement, getInputValue, getSelectedRadio,
 	clearUrlParams, getUrlParam, localizeBoardName, formatGameDate, parseHubErrorCode, isTableAtRestStatus,
-	isSectionHidden, keepingRadioChoice,
 	pickPackageName, renderBoardOptions, lobbyViewFromState, LobbyView
 } from './ui.js';
 
@@ -46,17 +45,8 @@ class UnifiedLobbyUI {
 	/** The package operation Create must wait for. A user can select a board and submit before its
 	 *  POST+i18n chain settles; reading uploadedPackage earlier created the PREVIOUS game instead. */
 	private pendingPackageStage: Promise<void> = Promise.resolve();
-	/** A manual deck choice must survive later interface-language changes. */
-	private contentLanguageExplicit = false;
 	/** Pending wipe of the lobby's spoken region (see announceInLobby). */
 	private liveClearTimer: number | null = null;
-	/**
-	 * The table being joined, kept so a language change can rebuild step 2. Everything on it —
-	 * the piece names, the squadron seats, the counts — is painted with t() from a package's own
-	 * words, and a form the player is standing in front of must not be left in a language they
-	 * have just stopped reading.
-	 */
-	private joiningTable: GameInfo | null = null;
 
 	constructor() {
 		void this.init();
@@ -124,10 +114,14 @@ class UnifiedLobbyUI {
 		gameClient.on('gameDeleted', (data) => this.handleGameDeleted(data));
 		gameClient.on('error', (msg) => showError(translateServerError(msg)));
 
-		// Language change handler
-		window.addEventListener('languageChanged', () => {
-			this.onLanguageChanged();
-		});
+		// There is deliberately NO `languageChanged` handler here. The lobby is built once per
+		// language and served already translated, and the binder takes its language from the
+		// page's own <html lang> ahead of any cookie — so the language a player is reading always
+		// matches the page they are on, and applying a DIFFERENT one navigates to that language's
+		// page. The in-place branch of the selector can therefore only ever re-apply the language
+		// already in force. Everything this used to repaint (the token and seat selectors, the
+		// saved-games list, the create-game selects, join step 2) was repainting for a change that
+		// cannot happen; a page load does it properly instead. See languageUrl.ts.
 	}
 
 	private setupUI(): void {
@@ -310,9 +304,6 @@ class UnifiedLobbyUI {
 		getElement<HTMLSelectElement>('max-players')?.addEventListener('change', () => {
 			if (this.uploadedPackage) this.renderTeamCountOptions(this.uploadedPackage);
 		});
-		getElement<HTMLSelectElement>('content-language')?.addEventListener('change', () => {
-			this.contentLanguageExplicit = true;
-		});
 	}
 
 	/** Wires the .corro upload control: upload on file pick; a Remove button clears it. */
@@ -388,7 +379,6 @@ class UnifiedLobbyUI {
 		// Team families offer their legal equal-team layouts for the chosen player count.
 		this.renderTeamCountOptions(pkg);
 		// Forbidden Words exposes each real word deck as one shared match-language choice.
-		this.contentLanguageExplicit = false;
 		this.renderCreateContentLanguages(pkg, i18nBinder.getCurrentLanguage());
 		// Reset any previous board's dynamic rules, then render this board's.
 		const pkgRules = getElement('package-rules');
@@ -1187,17 +1177,7 @@ class UnifiedLobbyUI {
 		// "Next" lands the player on the first field of step 2 (the name box) rather than on
 		// the now-hidden button — done now, before the async package loads below delay it.
 		focusFirstField('join-step2');
-		await this.renderJoinStep2(gameInfo);
-	}
 
-	/**
-	 * Paint step 2 from a table's info. Separate from navigating to it because a language change
-	 * has to repaint it WITHOUT moving anybody: every word here is written with t() rather than
-	 * data-i18n (the piece names and squadron seats come from the package's own bundle), so the
-	 * ordinary translation pass cannot reach them and only a repaint will do.
-	 */
-	private async renderJoinStep2(gameInfo: GameInfo): Promise<void> {
-		this.joiningTable = gameInfo;
 		const details = getElement('lobby-details');
 		if (details) {
 			const count = gameInfo.players?.length || 1;
@@ -1224,12 +1204,11 @@ class UnifiedLobbyUI {
 		}
 		setPackageTokens(gameInfo.tokens);
 
-		// Render join token selector with used tokens. Whatever the player had already chosen is
-		// put back: a repaint for a language change must not quietly un-pick their piece.
+		// Render join token selector with used tokens
 		const container = getElement('join-token-list');
 		if (container) {
 			const usedTokens = getUsedTokens(gameInfo);
-			keepingRadioChoice(container, 'token', () => renderTokenSelector(container, t, null, usedTokens));
+			renderTokenSelector(container, t, null, usedTokens);
 		}
 
 		// A race board also offers its seats; the ones already picked say who holds them
@@ -1239,8 +1218,7 @@ class UnifiedLobbyUI {
 		const seats = gameInfo.seats ?? [];
 		seatFieldset?.classList.toggle('hidden', seats.length === 0);
 		if (seatList && seats.length > 0) {
-			keepingRadioChoice(seatList, 'seat', () =>
-				renderSeatSelector(seatList, seats, t, getUsedSeats(gameInfo.players)));
+			renderSeatSelector(seatList, seats, t, getUsedSeats(gameInfo.players));
 		}
 	}
 
@@ -1276,8 +1254,8 @@ class UnifiedLobbyUI {
 	private renderBoardSelector(): void {
 		const selector = getElement<HTMLSelectElement>('board-selector');
 		if (!selector) return;
-		// The pure helper fills the options in the active language AND preserves the current
-		// selection, so a runtime language switch just re-calls this (see onLanguageChanged).
+		// The pure helper fills the options in the active language and preserves the current
+		// selection.
 		renderBoardOptions(selector, this.shippedBoards, i18nBinder.getCurrentLanguage());
 	}
 
@@ -1288,44 +1266,6 @@ class UnifiedLobbyUI {
 		}
 	}
 
-	private onLanguageChanged(): void {
-		// i18next has already switched by the time `languageChanged` fires. Re-render the bits we
-		// build imperatively with t()/localizePackageName() — they set textContent rather than
-		// data-i18n, so applyI18n never reaches them and they keep their old-language text: the
-		// token selectors, the saved-games list, and the create-game selects below.
-		this.renderAllTokenSelectors();
-		// The shipped-board picker options are localized per board; rebuild them in the new
-		// language (renderBoardOptions preserves the host's current choice on its own).
-		this.renderBoardSelector();
-		// A race board's SEATS are named by the package too, and were being left behind: the
-		// squadron colours stayed in the language the host had just stopped reading.
-		const seatList = getElement('seat-list');
-		const seats = this.uploadedPackage?.seats ?? [];
-		if (seatList && seats.length > 0) {
-			keepingRadioChoice(seatList, 'seat', () => renderSeatSelector(seatList, seats, t));
-		}
-		// And the whole of join step 2 — the piece list, the seats, the counts — which is painted
-		// from the table being joined and never repainted. Only if somebody is actually standing
-		// in it; rendering it otherwise would be building a form nobody asked for.
-		if (this.joiningTable && !isSectionHidden('join-step2')) {
-			void this.renderJoinStep2(this.joiningTable);
-		}
-		// The staged package's player- and team-count options also set textContent via t():
-		// re-render them, preserving the host's selection (renderTeamCountOptions keeps its own).
-		if (this.uploadedPackage) {
-			const select = getElement<HTMLSelectElement>('max-players');
-			const chosen = select?.value;
-			this.renderPlayerCount(this.uploadedPackage);
-			if (select && chosen) select.value = chosen;
-			this.renderTeamCountOptions(this.uploadedPackage);
-			const contentSelect = getElement<HTMLSelectElement>('content-language');
-			const preferred = this.contentLanguageExplicit
-				? contentSelect?.value ?? i18nBinder.getCurrentLanguage()
-				: i18nBinder.getCurrentLanguage();
-			this.renderCreateContentLanguages(this.uploadedPackage, preferred);
-		}
-		void this.refreshSavedGames();
-	}
 }
 
 // Initialize on DOM ready

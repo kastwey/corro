@@ -35,10 +35,9 @@ export function pickPackageName(name: Record<string, string>, lang: string): str
 
 /**
  * (Re)fills a board <select> with one <option> per board, each labelled in `lang`, preserving the
- * currently-selected board when it still exists. This is the seam the language-switch re-render
- * uses: keeping it a pure function (no orchestrator, no network, no globals) makes "the board
- * picker re-localizes and keeps your choice" testable directly, instead of through the
- * network-coupled lobby class.
+ * currently-selected board when it still exists. Kept a pure function (no orchestrator, no
+ * network, no globals) so "the picker localizes every board and keeps your choice" is testable
+ * directly rather than through the network-coupled lobby class.
  */
 export function renderBoardOptions(
 	select: HTMLSelectElement,
@@ -53,8 +52,8 @@ export function renderBoardOptions(
 		option.textContent = pickPackageName(board.name, lang);
 		select.appendChild(option);
 	}
-	// Preserve the host's choice across the re-render (e.g. a language switch); when it's gone the
-	// browser falls back to the first option on its own.
+	// Preserve the host's choice across the re-render; when it's gone the browser falls back to
+	// the first option on its own.
 	if (previous && boards.some(b => b.id === previous)) select.value = previous;
 }
 
@@ -150,12 +149,6 @@ export function hideSection(sectionId: string): void {
 	}
 }
 
-/** Whether a section is currently put away (missing counts as hidden). */
-export function isSectionHidden(sectionId: string): boolean {
-	const section = document.getElementById(sectionId);
-	return !section || section.classList.contains('hidden');
-}
-
 /**
  * The four mutually-exclusive top-level lobby views. Only one is ever visible:
  * `view-home` (the games list + entry buttons), `view-create`, `view-join` and
@@ -225,38 +218,6 @@ export function getInputValue(id: string): string {
 export function getSelectedRadio(containerSelector: string, name: string): string | null {
 	const radio = document.querySelector(`${containerSelector} input[name="${name}"]:checked`) as HTMLInputElement;
 	return radio?.value || null;
-}
-
-/**
- * Rebuild a radio group without losing what the player had chosen — and without moving them.
- *
- * These groups (the pieces, the squadron seats) are painted with `t()` from a package's own
- * words, which `applyI18n` cannot reach, so a language change has to repaint them outright. A
- * repaint that silently un-picks someone's piece, or drops the keyboard onto <body> because the
- * focused radio was replaced, would be a worse bug than the one being fixed.
- *
- * The choice is restored only if that option still exists and is still free: a seat taken while
- * the player was reading is not theirs to keep, and `render` has already decided who may sit.
- */
-export function keepingRadioChoice(container: HTMLElement, name: string, render: () => void): void {
-	const radios = () => Array.from(container.querySelectorAll<HTMLInputElement>(`input[name="${name}"]`));
-	const chosen = radios().find(radio => radio.checked)?.value ?? null;
-	// Tracked apart from the choice: they are normally the same radio, but a group can be read
-	// through without committing, and the reading position matters as much as the answer.
-	const focused = radios().find(radio => radio === document.activeElement)?.value ?? null;
-
-	render();
-
-	// Values are compared in JS rather than matched with an attribute selector: a value is a
-	// package's own id, and building selectors out of package content is how content becomes syntax.
-	const find = (value: string | null) => value === null ? undefined : radios().find(r => r.value === value);
-
-	const restored = find(chosen);
-	// Nothing is handed back that the player is no longer entitled to: a seat somebody took while
-	// they were reading belongs to that somebody, and `render` has already said so.
-	if (restored && restored.dataset.taken !== '1') restored.checked = true;
-
-	find(focused)?.focus();
 }
 
 /**
