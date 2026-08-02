@@ -999,19 +999,22 @@ class UnifiedLobbyUI {
 		if (!list) return;
 
 		const saved = GameSessionStore.getGames();
-		if (saved.length === 0) {
-			this.renderSavedGamesEmptyState(list);
-			return;
-		}
 
-		let infos: SavedGameInfo[] = [];
-		try {
-			infos = await gameClient.getGamesInfo(saved.map(g => g.gameId));
-		} catch (error) {
-			console.error('Error loading saved games info:', error);
-		}
+		// Two questions, asked together: what does this BROWSER remember, and what does this
+		// ACCOUNT hold a seat at? The second is empty when nobody is signed in, which is the
+		// normal case — and a failure of either must not take away what the other found, so they
+		// settle independently.
+		const [infos, accountTables] = await Promise.all([
+			saved.length === 0
+				? Promise.resolve<SavedGameInfo[]>([])
+				: gameClient.getGamesInfo(saved.map(g => g.gameId))
+					.catch(error => { console.error('Error loading saved games info:', error); return []; }),
+			gameClient.getMyTables()
+				.catch(error => { console.error('Error loading the account tables:', error); return []; }),
+		]);
 
-		// Prune games the server no longer knows (deleted / expired).
+		// Prune games the server no longer knows (deleted / expired). Only the ids the browser
+		// ASKED about: a table missing from the account list is not evidence of anything.
 		const liveIds = new Set(infos.map(i => i.gameId));
 		for (const g of saved) {
 			if (!liveIds.has(g.gameId)) {
@@ -1020,15 +1023,25 @@ class UnifiedLobbyUI {
 		}
 
 		const remaining = GameSessionStore.getGames();
-		if (remaining.length === 0) {
+		const known = new Set(remaining.map(g => g.gameId));
+		// A table the account holds that this browser has never seen: the cross-device case, and
+		// the whole point of signing in. It has no stored credentials, so entering it goes through
+		// the account claim (see resumeSavedGame) rather than the stored session.
+		const elsewhere = accountTables.filter(info => !known.has(info.gameId));
+
+		if (remaining.length === 0 && elsewhere.length === 0) {
 			this.renderSavedGamesEmptyState(list);
 			return;
 		}
 
 		list.innerHTML = '';
 		for (const game of remaining) {
-			const info = infos.find(i => i.gameId === game.gameId);
+			const info = infos.find(i => i.gameId === game.gameId)
+				?? accountTables.find(i => i.gameId === game.gameId);
 			list.appendChild(this.renderSavedGameItem(game, info));
+		}
+		for (const info of elsewhere) {
+			list.appendChild(this.renderSavedGameItem(this.seatFromAccountTable(info), info));
 		}
 		hideSection('your-games-empty');
 	}
@@ -1117,11 +1130,68 @@ class UnifiedLobbyUI {
 	 * that needs it loads.
 	 */
 	private resumeSavedGame(game: SavedGame, info?: SavedGameInfo): void {
+		// A table this ACCOUNT holds that this browser has never stored: there is no session to
+		// resume, so claim the seat first and carry on with the one the server hands back.
+		if (!game.playerSecretId) {
+			void this.resumeFromAnotherDevice(game, info);
+			return;
+		}
 		if (isTableAtRestStatus(info?.status)) {
 			void this.attemptReconnect(game);
 			return;
 		}
 		window.location.href = `board.html?gameId=${game.gameId}`;
+	}
+
+	/**
+	 * Take back a seat the account holds, from a browser that has never seen it. The claim rotates
+	 * the seat's secret and hands back a full session, which is stored exactly as a join would —
+	 * from here on this browser is an ordinary holder of the seat.
+	 *
+	 * The refusals are the server's, and they are worth repeating rather than swallowing: a table
+	 * that has ended, or a seat somebody is sitting on RIGHT NOW (which is what happens when the
+	 * other device is still connected — signing in must not evict you from your own game).
+	 */
+	private async resumeFromAnotherDevice(game: SavedGame, info?: SavedGameInfo): Promise<void> {
+		try {
+			const session = await gameClient.claimSeatAsAccount(game.gameId);
+			GameSessionStore.saveGame({
+				gameId: session.gameId,
+				playerId: session.playerId,
+				playerSecretId: session.playerSecretId,
+				playerName: session.playerName,
+				token: session.token,
+				board: session.board,
+				isHost: session.isHost,
+				rejoinCode: session.rejoinCode,
+			});
+			this.resumeSavedGame(GameSessionStore.getGames().find(g => g.gameId === game.gameId) ?? game, info);
+		} catch (error) {
+			const code = parseHubErrorCode(error) ?? 'GAME_LOOKUP_ERROR';
+			showError(translateServerError(code));
+			this.announceInLobby(translateServerError(code));
+			void this.refreshSavedGames();
+		}
+	}
+
+	/**
+	 * A row for a table the account holds but this browser has never stored. It carries no
+	 * credentials — deliberately: an EMPTY secret is what tells `resumeSavedGame` there is nothing
+	 * to resume and the seat has to be claimed first. Everything shown comes from the seat the
+	 * server pointed at.
+	 */
+	private seatFromAccountTable(info: SavedGameInfo): SavedGame {
+		const seat = info.players.find(p => p.id === info.yourPlayerId);
+		return {
+			gameId: info.gameId,
+			playerId: info.yourPlayerId ?? '',
+			playerSecretId: '',
+			playerName: seat?.name ?? '',
+			token: seat?.token ?? '',
+			board: info.board,
+			isHost: seat?.isHost ?? false,
+			updatedAt: Date.parse(info.createdAt) || Date.now(),
+		};
 	}
 
 	/** Host-only: confirm then ask the server to permanently delete a game. */

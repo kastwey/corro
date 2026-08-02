@@ -198,6 +198,12 @@ public record SavedGameInfo
 	public int MaxPlayers { get; init; }
 	public DateTime CreatedAt { get; init; }
 	public List<SavedGamePlayerInfo> Players { get; init; } = new();
+	/// <summary>
+	/// Which of those seats is the CALLER's, when the server is the one who knows. Filled by the
+	/// account listing, where the table was found BY the seat; null for the browser's own list,
+	/// which already knows which seat it holds because it stored the credentials for it.
+	/// </summary>
+	public string? YourPlayerId { get; init; }
 }
 
 public record SavedGamePlayerInfo

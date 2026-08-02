@@ -409,6 +409,29 @@ export class UnifiedGameClient {
 		return await this.connection.invoke("ClaimSeatByRejoinCode", code);
 	}
 
+	/**
+	 * Reclaim the seat this ACCOUNT holds at a table — no code to type and none to have kept.
+	 * Refuses exactly as the code path does when somebody is sitting on that seat.
+	 */
+	async claimSeatAsAccount(gameId: string): Promise<SeatClaimedSession> {
+		if (!this.connection) {
+			throw new Error('Not connected to server');
+		}
+		return await this.connection.invoke("ClaimSeatAsAccount", gameId);
+	}
+
+	/**
+	 * The tables this ACCOUNT holds a seat at, wherever they were opened. The sibling of
+	 * getGamesInfo, which describes the ones THIS BROWSER remembers; signed out, the answer is
+	 * simply empty.
+	 */
+	async getMyTables(): Promise<SavedGameInfo[]> {
+		if (!this.isConnected || !this.connection) {
+			throw new Error("Not connected to server");
+		}
+		return await this.connection.invoke("GetMyTables");
+	}
+
 	async getGameByInviteCode(inviteCode: string): Promise<GameInfo> {
 		if (!this.isConnected || !this.connection) {
 			throw new Error("Not connected to server");

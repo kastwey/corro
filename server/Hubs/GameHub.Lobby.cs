@@ -1293,7 +1293,11 @@ public partial class GameHub
 		try
 		{
 			var games = await _gameRepository.GetGamesForUserAsync(userId, MyTablesLimit);
-			return games.Select(ToSavedGameInfo).ToList();
+			// The seat this account holds is what the table was FOUND by, so say which it is: a
+			// browser meeting this table for the first time has no other way to know.
+			return games
+				.Select(g => ToSavedGameInfo(g, g.Players.FirstOrDefault(p => p.UserId == userId)?.Id))
+				.ToList();
 		}
 		catch (Exception ex)
 		{
@@ -1309,7 +1313,7 @@ public partial class GameHub
 	/// one — the ids a browser remembers and the seats an account holds — so both describe a
 	/// table the same way and a change lands on both at once.
 	/// </summary>
-	private SavedGameInfo ToSavedGameInfo(GameDocument game)
+	private SavedGameInfo ToSavedGameInfo(GameDocument game, string? yourPlayerId = null)
 	{
 		var connected = _registry.ConnectedPlayerIds(game.GameId);
 		return new SavedGameInfo
@@ -1327,7 +1331,8 @@ public partial class GameHub
 				Token = p.Token,
 				IsHost = p.IsHost,
 				Connected = connected.Contains(p.Id)
-			}).ToList()
+			}).ToList(),
+			YourPlayerId = yourPlayerId,
 		};
 	}
 

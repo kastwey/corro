@@ -1071,6 +1071,10 @@ export interface SavedGameInfo {
   maxPlayers: number;
   createdAt: string;
   players: SavedGamePlayerInfo[];
+  /** Which of those seats is yours, when the SERVER is the one who knows — the account listing,
+   *  where the table was found by the seat. Absent for the browser's own list, which already
+   *  knows: it stored the credentials for that seat itself. */
+  yourPlayerId?: string;
 }
 
 // === COMMANDS ===
