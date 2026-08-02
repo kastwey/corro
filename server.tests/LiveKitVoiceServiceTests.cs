@@ -115,7 +115,7 @@ public class LiveKitVoiceServiceTests
 		var options = CompleteOptions("wss://voice.example.org");
 		var controller = new ConfigController(
 			Options.Create(new CorroServer.Services.SiteBrandingOptions()),
-			new LiveKitVoiceService(Options.Create(options), new FakeRoomClient()));
+			voiceService: new LiveKitVoiceService(Options.Create(options), new FakeRoomClient()));
 
 		var json = JsonSerializer.Serialize(controller.GetVoice().Value);
 

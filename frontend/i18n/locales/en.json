@@ -5,7 +5,8 @@
   "footer": {
     "poweredBy": "Powered by",
     "corroNewWindowLabel": "Corro on GitHub, opens in a new window",
-    "licenseNewWindowLabel": "AGPL-3.0 license, opens in a new window"
+    "licenseNewWindowLabel": "AGPL-3.0 license, opens in a new window",
+    "privacy": "Privacy"
   },
   "_comment": "This file contains English translations and serves as reference for translators. Now processed like any other language for consistency.",
   "language": {

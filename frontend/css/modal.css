@@ -843,6 +843,20 @@
 	align-items: center;
 }
 
+/* The privacy notice opens in a dialog rather than a page, so it is a BUTTON — the element for
+   "this does something here" — dressed to sit beside the links around it. Its focus ring is the
+   browser's own; nothing here removes it. */
+.app-footer__link-button {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: inherit;
+	font: inherit;
+	text-decoration: underline;
+	text-underline-offset: 0.15em;
+	cursor: pointer;
+}
+
 .app-footer__external-icon {
 	flex: 0 0 auto;
 	width: 1em;

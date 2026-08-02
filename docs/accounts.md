@@ -173,8 +173,49 @@ the account settings dialog exposes it behind an inline confirmation whose defau
 the account. Erasure is real rather than a flag: signing in afterwards with the same provider login
 starts a genuinely new account.
 
-A privacy policy is still owed before this serves real users — storing an email address makes that a
-legal obligation, not a nicety.
+## Saying who you are (every host fills this in)
+
+Storing an email address makes whoever runs the deployment a **data controller**, and naming
+themselves is a legal obligation rather than a nicety. That is a fact about the person running the
+server, not about Corro, so it cannot ship with the code — **you fill in your own**:
+
+```jsonc
+// server/appsettings.json — or, better, your deployment's own configuration
+"Privacy": {
+  "ControllerName": "Your name or your organisation",
+  "Jurisdiction": "Your city, your country",
+  "Contact": "an address you actually read",
+  "PolicyUrl": ""
+}
+```
+
+| Field | Why it is asked for |
+| --- | --- |
+| `ControllerName` | The name somebody would write to, or sue. A pseudonym does not satisfy the obligation. |
+| `Jurisdiction` | Where you are established, which decides whose data-protection law applies and which supervisory authority hears a complaint. "Dublin, Ireland", not "the EU". |
+| `Contact` | Usually an email address. The right of access carries a one-month deadline, so it must be one you read. |
+| `PolicyUrl` | Optional. A host who already publishes their own policy points at it, and the built-in notice is replaced by a link. |
+
+The section is validated as **all or nothing** at startup: either all three are set or none are. A
+half-filled notice is the worst outcome — it looks like an answer and reaches nobody.
+
+**Leaving it empty is a supported configuration**, and it is what a fresh clone has: the footer
+shows no privacy link and, since no provider is configured either, nothing asks for an address. A
+server that collects nothing owes no notice about it.
+
+### The notice itself
+
+The TEXT ships with the app, in [`server/wwwroot/legal/privacy.en.md`](../server/wwwroot/legal/privacy.en.md)
+and its Spanish twin, because what Corro does with data is the same wherever it runs. Only the
+identity changes, and it is substituted into the `{{controller}}`, `{{jurisdiction}}` and
+`{{contact}}` placeholders when the page is served.
+
+If you change what your deployment stores — another provider, an analytics script, anything — edit
+that markdown. The notice is a description of reality and stops being worth anything the moment it
+stops matching.
+
+It is rendered into the same reading dialog as the board guide (`documentMode`), so a screen
+reader meets it in browse mode as an ordinary document rather than a widget.
 
 ## Testing
 

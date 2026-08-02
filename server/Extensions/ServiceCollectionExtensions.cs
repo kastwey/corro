@@ -15,6 +15,26 @@ public static class ServiceCollectionExtensions
 {
 	public static IServiceCollection AddCorroServices(this IServiceCollection services, IConfiguration configuration)
 	{
+		// Who answers for the personal data this deployment holds. Empty is valid and is what a
+		// fresh clone has: a server nobody can sign in to owes no privacy notice. What is NOT
+		// valid is half of it — a name with no way to reach it is worse than silence, because it
+		// looks like an answer.
+		services.AddOptions<PrivacyOptions>()
+			.Bind(configuration.GetSection(PrivacyOptions.SectionName))
+			.Validate(options =>
+				options.IsConfigured
+				|| (string.IsNullOrWhiteSpace(options.ControllerName)
+					&& string.IsNullOrWhiteSpace(options.Jurisdiction)
+					&& string.IsNullOrWhiteSpace(options.Contact)),
+				$"{PrivacyOptions.SectionName} must be either completely empty or have ControllerName, "
+				+ "Jurisdiction and Contact all set — a partial notice names nobody reachable.")
+			.Validate(options =>
+				(options.ControllerName?.Length ?? 0) <= PrivacyOptions.MaxNameLength
+				&& (options.Jurisdiction?.Length ?? 0) <= PrivacyOptions.MaxJurisdictionLength
+				&& (options.Contact?.Length ?? 0) <= PrivacyOptions.MaxContactLength,
+				$"{PrivacyOptions.SectionName} values exceed their maximum lengths.")
+			.ValidateOnStart();
+
 		services.AddOptions<SiteBrandingOptions>()
 			.Bind(configuration.GetSection(SiteBrandingOptions.SectionName))
 			.Validate(options =>

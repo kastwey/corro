@@ -24,6 +24,7 @@ import { initThemeToggle } from '../themeToggle.js';
 import { initAccountBar } from '../account.js';
 import { openAccountSettings } from '../accountSettings.js';
 import { initializeSiteBranding } from '../siteBranding.js';
+import { initPrivacyNotice } from '../privacyNotice.js';
 import { applyRuleSettings, readRuleSettings } from './ruleFields.js';
 import { chooseContentLanguage, contentLanguageName, fillContentLanguageSelect } from './contentLanguage.js';
 import {
@@ -68,6 +69,9 @@ class UnifiedLobbyUI {
 		// (create / join / navigation) dead until it resolved.
 		this.setupEventHandlers();
 		this.setupUI();
+		// Not awaited: a deployment's privacy notice is a footer link, and nothing about the lobby
+		// becoming usable should wait on it.
+		void initPrivacyNotice();
 		await this.connectToServer();
 		await this.fetchLobbyOptions();
 		this.checkExistingSession();
