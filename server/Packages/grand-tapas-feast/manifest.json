@@ -46,5 +46,13 @@
       "id": "olive",
       "nameKey": "tokens.olive"
     }
+  ],
+  "botNames": [
+    "bots.aceituna",
+    "bots.palillo",
+    "bots.sobremesa",
+    "bots.vermut",
+    "bots.ultima",
+    "bots.camarero"
   ]
 }

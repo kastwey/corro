@@ -143,5 +143,13 @@
     "small": "dome",
     "smallPlural": "domes",
     "big": "city"
+  },
+  "bots": {
+    "comandante": "Commander Vega",
+    "ovni": "The Grey Saucer",
+    "cohete": "Rocket Rhea",
+    "nebulosa": "Nebula Nine",
+    "aduanas": "Customs Drone",
+    "polizon": "The Stowaway"
   }
 }

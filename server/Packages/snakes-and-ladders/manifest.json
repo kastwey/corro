@@ -54,5 +54,13 @@
       "id": "flower",
       "nameKey": "tokens.flower"
     }
+  ],
+  "botNames": [
+    "bots.escalera",
+    "bots.serpiente",
+    "bots.casillaUno",
+    "bots.sol",
+    "bots.rayo",
+    "bots.casiCasi"
   ]
 }

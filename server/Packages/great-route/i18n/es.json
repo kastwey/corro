@@ -74,5 +74,23 @@
     "driving_ace": "As del volante",
     "driving_ace_played": "¡{{player}} se corona como As del volante!",
     "driving_ace_played_self": "¡Te coronas como As del volante!"
+  },
+  "bots": {
+    "granny": "La Abuela Nitro",
+    "handbrake": "Freno de Mano",
+    "stalls": "Embrague Triste",
+    "turbo": "Turbo Paco",
+    "codriver": "El Copiloto Fantasma",
+    "clutch": "Don Derrape",
+    "miles": "Kilometrina",
+    "blinker": "Intermitente Eterno",
+    "roundabout": "Doña Rotonda",
+    "diesel": "Pepe Gasolina",
+    "gravel": "Rueda Suelta",
+    "wrongway": "Curva Peligrosa",
+    "pothole": "El Rey del Atasco",
+    "zoom": "Chispas el Veloz",
+    "towtruck": "La Grúa Implacable",
+    "foggy": "Matrícula Borrosa"
   }
 }

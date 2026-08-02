@@ -170,6 +170,34 @@ public class KeyIntegrityTests
 	}
 
 	[Fact]
+	public void A_bot_name_that_resolves_nowhere_is_caught()
+	{
+		// A board names its own bots (manifest botNames -> its own i18n), so the host is offered
+		// opponents from THIS world rather than the engine's generic ones. A key that resolves in no
+		// locale would put a raw key in the "roll me a name" hat — the one place the text is handed
+		// to a person to accept as-is.
+		var def = new GameDefinition
+		{
+			Manifest = new Manifest
+			{
+				GameType = "property",
+				Locales = new() { "es", "en" },
+				Tokens = new() { new TokenDef { Id = "t", Svg = "M0 0z" } },
+				BotNames = new() { "bots.foreman", "bots.never_written" },
+			},
+			I18n = new()
+			{
+				["es"] = new() { ["bots.foreman"] = "Capataz Escombro" },
+				["en"] = new() { ["bots.foreman"] = "Foreman Grit" },
+			},
+		};
+
+		var problems = Validator.Validate(def);
+		Assert.Contains(problems, p => p.Contains("bots.never_written") && p.Contains("bot name"));
+		Assert.DoesNotContain(problems, p => p.Contains("bots.foreman"));
+	}
+
+	[Fact]
 	public void An_ownable_square_with_no_name_is_rejected()
 	{
 		// A property/transit/utility (or tax) square must name itself — it has no generic fallback,

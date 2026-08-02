@@ -169,6 +169,32 @@ La clave debe resolverse en al menos un idioma, y un paquete pensado para ambos 
 los dos. Conserva estable la clave y traduce el valor. Nunca pongas un secreto, como un código de
 desbloqueo, dentro de las traducciones: estas se envían a los navegadores.
 
+### Poner nombre a los bots de tu tablero
+
+El anfitrión puede sentar un bot y pedir un nombre al azar. Si no haces nada, esos nombres salen de
+la lista del motor, que es deliberadamente neutra: tiene que quedar igual de mal junto a un juego de
+minas, a un imperio galáctico y a un viaje por carretera. Los rivales de tu tablero son de *tu*
+mundo, así que decláralos:
+
+```json
+// manifest.json
+"botNames": ["bots.capataz", "bots.canario", "bots.pico"]
+```
+
+```json
+// i18n/es.json                      // i18n/en.json
+{ "bots": {                          { "bots": {
+  "capataz": "Capataz Escombro",       "capataz": "Foreman Grit",
+  "canario": "Pepe Canario",           "canario": "Canary Pete",
+  "pico":    "Viejo Pico"              "pico":    "Old Pickaxe"
+} }                                  } }
+```
+
+Son claves como cualquier otro nombre que aporta tu paquete, así que cada anfitrión los lee en su
+idioma, y el validador avisa si una no resuelve en ningún locale — aquí una clave cruda se le
+ofrecería a una persona como nombre para aceptar. Declara los que quieras; la lista del motor solo
+se usa cuando no declaras ninguno.
+
 ### Tablero, cartas o preguntas
 
 Usa la tabla de familias para encontrar el archivo principal. Empieza renombrando los elementos

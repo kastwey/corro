@@ -65,6 +65,32 @@ test('creating a table lands ON the table, with no empty board in sight', async 
 	expect(await focusedId()).toBe('table-start-btn');
 });
 
+// A board's opponents belong to its world. The engine's own names are deliberately theme-less —
+// they have to sit equally beside a mining game and a road trip — so a package declares its own
+// (manifest botNames -> its own i18n) and the hat offers THOSE. Asserted against the package's own
+// files, never a hardcoded string: the point is that the two agree.
+test("the hat offers the BOARD's own bot names, in the reader's language", async ({ browser }) => {
+	const ana = await newPlayerPage(browser);
+	await createGame(ana, 'Ana', 'the-mine');
+	await expect(ana.locator('#table-view')).toBeVisible();
+
+	const mineBots = Object.values(packageI18n('the-mine', 'es').bots as Record<string, string>);
+	const engineBots = Object.values(appI18n('es').lobby.botNames as Record<string, string>);
+
+	await ana.locator('#table-add-bot').click();
+	const dialog = ana.locator('.game-dialog.dialog-bot-name');
+	await expect(dialog).toBeVisible();
+	const box = dialog.locator('#bot-name-input');
+
+	// Rolled a few times: every name comes from the mine, and none from the engine's list.
+	for (let roll = 0; roll < 6; roll++) {
+		await dialog.locator('#bot-name-random').click();
+		const offered = await box.inputValue();
+		expect(mineBots).toContain(offered);
+		expect(engineBots).not.toContain(offered);
+	}
+});
+
 test('joining a table lands there too, and the board only appears with a match in it', async ({ browser }) => {
 	const ana = await newPlayerPage(browser);
 	const berto = await newPlayerPage(browser);

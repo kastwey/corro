@@ -168,6 +168,31 @@ The same key must resolve in at least one locale, and a package intended for bot
 translate it in both. Keep the key stable and translate the value. Never put a secret such as an
 unlock code in translations: translations are sent to browsers.
 
+### Naming your board's bots
+
+A host can seat a bot and ask for a random name. Left alone, those names come from the engine's own
+list, which is deliberately theme-less — it has to sit equally badly beside a mining game, a
+galactic empire and a road trip. Your board's opponents belong to *your* world, so declare them:
+
+```json
+// manifest.json
+"botNames": ["bots.foreman", "bots.canary", "bots.pickaxe"]
+```
+
+```json
+// i18n/en.json                      // i18n/es.json
+{ "bots": {                          { "bots": {
+  "foreman": "Foreman Grit",           "foreman": "Capataz Escombro",
+  "canary":  "Canary Pete",            "canary":  "Pepe Canario",
+  "pickaxe": "Old Pickaxe"             "pickaxe": "Viejo Pico"
+} }                                  } }
+```
+
+They are keys like every other name your package contributes, so each host reads them in their own
+language, and the validator flags one that resolves in no locale — a raw key here would be handed
+to a person as a name to accept. Declare as many or as few as you like; the engine's list is used
+only when you declare none.
+
 ### Board, cards or questions
 
 Use the family table above to find the main content file. Start by renaming existing neutral items.

@@ -27,6 +27,11 @@
       "minItems": 2,
       "items": { "$ref": "#/$defs/token" }
     },
+    "botNames": {
+      "type": "array",
+      "description": "i18n keys for the names offered when the host asks for a random bot name, resolved against this package's own translations. Omit to use the engine's own theme-less list.",
+      "items": { "type": "string", "minLength": 1 }
+    },
     "currency": { "$ref": "#/$defs/currency" },
     "centerBrand": { "type": "string" },
     "terminology": {

@@ -24,6 +24,9 @@ public static class PackageSummaries
 			RuleGroups = definition.Manifest.RuleGroups,
 			HouseRules = definition.Manifest.HouseRules,
 			Tokens = definition.Manifest.Tokens,
+			// The names this board offers for its own bots (i18n keys). Empty leaves the client on
+			// the engine's list — see Manifest.BotNames.
+			BotNames = definition.Manifest.BotNames,
 			MinPlayers = definition.Manifest.Players.Min,
 			MaxPlayers = definition.Manifest.Players.Max,
 			Seats = definition.RaceBoard?.Seats

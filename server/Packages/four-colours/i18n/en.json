@@ -81,5 +81,13 @@
     "sheddingStackingSameType": "Stack same type (+2 on +2, +4 on +4)",
     "sheddingStackingCross": "Stack across kinds (+4 on +2 and vice versa)",
     "sheddingLastCardCall": "Declare your last card (or be caught)"
+  },
+  "bots": {
+    "rombo": "Rhombus Rita",
+    "circulo": "Perfect Circle",
+    "esquina": "Sharp Corner",
+    "arcoiris": "Rainbow Ray",
+    "simetria": "Symmetry",
+    "descarte": "Last Card Lou"
   }
 }

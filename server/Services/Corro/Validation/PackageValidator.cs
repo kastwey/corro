@@ -131,6 +131,13 @@ public sealed class PackageValidator : IPackageValidator
 			Add(tk.NameKey, $"token '{tk.Id}'");
 		}
 
+		// A bot name that resolves nowhere would reach the host as a raw key in the "roll me a
+		// name" hat — the one place the text is offered for them to accept as-is.
+		for (var i = 0; i < d.Manifest.BotNames.Count; i++)
+		{
+			Add(d.Manifest.BotNames[i], $"bot name #{i + 1}");
+		}
+
 		foreach (var c in d.Cards)
 		{
 			Add(c.TextKey, $"card '{c.Id}'");

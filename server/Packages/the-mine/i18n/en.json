@@ -37,5 +37,15 @@
     "exploding_saw_future": "{{player}} sends the canary ahead and eyes the coming seams.",
     "exploding_noped": "{{player}} calls 'no way!'.",
     "exploding_noped_self": "You call 'no way!'."
+  },
+  "bots": {
+    "foreman": "Foreman Grit",
+    "canary": "Canary Pete",
+    "pickaxe": "Old Pickaxe",
+    "sooty": "Sooty",
+    "lamp": "Lantern Lil",
+    "quarry": "Quarry Quinn",
+    "dynamite": "Dynamite Dot",
+    "gallery": "Deep Gallery Sam"
   }
 }

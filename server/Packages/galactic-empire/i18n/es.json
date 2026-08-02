@@ -148,5 +148,13 @@
     "small": "cúpula",
     "smallPlural": "cúpulas",
     "big": "ciudad"
+  },
+  "bots": {
+    "comandante": "Comandante Vega",
+    "ovni": "El Platillo Gris",
+    "cohete": "Cohete Rea",
+    "nebulosa": "Nebulosa Nueve",
+    "aduanas": "Dron de Aduanas",
+    "polizon": "El Polizón"
   }
 }

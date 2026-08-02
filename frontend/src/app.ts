@@ -354,12 +354,16 @@ async function initBoard() {
 	const payReleaseCostSettled = guardSettled(() => gameManager.payReleaseCost());
 	const useReleasePassSettled = guardSettled(() => gameManager.useReleasePass());
 
+	/**
+	 * This board's own names for its bots, as i18n keys into the package's bundle (see
+	 * botNames.ts). Filled when the table's package arrives; empty until then, and empty for a
+	 * board that declares none, which leaves the host with the engine's list.
+	 */
+	let tableBotNameKeys: string[] = [];
+
 	const appControls = document.getElementById('app-controls');
 	if (appControls) {
-	diceControl.init(appControls, {
-		onRoll: rollDiceSettled,
-		onUnavailable: reason => globalAnnounce(createAnnouncement('_raw', { text: reason }), { instant: true }),
-	});
+	diceControl.init(appControls); // the visible dice; ROLLING lives in the action bar
 	initHelpButton(appControls); // opens the board guide (F1 / click); shortcuts live on Ctrl+F1
 	initThemeToggle(appControls);
 	soundToggleController = initSoundToggle(appControls, {
@@ -483,7 +487,8 @@ async function initBoard() {
 		}),
 		addBot: () => promptForBotName({
 			t: key => tSync(key),
-			rollName: current => randomBotName(key => tSync(key), current),
+			// This board's own names when it declares any; the engine's theme-less list otherwise.
+			rollName: current => randomBotName(key => tSync(key), current, tableBotNameKeys),
 			returnFocusTo: 'table-add-bot',
 			show: options => dialogManager.show(options),
 			close: () => dialogManager.close(),
@@ -1296,7 +1301,6 @@ async function initBoard() {
 	// Families without dice (journey) hide the die entirely; the hand's draw button is
 	// their visible turn affordance.
 	diceControl.setVisible(!isToolbarlessFamily(gs.gameType));
-	diceControl.setEnabled(isMyTurn);
 
 	// Start (or refresh) the token hop, then draw the tokens at their (possibly mid-hop)
 	// display position. renderPlayers also runs on every hop tick via the animator.
@@ -2167,6 +2171,9 @@ async function initBoard() {
 		void gameClient.getTablePackage()
 			.then(pkg => {
 				if (pkg?.tokens) setPackageTokens(pkg.tokens);
+				// The board's own names for its bots. Kept as KEYS: they resolve a moment later,
+				// once this package's translations are merged just below.
+				tableBotNameKeys = pkg?.botNames ?? [];
 				return loadPackageAssets(packageToken);
 			})
 			.then(() => {

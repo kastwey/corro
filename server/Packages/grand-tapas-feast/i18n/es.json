@@ -38,5 +38,13 @@
     "portion_2": "Bandeja de tapas doble",
     "portion_3": "Bandeja de tapas triple",
     "caramel_custard": "Flan casero"
+  },
+  "bots": {
+    "aceituna": "La Aceituna",
+    "palillo": "Tito Palillo",
+    "sobremesa": "Sobremesa",
+    "vermut": "Doña Vermut",
+    "ultima": "La Última Croqueta",
+    "camarero": "Camarero Nervioso"
   }
 }

@@ -145,6 +145,16 @@ public sealed record Manifest
 	/// <summary>The player tokens the package provides (id + inline SVG + i18n name key); empty means
 	/// the built-in token set is used.</summary>
 	public List<TokenDef> Tokens { get; init; } = new();
+	/// <summary>
+	/// i18n keys (resolved against the PACKAGE's OWN translations) for the names offered when the host
+	/// seats a bot and asks for a random one. Empty means the engine's own names are used.
+	///
+	/// A board's opponents belong to its world: the engine's list cannot be right for a mining game, a
+	/// galactic empire and a road trip at once, and shipping one theme made bots on every other board
+	/// sound like they had wandered in from somewhere else. Declared as KEYS, like every other name a
+	/// package contributes, so they arrive in the reader's language for free.
+	/// </summary>
+	public List<string> BotNames { get; init; } = new();
 	/// <summary>How many players this board supports; absent means the engine default (2..8).</summary>
 	public PlayersDef Players { get; init; } = new();
 	/// <summary>How the board's buildings work (how many small make a big, and their names).</summary>

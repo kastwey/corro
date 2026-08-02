@@ -952,6 +952,9 @@ export interface PackageUploadResponse {
   houseRules?: HouseRuleDef[];
   /** The package's player tokens (id + SVG path + name key); empty = built-in token set. */
   tokens?: TokenInfo[];
+  /** i18n keys (into the PACKAGE's bundle) for the names it offers when naming a bot at random.
+   *  Empty/absent leaves the engine's own, deliberately theme-less list. */
+  botNames?: string[];
   /** Fewest players this board can start with (the lobby's start guard mirrors it). */
   minPlayers: number;
   /** Most players this board supports (caps the player-count selector). */

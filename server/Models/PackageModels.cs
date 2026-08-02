@@ -21,6 +21,9 @@ public record PackageUploadResponse
 	public List<HouseRuleDef> HouseRules { get; init; } = new();
 	/// <summary>The package's player tokens (id + inline SVG + i18n name key); empty = built-in set.</summary>
 	public List<TokenDef> Tokens { get; init; } = new();
+	/// <summary>i18n keys for the names this board offers when the host asks for a random bot name;
+	/// empty means the engine's own names are used.</summary>
+	public List<string> BotNames { get; init; } = new();
 	/// <summary>Fewest players this board can start with (the lobby's start guard mirrors it).</summary>
 	public int MinPlayers { get; init; }
 	/// <summary>Most players this board supports (the lobby caps the player-count selector at it).</summary>

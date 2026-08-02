@@ -110,5 +110,13 @@
     "total_trade_in_played": "{{player}} trades their whole workshop with {{target}}'s!",
     "total_trade_in_played_self": "You trade your whole workshop with {{target}}'s!",
     "total_trade_in_played_victim": "{{player}} trades their whole workshop with yours!"
+  },
+  "bots": {
+    "chatarrin": "Rustbucket",
+    "tuercas": "Cogs",
+    "soldador": "Solder Sam",
+    "iman": "Magnet Mia",
+    "dron": "Drone 7",
+    "averia": "Minor Fault"
   }
 }

@@ -81,5 +81,13 @@
     "sheddingStackingSameType": "Apilar del mismo tipo (+2 sobre +2, +4 sobre +4)",
     "sheddingStackingCross": "Apilar con cruces (+4 sobre +2 y viceversa)",
     "sheddingLastCardCall": "Declarar la última carta (o te pillan)"
+  },
+  "bots": {
+    "rombo": "Doña Rombo",
+    "circulo": "Círculo Perfecto",
+    "esquina": "Esquina Afilada",
+    "arcoiris": "Arcoíris",
+    "simetria": "Simetría",
+    "descarte": "Última Carta"
   }
 }

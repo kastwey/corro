@@ -108,5 +108,13 @@
       "id": "diamond",
       "nameKey": "tokens.diamond"
     }
+  ],
+  "botNames": [
+    "bots.rombo",
+    "bots.circulo",
+    "bots.esquina",
+    "bots.arcoiris",
+    "bots.simetria",
+    "bots.descarte"
   ]
 }
