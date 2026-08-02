@@ -6,7 +6,6 @@ import { JSDOM } from 'jsdom';
 import {
 	applySiteBranding,
 	DEFAULT_SITE_BRANDING,
-	initializeSiteBranding,
 	loadSiteBranding,
 	normalizeSiteBranding,
 	siteTagline,

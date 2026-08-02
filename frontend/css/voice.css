@@ -156,11 +156,31 @@
 	font-weight: 600;
 }
 
+/* The controls are an ARIA toolbar built by rovingToolbar.ts, so the row lives on the button box
+   it creates: the toolbar element itself also holds the described-by hints. */
 .voice-controls {
+	margin-bottom: 0.9rem;
+}
+
+.voice-controls-buttons {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.5rem;
-	margin-bottom: 0.9rem;
+}
+
+/* A refused action's reason is announced through aria-describedby; keep it out of the visual flow
+   with a clip, never display:none, which would take it out of the accessibility tree too. */
+.voice-controls-hint {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	border: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+	white-space: nowrap;
 }
 
 .voice-controls .btn,

@@ -80,6 +80,24 @@ test('voice chat: every game offers it, the host closes and reopens it, players 
 	await expect(ana.locator('#voice-status')).toHaveText(es.voice_ready);
 	await flushAxeAudit(ana);
 
+	// Reaching the people in the room used to cost five tab stops: a focusable status paragraph
+	// with no name, then one stop per control. The controls are an ARIA toolbar now — one stop,
+	// arrows inside — and the status is read where it stands rather than tabbed to.
+	await expect(ana.locator('#voice-status')).not.toHaveAttribute('tabindex');
+	const voiceControls = ana.getByRole('toolbar', { name: es.voice_controls_label });
+	await expect(voiceControls).toBeVisible();
+	await ana.locator('.voice-panel__close').focus();
+	await ana.keyboard.press('Tab');
+	const firstControl = voiceControls.getByRole('button').first();
+	await expect(firstControl).toBeFocused();
+	// One tab stop: the NEXT Tab leaves the group entirely instead of walking through it.
+	await ana.keyboard.press('Tab');
+	expect(await ana.evaluate(() => !!document.activeElement?.closest('.voice-controls__bar')))
+		.toBe(false);
+	await firstControl.focus();
+	await ana.keyboard.press('ArrowRight');
+	await expect(voiceControls.getByRole('button').nth(1)).toBeFocused();
+
 	// Only the host holds the switch, and it is authoritative for the table in both directions:
 	// a room nobody is using can be closed, and — the case that matters — a table that decides
 	// mid-game that it wants to talk can have it opened again. Each client hears the change
@@ -120,10 +138,12 @@ test('voice chat: every game offers it, the host closes and reopens it, players 
 	await expect(anaVoiceRow).toContainText(es.voice_listening_visual);
 	await expect(anaVoiceRow.locator('.voice-participant__volume')).toBeHidden();
 	await expect(anaVoiceRow).toHaveAttribute('tabindex', '0');
-	await expect(anaVoiceRow).toHaveAttribute('aria-label', interpolate(
+	// The row NAMES the person and how they are heard, then says how to reach their controls —
+	// Right Arrow is the only way in, so a row that has actions must announce the way.
+	await expect(anaVoiceRow).toHaveAttribute('aria-label', `${interpolate(
 		es.voice_participant_label_listening,
 		{ player: interpolate(es.voice_participant_self, { player: 'Ana' }) },
-	));
+	)} ${es.voice_participant_more_actions}`);
 	await expect(anaVoiceRow.getByRole('toolbar')).toHaveAttribute('aria-label', interpolate(
 		es.actions_for,
 		{ name: interpolate(es.voice_participant_self, { player: 'Ana' }) },
@@ -334,10 +354,10 @@ test('voice chat: every game offers it, the host closes and reopens it, players 
 	await expect(berto.locator('.voice-participant').first()).toHaveClass(/voice-participant--muted/);
 	await expect(bertoRow).not.toHaveClass(/voice-participant--speaking/);
 	await expect(bertoRow).toContainText(es.voice_muted_visual);
-	await expect(bertoRow).toHaveAttribute('aria-label', interpolate(
+	await expect(bertoRow).toHaveAttribute('aria-label', `${interpolate(
 		es.voice_participant_label_muted,
 		{ player: 'Berto' },
-	));
+	)} ${es.voice_participant_more_actions}`);
 	await expect(bertoPlayerCard).not.toHaveClass(/is-voice-speaking/);
 	await expect(bertoPlayerCard.locator('.player-tag--voice')).toHaveText(es.voice_muted_visual);
 	await flushAxeAudit(ana);

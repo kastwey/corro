@@ -565,6 +565,8 @@
     "voice_participant_self": "{{player}} (you)",
     "voice_participant_label_listening": "{{player}} is in voice chat with the microphone on.",
     "voice_participant_label_muted": "{{player}} is in voice chat with the microphone muted.",
+    "voice_participant_more_actions": "Right Arrow for more actions.",
+    "voice_controls_label": "Voice chat actions",
     "voice_speaking_visual": "Speaking",
     "voice_muted_visual": "Muted",
     "voice_listening_visual": "Listening",

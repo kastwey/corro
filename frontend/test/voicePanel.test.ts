@@ -209,7 +209,7 @@ test('joining is explicit, starts unmuted, renders the roster and announces entr
 	const selfRow = document.querySelector('.voice-participant') as HTMLElement;
 	assert.equal(selfRow.tabIndex, 0, 'the roster exposes one roving tab stop');
 	assert.equal(selfRow.getAttribute('aria-label'),
-		'Ana (you) is in voice chat with the microphone on.');
+		'Ana (you) is in voice chat with the microphone on. Right Arrow for more actions.');
 	assert.equal(selfRow.querySelector('[role="toolbar"]')?.getAttribute('aria-label'), 'Actions for Ana (you)');
 	const selfMute = selfRow.querySelector('.voice-participant__self-mute') as HTMLButtonElement;
 	assert.equal(selfMute.textContent, 'Mute my microphone');
@@ -312,7 +312,7 @@ test('remote presence is voiced, speaking stays visual until queried, and volume
 	const bertoRow = document.querySelector('[data-player-id="berto"]') as HTMLElement;
 	assert.equal(bertoRow.classList.contains('voice-participant--speaking'), true);
 	assert.equal(bertoRow.getAttribute('aria-label'),
-		'Berto is in voice chat with the microphone on.',
+		'Berto is in voice chat with the microphone on. Right Arrow for more actions.',
 		'speaking stays visual and does not chatter in the stable row name');
 	assert.equal(announcements.some(a => a.key === 'game.voice_speakers'), false,
 		'active-speaker changes do not chatter at screen readers');
