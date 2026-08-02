@@ -29,7 +29,7 @@ beforeEach(() => {
 const dialog = () => document.querySelector('.game-dialog') as HTMLElement;
 
 test('it explains what happened and how to undo it, in order', () => {
-	showSecondAccountNotice();
+	showSecondAccountNotice('microsoft', ['google']);
 
 	const steps = dialog().querySelectorAll('ol li');
 	assert.equal(steps.length, 5, 'five steps, none of them optional');
@@ -44,12 +44,32 @@ test('it explains what happened and how to undo it, in order', () => {
 // the steps can be arrowed through and re-read — the alternative announces the button and nothing
 // else, which is useless for something you are meant to follow.
 test('it opens as a document, not as a widget', () => {
-	showSecondAccountNotice();
+	showSecondAccountNotice('microsoft', ['google']);
 
 	// Inside role="application" a screen reader builds no browse buffer and reads ONLY the focused
 	// button — which for a list of steps to follow is the same as reading nothing.
 	const buttons = dialog().querySelector('.dialog-buttons');
 	assert.notEqual(buttons?.getAttribute('role'), 'application');
+});
+
+// "Sign in with the service you used last time" is a riddle to somebody who cannot remember which
+// one that was — and we know, because we just found the account. So both are named.
+test('it names both services instead of saying "the one you used"', () => {
+	showSecondAccountNotice('microsoft', ['google']);
+
+	const text = dialog().textContent ?? '';
+	assert.match(text, /Google/, 'the account they already had');
+	assert.match(text, /Microsoft/, 'the one they just used');
+	assert.doesNotMatch(text, /\{\{/, 'no placeholder reaches the screen');
+});
+
+// An old account with two providers on it: any of them opens it, so list them rather than picking.
+test('an account with several sign-ins lists them all', () => {
+	showSecondAccountNotice('microsoft', ['google', 'facebook']);
+
+	const text = dialog().textContent ?? '';
+	assert.match(text, /Google/);
+	assert.match(text, /facebook|Facebook/);
 });
 
 // The words are what this feature IS, so they are checked against the locale files rather than

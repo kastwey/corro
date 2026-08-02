@@ -99,32 +99,35 @@ public class CosmosUserRepository : IUserRepository
 	}
 
 	/// <summary>
-	/// Writes the account. Two upserts racing to CREATE the same document make one of them fail with
-	/// <summary>
-	/// Whether another account already displays this address. A cross-partition query, and
-	/// deliberately a rare one: it runs on a FIRST sign-in only, to tell somebody that the account
-	/// they just made is their second. `Users` is partitioned by userId, so there is no cheaper
-	/// way — and adding an email index would create a second place where an address lives, which
-	/// is precisely the thing this design refuses to treat as identity.
+	/// Which providers another account with this address signs in with, or empty when there is no
+	/// such account. A cross-partition query, and deliberately a rare one: it runs on a FIRST
+	/// sign-in only, to tell somebody that the account they just made is their second — and which
+	/// service opens the first. `Users` is partitioned by userId, so there is no cheaper way, and
+	/// an email index would create a second place where an address lives, which is precisely what
+	/// this design refuses to treat as identity.
 	/// </summary>
-	public async Task<bool> HasOtherAccountWithEmailAsync(string email, string exceptUserId, CancellationToken ct = default)
+	public async Task<IReadOnlyList<string>> OtherAccountProvidersForEmailAsync(
+		string email, string exceptUserId, CancellationToken ct = default)
 	{
 		var query = new QueryDefinition(
-			"SELECT VALUE COUNT(1) FROM c WHERE LOWER(c.email) = LOWER(@email) AND c.userId != @exceptUserId")
+			"SELECT VALUE c FROM c WHERE LOWER(c.email) = LOWER(@email) AND c.userId != @exceptUserId")
 			.WithParameter("@email", email)
 			.WithParameter("@exceptUserId", exceptUserId);
 
-		using var iterator = _users.GetItemQueryIterator<int>(query);
+		var providers = new List<string>();
+		using var iterator = _users.GetItemQueryIterator<UserDocument>(query);
 		while (iterator.HasMoreResults)
 		{
-			foreach (var count in await iterator.ReadNextAsync(ct))
+			foreach (var other in await iterator.ReadNextAsync(ct))
 			{
-				if (count > 0) return true;
+				providers.AddRange(other.Identities.Select(i => i.Issuer));
 			}
 		}
-		return false;
+		return providers.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 	}
 
+	/// <summary>
+	/// Writes the account. Two upserts racing to CREATE the same document make one of them fail with
 	/// a conflict — Cosmos resolves an upsert of a not-yet-existing item as an insert — which is a
 	/// real scenario here: a double-submitted login signs the same account in twice at once. The
 	/// retry succeeds because by then the document exists, so the upsert is an ordinary replace.

@@ -16,13 +16,32 @@
 import { dialogManager } from './dialogManager.js';
 import { tSync } from './i18nBinder.js';
 
-/** Explain what just happened, and the steps out of it. */
-export function showSecondAccountNotice(): void {
+/** The provider's own name, localized — "Google", not "google". */
+function providerName(id: string): string {
+	const name = tSync(`account.provider.${id}`);
+	return name === `account.provider.${id}` ? id : name;
+}
+
+/** Fill {{existing}} and {{new}} in one of the notice's sentences. */
+function say(key: string, existing: string, added: string): string {
+	return tSync(key).replace(/\{\{existing\}\}/g, existing).replace(/\{\{new\}\}/g, added);
+}
+
+/**
+ * Explain what just happened, and the steps out of it — naming the services rather than saying
+ * "the one you used last time", which is precisely what somebody in this situation cannot
+ * remember. Both names are known: the one just used, and the one on the account we found.
+ */
+export function showSecondAccountNotice(newProvider: string, existingProviders: string[]): void {
+	const added = providerName(newProvider);
+	// More than one provider on the old account is possible (they linked two, then made a third
+	// login). Listing them all is the honest answer and any of them opens it.
+	const existing = existingProviders.map(providerName).join(' / ') || added;
 	const content = document.createElement('div');
 	content.className = 'second-account-notice';
 
 	const body = document.createElement('p');
-	body.textContent = tSync('account.secondAccount.body');
+	body.textContent = say('account.secondAccount.body', existing, added);
 
 	const why = document.createElement('p');
 	why.className = 'second-account-notice__why';
@@ -38,11 +57,11 @@ export function showSecondAccountNotice(): void {
 	// Spelled out rather than built in a loop: the project's translation guard scans the source for
 	// the keys it can SEE, and a key assembled from a variable is a key nobody can check.
 	for (const text of [
-		tSync('account.secondAccount.step1'),
-		tSync('account.secondAccount.step2'),
-		tSync('account.secondAccount.step3'),
-		tSync('account.secondAccount.step4'),
-		tSync('account.secondAccount.step5'),
+		say('account.secondAccount.step1', existing, added),
+		say('account.secondAccount.step2', existing, added),
+		say('account.secondAccount.step3', existing, added),
+		say('account.secondAccount.step4', existing, added),
+		say('account.secondAccount.step5', existing, added),
 	]) {
 		const step = document.createElement('li');
 		step.textContent = text;

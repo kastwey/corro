@@ -108,13 +108,20 @@ class UnifiedLobbyUI {
 			: null;
 		if (signInFailed || linkReturn || secondAccount) {
 			const url = new URL(window.location.href);
-			for (const marker of ['signInError', 'linkResult', 'linkProvider', 'secondAccount']) {
+			for (const marker of [
+				'signInError', 'linkResult', 'linkProvider',
+				'secondAccount', 'newProvider', 'existingProviders',
+			]) {
 				url.searchParams.delete(marker);
 			}
 			window.history.replaceState({}, '', url.toString());
 		}
 		if (secondAccount) {
-			showSecondAccountNotice();
+			// Both names travel in the URL: the one just used, and the one(s) on the account they
+			// already had. Naming them is most of the value of saying anything at all.
+			showSecondAccountNotice(
+				getUrlParam('newProvider') ?? '',
+				(getUrlParam('existingProviders') ?? '').split(',').filter(Boolean));
 		}
 
 		// Come back to the lobby exactly where the player left it (a game link keeps working).

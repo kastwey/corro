@@ -133,7 +133,8 @@ public sealed class UserAccountService
 	}
 
 	/// <summary>
-	/// Whether the player has just made a SECOND account without meaning to, and should be told.
+	/// Which providers open the account the player ALREADY had, when this sign-in has just made them
+	/// a second one without meaning to. Empty means there is nothing to tell them.
 	///
 	/// Signing in with Google and then with Microsoft using the same address gives two separate
 	/// accounts, on purpose (see the class summary). That is right, and it is also the single most
@@ -152,23 +153,29 @@ public sealed class UserAccountService
 	/// Nothing is merged and nothing is changed. The player is told, and linking stays what it has
 	/// always been: a deliberate act from inside a session that already holds both logins.
 	/// </summary>
-	public async Task<bool> ShouldSuggestLinkingAsync(
+	/// <returns>
+	/// The providers that open the OTHER account, or empty when there is nothing to say. Naming
+	/// them is most of the value: "sign in with the service you used last time" is a riddle to
+	/// somebody who cannot remember which one that was, and we know because we just found the
+	/// account.
+	/// </returns>
+	public async Task<IReadOnlyList<string>> ExistingAccountProvidersAsync(
 		UserDocument user,
 		ExternalIdentity identity,
 		CancellationToken ct = default)
 	{
 		if (user.CreatedAtUtc != user.LastSignInUtc)
 		{
-			return false; // a returning account, not one just made
+			return Array.Empty<string>(); // a returning account, not one just made
 		}
 
 		var email = Clean(identity.Email);
 		if (!identity.EmailVerified || string.IsNullOrWhiteSpace(email))
 		{
-			return false;
+			return Array.Empty<string>();
 		}
 
-		return await _repository.HasOtherAccountWithEmailAsync(email, user.UserId, ct);
+		return await _repository.OtherAccountProvidersForEmailAsync(email, user.UserId, ct);
 	}
 
 	/// <summary>The account behind an established session, or null when it has since been erased.</summary>

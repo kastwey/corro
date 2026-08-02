@@ -267,8 +267,10 @@ public class AuthController : ControllerBase
 			return Redirect(LinkResultUrl(returnUrl, provider, link.Outcome));
 		}
 
-		var secondAccount = await IssueSessionAsync(identity, ct);
-		return Redirect(secondAccount ? SecondAccountUrl(returnUrl) : returnUrl);
+		var existingProviders = await IssueSessionAsync(identity, ct);
+		return Redirect(existingProviders.Count > 0
+			? SecondAccountUrl(returnUrl, provider, existingProviders)
+			: returnUrl);
 	}
 
 	/// <summary>
@@ -308,9 +310,11 @@ public class AuthController : ControllerBase
 
 	/// <summary>Resolves the account and issues this app's session, dropping the provider's
 	/// external cookie now that it has served its one purpose.</summary>
-	/// <summary>Returns true when this sign-in quietly created the player a SECOND account, so the
-	/// destination can say so (see UserAccountService.ShouldSuggestLinkingAsync).</summary>
-	private async Task<bool> IssueSessionAsync(ExternalIdentity identity, CancellationToken ct)
+	/// <summary>Returns the providers that open the account the player ALREADY had, when this
+	/// sign-in quietly made them a second one — empty otherwise. The destination names them, because
+	/// "the service you used last time" is exactly what somebody in that situation cannot
+	/// remember.</summary>
+	private async Task<IReadOnlyList<string>> IssueSessionAsync(ExternalIdentity identity, CancellationToken ct)
 	{
 		var user = await _accounts.SignInAsync(identity, DateTime.UtcNow, ct);
 
@@ -320,7 +324,7 @@ public class AuthController : ControllerBase
 			new AuthenticationProperties { IsPersistent = true });
 
 		await HttpContext.SignOutAsync(AuthenticationExtensions.ExternalScheme);
-		return await _accounts.ShouldSuggestLinkingAsync(user, identity, ct);
+		return await _accounts.ExistingAccountProvidersAsync(user, identity, ct);
 	}
 
 	/// <summary>
@@ -342,8 +346,13 @@ public class AuthController : ControllerBase
 	/// URL for the same reason the link outcome is: a provider round-trip is a full page navigation
 	/// and leaves no response to put it in.
 	/// </summary>
-	private static string SecondAccountUrl(string returnUrl) =>
-		returnUrl + (returnUrl.Contains('?') ? "&" : "?") + "secondAccount=1";
+	private static string SecondAccountUrl(
+		string returnUrl, string provider, IReadOnlyList<string> existingProviders) =>
+		returnUrl
+		+ (returnUrl.Contains('?') ? "&" : "?")
+		+ "secondAccount=1"
+		+ "&newProvider=" + Uri.EscapeDataString(provider)
+		+ "&existingProviders=" + Uri.EscapeDataString(string.Join(',', existingProviders));
 
 	/// <summary>
 	/// Back where the player started, carrying what became of the link. A provider round-trip is a

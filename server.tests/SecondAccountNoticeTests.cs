@@ -43,8 +43,12 @@ public class SecondAccountNoticeTests
 		var (service, second) = await SignInFirstAsync(
 			repository, Identity("microsoft", "m-1", "juanjo@example.test", verified: true));
 
-		Assert.True(await service.ShouldSuggestLinkingAsync(
-			second, Identity("microsoft", "m-1", "juanjo@example.test", verified: true)));
+		// …and it says WHICH service opens the account they already had, which is the whole value:
+		// "the one you used last time" is exactly what somebody in this situation cannot remember.
+		Assert.Equal(
+			new[] { "google" },
+			await service.ExistingAccountProvidersAsync(
+				second, Identity("microsoft", "m-1", "juanjo@example.test", verified: true)));
 	}
 
 	[Fact]
@@ -58,7 +62,7 @@ public class SecondAccountNoticeTests
 		var (service, second) = await SignInFirstAsync(
 			repository, Identity("microsoft", "m-1", "juanjo@example.test", verified: false));
 
-		Assert.False(await service.ShouldSuggestLinkingAsync(
+		Assert.Empty(await service.ExistingAccountProvidersAsync(
 			second, Identity("microsoft", "m-1", "juanjo@example.test", verified: false)));
 	}
 
@@ -70,7 +74,7 @@ public class SecondAccountNoticeTests
 		var (service, only) = await SignInFirstAsync(
 			repository, Identity("google", "g-1", "juanjo@example.test", verified: true));
 
-		Assert.False(await service.ShouldSuggestLinkingAsync(
+		Assert.Empty(await service.ExistingAccountProvidersAsync(
 			only, Identity("google", "g-1", "juanjo@example.test", verified: true)));
 	}
 
@@ -87,7 +91,7 @@ public class SecondAccountNoticeTests
 
 		var returning = await service.SignInAsync(microsoft, DateTime.UtcNow.AddMinutes(5));
 
-		Assert.False(await service.ShouldSuggestLinkingAsync(returning, microsoft));
+		Assert.Empty(await service.ExistingAccountProvidersAsync(returning, microsoft));
 	}
 
 	[Fact]
@@ -99,7 +103,7 @@ public class SecondAccountNoticeTests
 		var (service, second) = await SignInFirstAsync(
 			repository, Identity("microsoft", "m-1", "berto@example.test", verified: true));
 
-		Assert.False(await service.ShouldSuggestLinkingAsync(
+		Assert.Empty(await service.ExistingAccountProvidersAsync(
 			second, Identity("microsoft", "m-1", "berto@example.test", verified: true)));
 	}
 
@@ -113,7 +117,7 @@ public class SecondAccountNoticeTests
 		var (service, second) = await SignInFirstAsync(
 			repository, Identity("facebook", "f-1", null, verified: true));
 
-		Assert.False(await service.ShouldSuggestLinkingAsync(
+		Assert.Empty(await service.ExistingAccountProvidersAsync(
 			second, Identity("facebook", "f-1", null, verified: true)));
 	}
 
@@ -128,7 +132,7 @@ public class SecondAccountNoticeTests
 		var (service, second) = await SignInFirstAsync(
 			repository, Identity("microsoft", "m-1", "juanjo@example.test", verified: true));
 
-		Assert.True(await service.ShouldSuggestLinkingAsync(
+		Assert.NotEmpty(await service.ExistingAccountProvidersAsync(
 			second, Identity("microsoft", "m-1", "juanjo@example.test", verified: true)));
 	}
 }

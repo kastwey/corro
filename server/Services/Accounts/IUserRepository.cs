@@ -25,12 +25,16 @@ public interface IUserRepository
 	Task<IdentityLinkDocument> CreateOrGetIdentityLinkAsync(IdentityLinkDocument link, CancellationToken ct = default);
 
 	/// <summary>
-	/// Whether some OTHER account already displays this address. Used for one thing only: telling
-	/// somebody who has just made a second account that their first one exists. It is NEVER used to
-	/// match accounts — the matching rule is (issuer, subject), and reading this as identity would
-	/// be the account-takeover route the whole design avoids.
+	/// The providers some OTHER account with this address signs in with, or empty when there is no
+	/// such account. Used for one thing only: telling somebody who has just made a second account
+	/// that their first one exists — and WHICH service opens it, because "the one you used last
+	/// time" is exactly what a person in that situation cannot remember.
+	///
+	/// NEVER used to match accounts. The matching rule is (issuer, subject), and reading an address
+	/// as identity would be the takeover route the whole design avoids.
 	/// </summary>
-	Task<bool> HasOtherAccountWithEmailAsync(string email, string exceptUserId, CancellationToken ct = default);
+	Task<IReadOnlyList<string>> OtherAccountProvidersForEmailAsync(
+		string email, string exceptUserId, CancellationToken ct = default);
 
 	/// <summary>Creates or replaces the account document.</summary>
 	Task<UserDocument> UpsertUserAsync(UserDocument user, CancellationToken ct = default);
