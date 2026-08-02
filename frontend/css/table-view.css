@@ -43,6 +43,20 @@
 	margin: 0.5rem 0 1rem;
 }
 
+/* The actions are a list in the accessibility tree and a row on screen. `list-style: none` is what
+   makes a browser drop the list semantics, which is why the markup carries an explicit role="list";
+   here we only take the bullets away. Wrapping, not scrolling: with the largest text sizes these
+   labels are long sentences, and a row that cannot wrap pushes "delete the table" off the screen. */
+.table-view__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+	list-style: none;
+	padding: 0;
+	margin: 1rem 0 0;
+}
+
 .table-view .player-item {
 	display: flex;
 	justify-content: space-between;

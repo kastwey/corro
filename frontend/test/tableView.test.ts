@@ -39,11 +39,13 @@ function mount(): void {
 				<summary>Rules</summary>
 				<div id="table-rules-fields"></div>
 			</details>
-			<button type="button" id="table-start-btn" hidden>Start</button>
-			<span id="table-waiting-host" hidden>Waiting for the host</span>
-			<button type="button" id="table-back">Back to the lobby</button>
-			<button type="button" id="table-abandon">Leave this table</button>
-			<button type="button" id="table-delete" hidden>Delete the table</button>
+			<p id="table-waiting-host" hidden>Waiting for the host</p>
+			<ul id="table-actions" role="list">
+				<li><button type="button" id="table-start-btn" hidden>Start</button></li>
+				<li><button type="button" id="table-back">Back to the lobby</button></li>
+				<li><button type="button" id="table-abandon">Leave this table</button></li>
+				<li><button type="button" id="table-delete" hidden>Delete the table</button></li>
+			</ul>
 		</section>
 		<p id="game-surface-intro">Focus will move to your hand.</p>
 		<div id="game-layout"></div>`;
@@ -330,6 +332,49 @@ test('the host edits the board rules for the next match, starting from the curre
 	assert.equal(saved[0].startingMoney, 1500, 'the untouched rules travel with the change');
 });
 
+// Reported from a real session: "al expandir las reglas, todas aparecen con sus claves de
+// traducción". This panel is built from the package DEFINITION, which arrives before the package's
+// WORDS do — and it is built once, so every label froze as the key it was rendered with and
+// nothing came back to fix it. The labels now carry their own keys and are re-resolved in place.
+test('the rules panel is re-translated when the package words arrive late', async () => {
+	const words: Record<string, string> = {};
+	const translated: HTMLElement[] = [];
+	const view = newView({
+		isHost: () => true,
+		t: (key: string) => words[key] ?? key,
+		loadRules: async () => ({
+			ruleGroups: [{ id: 'money', nameKey: 'rules.group.money' }],
+			houseRules: [{ id: 'salary', group: 'money', type: 'toggle', default: true, nameKey: 'rules.salary' }],
+		}) as any,
+		saveRules: async () => {},
+		// Stands in for the real translation pass: it resolves data-i18n in place.
+		translateDom: element => {
+			translated.push(element);
+			element.querySelectorAll<HTMLElement>('[data-i18n]').forEach(node => {
+				const text = words[node.getAttribute('data-i18n')!];
+				if (text) node.textContent = text;
+			});
+		},
+	});
+
+	// The words are not there yet: a readable id reaches the screen, never the key.
+	view.setTable(table({ packageToken: 'pkg' }));
+	await new Promise(resolve => setTimeout(resolve, 0));
+	const fields = document.getElementById('table-rules-fields')!;
+	assert.doesNotMatch(fields.textContent ?? '', /rules\./, 'a translation key must never be shown');
+	assert.equal(fields.querySelectorAll('[data-i18n]').length, 2, 'label and legend carry their keys');
+
+	// They arrive, and the next authoritative table re-resolves what is already on screen — the
+	// panel itself is NOT rebuilt, so nothing else may depend on rebuilding it.
+	words['rules.salary'] = 'Salary';
+	words['rules.group.money'] = 'Money';
+	view.setTable(table({ packageToken: 'pkg' }));
+	await new Promise(resolve => setTimeout(resolve, 0));
+	assert.match(fields.textContent ?? '', /Salary/);
+	assert.match(fields.textContent ?? '', /Money/);
+	assert.ok(translated.length >= 2, 'every table re-resolves the panel, not only the first');
+});
+
 test('a guest is never shown the rule editor, and neither is a board that declares no rules', async () => {
 	const guest = newView({ isHost: () => false, loadRules: async () => ({ houseRules: [] }) as any, saveRules: async () => {} });
 	guest.setTable(table({ packageToken: 'pkg' }));
@@ -356,6 +401,22 @@ test('everyone may leave; only the host may end the table for the rest', () => {
 	const host = newView({ isHost: () => true, backToLobby: () => {}, abandon: () => {}, deleteTable: () => {} });
 	host.show();
 	assert.equal(del(), false);
+});
+
+// The actions are an ARIA list, so a screen reader counts them ("list, 3 items"). A list item
+// holding nothing but a hidden button is STILL an item, so hiding the button alone would announce
+// choices that are not there — the count has to be the truth.
+test('an action that is not offered leaves no empty item behind in the list', () => {
+	const shown = () => Array.from(document.querySelectorAll('#table-actions li'))
+		.filter(item => !(item as HTMLElement).hidden).length;
+
+	const guest = newView({ isHost: () => false, backToLobby: () => {}, abandon: () => {}, deleteTable: () => {} });
+	guest.show();
+	assert.equal(shown(), 2, 'a guest is offered leaving, not starting or deleting');
+
+	const host = newView({ isHost: () => true, backToLobby: () => {}, abandon: () => {}, deleteTable: () => {} });
+	host.show();
+	assert.equal(shown(), 4);
 });
 
 test('the three goodbyes call three different things', () => {

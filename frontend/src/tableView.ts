@@ -51,6 +51,13 @@ export interface TableViewDeps {
 	 * cannot start because somebody has no team must say THAT, not "it could not be started".
 	 */
 	explainError?: (error: unknown) => string | null;
+	/**
+	 * Re-run the standard translation pass over freshly built markup. The rules panel is painted
+	 * from the package DEFINITION, which lands before the package's WORDS do, so its labels have
+	 * to be re-resolved once those arrive rather than staying frozen as the keys they were built
+	 * with.
+	 */
+	translateDom?: (element: HTMLElement) => void;
 	/** Copy text, reporting whether it reached the clipboard. */
 	copy?: (text: string, buttonId: string) => Promise<boolean>;
 	/** This player's re-entry code for THIS table, or null when they have none saved. */
@@ -209,6 +216,10 @@ export class TableView {
 			this.rulesFields.addEventListener('change', () => void this.saveRules());
 			this.rulesBox.hidden = false;
 		}
+		// The labels carry their own keys, so the translation pass resolves them wherever the
+		// package's words happen to be in flight — including on a table that painted this panel
+		// before they arrived, which showed a rulebook written in identifiers.
+		this.deps.translateDom?.(this.rulesFields);
 		// Re-applied on every authoritative table, so a host who changed them in another tab — or
 		// whose own change was refused — sees what the server actually holds.
 		if (!this.rulesBox.hidden) {
@@ -397,16 +408,29 @@ export class TableView {
 		if (this.startButton) {
 			// A table that has never played is not starting "another" game.
 			const key = this.matchesPlayed > 0 ? 'table.startAnother' : 'table.start';
-			this.startButton.hidden = !host;
+			this.setActionVisible(this.startButton, host);
 			this.startButton.setAttribute('data-i18n', key);
 			this.startButton.textContent = t(key);
 			this.startButton.setAttribute('aria-disabled', this.starting ? 'true' : 'false');
 		}
 		if (this.waitingHint) this.waitingHint.hidden = host;
 		// Ending the table for everybody is the host's privilege; leaving it is anybody's.
-		if (this.deleteButton) this.deleteButton.hidden = !host || !this.deps.deleteTable;
-		if (this.abandonButton) this.abandonButton.hidden = !this.deps.abandon;
-		if (this.backButton) this.backButton.hidden = !this.deps.backToLobby;
+		this.setActionVisible(this.deleteButton, host && !!this.deps.deleteTable);
+		this.setActionVisible(this.abandonButton, !!this.deps.abandon);
+		this.setActionVisible(this.backButton, !!this.deps.backToLobby);
+	}
+
+	/**
+	 * Show or hide one of the table's actions. The actions are an ARIA list, and a list item
+	 * holding nothing but a hidden button is still counted: hiding only the button would have a
+	 * screen reader announce four choices where two exist. So the `hidden` travels to the item
+	 * whenever there is one (the button itself carries it in tests, which mount the buttons bare).
+	 */
+	private setActionVisible(button: HTMLButtonElement | null, visible: boolean): void {
+		if (!button) return;
+		button.hidden = !visible;
+		const item = button.closest('li');
+		if (item) item.hidden = !visible;
 	}
 
 	private async startMatch(): Promise<void> {

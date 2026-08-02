@@ -69,6 +69,21 @@ inside a line in the listener's language, it rides as an i18n key and is resolve
   accessibility-critical work off `requestAnimationFrame` (it pauses in a background tab —
   the game must not stall because the player alt-tabbed).
 
+### A row of buttons is a list, not a toolbar
+
+`role="toolbar"` is not "several buttons side by side". It folds them into **one** tab stop
+reached by arrow keys, and focusing it drops NVDA into focus mode. That is right where it is
+used — the in-game action bar and the per-row actions in `accessibleList.ts`, which live inside
+an application surface, repeat per row and would otherwise flood the tab order.
+
+It is wrong on a page being **read**. The table's actions are a plain `<ul role="list">`: a
+screen reader counts them, browse mode still works around them, and leaving or deleting the
+table is one Tab away instead of hidden behind an arrow key nobody thinks to press. `role="list"`
+is written explicitly because `list-style: none` makes browsers drop list semantics.
+
+An action that is not offered is **removed with its `<li>`**, not just hidden inside one: an
+item holding a hidden button is still an item, and the announced count would be a lie.
+
 ## The accessible hand (`handPanel.ts`)
 
 Card games have no spatial board; the **hand is the surface**, and it is a carefully built

@@ -477,6 +477,7 @@ async function initBoard() {
 			gameId, hostId: playerSession.playerId, language,
 		}),
 		loadRules: () => gameClient.getTablePackage(),
+		translateDom: element => void i18nBinder.applyI18n(element),
 		saveRules: ruleValues => gameClient.setTableRules({
 			gameId, hostId: playerSession.playerId, ruleValues,
 		}),

@@ -133,6 +133,13 @@ changing one thing does not silently reset the rest. It is offered to the host a
 reading a rule they cannot change, in a panel that repaints whenever the host moves something,
 is worse served than by the board's own guide.
 
+Every label in it carries its own `data-i18n` key. The panel is built from the package's rule
+CATALOGUE, which arrives before the package's WORDS do, and it is built once per table — so
+rendering the labels as plain text froze them as the keys they were rendered with, and the table
+showed a rulebook written in identifiers. Carrying the key means the ordinary translation pass
+re-resolves them where they stand, which also fixes a language change (it repaints `data-i18n`
+markup and used to leave this panel in the old language).
+
 ## Leaving, and who holds the sceptre
 
 Three goodbyes, named as three different things because they are:

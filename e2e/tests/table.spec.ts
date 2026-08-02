@@ -38,6 +38,11 @@ test('creating a table lands ON the table, with no empty board in sight', async 
 	// And the copy is written for whoever reads it: the host is not waiting for the host.
 	await expect(ana.locator('#table-intro')).toHaveText(appI18n('es').table.introHost as string);
 	await expect(ana.locator('#table-start-btn')).toHaveText(appI18n('es').table.start as string);
+
+	// The actions are a named ARIA list, so they are counted and reachable one Tab at a time —
+	// and the count must be the truth: an item holding a hidden button is still an item.
+	const actions = ana.getByRole('list', { name: appI18n('es').table.actionsLabel as string });
+	await expect(actions.getByRole('listitem')).toHaveCount(4); // start, back, leave, delete
 });
 
 test('joining a table lands there too, and the board only appears with a match in it', async ({ browser }) => {
@@ -51,6 +56,9 @@ test('joining a table lands there too, and the board only appears with a match i
 	// A guest IS waiting for the host, and is told so instead of being given a dead button.
 	await expect(berto.locator('#table-intro')).toHaveText(appI18n('es').table.introGuest as string);
 	await expect(berto.locator('#table-start-btn')).toBeHidden();
+	// …and the actions a guest is not offered leave no empty items behind to be counted.
+	await expect(berto.getByRole('list', { name: appI18n('es').table.actionsLabel as string })
+		.getByRole('listitem')).toHaveCount(2); // back, leave — no start, no delete
 
 	await ana.locator('#table-start-btn').click();
 	for (const page of [ana, berto]) {
@@ -133,6 +141,16 @@ test('the host changes the board rules for the next match, and the change sticks
 	await expect(rules).toBeVisible();
 	await rules.evaluate(el => { (el as HTMLDetailsElement).open = true; });
 	await flushAxeAudit(ana);
+
+	// Reported from a real session: "al expandir las reglas, todas aparecen con sus claves de
+	// traducción". The panel is built from the package's rule CATALOGUE, which arrives before its
+	// WORDS do — and it is built once, so the labels have to be re-resolved where they stand. The
+	// previous test only read checkbox states, which are just as true in a panel full of keys.
+	const fields = ana.locator('#table-rules-fields');
+	const packageWords = packageI18n(PROPERTY_BOARD, 'es').rules;
+	await expect(fields).toContainText(packageWords.group.auctions as string);
+	await expect(fields).toContainText(packageWords.startingMoney as string);
+	await expect(fields).not.toContainText(/rules\./);
 
 	// The panel opens on the board's own default; flipping one is saved for the next match.
 	const auction = ana.locator('#table-rules-fields [data-rule-id="auctionOnDecline"]');
