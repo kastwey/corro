@@ -28,8 +28,12 @@ import {
 	t, translateServerError, showLoading, showError,
 	showSection, hideSection, showView, focusFirstField, getElement, getInputValue, getSelectedRadio,
 	clearUrlParams, getUrlParam, localizeBoardName, formatGameDate, parseHubErrorCode, isTableAtRestStatus,
+	isSectionHidden, keepingRadioChoice,
 	pickPackageName, renderBoardOptions, lobbyViewFromState, LobbyView
 } from './ui.js';
+
+/** How long a lobby announcement is left in the spoken region before it is wiped. */
+const LIVE_CLEAR_MS = 3000;
 
 class UnifiedLobbyUI {
 	private currentGame: GameInfo | null = null;
@@ -44,6 +48,15 @@ class UnifiedLobbyUI {
 	private pendingPackageStage: Promise<void> = Promise.resolve();
 	/** A manual deck choice must survive later interface-language changes. */
 	private contentLanguageExplicit = false;
+	/** Pending wipe of the lobby's spoken region (see announceInLobby). */
+	private liveClearTimer: number | null = null;
+	/**
+	 * The table being joined, kept so a language change can rebuild step 2. Everything on it —
+	 * the piece names, the squadron seats, the counts — is painted with t() from a package's own
+	 * words, and a form the player is standing in front of must not be left in a language they
+	 * have just stopped reading.
+	 */
+	private joiningTable: GameInfo | null = null;
 
 	constructor() {
 		void this.init();
@@ -1174,7 +1187,17 @@ class UnifiedLobbyUI {
 		// "Next" lands the player on the first field of step 2 (the name box) rather than on
 		// the now-hidden button — done now, before the async package loads below delay it.
 		focusFirstField('join-step2');
+		await this.renderJoinStep2(gameInfo);
+	}
 
+	/**
+	 * Paint step 2 from a table's info. Separate from navigating to it because a language change
+	 * has to repaint it WITHOUT moving anybody: every word here is written with t() rather than
+	 * data-i18n (the piece names and squadron seats come from the package's own bundle), so the
+	 * ordinary translation pass cannot reach them and only a repaint will do.
+	 */
+	private async renderJoinStep2(gameInfo: GameInfo): Promise<void> {
+		this.joiningTable = gameInfo;
 		const details = getElement('lobby-details');
 		if (details) {
 			const count = gameInfo.players?.length || 1;
@@ -1201,11 +1224,12 @@ class UnifiedLobbyUI {
 		}
 		setPackageTokens(gameInfo.tokens);
 
-		// Render join token selector with used tokens
+		// Render join token selector with used tokens. Whatever the player had already chosen is
+		// put back: a repaint for a language change must not quietly un-pick their piece.
 		const container = getElement('join-token-list');
 		if (container) {
 			const usedTokens = getUsedTokens(gameInfo);
-			renderTokenSelector(container, t, null, usedTokens);
+			keepingRadioChoice(container, 'token', () => renderTokenSelector(container, t, null, usedTokens));
 		}
 
 		// A race board also offers its seats; the ones already picked say who holds them
@@ -1215,7 +1239,8 @@ class UnifiedLobbyUI {
 		const seats = gameInfo.seats ?? [];
 		seatFieldset?.classList.toggle('hidden', seats.length === 0);
 		if (seatList && seats.length > 0) {
-			renderSeatSelector(seatList, seats, t, getUsedSeats(gameInfo.players));
+			keepingRadioChoice(seatList, 'seat', () =>
+				renderSeatSelector(seatList, seats, t, getUsedSeats(gameInfo.players)));
 		}
 	}
 
@@ -1235,6 +1260,15 @@ class UnifiedLobbyUI {
 		// Clear first so repeating the SAME text is still announced.
 		live.textContent = '';
 		window.setTimeout(() => { live.textContent = text; }, 30);
+		// …and wipe it once it has been spoken. The region is visually hidden but perfectly
+		// readable with the virtual cursor, so whatever it last said would otherwise sit at the
+		// bottom of the lobby to be read again long afterwards. Same rule as announcer.ts's
+		// scheduleTextClear and the chat's spoken log: said, then taken away.
+		if (this.liveClearTimer !== null) window.clearTimeout(this.liveClearTimer);
+		this.liveClearTimer = window.setTimeout(() => {
+			this.liveClearTimer = null;
+			live.textContent = '';
+		}, LIVE_CLEAR_MS);
 	}
 
 	// === Rendering ===
@@ -1263,6 +1297,19 @@ class UnifiedLobbyUI {
 		// The shipped-board picker options are localized per board; rebuild them in the new
 		// language (renderBoardOptions preserves the host's current choice on its own).
 		this.renderBoardSelector();
+		// A race board's SEATS are named by the package too, and were being left behind: the
+		// squadron colours stayed in the language the host had just stopped reading.
+		const seatList = getElement('seat-list');
+		const seats = this.uploadedPackage?.seats ?? [];
+		if (seatList && seats.length > 0) {
+			keepingRadioChoice(seatList, 'seat', () => renderSeatSelector(seatList, seats, t));
+		}
+		// And the whole of join step 2 — the piece list, the seats, the counts — which is painted
+		// from the table being joined and never repainted. Only if somebody is actually standing
+		// in it; rendering it otherwise would be building a form nobody asked for.
+		if (this.joiningTable && !isSectionHidden('join-step2')) {
+			void this.renderJoinStep2(this.joiningTable);
+		}
 		// The staged package's player- and team-count options also set textContent via t():
 		// re-render them, preserving the host's selection (renderTeamCountOptions keeps its own).
 		if (this.uploadedPackage) {

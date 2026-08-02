@@ -274,9 +274,11 @@ export class GameManager {
 			this.turnSequencer.enqueueState(gameState);
 		});
 
-		gameClient.on('lobbyState', (lobbyState: any) => {
-			this.announce?.(createAnnouncement('game.waiting_for_start', { status: lobbyState.status }));
-		});
+		// `lobbyState` is NOT announced from here. It used to say "Waiting to start. Status:
+		// {{status}}" with the server's raw enum poured straight in — "Estado: WaitingForPlayers",
+		// untranslated in every language, on every reload of a table at rest (live report). The
+		// table view is what answers this question now, in a line written for whoever is reading
+		// it (host or guest), with the reading position placed on its heading. See app.ts.
 
 		gameClient.on('commandResponse', (response: CommandResponse) => {
 			this.handleCommandResponse(response);

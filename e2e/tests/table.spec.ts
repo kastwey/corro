@@ -45,6 +45,16 @@ test('creating a table lands ON the table, with no empty board in sight', async 
 	const actions = ana.getByRole('toolbar', { name: appI18n('es').table.actionsLabel as string });
 	await expect(actions.getByRole('button')).toHaveCount(4); // start, back, leave, delete
 
+	// Reported from a real session: reloading a table spoke the server's raw enum — "Esperando
+	// para empezar. Estado: WaitingForPlayers" — untranslated in every language, and never on the
+	// page, because it was only ever an announcement. The table itself answers that question now.
+	// A negative assertion, so it is made after the state that used to trigger it has arrived.
+	await ana.reload();
+	await expect(ana.locator('#table-view')).toBeVisible();
+	await expect(ana.locator('#table-intro')).toHaveText(appI18n('es').table.introHost as string);
+	const heard: string[] = await ana.evaluate(() => (window as never as { __announcements?: string[] }).__announcements ?? []);
+	expect(heard.filter(line => /WaitingForPlayers|waiting_for_start|Estado:/i.test(line))).toEqual([]);
+
 	await ana.locator('#table-start-btn').focus();
 	const focusedId = () => ana.evaluate(() => document.activeElement?.id);
 	await ana.keyboard.press('ArrowRight');

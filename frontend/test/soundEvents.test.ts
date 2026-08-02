@@ -191,7 +191,6 @@ test('maps representative game events to their earcons', () => {
 });
 
 test('returns null for announcements with no earcon and for empty input', () => {
-	assert.equal(soundEventForAnnouncement('game.waiting_for_start'), null);
 	assert.equal(soundEventForAnnouncement('game.trade_proposed'), null);
 	assert.equal(soundEventForAnnouncement('game.property_mortgaged'), null);
 	assert.equal(soundEventForAnnouncement(''), null);

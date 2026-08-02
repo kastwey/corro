@@ -1403,7 +1403,6 @@
     "free_parking_pot_label": "Accumulated pot: {{amount}} {{currencyName}}",
     "game_created": "Game created. Code: {{gameId}}",
     "game_has_started": "The game has started",
-    "waiting_for_start": "Waiting to start. Status: {{status}}",
     "command_error": "Error: {{error}}",
     "player_not_identified": "Player not identified",
     "not_your_turn": "It's not your turn",

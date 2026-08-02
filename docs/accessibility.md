@@ -41,6 +41,23 @@ contradict. One authoritative voice keeps every player hearing the same, correct
   screen reader has usually just read the card you focused; a polite line would queue
   behind it and arrive too late to feel responsive.
 
+### A live region is a mouth, not a transcript
+
+**Every live region wipes itself once it has been spoken.** This is not tidiness. These regions
+are visually hidden but perfectly readable with the virtual cursor, so whatever is left in one
+becomes part of the page: text sitting in the middle of what a reader browses, to be stumbled
+into and read again long after it was heard. A region that *accumulates* is worse still — it
+grows a transcript inside the document.
+
+There are three (`announcer.ts`'s polite and assertive regions, the chat's spoken log, the
+lobby's `#lobby-live`), and every one of them now clears. The chat's and the lobby's did not,
+and both had quietly become transcripts.
+
+**And a live region carries no accessible name.** An announcement speaks the text that arrived,
+never the container's label, so a name buys nothing — while a *named* empty container is a stop
+in the browse buffer. The chat log had one, and it read out as "Chat, grouping" in the middle of
+the table (live report).
+
 ## The composed-line doctrine
 
 A screen reader hears a label or announcement as **one flowing line**. So every composed

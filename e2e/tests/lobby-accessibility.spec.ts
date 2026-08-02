@@ -359,6 +359,10 @@ test('unlock prompt and its feedback are Axe-clean and announced from every lobb
 	// Regression: this live region used to sit inside the hidden waiting-room view, making home-screen
 	// unlock feedback silent to real assistive technology.
 	expect(await page.locator('#lobby-live').evaluate(element => element.closest('.lobby-view') === null)).toBe(true);
+	// …and what it says does not STAY said. It is visually hidden but perfectly readable with the
+	// virtual cursor, so a line left behind would sit at the bottom of the lobby to be stumbled on
+	// long after it was spoken (the same debt the chat's spoken log carried).
+	await expect(page.locator('#lobby-live')).toBeEmpty({ timeout: 10_000 });
 });
 
 test('an unlocked hidden shipped package can be selected and used to create a game', async ({ browser }) => {
