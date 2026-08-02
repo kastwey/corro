@@ -59,12 +59,7 @@
   100% { transform: rotate(360deg) scale(1); }
 }
 
-.dice-button { white-space: nowrap; }
 
-.dice-button[aria-disabled="true"] {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
 
 @media (prefers-reduced-motion: reduce) {
   .die--rolling { animation: none; }

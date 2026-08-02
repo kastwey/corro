@@ -1,13 +1,17 @@
-// diceControl.ts — visual dice + roll button.
+// diceControl.ts — the visible dice.
 //
-// Purely additive: the existing Enter shortcut still rolls the dice. This
-// control gives sighted players a clickable button and an animated result.
-// The dice tray itself is aria-hidden because dice results are announced by
-// the server-driven screen-reader pipeline.
-
-import { tSync } from './i18nBinder.js';
-
-const t = (key: string, vars?: Record<string, any>) => tSync(`game.${key}`, vars);
+// A tray that tumbles and settles on the roll everyone just made, for players who read the table
+// with their eyes. It is aria-hidden: the result is announced by the server-driven pipeline, and
+// a screen reader hearing it twice would be worse than not seeing the dice at all.
+//
+// It used to carry a ROLL BUTTON too, and that button was a second way to do something the action
+// bar already offers (with Space, above the board, beside every other action of the turn). Two
+// controls for one act, in two places, with two keyboard models — and the header one knew less:
+// it enabled itself on `isMyTurn` alone, while the action bar also knows whether you have already
+// rolled, whether a doubles re-roll is owed, whether your token is still moving and whether a
+// modal owns the turn. Being in the page header rather than the board's layout, it also survived
+// into the table, where it sat answering "it is not your turn" at a table where nobody has one.
+// The tray stays; the act belongs to the action bar.
 
 // Pip layout per die face, as [row, column] coordinates on a 3x3 grid.
 const PIPS: Record<number, [number, number][]> = {
@@ -21,18 +25,12 @@ const PIPS: Record<number, [number, number][]> = {
 
 class DiceControl {
 	private root: HTMLElement | null = null;
-	private button: HTMLButtonElement | null = null;
 	private die1El: HTMLElement | null = null;
 	private die2El: HTMLElement | null = null;
 	private bonusEl: HTMLElement | null = null;
-	private onRoll: () => void = () => {};
-	private onUnavailable: (reason: string) => void = () => {};
-	private enabled = false;
 
-	init(mount: HTMLElement, opts: { onRoll: () => void; onUnavailable?: (reason: string) => void }): void {
-		if (this.button) return;
-		this.onRoll = opts.onRoll;
-		this.onUnavailable = opts.onUnavailable ?? (() => {});
+	init(mount: HTMLElement): void {
+		if (this.root) return;
 
 		const root = document.createElement('div');
 		root.className = 'dice-control';
@@ -47,33 +45,12 @@ class DiceControl {
 		this.bonusEl.hidden = true;
 		tray.append(this.die1El, this.die2El, this.bonusEl);
 
-		const button = document.createElement('button');
-		button.type = 'button';
-		button.id = 'dice-button';
-		button.className = 'btn btn--primary dice-button';
-		button.textContent = t('roll_dice_button');
-		button.addEventListener('click', () => {
-			if (!this.enabled) {
-				this.onUnavailable(t('roll_dice_not_your_turn'));
-				return;
-			}
-			this.onRoll();
-		});
-
-		const unavailableReason = document.createElement('span');
-		unavailableReason.id = 'dice-button-unavailable-reason';
-		unavailableReason.className = 'sr-only';
-		unavailableReason.textContent = t('roll_dice_not_your_turn');
-		button.setAttribute('aria-describedby', unavailableReason.id);
-
-		root.append(tray, button, unavailableReason);
+		root.append(tray);
 		mount.appendChild(root);
 
 		this.root = root;
-		this.button = button;
 		this.setFace(this.die1El, 1);
 		this.setFace(this.die2El, 1);
-		this.setEnabled(false);
 	}
 
 	/** Show/hide the whole control: families without dice (journey) have no die to show —
@@ -81,16 +58,6 @@ class DiceControl {
 	 *  hidden attribute: the control's own `display` rule would override `[hidden]`.) */
 	setVisible(visible: boolean): void {
 		if (this.root) this.root.style.display = visible ? '' : 'none';
-	}
-
-	/** Enable/disable the roll button (e.g. only on the local player's turn). */
-	setEnabled(enabled: boolean): void {
-		if (!this.button) return;
-		this.enabled = enabled;
-		this.button.setAttribute('aria-disabled', String(!enabled));
-		this.button.setAttribute('aria-label', enabled ? t('roll_dice_button') : t('roll_dice_not_your_turn'));
-		if (enabled) this.button.removeAttribute('aria-describedby');
-		else this.button.setAttribute('aria-describedby', 'dice-button-unavailable-reason');
 	}
 
 	/**

@@ -79,6 +79,8 @@ export class VoicePanel {
 	private controls: HTMLElement | null = null;
 	private deviceSettingsButton: HTMLButtonElement | null = null;
 	private list: HTMLUListElement | null = null;
+	/** The application wrapper around the roster — see the markup for why it is a wrapper. */
+	private participantsSurface: HTMLElement | null = null;
 	private participantNav: RovingToolbarList | null = null;
 	/**
 	 * The panel's own actions (join, mute, leave, open/close the room) as ONE tab stop with arrows
@@ -275,7 +277,21 @@ export class VoicePanel {
 				<p class="voice-status" id="voice-status"></p>
 				<div class="voice-controls" id="voice-controls"></div>
 				<button type="button" id="voice-device-settings" class="btn btn-secondary voice-device-settings" hidden></button>
-				<ul class="voice-participants" id="voice-participants" role="list"></ul>
+				<!-- The roster is a WIDGET you operate, not a passage you read, and it is wrapped in
+					 an application so a screen reader treats it as one. Inside an application NVDA
+					 builds no virtual buffer, so arriving at a row reads that ROW — its name and how
+					 that person is heard — instead of walking the reader through every control of
+					 every participant, which is what a browse-mode list does with rows that carry a
+					 slider and two buttons each (reported live).
+
+					 A WRAPPER, not the role on the <ul> itself: application would displace the list
+					 semantics, and "list, 3 items" is worth keeping — it is how you learn how many
+					 people are in the room. Scoped to the roster alone, so the panel's title, status
+					 and controls stay ordinary browsable page. The same shape the chat uses for its
+					 message list. -->
+				<div class="voice-participants-application" role="application" id="voice-participants-surface">
+					<ul class="voice-participants" id="voice-participants" role="list"></ul>
+				</div>
 			</div>`;
 		mount.appendChild(panel);
 		this.panel = panel;
@@ -291,6 +307,7 @@ export class VoicePanel {
 		}
 		this.deviceSettingsButton = panel.querySelector('#voice-device-settings');
 		this.list = panel.querySelector('#voice-participants');
+		this.participantsSurface = panel.querySelector('#voice-participants-surface');
 		this.participantNav = new RovingToolbarList({
 			list: this.list!,
 			itemSelector: '.voice-participant',
@@ -765,7 +782,10 @@ export class VoicePanel {
 		this.panel.querySelector('#voice-disclaimer-text')!.textContent = t('game.voice_disclaimer');
 		this.panel.querySelector('#voice-disclaimer-dontshow-label')!.textContent = t('game.voice_disclaimer_dontshow');
 		this.panel.querySelector<HTMLButtonElement>('#voice-disclaimer-dismiss')!.textContent = t('game.voice_disclaimer_dismiss');
-		this.list.setAttribute('aria-label', t('game.voice_participants'));
+		// The NAME goes on the application wrapper, not the list inside it: entering the roster
+		// should announce what it is once, and a label on both would say it twice. The list keeps
+		// its role, and with it the count — "list, 3 items" is how you learn who is in the room.
+		this.participantsSurface?.setAttribute('aria-label', t('game.voice_participants'));
 		if (this.deviceSettingsButton) {
 			this.deviceSettingsButton.hidden = !this.deploymentAvailable || !this.gameEnabled || this.joining;
 			this.deviceSettingsButton.textContent = t('game.voice_devices_button');

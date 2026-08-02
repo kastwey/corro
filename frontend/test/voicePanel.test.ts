@@ -229,6 +229,36 @@ test('joining is explicit, starts unmuted, renders the roster and announces entr
 	assert.equal(document.querySelector('[disabled]'), null, 'controls stay focusable; disabled is forbidden');
 });
 
+// Reported live: tabbing into the roster did not reliably drop NVDA into focus mode, so it read
+// the whole row — the person AND their slider and buttons. The roster is a widget you operate,
+// not a passage you read, so it says so: inside role="application" a screen reader builds no
+// virtual buffer and arriving at a row reads that row.
+//
+// A WRAPPER, deliberately. Putting the role on the <ul> would displace the list semantics, and
+// the count is worth keeping — it is how you learn how many people are in the room.
+test('the roster says it is a widget, without giving up being a list', async () => {
+	mountPanel();
+	openPastDisclaimer();
+	Array.from(document.querySelectorAll<HTMLButtonElement>('#voice-controls button'))
+		.find(button => button.textContent?.includes('Join with microphone'))!.click();
+	await settle();
+
+	const surface = document.getElementById('voice-participants-surface')!;
+	const list = document.getElementById('voice-participants')!;
+
+	assert.equal(surface.getAttribute('role'), 'application');
+	assert.equal(list.getAttribute('role'), 'list', 'the count survives the mode change');
+	assert.ok(list.closest('[role="application"]') === surface, 'the roster is inside it');
+
+	// Named once, on the surface: a label on both would announce the roster twice on entry.
+	assert.equal(surface.getAttribute('aria-label'), 'People in voice chat');
+	assert.equal(list.hasAttribute('aria-label'), false);
+
+	// Scoped to the roster alone — the panel around it stays ordinary browsable page.
+	assert.equal(document.getElementById('voice-status')!.closest('[role="application"]'), null);
+	assert.equal(document.getElementById('voice-controls')!.closest('[role="application"]'), null);
+});
+
 test('saved voice devices are passed to LiveKit on the next join', async () => {
 	localStorage.setItem('corro.voiceDevices', JSON.stringify({
 		microphoneId: 'mic-2',
