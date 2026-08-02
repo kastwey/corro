@@ -135,7 +135,10 @@ public partial class GameHub
 						IsHost = true,
 						IsReady = true,
 						PlayerSecretId = hostSecretId,
-						RejoinCode = hostRejoinCode
+						RejoinCode = hostRejoinCode,
+						// Read from the caller's own session, never from the request: a client that
+						// could name its account could name somebody else's.
+						UserId = SignedInUserId()
 					}
 				}
 			};
@@ -589,7 +592,8 @@ public partial class GameHub
 				IsHost = false,
 				IsReady = false,
 				PlayerSecretId = playerSecretId,
-				RejoinCode = playerRejoinCode
+				RejoinCode = playerRejoinCode,
+				UserId = SignedInUserId()
 			};
 
 			var updatedPlayers = game.Players.ToList();
@@ -1212,24 +1216,7 @@ public partial class GameHub
 					continue; // deleted/expired — client prunes it.
 				}
 
-				var connected = _registry.ConnectedPlayerIds(gameId);
-				result.Add(new SavedGameInfo
-				{
-					GameId = game.GameId,
-					Status = game.Status,
-					Board = game.Board,
-					HostId = game.HostId,
-					MaxPlayers = game.MaxPlayers,
-					CreatedAt = game.CreatedAt,
-					Players = game.Players.Select(p => new SavedGamePlayerInfo
-					{
-						Id = p.Id,
-						Name = p.Name,
-						Token = p.Token,
-						IsHost = p.IsHost,
-						Connected = connected.Contains(p.Id)
-					}).ToList()
-				});
+				result.Add(ToSavedGameInfo(game));
 			}
 			catch (Exception ex)
 			{
@@ -1239,6 +1226,68 @@ public partial class GameHub
 
 		return result;
 	}
+
+	/// <summary>
+	/// Every table this ACCOUNT holds a seat at — the same shape as <see cref="GetGamesInfo"/>,
+	/// answering a different question. That one enriches the ids a BROWSER remembers; this one
+	/// asks who the player is, so their tables follow them to a device that has never seen them.
+	///
+	/// Takes no account parameter on purpose: the answer comes from the caller's own session (see
+	/// GameHub.SignedInUserId). Anonymous gets an empty list rather than an error — not signing in
+	/// is a normal state, not a failure, and the lobby simply has nothing extra to add.
+	/// </summary>
+	public async Task<List<SavedGameInfo>> GetMyTables()
+	{
+		var userId = SignedInUserId();
+		if (userId == null)
+		{
+			return new List<SavedGameInfo>();
+		}
+
+		try
+		{
+			var games = await _gameRepository.GetGamesForUserAsync(userId, MyTablesLimit);
+			return games.Select(ToSavedGameInfo).ToList();
+		}
+		catch (Exception ex)
+		{
+			_logger?.LogError(ex, "Error listing the tables of a signed-in player");
+			// The account-less list still works, so a failure here costs a player nothing they
+			// had before signing in.
+			return new List<SavedGameInfo>();
+		}
+	}
+
+	/// <summary>
+	/// How a table describes itself to the lobby's list. Shared by the two doors that ask for
+	/// one — the ids a browser remembers and the seats an account holds — so both describe a
+	/// table the same way and a change lands on both at once.
+	/// </summary>
+	private SavedGameInfo ToSavedGameInfo(GameDocument game)
+	{
+		var connected = _registry.ConnectedPlayerIds(game.GameId);
+		return new SavedGameInfo
+		{
+			GameId = game.GameId,
+			Status = game.Status,
+			Board = game.Board,
+			HostId = game.HostId,
+			MaxPlayers = game.MaxPlayers,
+			CreatedAt = game.CreatedAt,
+			Players = game.Players.Select(p => new SavedGamePlayerInfo
+			{
+				Id = p.Id,
+				Name = p.Name,
+				Token = p.Token,
+				IsHost = p.IsHost,
+				Connected = connected.Contains(p.Id)
+			}).ToList()
+		};
+	}
+
+	/// <summary>How many of an account's tables the lobby lists. A cap, not a page: somebody with
+	/// hundreds of old tables wants the recent ones, and the query is ordered by last activity.</summary>
+	private const int MyTablesLimit = 50;
 
 	/// <summary>
 	/// Permanently delete a game. Only the host may do this. Everyone currently connected

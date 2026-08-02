@@ -35,6 +35,18 @@ public partial class GameHub : Hub
 	private readonly Services.Bots.BotDriver? _botDriver;
 	private readonly ILiveKitVoiceService? _voiceService;
 
+	/// <summary>
+	/// The account behind this connection, or null — which is the normal case, and a fully
+	/// supported one: playing never requires signing in.
+	///
+	/// Read from the connection's OWN principal, which the session cookie established during the
+	/// SignalR handshake. Deliberately not a parameter on any hub method: a client that could name
+	/// its account could name somebody else's, and every seat this stamps would become a claim
+	/// anybody could make.
+	/// </summary>
+	private string? SignedInUserId()
+		=> Services.Accounts.SessionPrincipal.UserId(Context.User);
+
 	public GameHub(
 		IGameRepository gameRepository,
 		IGameServiceFactory gameServiceFactory,

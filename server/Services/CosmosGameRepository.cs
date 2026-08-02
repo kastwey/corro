@@ -118,6 +118,44 @@ public class CosmosGameRepository : IGameRepository
 		}
 	}
 
+	public async Task<IReadOnlyList<GameDocument>> GetGamesForUserAsync(
+		string userId,
+		int maxCount,
+		CancellationToken ct = default)
+	{
+		try
+		{
+			// Same shape, and the same trade, as the rejoin-code lookup above: a JOIN over the
+			// seats, cross-partition. This runs when somebody opens the lobby, not on any hot path,
+			// and it keeps ONE source of truth — a per-account index would be a second place for a
+			// table to be listed after it stopped existing.
+			//
+			// ORDER BY is the point of the query, not decoration: a returning player wants the
+			// table they were last at, and the lobby caps the list.
+			var query = new QueryDefinition(
+				"SELECT DISTINCT VALUE c FROM c JOIN p IN c.players "
+				+ "WHERE p.userId = @userId ORDER BY c.lastUpdated DESC OFFSET 0 LIMIT @limit")
+				.WithParameter("@userId", userId)
+				.WithParameter("@limit", maxCount);
+
+			var games = new List<GameDocument>();
+			var iterator = _container.GetItemQueryIterator<GameDocument>(query);
+			while (iterator.HasMoreResults && games.Count < maxCount)
+			{
+				foreach (var game in await iterator.ReadNextAsync(ct))
+				{
+					games.Add(game);
+				}
+			}
+			return games;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Error listing games for a user");
+			throw;
+		}
+	}
+
 	public async Task<GameDocument> CreateGameAsync(GameDocument game)
 	{
 		try

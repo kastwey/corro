@@ -233,6 +233,8 @@ public class GameRetentionCleanupTests
 		public Task<GameDocument?> GetByInviteCodeAsync(string inviteCode)
 			=> Task.FromResult(_games.Values.FirstOrDefault(game => game.InviteCode == inviteCode));
 		public Task<GameDocument?> GetByRejoinCodeAsync(string rejoinCode) => Task.FromResult<GameDocument?>(null);
+		public Task<IReadOnlyList<GameDocument>> GetGamesForUserAsync(string userId, int maxCount, CancellationToken ct = default)
+			=> Task.FromResult<IReadOnlyList<GameDocument>>(Array.Empty<GameDocument>());
 		public Task<GameDocument> CreateGameAsync(GameDocument game)
 		{
 			_games[game.GameId] = game;

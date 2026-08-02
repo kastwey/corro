@@ -205,12 +205,69 @@ public class GameHubSavedGamesTests
 
 	private static string NewId() => Guid.NewGuid().ToString("N");
 
+	// ── An account's tables ──────────────────────────────────────────────────
+	//
+	// GetGamesInfo answers "tell me about the tables THIS BROWSER remembers"; GetMyTables answers
+	// "tell me about the tables I HAVE A SEAT AT". The second is what makes a table belong to a
+	// person: it survives a cleared browser and follows them to a device that has never seen them.
+
+	[Fact]
+	public async Task GetMyTables_ListsTheTablesTheAccountHoldsASeatAt()
+	{
+		var mine = DocFor(NewId(), hostId: "host", hostSecret: "s", userId: "user-1");
+		var someoneElses = DocFor(NewId(), hostId: "other", hostSecret: "s", userId: "user-2");
+		var anonymous = DocFor(NewId(), hostId: "nobody", hostSecret: "s");
+		var repo = new StubRepository(mine, someoneElses, anonymous);
+		var (hub, _, _) = BuildHub(repo, signedInUserId: "user-1");
+
+		var tables = await hub.GetMyTables();
+
+		var listed = Assert.Single(tables);
+		Assert.Equal(mine.GameId, listed.GameId);
+	}
+
+	[Fact]
+	public async Task GetMyTables_IsEmptyForAnAnonymousCaller()
+	{
+		// Not signing in is a normal state, not a failure: the answer is "nothing extra", and the
+		// browser's own list carries on working exactly as it did.
+		var repo = new StubRepository(DocFor(NewId(), hostId: "host", hostSecret: "s", userId: "user-1"));
+		var (hub, _, _) = BuildHub(repo);
+
+		Assert.Empty(await hub.GetMyTables());
+	}
+
+	[Fact]
+	public async Task GetMyTables_DescribesATableExactlyAsTheSavedGamesListDoes()
+	{
+		// Both doors share one projection, so a table cannot describe itself one way to a browser
+		// and another way to an account.
+		var game = DocFor(NewId(), hostId: "host", hostSecret: "s", extraPlayerId: "guest", userId: "user-1");
+		var repo = new StubRepository(game);
+		var (hub, _, _) = BuildHub(repo, signedInUserId: "user-1");
+
+		var byAccount = Assert.Single(await hub.GetMyTables());
+		var byId = Assert.Single(await hub.GetGamesInfo(new List<string> { game.GameId }));
+
+		Assert.Equal(byId.GameId, byAccount.GameId);
+		Assert.Equal(byId.Status, byAccount.Status);
+		Assert.Equal(byId.HostId, byAccount.HostId);
+		Assert.Equal(
+			byId.Players.Select(p => (p.Id, p.Name, p.IsHost, p.Connected)),
+			byAccount.Players.Select(p => (p.Id, p.Name, p.IsHost, p.Connected)));
+	}
+
 	private static GameDocument DocFor(string gameId, string hostId, string hostSecret, string? extraPlayerId = null,
-		string? packageToken = null, string? shippedBoardId = null, string? packageBlobKey = null)
+		string? packageToken = null, string? shippedBoardId = null, string? packageBlobKey = null,
+		string? userId = null)
 	{
 		var players = new List<LobbyPlayer>
 		{
-			new() { Id = hostId, Name = "Host", Token = "disc", IsHost = true, PlayerSecretId = hostSecret }
+			new()
+			{
+				Id = hostId, Name = "Host", Token = "disc", IsHost = true, PlayerSecretId = hostSecret,
+				UserId = userId,
+			}
 		};
 		if (extraPlayerId != null)
 		{
@@ -243,7 +300,8 @@ public class GameHubSavedGamesTests
 
 	private static (GameHub hub, FakeClients clients, GameSessionRegistry registry) BuildHub(
 		StubRepository repo,
-		IPackageBlobStore? blob = null)
+		IPackageBlobStore? blob = null,
+		string? signedInUserId = null)
 	{
 		var packageStore = new CorroPackageStore(new CompositeSoundPackProvider(new DefaultSoundPackProvider()));
 		var restorer = blob is null
@@ -262,7 +320,9 @@ public class GameHubSavedGamesTests
 		var clients = new FakeClients();
 		hub.Clients = clients;
 		hub.Groups = new FakeGroupManager();
-		hub.Context = new FakeCallerContext("c-" + NewId());
+		hub.Context = new FakeCallerContext(
+			"c-" + NewId(),
+			signedInUserId is null ? null : CorroServer.Services.Accounts.SessionPrincipal.For(signedInUserId));
 		return (hub, clients, registry);
 	}
 
@@ -312,6 +372,14 @@ public class GameHubSavedGamesTests
 				.ToHashSet());
 
 		public Task<GameDocument?> GetByRejoinCodeAsync(string rejoinCode) => Task.FromResult<GameDocument?>(null);
+		/// <summary>The real filter, because THIS file is where the account's list is tested: a
+		/// stub that always answered "nothing" would make those tests pass for the wrong reason.</summary>
+		public Task<IReadOnlyList<GameDocument>> GetGamesForUserAsync(string userId, int maxCount, CancellationToken ct = default)
+			=> Task.FromResult<IReadOnlyList<GameDocument>>(_games.Values
+				.Where(g => g.Players.Any(p => p.UserId == userId))
+				.OrderByDescending(g => g.LastUpdated)
+				.Take(maxCount)
+				.ToList());
 
 		public Task<GameDocument?> GetByInviteCodeAsync(string inviteCode)
 		{
@@ -378,10 +446,16 @@ public class GameHubSavedGamesTests
 
 	private sealed class FakeCallerContext : HubCallerContext
 	{
-		public FakeCallerContext(string connectionId) => ConnectionId = connectionId;
+		public FakeCallerContext(string connectionId, System.Security.Claims.ClaimsPrincipal? user = null)
+		{
+			ConnectionId = connectionId;
+			User = user;
+		}
 		public override string ConnectionId { get; }
 		public override string? UserIdentifier => null;
-		public override System.Security.Claims.ClaimsPrincipal? User => null;
+		/// <summary>The session the handshake established, or null for the anonymous player —
+		/// which is what almost every connection is.</summary>
+		public override System.Security.Claims.ClaimsPrincipal? User { get; }
 		public override IDictionary<object, object?> Items { get; } = new Dictionary<object, object?>();
 		public override Microsoft.AspNetCore.Http.Features.IFeatureCollection Features { get; }
 			= new Microsoft.AspNetCore.Http.Features.FeatureCollection();

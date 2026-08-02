@@ -30,6 +30,23 @@ public record LobbyPlayer
 	/// on it (see GameHub.ClaimSeatByRejoinCode). It is a credential: persisted with the game,
 	/// shown only to its own player, and stripped from every client-bound document.</summary>
 	public string? RejoinCode { get; init; }
+
+	/// <summary>
+	/// The signed-in account that took this seat, or null — which is the normal case and always
+	/// will be. Accounts are additive: nothing about sitting down, playing or coming back may ever
+	/// require one, so this is recorded when it happens to be known and never demanded.
+	///
+	/// It is what lets a table belong to a PERSON rather than to a browser: the account's own list
+	/// of tables is a query for this field, and re-entry from a new device becomes "this seat is
+	/// already mine" instead of "type the code you wrote down". The re-entry code keeps working
+	/// regardless — a player may sign in after sitting down, or come back from a browser where
+	/// they are not signed in.
+	///
+	/// NOT a credential, unlike the two fields above: it identifies, it does not authorize. What
+	/// authorizes is the session cookie the caller presents, which the server reads for itself and
+	/// never takes from the client.
+	/// </summary>
+	public string? UserId { get; init; }
 }
 
 // DTOs for the unified API.

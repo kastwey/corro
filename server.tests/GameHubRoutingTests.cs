@@ -371,6 +371,53 @@ public class GameHubRoutingTests
 	}
 
 	[Fact]
+	public async Task CreateGameLobby_StampsTheHostSeatWithTheCallersOwnAccount()
+	{
+		// A table belongs to a PERSON once the person is known. The account is read from the
+		// caller's session, never from the request — see GameHub.SignedInUserId.
+		var repository = new CapturingRepository();
+		var hub = BuildLobbyHub(repository, signedInUserId: "user-1");
+
+		await hub.CreateGameLobby(new CreateGameRequest { HostName = "Host", HostToken = "disc", Board = "Test board" });
+
+		Assert.Equal("user-1", Assert.Single(repository.Created!.Players).UserId);
+	}
+
+	[Fact]
+	public async Task CreateGameLobby_LeavesTheSeatUnclaimedForAnAnonymousHost()
+	{
+		// The overwhelmingly normal case, and it must stay indistinguishable from before accounts
+		// existed: no account, no marker, everything else the same.
+		var repository = new CapturingRepository();
+		var hub = BuildLobbyHub(repository);
+
+		await hub.CreateGameLobby(new CreateGameRequest { HostName = "Host", HostToken = "disc", Board = "Test board" });
+
+		var seat = Assert.Single(repository.Created!.Players);
+		Assert.Null(seat.UserId);
+		Assert.NotNull(seat.RejoinCode); // the account-less way back is untouched
+	}
+
+	/// <summary>A hub wired for the lobby paths, optionally with a signed-in caller.</summary>
+	private static GameHub BuildLobbyHub(CapturingRepository repository, string? signedInUserId = null)
+	{
+		var registry = new GameSessionRegistry(new FakeHubContext(), repository, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
+		var hub = new GameHub(
+			repository,
+			new FakeGameServiceFactory(),
+			new FakeAuctionTimer(),
+			new CorroPackageStore(new CompositeSoundPackProvider(new DefaultSoundPackProvider())),
+			TestFixtures.NewPackageRestorer(),
+			registry,
+			NullLogger<GameHub>.Instance);
+		hub.Clients = new FakeClients();
+		hub.Context = new FakeCallerContext(
+			"c-" + Guid.NewGuid().ToString("N"),
+			signedInUserId is null ? null : CorroServer.Services.Accounts.SessionPrincipal.For(signedInUserId));
+		return hub;
+	}
+
+	[Fact]
 	public async Task CreateGameLobby_WithoutSettings_FallsBackToDefaults()
 	{
 		var repository = new CapturingRepository();
@@ -899,10 +946,15 @@ public class GameHubRoutingTests
 
 	private sealed class FakeCallerContext : HubCallerContext
 	{
-		public FakeCallerContext(string connectionId) => ConnectionId = connectionId;
+		public FakeCallerContext(string connectionId, System.Security.Claims.ClaimsPrincipal? user = null)
+		{
+			ConnectionId = connectionId;
+			User = user;
+		}
 		public override string ConnectionId { get; }
 		public override string? UserIdentifier => null;
-		public override System.Security.Claims.ClaimsPrincipal? User => null;
+		/// <summary>The session the handshake established, or null for an anonymous connection.</summary>
+		public override System.Security.Claims.ClaimsPrincipal? User { get; }
 		public override IDictionary<object, object?> Items { get; } = new Dictionary<object, object?>();
 		public override Microsoft.AspNetCore.Http.Features.IFeatureCollection Features { get; }
 			= new Microsoft.AspNetCore.Http.Features.FeatureCollection();
@@ -994,6 +1046,8 @@ public class GameHubRoutingTests
 			=> Task.FromResult<IReadOnlySet<string>>(new HashSet<string>());
 		public Task<GameDocument?> GetByInviteCodeAsync(string inviteCode) => Task.FromResult<GameDocument?>(null);
 		public Task<GameDocument?> GetByRejoinCodeAsync(string rejoinCode) => Task.FromResult<GameDocument?>(null);
+		public Task<IReadOnlyList<GameDocument>> GetGamesForUserAsync(string userId, int maxCount, CancellationToken ct = default)
+			=> Task.FromResult<IReadOnlyList<GameDocument>>(Array.Empty<GameDocument>());
 		public Task<GameDocument> CreateGameAsync(GameDocument game) => Task.FromResult(game);
 		public Task<GameDocument> UpdateGameAsync(GameDocument game) => Task.FromResult(game);
 
@@ -1026,6 +1080,8 @@ public class GameHubRoutingTests
 			=> Task.FromResult<IReadOnlySet<string>>(new HashSet<string>());
 		public Task<GameDocument?> GetByInviteCodeAsync(string inviteCode) => Task.FromResult<GameDocument?>(null);
 		public Task<GameDocument?> GetByRejoinCodeAsync(string rejoinCode) => Task.FromResult<GameDocument?>(null);
+		public Task<IReadOnlyList<GameDocument>> GetGamesForUserAsync(string userId, int maxCount, CancellationToken ct = default)
+			=> Task.FromResult<IReadOnlyList<GameDocument>>(Array.Empty<GameDocument>());
 		public Task<GameDocument> CreateGameAsync(GameDocument game)
 		{
 			Created = game;

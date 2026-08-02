@@ -276,6 +276,8 @@ public class TableSeatTests
 		public Task<GameDocument> CreateGameAsync(GameDocument game) => _inner.CreateGameAsync(game);
 		public Task<GameDocument?> GetByInviteCodeAsync(string inviteCode) => _inner.GetByInviteCodeAsync(inviteCode);
 		public Task<GameDocument?> GetByRejoinCodeAsync(string rejoinCode) => _inner.GetByRejoinCodeAsync(rejoinCode);
+		public Task<IReadOnlyList<GameDocument>> GetGamesForUserAsync(string userId, int maxCount, CancellationToken ct = default)
+			=> _inner.GetGamesForUserAsync(userId, maxCount, ct);
 		public IAsyncEnumerable<GameDocument> GetGamesLastUpdatedBeforeAsync(DateTime cutoffUtc, int maxCount, CancellationToken ct = default)
 			=> _inner.GetGamesLastUpdatedBeforeAsync(cutoffUtc, maxCount, ct);
 		public Task<bool> HasPackageReferenceAsync(string? packageToken, string? packageBlobKey, CancellationToken ct = default)

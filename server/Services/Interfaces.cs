@@ -156,6 +156,15 @@ public interface IGameRepository
 	Task<GameDocument?> GetByInviteCodeAsync(string inviteCode);
 	/// <summary>The game holding a player whose re-entry code matches, or null.</summary>
 	Task<GameDocument?> GetByRejoinCodeAsync(string rejoinCode);
+	/// <summary>
+	/// Every table this ACCOUNT holds a seat at, most recently active first. This is what makes a
+	/// table belong to a person rather than to a browser: the account-less list lives in the
+	/// player's own storage and cannot follow them to another device, and this one can.
+	/// </summary>
+	Task<IReadOnlyList<GameDocument>> GetGamesForUserAsync(
+		string userId,
+		int maxCount,
+		CancellationToken ct = default);
 	Task<GameDocument> CreateGameAsync(GameDocument game);
 	Task<GameDocument> UpdateGameAsync(GameDocument game);
 }

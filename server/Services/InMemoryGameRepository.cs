@@ -27,6 +27,16 @@ public sealed class InMemoryGameRepository : IGameRepository
 		=> Task.FromResult(_games.Values.FirstOrDefault(
 			g => g.Players.Any(p => p.RejoinCode == rejoinCode)));
 
+	public Task<IReadOnlyList<GameDocument>> GetGamesForUserAsync(
+		string userId,
+		int maxCount,
+		CancellationToken ct = default)
+		=> Task.FromResult<IReadOnlyList<GameDocument>>(_games.Values
+			.Where(g => g.Players.Any(p => p.UserId == userId))
+			.OrderByDescending(g => g.LastUpdated)
+			.Take(maxCount)
+			.ToList());
+
 	public Task<GameDocument> CreateGameAsync(GameDocument game)
 	{
 		_games[Key(game.GameId)] = game;
