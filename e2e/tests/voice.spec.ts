@@ -80,13 +80,19 @@ test('voice chat: every game offers it, the host closes and reopens it, players 
 	await expect(ana.locator('#voice-status')).toHaveText(es.voice_ready);
 	await flushAxeAudit(ana);
 
-	// Reaching the people in the room used to cost five tab stops: a focusable status paragraph
-	// with no name, then one stop per control. The controls are an ARIA toolbar now — one stop,
-	// arrows inside — and the status is read where it stands rather than tabbed to.
+	// Reaching the people in the room used to cost five tab stops: a close button that duplicated
+	// the header toggle, a focusable status paragraph with no name, then one stop per control. The
+	// controls are an ARIA toolbar now — one stop, arrows inside — the status is read where it
+	// stands, and the panel is closed the three ways it already could be (Escape, Control+Alt+V,
+	// and the header button focus returns to anyway).
+	await expect(ana.locator('.voice-panel__close')).toHaveCount(0);
 	await expect(ana.locator('#voice-status')).not.toHaveAttribute('tabindex');
 	const voiceControls = ana.getByRole('toolbar', { name: es.voice_controls_label });
 	await expect(voiceControls).toBeVisible();
-	await ana.locator('.voice-panel__close').focus();
+	// From the title (which the panel can fall back to, but never as a TAB stop), one Tab reaches
+	// the controls: nothing sits between the heading and something worth doing.
+	await expect(ana.locator('#voice-panel-title')).toHaveAttribute('tabindex', '-1');
+	await ana.locator('#voice-panel-title').focus();
 	await ana.keyboard.press('Tab');
 	const firstControl = voiceControls.getByRole('button').first();
 	await expect(firstControl).toBeFocused();
@@ -283,8 +289,9 @@ test('voice chat: every game offers it, the host closes and reopens it, players 
 	await expect(bertoPlayerCard.locator('.player-tag--voice')).toHaveText(es.voice_speaking_visual);
 	await flushAxeAudit(ana);
 	// Presence belongs to the game surface, not to the settings dialog: closing the latter
-	// leaves the active speaker visible beside that player's normal game state.
-	await ana.getByRole('button', { name: es.voice_close }).click();
+	// leaves the active speaker visible beside that player's normal game state. Closed from the
+	// header button that opened it — the panel no longer carries a close of its own.
+	await ana.locator('#voice-toggle').click();
 	await expect(ana.locator('#voice-panel')).toBeHidden();
 	await expect(ana.locator('#voice-toggle')).toHaveAttribute('aria-expanded', 'false');
 	await expect(bertoPlayerCard).toHaveClass(/is-voice-speaking/);

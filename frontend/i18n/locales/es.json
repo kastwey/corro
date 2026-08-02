@@ -514,7 +514,6 @@
     "chat_send": "Enviar",
     "chat_mention_label": "Jugadores disponibles",
     "voice_title": "Chat de voz",
-    "voice_close": "Cerrar los controles del chat de voz",
     "voice_disclaimer": "El audio de voz se cifra durante el tránsito, pero pasa por el servidor de retransmisión de este despliegue. Corro no lo graba.",
     "voice_disclaimer_dontshow": "No volver a mostrar",
     "voice_disclaimer_dismiss": "Entendido",

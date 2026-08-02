@@ -259,6 +259,32 @@ test('the roster says it is a widget, without giving up being a list', async () 
 	assert.equal(document.getElementById('voice-controls')!.closest('[role="application"]'), null);
 });
 
+// The panel had a close button of its own, first in the tab order, for an act already available
+// three other ways: Escape, Control+Alt+V, and the header button that opened it — which is where
+// focus returns on close anyway. The chat panel never had one. Gone, and with it a stop every
+// keyboard user passed on the way to everything else.
+//
+// Its one real job was being the LAST RESORT of the panel's focus chains, and there is a state
+// with nothing else to focus: a guest at a table whose host has switched voice off sees a status
+// line and no controls at all. The title takes that job — focusable programmatically, never a tab
+// stop, so it costs nothing and keeps the reader inside the panel.
+test('closing lives where it opened, and the panel is never a focus dead end', () => {
+	mountPanel();
+	openPastDisclaimer();
+	assert.equal(document.querySelector('.voice-panel__close'), null);
+
+	const title = document.getElementById('voice-panel-title') as HTMLElement;
+	assert.equal(title.getAttribute('tabindex'), '-1', 'reachable by code, not by Tab');
+
+	// A GUEST at a table whose host switched voice off: no controls (the switch is the host's),
+	// no participants, nothing else in the panel to land on.
+	host = false;
+	panel.setGameEnabled(false);
+	assert.equal(document.querySelectorAll('#voice-controls button').length, 0);
+	assert.equal(panel.focus(), true, 'the panel still takes the keyboard');
+	assert.equal(document.activeElement, title);
+});
+
 test('saved voice devices are passed to LiveKit on the next join', async () => {
 	localStorage.setItem('corro.voiceDevices', JSON.stringify({
 		microphoneId: 'mic-2',

@@ -73,41 +73,9 @@
 
 .voice-panel__title {
 	margin: 0;
-	padding: 1rem 3.5rem 0.85rem 1.5rem;
+	padding: 1rem 1.5rem 0.85rem;
 	border-bottom: 1px solid var(--border);
 	font-size: 1.1rem;
-}
-
-.voice-panel__close {
-	position: absolute;
-	top: 0.65rem;
-	right: 0.75rem;
-	width: 2rem;
-	height: 2rem;
-	border: 1px solid var(--border-strong);
-	border-radius: 50%;
-	background: var(--surface-2);
-	color: var(--text);
-	font-size: 0;
-	cursor: pointer;
-}
-
-.voice-panel__close::before,
-.voice-panel__close::after {
-	content: '';
-	position: absolute;
-	left: 0.48rem;
-	top: 0.9rem;
-	width: 1rem;
-	height: 2px;
-	background: currentColor;
-}
-
-.voice-panel__close::before { transform: rotate(45deg); }
-.voice-panel__close::after { transform: rotate(-45deg); }
-
-.voice-panel__close:hover {
-	background: var(--surface-3);
 }
 
 .voice-disclaimer,

@@ -188,7 +188,7 @@ export class VoicePanel {
 			return this.isOpen();
 		}
 		const target = this.panel?.querySelector<HTMLElement>(
-			'#voice-disclaimer:not([hidden]) #voice-disclaimer-text, .voice-controls button:not([hidden]), .voice-device-settings:not([hidden]), .voice-participant, .voice-panel__close',
+			'#voice-disclaimer:not([hidden]) #voice-disclaimer-text, .voice-controls button:not([hidden]), .voice-device-settings:not([hidden]), .voice-participant, #voice-panel-title',
 		);
 		if (!target) return false;
 		target.focus();
@@ -264,8 +264,7 @@ export class VoicePanel {
 		panel.setAttribute('aria-labelledby', 'voice-panel-title');
 		panel.innerHTML = `
 			<div class="voice-panel__surface">
-				<h2 class="voice-panel__title" id="voice-panel-title"></h2>
-				<button type="button" class="voice-panel__close"></button>
+				<h2 class="voice-panel__title" id="voice-panel-title" tabindex="-1"></h2>
 				<div class="voice-disclaimer" id="voice-disclaimer" hidden>
 					<p id="voice-disclaimer-text" tabindex="0"></p>
 					<label><input type="checkbox" id="voice-disclaimer-dontshow"><span id="voice-disclaimer-dontshow-label"></span></label>
@@ -318,13 +317,12 @@ export class VoicePanel {
 			// Keep the popup inside the active page landmark, never orphaned under body.
 			menuHost: () => this.panel?.closest('main') ?? this.panel,
 			fallbackFocus: () => this.panel?.querySelector<HTMLElement>(
-				'.voice-controls button:not([hidden]), .voice-device-settings:not([hidden]), .voice-panel__close',
+				'.voice-controls button:not([hidden]), .voice-device-settings:not([hidden]), #voice-panel-title',
 			) ?? null,
 		});
 		this.deviceSettingsButton?.setAttribute('aria-haspopup', 'menu');
 		this.deviceSettingsButton?.setAttribute('aria-expanded', 'false');
 
-		panel.querySelector('.voice-panel__close')!.addEventListener('click', () => this.closePanel());
 		this.deviceSettingsButton?.addEventListener('click', () => void this.openDeviceSettings());
 		panel.addEventListener('keydown', event => {
 			if (event.key !== 'Escape') return;
@@ -775,10 +773,6 @@ export class VoicePanel {
 		if (!this.panel || !this.deps || !this.controls || !this.list) return;
 		const t = this.deps.t;
 		this.panel.querySelector('#voice-panel-title')!.textContent = t('game.voice_title');
-		const close = this.panel.querySelector<HTMLButtonElement>('.voice-panel__close')!;
-		close.textContent = t('game.voice_close');
-		close.setAttribute('aria-label', t('game.voice_close'));
-		close.setAttribute('aria-keyshortcuts', 'Control+Alt+V');
 		this.panel.querySelector('#voice-disclaimer-text')!.textContent = t('game.voice_disclaimer');
 		this.panel.querySelector('#voice-disclaimer-dontshow-label')!.textContent = t('game.voice_disclaimer_dontshow');
 		this.panel.querySelector<HTMLButtonElement>('#voice-disclaimer-dismiss')!.textContent = t('game.voice_disclaimer_dismiss');
@@ -847,7 +841,7 @@ export class VoicePanel {
 			onRemoved: () => this.participantNav?.closeContextMenu(),
 			rescueFocus: () => this.list?.querySelector<HTMLElement>('.voice-participant')
 				?? this.panel?.querySelector<HTMLElement>(
-					'.voice-controls button:not([hidden]), .voice-device-settings:not([hidden]), .voice-panel__close',
+					'.voice-controls button:not([hidden]), .voice-device-settings:not([hidden]), #voice-panel-title',
 				) ?? null,
 		});
 		this.list.hidden = this.participants.length === 0;

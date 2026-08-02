@@ -514,7 +514,6 @@
     "chat_send": "Send",
     "chat_mention_label": "Available players",
     "voice_title": "Voice chat",
-    "voice_close": "Close voice chat controls",
     "voice_disclaimer": "Voice audio is encrypted in transit, but it passes through this deployment's relay server. Corro does not record it.",
     "voice_disclaimer_dontshow": "Don't show this again",
     "voice_disclaimer_dismiss": "Got it",
