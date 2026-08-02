@@ -95,6 +95,12 @@ export class TableView {
 	private rulesFields: HTMLElement | null = null;
 	/** The package whose rules are on screen, so they are fetched and built once per table. */
 	private rulesPackageToken: string | null = null;
+	/**
+	 * Set while a bot the host just asked for is on its way. The table it comes back in may no
+	 * longer offer the chair, so the next render decides where the keyboard goes: another bot if
+	 * there is still room, otherwise the thing they were filling the table FOR.
+	 */
+	private claimFocusAfterSeatingBot = false;
 	private starting = false;
 
 	init(deps: TableViewDeps): void {
@@ -135,7 +141,13 @@ export class TableView {
 		this.lastMatchLine = document.getElementById('table-last-match-line');
 		this.standingsButton = document.getElementById('table-standings') as HTMLButtonElement | null;
 
-		this.addBotButton?.addEventListener('click', () => this.deps?.addBot?.());
+		this.addBotButton?.addEventListener('click', () => {
+			// Seating a bot may be the act that FILLS the table, and then the chair the host just
+			// used stops existing. Claim the next authoritative repaint so the keyboard lands
+			// somewhere deliberate instead of falling to the top of the page.
+			this.claimFocusAfterSeatingBot = true;
+			this.deps?.addBot?.();
+		});
 		this.standingsButton?.addEventListener('click', () => {
 			if (this.lastMatch) this.deps?.showStandings?.(this.lastMatch);
 		});
@@ -323,6 +335,15 @@ export class TableView {
 			&& familyHasBots(table.gameType ?? undefined)
 			&& (table.players?.length ?? 0) < (table.maxPlayers ?? 0);
 		this.addBotButton.hidden = !offered;
+
+		if (!this.claimFocusAfterSeatingBot) return;
+		this.claimFocusAfterSeatingBot = false;
+		// Another chair if the table still has room — seating bots is usually done in a run — and
+		// otherwise the match itself, which is what a full table is for. Never nothing: a control
+		// that vanishes under the keyboard drops the reader on <body>, which reads as the page
+		// having jumped to the top (reported live).
+		if (offered) this.addBotButton.focus();
+		else (document.getElementById('table-start-btn') ?? this.heading)?.focus();
 	}
 
 	private renderInvites(table: GameInfo): void {

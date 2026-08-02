@@ -454,6 +454,34 @@ test('the three goodbyes call three different things', () => {
 	assert.deepEqual(called, ['back', 'abandon', 'delete']);
 });
 
+// Reported live: seating a bot left the keyboard on <body> — "el foco desaparece y se va
+// arriba". The chair is the act that can FILL the table, and a full table stops offering it, so
+// the control the host had just used ceases to exist under them. Focus has to be handed on.
+test('seating a bot hands the keyboard on, never drops it', () => {
+	const chair = () => document.getElementById('table-add-bot') as HTMLButtonElement;
+	const seatABot = () => chair().click();
+
+	// Room left: another chair, because seating bots is usually done in a run.
+	const view = newView({ isHost: () => true, addBot: () => {} });
+	view.setTable(table({ gameType: 'property', maxPlayers: 4, players: [{ id: 'a', name: 'Ana', token: 'disc', isHost: true }] }));
+	seatABot();
+	view.setTable(table({
+		gameType: 'property', maxPlayers: 4,
+		players: [{ id: 'a', name: 'Ana', token: 'disc', isHost: true }, { id: 'b', name: 'Bot', token: 'star', isBot: true }],
+	}));
+	assert.equal(document.activeElement, chair(), 'still room, so the next bot is one key away');
+
+	// The bot that fills the table takes the chair away with it: the keyboard goes to the match.
+	seatABot();
+	view.setTable(table({
+		gameType: 'property', maxPlayers: 2,
+		players: [{ id: 'a', name: 'Ana', token: 'disc', isHost: true }, { id: 'b', name: 'Bot', token: 'star', isBot: true }],
+	}));
+	assert.equal(chair().hidden, true, 'a full table offers no chair');
+	assert.equal(document.activeElement, document.getElementById('table-start-btn'),
+		'and the keyboard lands on what the table was being filled FOR');
+});
+
 test('the host can hand the sceptre to another person, and to nobody else', () => {
 	const promoted: string[] = [];
 	const view = newView({ isHost: () => true, makeHost: async id => { promoted.push(id); } });
