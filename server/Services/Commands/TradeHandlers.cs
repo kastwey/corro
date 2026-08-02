@@ -7,7 +7,7 @@ namespace CorroServer.Services.Commands;
 /// Handler for proposing a player-to-player trade. Validates the players, builds the pending
 /// <see cref="TradeState"/> and delegates to the rulebook, which freezes the game.
 /// </summary>
-public class ProposeTradeHandler : ICommandHandler<ProposeTradeCommand>
+public class ProposeTradeHandler : PlayerCommandHandler<ProposeTradeCommand>
 {
 	private readonly ICorroRulebook _rulebook;
 
@@ -16,13 +16,8 @@ public class ProposeTradeHandler : ICommandHandler<ProposeTradeCommand>
 		_rulebook = rulebook;
 	}
 
-	public async Task<ServerResponse> HandleAsync(ProposeTradeCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(ProposeTradeCommand command, Player initiator, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var initiator) is { } error)
-		{
-			return error;
-		}
-
 		var target = context.Helper.GetPlayer(command.TargetPlayerId);
 		if (target == null)
 		{
@@ -91,7 +86,7 @@ public class ProposeTradeHandler : ICommandHandler<ProposeTradeCommand>
 /// <summary>
 /// Handler for the target's response (accept / decline) to a pending trade.
 /// </summary>
-public class RespondTradeHandler : ICommandHandler<RespondTradeCommand>
+public class RespondTradeHandler : PlayerCommandHandler<RespondTradeCommand>
 {
 	private readonly ICorroRulebook _rulebook;
 
@@ -100,13 +95,8 @@ public class RespondTradeHandler : ICommandHandler<RespondTradeCommand>
 		_rulebook = rulebook;
 	}
 
-	public async Task<ServerResponse> HandleAsync(RespondTradeCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(RespondTradeCommand command, Player responder, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var responder) is { } error)
-		{
-			return error;
-		}
-
 		var outcome = command.Accept
 			? await _rulebook.AcceptTradeAsync(responder.Id, command.TradeId, context)
 			: await _rulebook.DeclineTradeAsync(responder.Id, command.TradeId, context);
@@ -131,7 +121,7 @@ public class RespondTradeHandler : ICommandHandler<RespondTradeCommand>
 /// <summary>
 /// Handler for the initiator cancelling their own pending trade.
 /// </summary>
-public class CancelTradeHandler : ICommandHandler<CancelTradeCommand>
+public class CancelTradeHandler : PlayerCommandHandler<CancelTradeCommand>
 {
 	private readonly ICorroRulebook _rulebook;
 
@@ -140,13 +130,8 @@ public class CancelTradeHandler : ICommandHandler<CancelTradeCommand>
 		_rulebook = rulebook;
 	}
 
-	public async Task<ServerResponse> HandleAsync(CancelTradeCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(CancelTradeCommand command, Player initiator, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var initiator) is { } error)
-		{
-			return error;
-		}
-
 		var outcome = await _rulebook.CancelTradeAsync(initiator.Id, command.TradeId, context);
 		if (outcome.AsError() is { } outcomeError)
 		{

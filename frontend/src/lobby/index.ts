@@ -2,23 +2,20 @@
  * Lobby - Main orchestrator for game creation and joining
  */
 import {
-	TokenKey, GameInfo, LobbyPlayer,
+	TokenKey, GameInfo,
 	CreateGameRequest, CreateGameResponse, JoinGameResponse, ResolvedJoinCode,
 	GameSettings, SavedGameInfo, PackageUploadResponse, ShippedBoard
 } from '../models.js';
 import { gameClient } from '../gameClient.js';
 import { hasUnlockCode, addUnlockCode } from '../unlockCodes.js';
 import { i18nBinder } from '../i18nBinder.js';
-import { randomBotName } from '../botNames.js';
-import { familyHasBots } from '../familyTraits.js';
-import { teamDisplayName } from '../enginePalette.js';
-import { popupMenu } from '../popupMenu.js';
+import { isLobbyPathFor, lobbyPathFor } from '../languageUrl.js';
 import { renderHouseRules, readHouseRuleValues } from '../houseRules.js';
 import { GameSessionStore, SavedGame } from '../sessionUtils.js';
 import { dialogManager } from '../dialogManager.js';
 import { FocusTrap } from '../focusTrap.js';
 import {
-	convertTokenToSnakeCase, getUsedTokens, getTokenName, renderTokenSelector
+	convertTokenToSnakeCase, getUsedTokens, renderTokenSelector
 } from './tokens.js';
 import { renderSeatSelector, getUsedSeats } from './seats.js';
 import { LatestOnly } from './latestOnly.js';
@@ -28,22 +25,19 @@ import { initAccountBar } from '../account.js';
 import { openAccountSettings } from '../accountSettings.js';
 import { initializeSiteBranding } from '../siteBranding.js';
 import { applyRuleSettings, readRuleSettings } from './ruleFields.js';
-import { buildBotNameForm } from './botNameForm.js';
-import { createPlayerIdentity } from './playerListItem.js';
-import { RovingToolbarList } from '../accessibleList.js';
-import { nextTeamAddFocus, teamRosterStatus } from './teamRoster.js';
-import { chooseWordLanguage, wordLanguageName } from './wordLanguage.js';
+import { chooseContentLanguage, contentLanguageName, fillContentLanguageSelect } from './contentLanguage.js';
 import {
 	t, translateServerError, showLoading, showError,
 	showSection, hideSection, showView, focusFirstField, getElement, getInputValue, getSelectedRadio,
-	copyToClipboard, updateUrlWithGame, clearUrlParams, getUrlParam, localizeBoardName, formatGameDate, parseHubErrorCode, isResumableToBoardStatus,
+	clearUrlParams, getUrlParam, localizeBoardName, formatGameDate, parseHubErrorCode, isTableAtRestStatus,
 	pickPackageName, renderBoardOptions, lobbyViewFromState, LobbyView
 } from './ui.js';
 
+/** How long a lobby announcement is left in the spoken region before it is wiped. */
+const LIVE_CLEAR_MS = 3000;
+
 class UnifiedLobbyUI {
 	private currentGame: GameInfo | null = null;
-	private currentPlayerId: string = '';
-	private isHost: boolean = false;
 	/** The shipped boards offered in the picker (engine boards served as packages). */
 	private shippedBoards: ShippedBoard[] = [];
 	/** The staged package for this game (a shipped board OR a custom upload) — always set once ready. */
@@ -53,20 +47,11 @@ class UnifiedLobbyUI {
 	/** The package operation Create must wait for. A user can select a board and submit before its
 	 *  POST+i18n chain settles; reading uploadedPackage earlier created the PREVIOUS game instead. */
 	private pendingPackageStage: Promise<void> = Promise.resolve();
-	/** Team member lists are rebuilt from authoritative lobby state; detach their delegated
-	 *  keyboard handlers before each rebuild. */
-	private teamListNavigators: RovingToolbarList[] = [];
-	/** Focus destination requested by an in-flight team move. The LobbyUpdated repaint consumes it. */
-	private pendingTeamFocus: {
-		preferredTeamIndex: number;
-		playerId: string;
-		expectedTeamIndex: number | null;
-	} | null = null;
-	/** A manual deck choice must survive later interface-language changes. */
-	private wordLanguageExplicit = false;
+	/** Pending wipe of the lobby's spoken region (see announceInLobby). */
+	private liveClearTimer: number | null = null;
 
 	constructor() {
-		this.init();
+		void this.init();
 	}
 
 	private async init(): Promise<void> {
@@ -167,20 +152,6 @@ class UnifiedLobbyUI {
 		}
 	}
 
-	private async loadVoiceAvailability(): Promise<void> {
-		try {
-			const response = await fetch('/api/config/voice');
-			const available = response.ok && !!(await response.json() as { available?: boolean }).available;
-			const group = getElement('voice-chat-group');
-			if (group) {
-				group.hidden = !available;
-				group.classList.toggle('hidden', !available);
-			}
-		} catch {
-			// Voice is optional. A failed public capability probe leaves the form hidden.
-		}
-	}
-
 	private async connectToServer(): Promise<void> {
 		try {
 			await gameClient.connect();
@@ -195,21 +166,17 @@ class UnifiedLobbyUI {
 		gameClient.on('disconnected', () => showError(t('lobby.errors.disconnected')));
 		gameClient.on('gameCreated', (data) => this.handleGameCreated(data));
 		gameClient.on('gameJoined', (data) => this.handleGameJoined(data));
-		gameClient.on('playerJoined', (data) => this.handlePlayerJoined(data));
-		gameClient.on('lobbyUpdated', (data) => this.handleLobbyUpdated(data));
-		gameClient.on('teamAssigned', (data) => this.handleTeamAssigned(data));
-		gameClient.on('forbiddenWordLanguageChanged', (data) => {
-			this.announceInLobby(t('lobby.wordLanguageChanged')
-				.replace('{{language}}', wordLanguageName(data.language, t)));
-		});
-		gameClient.on('gameStarted', (data) => this.handleGameStarted(data));
 		gameClient.on('gameDeleted', (data) => this.handleGameDeleted(data));
 		gameClient.on('error', (msg) => showError(translateServerError(msg)));
 
-		// Language change handler
-		window.addEventListener('languageChanged', () => {
-			this.onLanguageChanged();
-		});
+		// There is deliberately NO `languageChanged` handler here. The lobby is built once per
+		// language and served already translated, and the binder takes its language from the
+		// page's own <html lang> ahead of any cookie — so the language a player is reading always
+		// matches the page they are on, and applying a DIFFERENT one navigates to that language's
+		// page. The in-place branch of the selector can therefore only ever re-apply the language
+		// already in force. Everything this used to repaint (the token and seat selectors, the
+		// saved-games list, the create-game selects, join step 2) was repainting for a change that
+		// cannot happen; a page load does it properly instead. See languageUrl.ts.
 	}
 
 	private setupUI(): void {
@@ -218,11 +185,7 @@ class UnifiedLobbyUI {
 		this.setupBoardUpload();
 		this.setupCreateGameForm();
 		this.setupJoinGameForm();
-		this.setupCopyLinkButton();
-		this.setupCopyCodeButton();
-		this.setupStartGameButton();
 		this.setupUnlockShortcut();
-		void this.loadVoiceAvailability();
 	}
 
 	/**
@@ -328,9 +291,6 @@ class UnifiedLobbyUI {
 
 	private handleGameCreated(data: CreateGameResponse): void {
 		this.currentGame = data.game;
-		// The real hostId is in game.hostId, hostSecretId is only for authentication
-		this.currentPlayerId = data.game.hostId;
-		this.isHost = true;
 		const host = data.game.players.find(p => p.id === data.game.hostId);
 		const board = this.uploadedPackage ? this.localizePackageName(this.uploadedPackage.name) : '';
 		GameSessionStore.saveGame({
@@ -343,13 +303,11 @@ class UnifiedLobbyUI {
 			isHost: true,
 			rejoinCode: data.hostRejoinCode
 		});
-		this.showGameCreated(data.game, data.inviteCode);
+		this.enterTable(data.game);
 	}
 
 	private handleGameJoined(data: JoinGameResponse): void {
 		this.currentGame = data.game;
-		this.currentPlayerId = data.playerId;
-		this.isHost = false;
 		const me = data.game.players.find(p => p.id === data.playerId);
 		GameSessionStore.saveGame({
 			gameId: data.game.gameId,
@@ -361,38 +319,7 @@ class UnifiedLobbyUI {
 			isHost: false,
 			rejoinCode: data.rejoinCode
 		});
-		this.showGameJoined(data.game);
-	}
-
-	private handlePlayerJoined(_data: { playerId: string; playerName: string }): void {
-		if (this.currentGame) {
-			// Refresh game state to get updated player list
-			this.refreshGameState();
-		}
-	}
-
-	private handleLobbyUpdated(game: GameInfo): void {
-		// Server sent updated game state, update our local state and UI
-		this.currentGame = game;
-		this.updatePlayerList(game.players);
-		this.renderWaitingWordLanguage(game);
-	}
-
-	private handleGameStarted(data: { gameId: string }): void {
-		window.location.href = `board.html?gameId=${data.gameId}`;
-	}
-
-	private async refreshGameState(): Promise<void> {
-		if (!this.currentGame) return;
-		try {
-			const gameInfo = await gameClient.getGameByInviteCode(this.currentGame.gameId);
-			if (gameInfo) {
-				this.currentGame = gameInfo;
-				this.updatePlayerList(gameInfo.players);
-			}
-		} catch (error) {
-			console.error('Error refreshing game state:', error);
-		}
+		this.enterTable(data.game);
 	}
 
 	// === Form Setup ===
@@ -405,9 +332,23 @@ class UnifiedLobbyUI {
 		const getCurrentLang = () => (window as any).i18next?.language || 'en';
 		selector.value = getCurrentLang();
 
-		applyBtn.addEventListener('click', async () => {
-			const { changeLanguage } = await import('../i18nBinder.js');
-			await changeLanguage(selector.value);
+		applyBtn.addEventListener('click', () => {
+			const language = selector.value;
+			// Each language has its own pre-translated lobby, so applying one is navigation, not a
+			// DOM pass: the player lands on the page that was BUILT in that language (URL, <html lang>
+			// and text all agreeing) instead of a Spanish-looking English page. The choice is saved
+			// first because the root page redirects by cookie — a stale one would send a player who
+			// just asked for English straight back to Spanish. The query string and hash travel along
+			// so an invite link survives the switch.
+			// Already on that language's page: there is nothing to translate and nowhere to go, but
+			// the CHOICE still has to be recorded — someone who arrived on /es/ from a shared link
+			// and pressed Apply has just told us where to send them from the root next time.
+			if (isLobbyPathFor(window.location.pathname, language)) {
+				i18nBinder.rememberLanguage(language);
+				return;
+			}
+			i18nBinder.rememberLanguage(language);
+			window.location.assign(`${lobbyPathFor(language)}${window.location.search}${window.location.hash}`);
 		});
 	}
 
@@ -420,12 +361,6 @@ class UnifiedLobbyUI {
 		// The valid team counts depend on the CHOSEN player count: refresh them together.
 		getElement<HTMLSelectElement>('max-players')?.addEventListener('change', () => {
 			if (this.uploadedPackage) this.renderTeamCountOptions(this.uploadedPackage);
-		});
-		getElement<HTMLSelectElement>('forbidden-word-language')?.addEventListener('change', () => {
-			this.wordLanguageExplicit = true;
-		});
-		getElement<HTMLSelectElement>('host-forbidden-word-language')?.addEventListener('change', event => {
-			void this.setWaitingWordLanguage((event.target as HTMLSelectElement).value);
 		});
 	}
 
@@ -502,8 +437,7 @@ class UnifiedLobbyUI {
 		// Team families offer their legal equal-team layouts for the chosen player count.
 		this.renderTeamCountOptions(pkg);
 		// Forbidden Words exposes each real word deck as one shared match-language choice.
-		this.wordLanguageExplicit = false;
-		this.renderCreateWordLanguages(pkg, i18nBinder.getCurrentLanguage());
+		this.renderCreateContentLanguages(pkg, i18nBinder.getCurrentLanguage());
 		// Reset any previous board's dynamic rules, then render this board's.
 		const pkgRules = getElement('package-rules');
 		if (pkgRules) { pkgRules.innerHTML = ''; pkgRules.classList.add('hidden'); }
@@ -653,32 +587,25 @@ class UnifiedLobbyUI {
 	/** Populate the create-time word-deck selector. It is visible only when there is an
 	 * actual choice, but remains populated for a one-language package so creation submits
 	 * that sole valid deck instead of silently borrowing the interface locale. */
-	private renderCreateWordLanguages(pkg: PackageUploadResponse, preferred: string): void {
-		const group = getElement('forbidden-word-language-group');
-		const select = getElement<HTMLSelectElement>('forbidden-word-language');
+	private renderCreateContentLanguages(pkg: PackageUploadResponse, preferred: string): void {
+		const group = getElement('content-language-group');
+		const select = getElement<HTMLSelectElement>('content-language');
 		if (!group || !select) return;
 
-		const languages = pkg.gameType === 'forbidden' ? pkg.forbiddenWordLanguages ?? [] : [];
-		const selected = chooseWordLanguage(languages, preferred);
-		this.fillWordLanguageSelect(select, languages, selected);
+		const languages = pkg.contentLanguages ?? [];
+		const selected = chooseContentLanguage(languages, preferred);
+		this.fillContentLanguageSelect(select, languages, selected);
 		const visible = languages.length > 1;
 		group.hidden = !visible;
 		group.classList.toggle('hidden', !visible);
 	}
 
-	private fillWordLanguageSelect(
+	private fillContentLanguageSelect(
 		select: HTMLSelectElement,
 		languages: readonly string[],
 		selected: string,
 	): void {
-		select.innerHTML = '';
-		for (const language of languages) {
-			const option = document.createElement('option');
-			option.value = language;
-			option.textContent = wordLanguageName(language, t);
-			select.appendChild(option);
-		}
-		select.value = selected;
+		fillContentLanguageSelect(select, languages, selected, t);
 	}
 
 	/**
@@ -690,10 +617,13 @@ class UnifiedLobbyUI {
 		if (!select) return;
 		const min = pkg.minPlayers || 2;
 		const max = Math.max(pkg.maxPlayers || 8, min);
-		const forbidden = pkg.gameType === 'forbidden';
+		// A team-only board (forbidden: clue-giver vs the opposing monitor) only seats tables that
+		// split evenly into its teams, with at least two players each. The SERVER says how many —
+		// the lobby no longer guesses which family that is.
+		const teams = pkg.requiredTeamCount ?? 0;
 		select.innerHTML = '';
 		for (let n = min; n <= max; n++) {
-			if (forbidden && n % 2 !== 0) continue;
+			if (teams > 0 && (n % teams !== 0 || n / teams < 2)) continue;
 			const option = document.createElement('option');
 			option.value = String(n);
 			option.textContent = t('lobby.playersOption', '{{count}} players').replace('{{count}}', String(n));
@@ -740,76 +670,6 @@ class UnifiedLobbyUI {
 		const joinHandler = async (e: Event) => { e.preventDefault(); await this.joinGame(); };
 		joinForm?.addEventListener('submit', joinHandler);
 		joinBtn?.addEventListener('click', joinHandler);
-	}
-
-	private setupCopyLinkButton(): void {
-		getElement('copy-link-btn')?.addEventListener('click', async () => {
-			const url = getElement('invite-url')?.textContent || '';
-			if (!url || !await copyToClipboard(url, 'copy-link-btn')) {
-				showError(t('lobby.errors.copyLink'));
-			}
-		});
-	}
-
-	private setupCopyCodeButton(): void {
-		getElement('copy-code-btn')?.addEventListener('click', async () => {
-			const code = getElement('lobby-code')?.textContent || '';
-			if (!code || !await copyToClipboard(code, 'copy-code-btn')) {
-				showError(t('lobby.errors.copyCode'));
-			}
-		});
-	}
-
-	private setupStartGameButton(): void {
-		getElement('start-game-btn')?.addEventListener('click', () => this.startGame());
-		getElement('add-bot-btn')?.addEventListener('click', () => this.promptBotName());
-	}
-
-	/**
-	 * Adding a bot asks for its NAME first: type one, or roll the hat («Dame uno
-	 * aleatorio») for a silly road-trip name in the host's language. Left empty, the
-	 * server falls back to its plain "Bot N".
-	 */
-	private promptBotName(): void {
-		const { content, input, submit } = buildBotNameForm({
-			t,
-			rollName: (current) => randomBotName(key => i18nBinder.tSync(key), current),
-			onSubmit: (name) => {
-				dialogManager.close();
-				void this.addBot(name);
-			},
-		});
-
-		dialogManager.show({
-			title: t('lobby.botNameTitle'),
-			contentElement: content,
-			className: 'dialog-bot-name',
-			// Focus returns to the Add-bot chair on close — passed explicitly because a
-			// screen-reader activation of the button may not leave DOM focus on it.
-			returnFocusTo: 'add-bot-btn',
-			buttons: [
-				{
-					label: 'Cancel', i18nKey: 'common.cancel', variant: 'secondary',
-					action: () => dialogManager.close(),
-				},
-				{
-					label: 'Add', i18nKey: 'lobby.botNameAdd', variant: 'primary',
-					action: submit,
-				},
-			],
-		});
-		// Land ON the name box (the dialog's own initial focus goes to a button at ~50ms).
-		window.setTimeout(() => input.focus(), 80);
-	}
-
-	private async addBot(name?: string): Promise<void> {
-		if (!this.currentGame || !this.isHost) return;
-		try {
-			await gameClient.addBot({ gameId: this.currentGame.gameId, hostId: this.currentPlayerId, name });
-		} catch (error) {
-			console.error('Error adding bot:', error);
-			showError(t('lobby.errors.addBot'));
-		}
 	}
 
 	/**
@@ -896,23 +756,29 @@ class UnifiedLobbyUI {
 		// The host's seat pick (race boards only; the fieldset stays hidden for property).
 		const hostSeatId = getSelectedRadio('#seat-list', 'seat') ?? undefined;
 		// Classic pairs: only offered (and only submitted) for 4-seat race boards.
+		// Left UNDEFINED rather than false when unticked: the field is then omitted from the
+		// request entirely, which is what tells the server "this board has no classic pairs".
 		const raceTeams = getElement<HTMLInputElement>('race-teams')?.checked
-			&& !getElement('teams-group')?.classList.contains('hidden') || undefined;
+			&& !getElement('teams-group')?.classList.contains('hidden')
+			? true
+			: undefined;
 
 		// Journey team mode: only when the combo is offered and a count is picked.
 		const teamCount = (!getElement('team-count-group')?.classList.contains('hidden')
 			&& Number(getElement<HTMLSelectElement>('team-count')?.value)) || undefined;
 
+		// A package whose CONTENT is language-split (a word deck, a question deck) needs the host to
+		// name one deck for the whole table; every other package just travels with my own locale.
 		const interfaceLanguage = i18nBinder.getCurrentLanguage();
-		const wordLanguages = this.uploadedPackage.forbiddenWordLanguages ?? [];
-		const language = this.uploadedPackage.gameType === 'forbidden'
-			? chooseWordLanguage(
-				wordLanguages,
-				getElement<HTMLSelectElement>('forbidden-word-language')?.value || interfaceLanguage,
+		const contentLanguages = this.uploadedPackage.contentLanguages ?? [];
+		const language = contentLanguages.length > 0
+			? chooseContentLanguage(
+				contentLanguages,
+				getElement<HTMLSelectElement>('content-language')?.value || interfaceLanguage,
 			)
 			: interfaceLanguage;
-		if (this.uploadedPackage.gameType === 'forbidden' && !language) {
-			return showError(t('lobby.errors.selectWordLanguage'));
+		if (contentLanguages.length > 0 && !language) {
+			return showError(t('lobby.errors.selectContentLanguage'));
 		}
 
 		const request: CreateGameRequest = {
@@ -924,7 +790,6 @@ class UnifiedLobbyUI {
 			hostSeatId,
 			raceTeams,
 			teamCount,
-			voiceChatEnabled: getElement<HTMLInputElement>('voice-chat-enabled')?.checked || undefined,
 			settings: this.readGameSettings()
 		};
 
@@ -992,23 +857,6 @@ class UnifiedLobbyUI {
 			console.error('   Error stack:', error?.stack);
 			const msg = translateServerError(error?.message || '');
 			showError(msg || t('lobby.errors.joinGame'));
-		} finally {
-			showLoading(false);
-		}
-	}
-
-	private async startGame(): Promise<void> {
-		if (!this.currentGame || !this.isHost) return showError(t('lobby.errors.hostOnly'));
-
-		try {
-			showLoading(true);
-			await gameClient.startGame({
-				gameId: this.currentGame.gameId,
-				hostId: this.currentPlayerId
-			});
-		} catch (error) {
-			console.error('Error starting game:', error);
-			showError(t('lobby.errors.startGame'));
 		} finally {
 			showLoading(false);
 		}
@@ -1123,7 +971,7 @@ class UnifiedLobbyUI {
 
 		if (inviteCode) {
 			showView('view-join');
-			this.autoValidateInviteCode(inviteCode);
+			void this.autoValidateInviteCode(inviteCode);
 			return;
 		}
 
@@ -1131,7 +979,7 @@ class UnifiedLobbyUI {
 		if (gameIdFromUrl) {
 			const saved = GameSessionStore.getGame(gameIdFromUrl);
 			if (saved) {
-				this.attemptReconnect(saved);
+				void this.attemptReconnect(saved);
 				return;
 			}
 		}
@@ -1262,13 +1110,18 @@ class UnifiedLobbyUI {
 		return li;
 	}
 
-	/** Resume a saved game: active games go to the board, pending ones back to the waiting room. */
+	/**
+	 * Resume a saved table. One destination either way: its own page shows the board when a match
+	 * is running there and the table when none is. A table with no match still goes through
+	 * ReconnectLobby first, which re-authenticates this browser's saved session before the page
+	 * that needs it loads.
+	 */
 	private resumeSavedGame(game: SavedGame, info?: SavedGameInfo): void {
-		if (isResumableToBoardStatus(info?.status)) {
-			window.location.href = `board.html?gameId=${game.gameId}`;
-		} else {
+		if (isTableAtRestStatus(info?.status)) {
 			void this.attemptReconnect(game);
+			return;
 		}
+		window.location.href = `board.html?gameId=${game.gameId}`;
 	}
 
 	/** Host-only: confirm then ask the server to permanently delete a game. */
@@ -1353,17 +1206,9 @@ class UnifiedLobbyUI {
 			}
 			if (gameState) {
 				this.currentGame = gameState as any;
-				this.currentPlayerId = session.playerId;
-				this.isHost = gameState.hostId === session.playerId;
-				if (this.isHost) {
-					// Pass the real invite code (not the gameId) so the shared link is
-					// `?code=<inviteCode>`. The join flow resolves it via
-					// GetByInviteCodeAsync, which only matches the inviteCode field —
-					// a `?code=<gameId>` link would always report "game not found".
-					this.showGameCreated(gameState as any, gameState.inviteCode);
-				} else {
-					this.showGameJoined(gameState as any);
-				}
+				// A table is resumed through its own page, whether or not a match is running there:
+				// it shows the board when there is one and the table when there is not.
+				this.enterTable(gameState as any);
 			} else {
 				GameSessionStore.removeGame(session.gameId);
 				clearUrlParams();
@@ -1401,11 +1246,11 @@ class UnifiedLobbyUI {
 			const status = document.createElement('li');
 			status.textContent = t('lobby.statusWaiting', 'Waiting for players');
 			details.append(players, status);
-			if ((gameInfo.forbiddenWordLanguages?.length ?? 0) > 0 && gameInfo.language) {
-				const wordLanguage = document.createElement('li');
-				wordLanguage.textContent = t('lobby.wordLanguageCurrent')
-					.replace('{{language}}', wordLanguageName(gameInfo.language, t));
-				details.appendChild(wordLanguage);
+			if ((gameInfo.contentLanguages?.length ?? 0) > 0 && gameInfo.language) {
+				const contentLanguage = document.createElement('li');
+				contentLanguage.textContent = t('lobby.contentLanguageCurrent')
+					.replace('{{language}}', contentLanguageName(gameInfo.language, t));
+				details.appendChild(contentLanguage);
 			}
 		}
 
@@ -1435,421 +1280,14 @@ class UnifiedLobbyUI {
 		}
 	}
 
-	private showGameCreated(game: GameInfo, inviteCode: string): void {
-		updateUrlWithGame(game.gameId);
-		showSection('lobby-created');
-		hideSection('lobby-joined');
-		showView('view-waiting', 'game-created-message');
-		this.updateGameInfo(game, inviteCode);
-		this.updatePlayerList(game.players);
-		this.renderRejoinCode('created-rejoin-mount', game.gameId);
-	}
-
-	private showGameJoined(game: GameInfo): void {
-		updateUrlWithGame(game.gameId);
-		hideSection('lobby-created');
-		showSection('lobby-joined');
-		showView('view-waiting', 'game-joined-message');
-		this.updateGameInfo(game);
-		this.updatePlayerList(game.players);
-		this.renderRejoinCode('joined-rejoin-mount', game.gameId);
-	}
-
 	/**
-	 * The player's own RE-ENTRY code in the waiting room, with a copy button: the one
-	 * thing worth noting down — typed back in the code box it recovers this seat from
-	 * any browser (the saved-session localStorage may not survive).
+	 * Take the player to their TABLE — the game page, where the group waits together with the
+	 * chat, the voice room, the roster, the shared deck and, on a team board, the arrangement
+	 * (docs/tables.md). The lobby keeps what is genuinely lobby: your tables, and the forms for
+	 * creating one or asking to sit at somebody else's.
 	 */
-	private renderRejoinCode(mountId: string, gameId: string): void {
-		const mount = getElement(mountId);
-		if (!mount) return;
-		const code = GameSessionStore.getGame(gameId)?.rejoinCode;
-		if (!code) { mount.innerHTML = ''; return; }
-		mount.innerHTML = '';
-
-		const box = document.createElement('div');
-		box.className = 'invite-code rejoin-code';
-		const title = document.createElement('h3');
-		title.textContent = t('lobby.rejoin.codeTitle');
-		const value = document.createElement('div');
-		value.className = 'invite-code__value';
-		value.id = `${mountId}-value`;
-		value.textContent = code;
-		const copyBtn = document.createElement('button');
-		copyBtn.className = 'copy-button';
-		copyBtn.id = `${mountId}-copy`;
-		copyBtn.textContent = t('lobby.rejoin.copy');
-		copyBtn.addEventListener('click', () => { void copyToClipboard(code, copyBtn.id); });
-		const hint = document.createElement('p');
-		hint.className = 'hint';
-		hint.textContent = t('lobby.rejoin.hint');
-		box.append(title, value, copyBtn, hint);
-		mount.appendChild(box);
-	}
-
-	private updateGameInfo(game: GameInfo, inviteCode?: string): void {
-		const codeEl = getElement('lobby-code');
-		const urlEl = getElement('invite-url');
-		const code = inviteCode || game.gameId;
-		if (codeEl) codeEl.textContent = code;
-		if (urlEl) urlEl.textContent = `${window.location.origin}?code=${code}`;
-		this.renderWaitingWordLanguage(game);
-	}
-
-	/** The waiting room keeps the selected deck visible to everyone. The host receives a
-	 * real select and every guest receives one flowing read-only sentence. */
-	private renderWaitingWordLanguage(game: GameInfo): void {
-		const languages = game.forbiddenWordLanguages ?? [];
-		const selected = chooseWordLanguage(languages, game.language);
-		const hostGroup = getElement('host-forbidden-word-language-group');
-		const hostSelect = getElement<HTMLSelectElement>('host-forbidden-word-language');
-		const showHost = this.isHost && languages.length > 0 && !!selected;
-		if (hostGroup) {
-			hostGroup.hidden = !showHost;
-			hostGroup.classList.toggle('hidden', !showHost);
-		}
-		if (hostSelect && showHost) {
-			const focused = document.activeElement === hostSelect;
-			this.fillWordLanguageSelect(hostSelect, languages, selected);
-			if (focused) hostSelect.focus();
-		}
-
-		const guestSummary = getElement('joined-forbidden-word-language');
-		const showGuest = !this.isHost && languages.length > 0 && !!selected;
-		if (guestSummary) {
-			guestSummary.hidden = !showGuest;
-			guestSummary.classList.toggle('hidden', !showGuest);
-			guestSummary.textContent = showGuest
-				? t('lobby.wordLanguageCurrent')
-					.replace('{{language}}', wordLanguageName(selected, t))
-				: '';
-		}
-	}
-
-	private async setWaitingWordLanguage(language: string): Promise<void> {
-		if (!this.currentGame || !this.isHost) return;
-		try {
-			await gameClient.setForbiddenWordLanguage({
-				gameId: this.currentGame.gameId,
-				hostId: this.currentPlayerId,
-				language,
-			});
-		} catch (error) {
-			console.error('Error changing Forbidden Words language:', error);
-			this.renderWaitingWordLanguage(this.currentGame);
-			showError(t('lobby.errors.changeWordLanguage'));
-		}
-	}
-
-	private updatePlayerList(players: LobbyPlayer[]): void {
-		// Update both lists if they exist (host sees host-player-list, guest sees joined-player-list)
-		const hostContainer = getElement('host-player-list');
-		const guestContainer = getElement('joined-player-list');
-
-		// NOTE: no status check here — these lists only render in the WAITING room (an
-		// active game lives on board.html), and the hub payload's status encoding differs
-		// from the REST one, so comparing it here is a trap.
-		const updateContainer = (container: HTMLElement | null, interactive: boolean) => {
-			if (!container) return;
-			container.innerHTML = '';
-			players.forEach(player => {
-				const tokenKey = convertTokenToSnakeCase(player.token as unknown as string);
-				const tokenName = getTokenName(tokenKey, t);
-				const statusText = player.isReady
-					? t('lobby.playerReady', '(ready)')
-					: t('lobby.playerWaiting', '(waiting)');
-				const hostText = player.isHost ? ` ${t('lobby.playerHost', '(host)')}` : '';
-				const botText = player.isBot ? ` ${t('lobby.playerBot', '(bot)')}` : '';
-				const li = document.createElement('li');
-				li.className = 'player-item';
-				// The spans are laid out with a CSS flex `gap`, so there is NO real text
-				// node between them — only visual spacing. Screen readers (JAWS) ignore the
-				// gap and read adjacent spans glued together ("NúriaScottie Dog"). A normal
-				// space doesn't help because it collapses; we suffix each part with a comma
-				// plus a non-breaking space, which is a real, non-collapsible
-				// character in the accessibility tree, so each part is read distinctly.
-				li.appendChild(createPlayerIdentity({
-					tokenKey,
-					playerName: player.name,
-					tokenName,
-					statusText,
-					hostText,
-					botText,
-				}));
-				// The host can send a bot away while waiting.
-				if (interactive && player.isBot) {
-					const remove = document.createElement('button');
-					remove.type = 'button';
-					remove.className = 'secondary-button player-item__remove-bot';
-					remove.textContent = t('lobby.removeBot');
-					remove.setAttribute('aria-label', t('lobby.removeBotOf').replace('{{name}}', player.name));
-					remove.addEventListener('click', () => void this.removeBot(player.id));
-					li.appendChild(remove);
-				}
-				container.appendChild(li);
-			});
-		};
-
-		updateContainer(hostContainer, this.isHost);
-		updateContainer(guestContainer, false);
-		this.renderTeamPanels();
-		// The add-bot chair: host only, on a family that HAS bots (trivia/race/property ship no
-		// bot policy — the server rejects them), while there is room at the table. The host holds
-		// the selected package, whose gameType names the family.
-		const canAddBot = this.isHost
-			&& familyHasBots(this.uploadedPackage?.gameType)
-			&& players.length < (this.currentGame?.maxPlayers ?? 0);
-		const addBotBtn = getElement('add-bot-btn');
-		// Hiding the focused chair (the table just filled, e.g. after adding the last bot)
-		// would strand focus on <body>: hand it to Start first so the keyboard user keeps a
-		// sensible landing spot.
-		if (addBotBtn && !canAddBot && document.activeElement === addBotBtn) {
-			getElement('start-game-btn')?.focus();
-		}
-		addBotBtn?.classList.toggle('hidden', !canAddBot);
-	}
-
-	private async removeBot(playerId: string): Promise<void> {
-		if (!this.currentGame || !this.isHost) return;
-		try {
-			await gameClient.removeBot({ gameId: this.currentGame.gameId, hostId: this.currentPlayerId, playerId });
-		} catch (error) {
-			console.error('Error removing bot:', error);
-			showError(t('lobby.errors.addBot'));
-		}
-	}
-
-	// === Team mode (waiting room) ─ the host arranges, the room watches ===
-
-	/** The team's spoken identity ("Red team") — palette colour word by team index. */
-	private teamName(index: number): string {
-		return teamDisplayName(index, (k, v) => i18nBinder.tSync(k, v));
-	}
-
-	private renderTeamPanels(): void {
-		const game = this.currentGame;
-		const teamCount = game?.teamCount ?? 0;
-		const hostPanel = getElement('host-team-panel');
-		const guestPanel = getElement('joined-team-panel');
-		const preservedFocus = this.captureTeamPanelFocus();
-		this.destroyTeamListNavigators();
-		hostPanel?.classList.toggle('hidden', teamCount < 2);
-		guestPanel?.classList.toggle('hidden', teamCount < 2);
-		if (!game || teamCount < 2) return;
-		// The host's panel carries the controls; the guests' is the same picture, read-only.
-		if (hostPanel) this.renderTeamPanel(hostPanel, game, this.isHost);
-		if (guestPanel) this.renderTeamPanel(guestPanel, game, false);
-		this.restoreTeamPanelFocus(game, preservedFocus);
-	}
-
-	private renderTeamPanel(panel: HTMLElement, game: GameInfo, interactive: boolean): void {
-		const teamCount = game.teamCount!;
-		const teamSize = Math.floor(game.maxPlayers / teamCount);
-		const pool = game.players.filter(p => p.teamIndex == null);
-		panel.innerHTML = '';
-
-		const heading = document.createElement('h4');
-		heading.textContent = t('lobby.teamsHeading');
-		panel.appendChild(heading);
-
-		for (let index = 0; index < teamCount; index++) {
-			const members = game.players.filter(p => p.teamIndex === index);
-			const teamName = this.teamName(index);
-			const box = document.createElement('fieldset');
-			box.className = 'team-box';
-			box.dataset.teamIndex = String(index);
-			const legend = document.createElement('legend');
-			legend.textContent = `${teamName} (${members.length}/${teamSize})`;
-			box.appendChild(legend);
-
-			const list = document.createElement('ul');
-			list.className = 'team-member-list';
-			list.setAttribute('aria-label', teamName);
-			for (const member of members) {
-				const item = document.createElement('li');
-				item.className = 'team-member';
-				item.dataset.playerId = member.id;
-				item.tabIndex = -1;
-				item.setAttribute('aria-label', t('lobby.teamMemberLabel')
-					.replace('{{name}}', member.name)
-					.replace('{{team}}', teamName));
-				const name = document.createElement('span');
-				name.className = 'team-member__name';
-				name.textContent = member.name;
-				item.appendChild(name);
-				if (interactive) {
-					const toolbar = document.createElement('div');
-					toolbar.className = 'team-member__actions';
-					toolbar.setAttribute('role', 'toolbar');
-					toolbar.setAttribute('aria-label', t('actions_for').replace('{{name}}', member.name));
-					const remove = document.createElement('button');
-					remove.type = 'button';
-					remove.className = 'secondary-button team-box__remove';
-					remove.tabIndex = -1;
-					remove.textContent = t('lobby.teamRemove');
-					remove.setAttribute('aria-label',
-						t('lobby.teamRemoveOf').replace('{{name}}', member.name));
-					remove.addEventListener('click', () => void this.assignTeam(member.id, null, index));
-					toolbar.appendChild(remove);
-					item.appendChild(toolbar);
-				}
-				list.appendChild(item);
-			}
-			box.appendChild(list);
-			const navigator = new RovingToolbarList({
-				list,
-				itemSelector: '.team-member',
-				toolbarButtonSelector: '.team-member__actions button',
-				menuLabel: () => t('lobby.teamMemberActionsMenu'),
-				menuClass: 'team-context-menu',
-				menuItemClass: 'team-context-menu__item',
-				// Keep visible popup content in the active main landmark.
-				menuHost: () => panel.closest<HTMLElement>('main') ?? panel,
-			});
-			navigator.refreshRovingTabindex();
-			this.teamListNavigators.push(navigator);
-
-			if (interactive && members.length < teamSize && pool.length > 0) {
-				const add = document.createElement('button');
-				add.type = 'button';
-				add.className = 'secondary-button team-box__add';
-				add.dataset.teamIndex = String(index);
-				add.textContent = t('lobby.teamAdd');
-				add.setAttribute('aria-label',
-					t('lobby.teamAddTo').replace('{{team}}', teamName));
-				add.addEventListener('click', () => this.openTeamPickMenu(add, index, pool));
-				box.appendChild(add);
-			}
-			panel.appendChild(box);
-		}
-
-		// Distinguish the current unassigned pool from seats whose players have not joined yet.
-		// An empty pool is not a complete roster until every configured team place is filled.
-		const poolLine = document.createElement('p');
-		poolLine.className = 'team-pool';
-		const roster = teamRosterStatus(game.players, game.maxPlayers);
-		if (roster.kind === 'unassigned') {
-			poolLine.textContent = t('lobby.teamPool')
-				.replace('{{names}}', roster.names.join(', '));
-		} else if (roster.kind === 'waiting') {
-			const key = roster.missing === 1
-				? 'lobby.teamRosterWaitingOne'
-				: 'lobby.teamRosterWaitingMany';
-			poolLine.textContent = t(key)
-				.replace('{{assigned}}', String(roster.assigned))
-				.replace('{{capacity}}', String(roster.capacity))
-				.replace('{{missing}}', String(roster.missing));
-		} else {
-			poolLine.textContent = t('lobby.teamPoolEmpty');
-		}
-		panel.appendChild(poolLine);
-	}
-
-	/** The host's "add player" menu: only the UNASSIGNED players are offered. */
-	private openTeamPickMenu(anchor: HTMLElement, teamIndex: number, pool: LobbyPlayer[]): void {
-		popupMenu.open({
-			ariaLabel: t('lobby.teamAddTo').replace('{{team}}', this.teamName(teamIndex)),
-			anchor,
-			items: pool.map(player => ({
-				label: player.name,
-				onSelect: () => void this.assignTeam(player.id, teamIndex, teamIndex),
-			})),
-			announce: text => this.announceInLobby(text),
-			onClose: () => anchor.focus(),
-		});
-	}
-
-	private async assignTeam(
-		playerId: string,
-		teamIndex: number | null,
-		preferredTeamIndex: number,
-	): Promise<void> {
-		if (!this.currentGame || !this.isHost) return;
-		this.pendingTeamFocus = { preferredTeamIndex, playerId, expectedTeamIndex: teamIndex };
-		try {
-			await gameClient.assignTeam({
-				gameId: this.currentGame.gameId,
-				hostId: this.currentPlayerId,
-				playerId,
-				teamIndex,
-			});
-		} catch (error) {
-			this.pendingTeamFocus = null;
-			console.error('Error assigning team:', error);
-			showError(t('lobby.errors.assignTeam'));
-		}
-	}
-
-	private destroyTeamListNavigators(): void {
-		for (const navigator of this.teamListNavigators) navigator.destroy();
-		this.teamListNavigators = [];
-	}
-
-	/** Capture a stable identity before authoritative state replaces the team DOM. */
-	private captureTeamPanelFocus(): {
-		kind: 'add' | 'member' | 'action';
-		teamIndex: number;
-		playerId?: string;
-	} | null {
-		const active = document.activeElement as HTMLElement | null;
-		if (!active?.closest('#host-team-panel, #joined-team-panel')) return null;
-		const box = active.closest<HTMLElement>('.team-box');
-		const teamIndex = Number(box?.dataset.teamIndex);
-		if (!Number.isInteger(teamIndex)) return null;
-		if (active.matches('.team-box__add')) return { kind: 'add', teamIndex };
-		const member = active.closest<HTMLElement>('.team-member');
-		const playerId = member?.dataset.playerId;
-		if (!playerId) return null;
-		return {
-			kind: active.matches('.team-member__actions button') ? 'action' : 'member',
-			teamIndex,
-			playerId,
-		};
-	}
-
-	private restoreTeamPanelFocus(
-		game: GameInfo,
-		preserved: { kind: 'add' | 'member' | 'action'; teamIndex: number; playerId?: string } | null,
-	): void {
-		const hostPanel = getElement('host-team-panel');
-		if (!hostPanel || !this.isHost) return;
-
-		const pending = this.pendingTeamFocus;
-		if (pending) {
-			const addButtons = Array.from(hostPanel.querySelectorAll<HTMLButtonElement>('.team-box__add'));
-			const addable = addButtons.map(button => Number(button.dataset.teamIndex));
-			const targetIndex = nextTeamAddFocus(pending.preferredTeamIndex, addable, game.teamCount ?? 0);
-			const target = targetIndex === null
-				? hostPanel.querySelector<HTMLElement>(`.team-member[data-player-id="${CSS.escape(pending.playerId)}"]`)
-				: addButtons.find(button => Number(button.dataset.teamIndex) === targetIndex) ?? null;
-			target?.focus();
-			const updated = game.players.find(player => player.id === pending.playerId);
-			if ((updated?.teamIndex ?? null) === pending.expectedTeamIndex) this.pendingTeamFocus = null;
-			return;
-		}
-
-		if (!preserved) return;
-		if (preserved.kind === 'add') {
-			const addButtons = Array.from(hostPanel.querySelectorAll<HTMLButtonElement>('.team-box__add'));
-			const addable = addButtons.map(button => Number(button.dataset.teamIndex));
-			const targetIndex = nextTeamAddFocus(preserved.teamIndex, addable, game.teamCount ?? 0);
-			addButtons.find(button => Number(button.dataset.teamIndex) === targetIndex)?.focus();
-			return;
-		}
-		const row = preserved.playerId
-			? hostPanel.querySelector<HTMLElement>(`.team-member[data-player-id="${CSS.escape(preserved.playerId)}"]`)
-			: null;
-		if (preserved.kind === 'action') row?.querySelector<HTMLElement>('.team-member__actions button')?.focus();
-		else row?.focus();
-	}
-
-	/** The whole room hears every team move (the LobbyUpdated repaint is silent). */
-	private handleTeamAssigned(data: { playerId: string; playerName: string; teamIndex: number | null }): void {
-		this.announceInLobby(data.teamIndex == null
-			? t('lobby.teamUnassigned').replace('{{player}}', data.playerName)
-			: t('lobby.teamAssigned')
-				.replace('{{player}}', data.playerName)
-				.replace('{{team}}', this.teamName(data.teamIndex)));
+	private enterTable(game: GameInfo): void {
+		window.location.href = `board.html?gameId=${game.gameId}`;
 	}
 
 	private announceInLobby(text: string): void {
@@ -1858,6 +1296,15 @@ class UnifiedLobbyUI {
 		// Clear first so repeating the SAME text is still announced.
 		live.textContent = '';
 		window.setTimeout(() => { live.textContent = text; }, 30);
+		// …and wipe it once it has been spoken. The region is visually hidden but perfectly
+		// readable with the virtual cursor, so whatever it last said would otherwise sit at the
+		// bottom of the lobby to be read again long afterwards. Same rule as announcer.ts's
+		// scheduleTextClear and the chat's spoken log: said, then taken away.
+		if (this.liveClearTimer !== null) window.clearTimeout(this.liveClearTimer);
+		this.liveClearTimer = window.setTimeout(() => {
+			this.liveClearTimer = null;
+			live.textContent = '';
+		}, LIVE_CLEAR_MS);
 	}
 
 	// === Rendering ===
@@ -1865,8 +1312,8 @@ class UnifiedLobbyUI {
 	private renderBoardSelector(): void {
 		const selector = getElement<HTMLSelectElement>('board-selector');
 		if (!selector) return;
-		// The pure helper fills the options in the active language AND preserves the current
-		// selection, so a runtime language switch just re-calls this (see onLanguageChanged).
+		// The pure helper fills the options in the active language and preserves the current
+		// selection.
 		renderBoardOptions(selector, this.shippedBoards, i18nBinder.getCurrentLanguage());
 	}
 
@@ -1877,32 +1324,6 @@ class UnifiedLobbyUI {
 		}
 	}
 
-	private onLanguageChanged(): void {
-		// i18next has already switched by the time `languageChanged` fires. Re-render the bits we
-		// build imperatively with t()/localizePackageName() — they set textContent rather than
-		// data-i18n, so applyI18n never reaches them and they keep their old-language text: the
-		// token selectors, the saved-games list, and the create-game selects below.
-		this.renderAllTokenSelectors();
-		// The shipped-board picker options are localized per board; rebuild them in the new
-		// language (renderBoardOptions preserves the host's current choice on its own).
-		this.renderBoardSelector();
-		// The staged package's player- and team-count options also set textContent via t():
-		// re-render them, preserving the host's selection (renderTeamCountOptions keeps its own).
-		if (this.uploadedPackage) {
-			const select = getElement<HTMLSelectElement>('max-players');
-			const chosen = select?.value;
-			this.renderPlayerCount(this.uploadedPackage);
-			if (select && chosen) select.value = chosen;
-			this.renderTeamCountOptions(this.uploadedPackage);
-			const wordSelect = getElement<HTMLSelectElement>('forbidden-word-language');
-			const preferred = this.wordLanguageExplicit
-				? wordSelect?.value ?? i18nBinder.getCurrentLanguage()
-				: i18nBinder.getCurrentLanguage();
-			this.renderCreateWordLanguages(this.uploadedPackage, preferred);
-		}
-		if (this.currentGame) this.renderWaitingWordLanguage(this.currentGame);
-		void this.refreshSavedGames();
-	}
 }
 
 // Initialize on DOM ready

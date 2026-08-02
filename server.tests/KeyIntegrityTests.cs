@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CorroServer.Models.Corro;
 using CorroServer.Services.Corro;
 using CorroServer.Services.Corro.Validation;
@@ -80,6 +81,79 @@ public class KeyIntegrityTests
 		Assert.DoesNotContain(Validator.Validate(def), p => p.Contains("gameType"));
 	}
 
+	/// <summary>A definition carrying one host-editable rule, with everything else valid.</summary>
+	private static GameDefinition WithHouseRule(HouseRuleDef rule, Dictionary<string, string>? labels = null)
+		=> new()
+		{
+			Manifest = new Manifest
+			{
+				GameType = "shedding",
+				Locales = new() { "es" },
+				Tokens = new() { new TokenDef { Id = "t", Svg = "M0 0z" } },
+				HouseRules = new() { rule },
+			},
+			I18n = new() { ["es"] = labels ?? new() },
+		};
+
+	private static HouseRuleDef ScoringRule(string type, string[] options, string? @default = null)
+		=> new()
+		{
+			Id = "sheddingScoring",
+			Type = type,
+			NameKey = "rules.scoring",
+			Default = @default == null ? null : JsonSerializer.SerializeToElement(@default),
+			Options = options.Select(o => new HouseRuleOption { Id = o, NameKey = $"rules.{o}" }).ToList(),
+		};
+
+	private static readonly Dictionary<string, string> ScoringLabels = new()
+	{
+		["rules.scoring"] = "Puntuación",
+		["rules.collect"] = "Sumar",
+		["rules.penalty"] = "Castigo",
+		["rules.wobble"] = "Bamboleo",
+	};
+
+	[Fact]
+	public void A_choice_rule_offering_a_value_the_engine_would_ignore_is_rejected()
+	{
+		// The applier keeps its default whenever the stored value is not one of its own, so an
+		// invented option would be offered, chosen, saved — and then silently dropped.
+		var def = WithHouseRule(ScoringRule("choice", new[] { "collect", "wobble" }), ScoringLabels);
+
+		var problem = Assert.Single(Validator.Validate(def), p => p.Contains("sheddingScoring"));
+		Assert.Contains("wobble", problem);
+		Assert.Contains("collect, penalty", problem); // the message names what IS accepted
+	}
+
+	[Fact]
+	public void A_choice_rule_that_defaults_outside_its_own_options_is_rejected()
+	{
+		var def = WithHouseRule(ScoringRule("choice", new[] { "collect" }, "penalty"), ScoringLabels);
+
+		Assert.Contains(Validator.Validate(def), p => p.Contains("defaults to 'penalty'"));
+	}
+
+	[Fact]
+	public void A_value_gated_rule_declared_as_a_toggle_is_rejected()
+	{
+		var def = WithHouseRule(ScoringRule("toggle", Array.Empty<string>()), ScoringLabels);
+
+		Assert.Contains(Validator.Validate(def), p => p.Contains("must be declared as a choice"));
+	}
+
+	[Fact]
+	public void A_coherent_choice_rule_passes_and_its_labels_must_resolve()
+	{
+		var ok = WithHouseRule(ScoringRule("choice", new[] { "collect", "penalty" }, "collect"), ScoringLabels);
+		Assert.DoesNotContain(Validator.Validate(ok), p => p.Contains("sheddingScoring"));
+
+		// Without labels the lobby would render the raw ids, so a dangling one is a problem.
+		var unnamed = WithHouseRule(ScoringRule("choice", new[] { "collect", "penalty" }, "collect"));
+		var problems = Validator.Validate(unnamed);
+		Assert.Contains(problems, p => p.Contains("house rule 'sheddingScoring'") && p.Contains("rules.scoring"));
+		Assert.Contains(problems, p => p.Contains("option 'penalty'"));
+	}
+
 	[Fact]
 	public void A_dangling_key_is_caught()
 	{
@@ -93,6 +167,34 @@ public class KeyIntegrityTests
 
 		var problems = Validator.Validate(def);
 		Assert.Contains(problems, p => p.Contains("squares.does_not_exist"));
+	}
+
+	[Fact]
+	public void A_bot_name_that_resolves_nowhere_is_caught()
+	{
+		// A board names its own bots (manifest botNames -> its own i18n), so the host is offered
+		// opponents from THIS world rather than the engine's generic ones. A key that resolves in no
+		// locale would put a raw key in the "roll me a name" hat — the one place the text is handed
+		// to a person to accept as-is.
+		var def = new GameDefinition
+		{
+			Manifest = new Manifest
+			{
+				GameType = "property",
+				Locales = new() { "es", "en" },
+				Tokens = new() { new TokenDef { Id = "t", Svg = "M0 0z" } },
+				BotNames = new() { "bots.foreman", "bots.never_written" },
+			},
+			I18n = new()
+			{
+				["es"] = new() { ["bots.foreman"] = "Capataz Escombro" },
+				["en"] = new() { ["bots.foreman"] = "Foreman Grit" },
+			},
+		};
+
+		var problems = Validator.Validate(def);
+		Assert.Contains(problems, p => p.Contains("bots.never_written") && p.Contains("bot name"));
+		Assert.DoesNotContain(problems, p => p.Contains("bots.foreman"));
 	}
 
 	[Fact]

@@ -312,5 +312,13 @@
     "smallKey": "building.small",
     "smallPluralKey": "building.smallPlural",
     "bigKey": "building.big"
-  }
+  },
+  "botNames": [
+    "bots.comandante",
+    "bots.ovni",
+    "bots.cohete",
+    "bots.nebulosa",
+    "bots.aduanas",
+    "bots.polizon"
+  ]
 }

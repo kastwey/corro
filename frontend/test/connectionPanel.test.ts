@@ -5,12 +5,13 @@ import { ConnectionPanel } from '../src/connectionPanel.js';
 
 /**
  * DOM regression tests for the always-visible connection panel: it shows the live
- * connection status (an aria-live region) and offers "Leave game" (confirmed
- * bankruptcy) and "Disconnect" buttons. We assert the accessible structure, the
- * status transitions, the button wiring and that focus() lands on the container.
+ * connection status (an aria-live region) and offers three different goodbyes —
+ * forfeit THIS match (you stay at the table), leave the TABLE for good, and drop the
+ * connection. We assert the accessible structure, the status transitions, the button
+ * wiring and that focus() lands on the container.
  */
 
-let calls: { leave: number; disconnect: number; copied: string[] };
+let calls: { leave: number; leaveTable: number; disconnect: number; copied: string[] };
 
 function makePanel(): { panel: ConnectionPanel; mount: HTMLElement } {
 	const mount = document.createElement('div');
@@ -18,6 +19,7 @@ function makePanel(): { panel: ConnectionPanel; mount: HTMLElement } {
 	const panel = new ConnectionPanel();
 	panel.init(mount, {
 		onLeaveGame: () => { calls.leave++; },
+		onLeaveTable: () => { calls.leaveTable++; },
 		onDisconnect: () => { calls.disconnect++; },
 		onCopyRejoinCode: (code) => { calls.copied.push(code); },
 	});
@@ -31,10 +33,10 @@ before(() => {
 
 beforeEach(() => {
 	document.body.innerHTML = '';
-	calls = { leave: 0, disconnect: 0, copied: [] };
+	calls = { leave: 0, leaveTable: 0, disconnect: 0, copied: [] };
 });
 
-test('renders a labelled toolbar with status and two action buttons', () => {
+test('renders a labelled toolbar with status and its three goodbyes', () => {
 	makePanel();
 	const aside = document.getElementById('connection-panel')!;
 	assert.equal(aside.tagName, 'DIV', 'toolbar role uses a permitted neutral host');
@@ -51,12 +53,16 @@ test('renders a labelled toolbar with status and two action buttons', () => {
 	assert.equal(aside.getAttribute('aria-describedby'), 'connection-panel-status');
 
 	const buttons = aside.querySelectorAll('.connection-panel__btn');
-	assert.equal(buttons.length, 2);
-	assert.equal(buttons[0].textContent, 'Leave game');
-	assert.equal(buttons[1].textContent, 'Disconnect');
+	assert.equal(buttons.length, 3);
+	// Leaving the MATCH and leaving the TABLE are different sizes of goodbye and must read as
+	// two different things, not as one control whose meaning depends on where you are.
+	assert.ok(aside.querySelector('.connection-panel__btn--leave'));
+	assert.ok(aside.querySelector('.connection-panel__btn--leave-table'));
+	assert.equal(buttons[2].textContent, 'Disconnect');
 	// Roving tabindex: only the first action is in the tab order.
 	assert.equal((buttons[0] as HTMLButtonElement).tabIndex, 0);
 	assert.equal((buttons[1] as HTMLButtonElement).tabIndex, -1);
+	assert.equal((buttons[2] as HTMLButtonElement).tabIndex, -1);
 });
 
 test('setStatus updates the live status text and the styling hook', () => {
@@ -82,7 +88,9 @@ test('the buttons invoke their respective callbacks', () => {
 	const buttons = document.querySelectorAll<HTMLButtonElement>('.connection-panel__btn');
 	buttons[0].click();
 	buttons[1].click();
-	assert.equal(calls.leave, 1);
+	buttons[2].click();
+	assert.equal(calls.leave, 1, 'forfeit this match');
+	assert.equal(calls.leaveTable, 1, 'give up the seat');
 	assert.equal(calls.disconnect, 1);
 });
 
@@ -125,16 +133,18 @@ test('the re-entry code appears as a copyable toolbar action once known', () => 
 	panel.setRejoinCode('A2B3C4D5');
 	assert.equal(document.querySelectorAll('.connection-panel__btn--rejoin-code').length, 1);
 
-	// The roving arrows reach it (it is part of the toolbar's button set).
+	// The roving arrows reach it (it is part of the toolbar's button set): it is the LAST action,
+	// after forfeit / leave the table / disconnect.
 	panel.focus();
 	const aside = document.getElementById('connection-panel')!;
-	aside.dispatchEvent(new (window as any).KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
-	aside.dispatchEvent(new (window as any).KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
-	assert.equal(document.activeElement, btn, 'ArrowRight twice lands on the code action');
+	for (let step = 0; step < 3; step++) {
+		aside.dispatchEvent(new (window as any).KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+	}
+	assert.equal(document.activeElement, btn, 'the arrows walk the whole toolbar to the code action');
 });
 
 test('init is idempotent (a second call does not duplicate the panel)', () => {
 	const { panel, mount } = makePanel();
-	panel.init(mount, { onLeaveGame: () => {}, onDisconnect: () => {} });
+	panel.init(mount, { onLeaveGame: () => {}, onLeaveTable: () => {}, onDisconnect: () => {} });
 	assert.equal(document.querySelectorAll('#connection-panel').length, 1);
 });

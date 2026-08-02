@@ -119,8 +119,12 @@ are authoring aids and are automatically left out of the packed `.corro` file.
 Card families do not have a `board.json`. That is expected. `race` and `track` do not need a
 `cards.json`. Do not create files merely because another family has them.
 
-For `forbidden`, every `words.<locale>.json` becomes a word-language option in the create form. The
-host chooses one shared deck for the match; players do not receive different translations of a card.
+Where a family's CONTENT is language-split, every locale file you ship becomes an option in the
+create form's content-language picker: `words.<locale>.json` for `forbidden`, and
+`questions.<locale>.json` for `trivia`. The host chooses one shared deck for the whole match — every
+player is guessing the same words, or answering the same questions — while each player still reads
+the interface in their own language. Ship a locale file only when its content is really translated:
+a locale the manifest lists but has no content file for is not offered.
 
 Most starters support exactly two players so they stay small and easy to understand; `forbidden`
 starts with the four players its two teams require. To support more players, increase `players.max`, add enough distinct tokens or seats, and expand card decks when
@@ -163,6 +167,31 @@ The actual words live in both locale files:
 The same key must resolve in at least one locale, and a package intended for both languages should
 translate it in both. Keep the key stable and translate the value. Never put a secret such as an
 unlock code in translations: translations are sent to browsers.
+
+### Naming your board's bots
+
+A host can seat a bot and ask for a random name. Left alone, those names come from the engine's own
+list, which is deliberately theme-less — it has to sit equally badly beside a mining game, a
+galactic empire and a road trip. Your board's opponents belong to *your* world, so declare them:
+
+```json
+// manifest.json
+"botNames": ["bots.foreman", "bots.canary", "bots.pickaxe"]
+```
+
+```json
+// i18n/en.json                      // i18n/es.json
+{ "bots": {                          { "bots": {
+  "foreman": "Foreman Grit",           "foreman": "Capataz Escombro",
+  "canary":  "Canary Pete",            "canary":  "Pepe Canario",
+  "pickaxe": "Old Pickaxe"             "pickaxe": "Viejo Pico"
+} }                                  } }
+```
+
+They are keys like every other name your package contributes, so each host reads them in their own
+language, and the validator flags one that resolves in no locale — a raw key here would be handed
+to a person as a name to accept. Declare as many or as few as you like; the engine's list is used
+only when you declare none.
 
 ### Board, cards or questions
 

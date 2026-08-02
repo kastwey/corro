@@ -69,27 +69,27 @@ const EXPLODING_HAND_SORTING: HandSorting = {
 };
 
 export interface ExplodingBoardDeps {
-	getGameState(): GameState | null;
-	getMyPlayerId(): string | null;
-	announce(text: string): void;
-	tSync(key: string, vars?: Record<string, unknown>): string;
-	onIdle(): void;
-	motionDisabled(): boolean;
+	getGameState: () => GameState | null;
+	getMyPlayerId: () => string | null;
+	announce: (text: string) => void;
+	tSync: (key: string, vars?: Record<string, unknown>) => string;
+	onIdle: () => void;
+	motionDisabled: () => boolean;
 	/** Injectable timer hooks keep the focus-delay regression deterministic in DOM tests. */
-	setTimer?(callback: () => void, delayMs: number): unknown;
-	clearTimer?(handle: unknown): void;
+	setTimer?: (callback: () => void, delayMs: number) => unknown;
+	clearTimer?: (handle: unknown) => void;
 	commands: {
 		/** Play an action card. `targetId` names a Favor / cat-steal victim; `secondInstanceId`
 		 *  is the matching cat of a pair. */
-		play(instanceId: string, targetId?: string, secondInstanceId?: string): void;
+		play: (instanceId: string, targetId?: string, secondInstanceId?: string) => void;
 		/** Draw the top card — ends the turn; may detonate. */
-		draw(): void;
+		draw: () => void;
 		/** Play a Nope on the pending action (off-turn). */
-		nope(instanceId: string): void;
+		nope: (instanceId: string) => void;
 		/** Tuck the just-drawn (defused) bomb back at `depth` cards from the top. */
-		defuse(depth: number): void;
+		defuse: (depth: number) => void;
 		/** As a Favor's target, give the requester the chosen card. */
-		give(instanceId: string): void;
+		give: (instanceId: string) => void;
 	};
 }
 
@@ -99,7 +99,7 @@ export class ExplodingBoard {
 	private table!: HTMLElement;
 	/** The bomb instance whose depth picker is scheduled or open (so update() doesn't repeat it). */
 	private bombPickerFor: string | null = null;
-	private bombPickerTimer: unknown | null = null;
+	private bombPickerTimer: unknown = null;
 	private readonly setTimer: (callback: () => void, delayMs: number) => unknown;
 	private readonly clearTimer: (handle: unknown) => void;
 
@@ -381,7 +381,7 @@ export class ExplodingBoard {
 	private maybeOpenDefusePicker(gs: GameState): void {
 		const myId = this.deps.getMyPlayerId();
 		const bomb = gs.exploding?.pendingBomb;
-		if (!myId || !bomb || bomb.playerId !== myId) {
+		if (!myId || bomb?.playerId !== myId) {
 			this.cancelDefusePickerTimer();
 			this.bombPickerFor = null;
 			return;
@@ -403,7 +403,7 @@ export class ExplodingBoard {
 		const gs = this.deps.getGameState();
 		const myId = this.deps.getMyPlayerId();
 		const bomb = gs?.exploding?.pendingBomb;
-		if (!gs || !myId || !bomb || bomb.playerId !== myId || bomb.instanceId !== instanceId) {
+		if (!gs || !myId || bomb?.playerId !== myId || bomb.instanceId !== instanceId) {
 			if (this.bombPickerFor === instanceId) this.bombPickerFor = null;
 			return;
 		}
@@ -473,7 +473,11 @@ export class ExplodingBoard {
 			const color = escapeHtml(rawColor);
 			const ink = contrastingTextColor(rawColor);
 			const name = escapeHtml(player?.name ?? seat.playerId);
-			const turn = gs.currentTurn === seat.playerId ? ' exploding-seat--turn' : '';
+			// A buried miner does not hold the turn, whatever the last state left in currentTurn
+			// when the game ended. Painting them as if they did also stacked the turn colour under
+			// the faded "exploded" treatment, and the name stopped being readable — which is how
+			// this was found, once the end screen stopped covering the table on its way home.
+			const turn = gs.currentTurn === seat.playerId && !seat.retired ? ' exploding-seat--turn' : '';
 			const dead = seat.retired ? ' exploding-seat--exploded' : '';
 			const cards = seat.retired ? '💥' : `🂠 ${seat.handCount}`;
 			return `<div class="exploding-seat${turn}${dead}" data-player-id="${escapeHtml(seat.playerId)}" style="--seat-color:${color};--seat-ink:${ink}">`

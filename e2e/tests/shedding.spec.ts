@@ -137,3 +137,34 @@ test('shedding: matches, the drawn-card pause, a penalty and the on-demand count
 	const rivals = heard.filter(line => /^Berto: /.test(line)).pop()!;
 	expect(rivals).not.toMatch(/Ana:/);
 });
+
+test('shedding: the penalty scoring house rule words the points against their holder', async ({ browser }) => {
+	const ana = await newPlayerPage(browser);
+	const berto = await newPlayerPage(browser);
+
+	// The host flips the count around in the lobby: points now run AGAINST whoever holds them.
+	const code = await createGame(ana, 'Ana', BOARD, { houseRules: { sheddingScoring: 'penalty' } });
+	await joinGame(berto, code, 'Berto');
+	await startGame(ana, [ana, berto]);
+
+	// ── The same number, worded as what it now is: points against you, on both surfaces. ──
+	await ana.locator('#board').focus();
+	await ana.keyboard.press('s');
+	await expectAnnouncement(ana, /7 cartas, .*0 puntos de castigo/);
+
+	await ana.keyboard.press('Shift+S');
+	await expectAnnouncement(ana, /Berto: 7 cartas, 0 puntos de castigo/);
+
+	// ── The active-rules document states the direction, and the target line says what
+	// reaching it DOES — the classic "Puntos para ganar" would say the exact opposite. ──
+	await ana.keyboard.press('Control+Shift+F1');
+	const rules = ana.locator('.game-dialog.dialog-game-rules');
+	await expect(rules).toBeVisible();
+	const lines = rules.locator('.game-rules-list li');
+	await expect(lines.filter({ hasText: 'Puntuación:' }))
+		.toHaveText(/cada jugador se apunta los puntos que le quedan en la mano, y gana la puntuación más baja/);
+	await expect(lines.filter({ hasText: 'Llegar a 500 puntos hace perder la partida' })).toHaveCount(1);
+	await expect(lines.filter({ hasText: 'Puntos para ganar' })).toHaveCount(0);
+	await flushAxeAudit(ana);
+	await rules.locator('.btn-primary').click();
+});

@@ -24,37 +24,33 @@ public class CommandDispatcher
 
 		RegisterHandler(new MoveRacePieceHandler());
 
-		// Journey family handlers (draw → play/discard, coup fourré answer). Play/discard
-		// carry the rulebook for its randomness source: a finished hand redeals through it.
+		// Journey family handlers (draw → play/discard, coup fourré answer).
 		RegisterHandler(new JourneyDrawHandler());
-		RegisterHandler(new JourneyPlayHandler(rulebook));
-		RegisterHandler(new JourneyDiscardHandler(rulebook));
+		RegisterHandler(new JourneyPlayHandler());
+		RegisterHandler(new JourneyDiscardHandler());
 		RegisterHandler(new JourneyCoupHandler());
 
-		// Assembly family handlers (play/discard; the end-of-turn refill reshuffles the
-		// face-down discards through the rulebook's randomness source).
-		RegisterHandler(new AssemblyPlayHandler(rulebook));
-		RegisterHandler(new AssemblyDiscardHandler(rulebook));
+		// Assembly family handlers (play/discard).
+		RegisterHandler(new AssemblyPlayHandler());
+		RegisterHandler(new AssemblyDiscardHandler());
 
 		// Draft family handler (the simultaneous pick; reveal/pass/scoring cascade from it).
 		RegisterHandler(new DraftPickHandler());
 
-		// Shedding family handlers (play/draw/keep; draws may reshuffle the buried
-		// discards through the rulebook's randomness source).
-		RegisterHandler(new SheddingPlayHandler(rulebook));
-		RegisterHandler(new SheddingDrawHandler(rulebook));
+		// Shedding family handlers (play/draw/keep).
+		RegisterHandler(new SheddingPlayHandler());
+		RegisterHandler(new SheddingDrawHandler());
 		RegisterHandler(new SheddingKeepHandler());
 		RegisterHandler(new SheddingDeclareLastCardHandler());
-		RegisterHandler(new SheddingCatchLastCardHandler(rulebook));
+		RegisterHandler(new SheddingCatchLastCardHandler());
 
-		// Exploding family handlers (play an action → the Nope window; the timer-driven
-		// window resolution and the draw's shuffle carry the rulebook's randomness source).
+		// Exploding family handlers (play an action → the Nope window).
 		RegisterHandler(new ExplodingPlayHandler());
 		RegisterHandler(new ExplodingNopeHandler());
-		RegisterHandler(new ExplodingDrawHandler(rulebook));
+		RegisterHandler(new ExplodingDrawHandler());
 		RegisterHandler(new ExplodingDefuseHandler());
 		RegisterHandler(new ExplodingGiveHandler());
-		RegisterHandler(new ExplodingResolveWindowHandler(rulebook));
+		RegisterHandler(new ExplodingResolveWindowHandler());
 
 		// Trivia family handlers (choose judge at start → move after a roll → answer → judge).
 		// A dice roll dispatches through the family's ProcessRoll, so no roll handler is needed.
@@ -163,10 +159,25 @@ public class CommandDispatcher
 		return command.MutatesState ? "AUCTION_IN_PROGRESS" : null;
 	}
 
-	/// <summary>While a Bus choice is pending, only that answer and read-only queries may mutate.</summary>
+	/// <summary>
+	/// A pending Bus choice blocks THE PLAYER WHO OWES IT, and nobody else.
+	///
+	/// Unlike a trade or an auction, this is not a table-wide event: it is one player deciding how
+	/// their own bonus die moves them. Freezing everyone meant a rival mortgaging a property, or
+	/// answering a trade, was told to "choose your bonus-die movement" for a die they never threw —
+	/// and could do nothing until that player got around to deciding.
+	///
+	/// The owner still cannot slip past it: every mutating command of theirs except the answer is
+	/// refused, so the choice cannot be abandoned half-made.
+	/// </summary>
 	public static string? CheckBusChoiceFreeze(GameCommand command, GameState state)
 	{
-		if (state.PendingBusChoice is null || command is BusChoiceCommand)
+		if (state.PendingBusChoice is not { } pending || command is BusChoiceCommand)
+		{
+			return null;
+		}
+
+		if (command.PlayerId != pending.PlayerId)
 		{
 			return null;
 		}
@@ -175,14 +186,28 @@ public class CommandDispatcher
 	}
 
 	/// <summary>
+	/// The pre-dispatch gate, in order: turn ownership first (a turn-bound command from anyone
+	/// but the current player never runs, whatever the client did), then the three freezes. A
+	/// pending trade or auction is a TABLE event: while one is open, only the commands that resolve
+	/// it (plus read-only queries) may mutate, for anybody. A pending Bus choice is one player's
+	/// own decision and freezes only them. The auction freeze matters twice over: the player who
+	/// declined the purchase is still the turn holder, so without it they could roll again on
+	/// doubles (playtest #9) or open a trade that freezes the auction's own bids (playtest #6).
+	/// Each check stays a pure static method, unit-tested without constructing a dispatcher.
+	/// </summary>
+	private static readonly (Func<GameCommand, GameState, string?> Check, string Message)[] Guards =
+	{
+		(CheckTradeFreeze, "A trade is in progress"),
+		(CheckAuctionFreeze, "An auction is in progress"),
+		(CheckBusChoiceFreeze, "A bonus-die movement choice is required"),
+	};
+
+	/// <summary>
 	/// Dispatches a command to its handler and returns the response.
 	/// </summary>
 	public Task<ServerResponse> DispatchAsync(GameCommand command, GameContext context)
 	{
-		// Enforce turn ownership on the server before anything else. A turn-bound command issued
-		// by anyone other than the current player is rejected outright, no matter what the client did.
-		var turnError = CheckTurn(command, context.Helper.GetCurrentTurn());
-		if (turnError != null)
+		if (CheckTurn(command, context.Helper.GetCurrentTurn()) is { } turnError)
 		{
 			return Task.FromResult<ServerResponse>(new ErrorResponse
 			{
@@ -191,39 +216,12 @@ public class CommandDispatcher
 			});
 		}
 
-		// While a trade is pending the game is frozen: only the trade response / cancellation
-		// and read-only queries are allowed through.
-		var tradeError = CheckTradeFreeze(command, context.GameState);
-		if (tradeError != null)
+		foreach (var (check, message) in Guards)
 		{
-			return Task.FromResult<ServerResponse>(new ErrorResponse
+			if (check(command, context.GameState) is { } code)
 			{
-				Message = "A trade is in progress",
-				Code = tradeError
-			});
-		}
-
-		// Likewise, while an auction is running only bids, passes and the auction-ending command
-		// (plus read-only queries) get through — the declining player is still the current turn
-		// holder, so this stops them rolling again or opening a game-freezing trade mid-auction.
-		var auctionError = CheckAuctionFreeze(command, context.GameState);
-		if (auctionError != null)
-		{
-			return Task.FromResult<ServerResponse>(new ErrorResponse
-			{
-				Message = "An auction is in progress",
-				Code = auctionError
-			});
-		}
-
-		var busError = CheckBusChoiceFreeze(command, context.GameState);
-		if (busError != null)
-		{
-			return Task.FromResult<ServerResponse>(new ErrorResponse
-			{
-				Message = "A bonus-die movement choice is required",
-				Code = busError
-			});
+				return Task.FromResult<ServerResponse>(new ErrorResponse { Message = message, Code = code });
+			}
 		}
 
 		if (!_handlers.TryGetValue(command.GetType(), out var handler))

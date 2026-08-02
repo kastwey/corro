@@ -12,19 +12,26 @@ Everything a player does is a **command**, handled the same way:
 client → SignalR hub → CommandDispatcher → ICommandHandler → rulebook → announce + new state
 ```
 
-1. **The SignalR hub** (`server/Hubs/GameHub.*.cs`, partial classes) exposes one method per
-   command (e.g. `SheddingPlay`, `RollDice`, `DraftPick`). Each just packages a
-   `GameCommand` and calls the shared `ExecuteCommand`, which does auth, game lookup,
-   response routing and cleanup — so no hub method reimplements that.
+1. **The SignalR hub** (`server/Hubs/GameHub.*.cs`, partial classes) exposes **one** in-game
+   method, `ExecuteCommand(GameCommand)`. `GameCommand` is **polymorphic on the wire**: its
+   `[JsonDerivedType]` list (in `server/Models/Commands.cs`) maps each discriminator —
+   `"ROLL_DICE"`, `"SHEDDING_PLAY"` — to a concrete record, and that list is the **wire
+   allowlist**. Commands only the server may raise (the timer-driven `END_AUCTION`,
+   `EXPLODING_RESOLVE_WINDOW` and `FORBIDDEN_EXPIRE_TURN`, issued by `GameSessionRegistry`)
+   are deliberately absent, so a client cannot forge one however it shapes the payload.
+   `ExecuteCommand` does auth, the caller-identity check (`command.PlayerId` must be the
+   authenticated player), game lookup, response routing and cleanup — once, for everything.
 2. **`CommandDispatcher`** routes a command to its handler by type (no reflection), but
-   first runs two **guards**: the *turn guard* (a turn-bound command from anyone but the
-   current player is rejected `NOT_YOUR_TURN`) and the *trade-freeze guard* (while a trade
-   is pending, only the trade response / cancellation and read-only queries pass). Both are
-   pure static methods, unit-tested without a dispatcher.
+   first runs the **turn guard** (a turn-bound command from anyone but the current player is
+   rejected `NOT_YOUR_TURN`) and then the **freeze guards** — while a trade, an auction or a
+   Bus choice is pending, only the commands that resolve it (plus read-only queries) may
+   mutate. All are pure static methods, unit-tested without a dispatcher.
 3. **An `ICommandHandler<TCommand>`** (e.g. `SheddingPlayHandler`) is the thin flow layer:
    it validates the player, calls the rulebook, and **owns the spoken voice** for the
    outcome (see [accessibility.md](accessibility.md)). Handlers emit announcements and
-   state changes; they don't contain the rules themselves.
+   state changes; they don't contain the rules themselves. Most derive from
+   `PlayerCommandHandler<TCommand>`, which resolves the acting player (or returns
+   `PLAYER_NOT_FOUND`) so the handler is left with "delegate to the flow, shape the response".
 
 At command completion, `GameService` flushes the ordered `GameEvents` batch before the Hub
 sends `GameStateChanged`. A handler cannot push an ordinary full-state snapshot through

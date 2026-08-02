@@ -30,7 +30,10 @@ public partial class GameHub
 			await SendVoiceError("GAME_NOT_FOUND");
 			return null;
 		}
-		if (game.Status != GameStatus.Active || !game.VoiceChatEnabled)
+		// Deliberately NOT gated on a match being in progress. The room belongs to the TABLE (see
+		// docs/tables.md): the moment a group most wants to talk is between games — deciding what
+		// to play next, or going over the one that just ended.
+		if (!game.VoiceChatEnabled)
 		{
 			await SendVoiceError("VOICE_NOT_ENABLED");
 			return null;
@@ -72,11 +75,8 @@ public partial class GameHub
 			await SendVoiceError("VOICE_NOT_CONFIGURED");
 			return;
 		}
-		if (game.Status != GameStatus.Active)
-		{
-			await SendVoiceError("GAME_NOT_ACTIVE");
-			return;
-		}
+		// No match-in-progress gate: the host opens and closes their TABLE's room, and a table
+		// with no game running is exactly where that decision gets made.
 
 		if (game.VoiceChatEnabled != enabled)
 		{

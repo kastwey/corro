@@ -68,8 +68,27 @@ public partial class GameHub : Hub
 	// CONNECTION LIFECYCLE
 	// ============================================
 
+	/// <summary>
+	/// "I am about to be replaced": the page announces its own navigation to another page of the
+	/// SAME game (the waiting room handing over to the board) so the disconnection that follows is
+	/// not mistaken for the player leaving. Scoped to this connection, so it can only ever silence
+	/// the caller's own handover.
+	/// </summary>
+	public Task DeclareHandoff()
+	{
+		if (IsConnectionAuthenticated(out _, out _))
+		{
+			_registry.DeclareHandoff(Context.ConnectionId);
+		}
+		return Task.CompletedTask;
+	}
+
 	public override async Task OnDisconnectedAsync(Exception? exception)
 	{
+		// Announced navigations (waiting room → board) are a handover, not a departure. Read once
+		// here so the record is cleared for every connection, announced or not.
+		var handedOver = _registry.TryConsumeHandoff(Context.ConnectionId);
+
 		// Clean up game mapping
 		var hadGame = _registry.TryRemoveGameConnection(Context.ConnectionId, out var gameId);
 		if (hadGame)
@@ -92,7 +111,13 @@ public partial class GameHub : Hub
 			// "X's turn. Disconnected"). TryRemoveAuthConnection above already dropped THIS
 			// connection, so a remaining count of 0 means they are truly gone. Also supports
 			// multiple tabs correctly.
-			if (hadGame && _registry.TryGetService(gameId, out var gameService)
+			//
+			// A declared handover is exempt: the player is mid-navigation inside this same game, so
+			// marking them away would announce a departure and then a reconnection they never made.
+			// The cost of trusting it is bounded — a page that declares a handover and then never
+			// arrives (the tab is closed mid-navigation) leaves them listed as present until they
+			// truly connect again, which is a far rarer and quieter failure than the false pair.
+			if (!handedOver && hadGame && _registry.TryGetService(gameId, out var gameService)
 				&& _registry.ConnectionsForPlayer(playerId, gameId).Count == 0)
 			{
 				await gameService.SetPlayerConnectedAsync(playerId, false);
@@ -204,13 +229,18 @@ public partial class GameHub : Hub
 			// If game is still in lobby, send lobby state
 			if (game.Status == GameStatus.WaitingForPlayers)
 			{
+				// A player authenticated to a table with no match running IS in its waiting room,
+				// whichever page they are looking at. Putting them in that group is what makes the
+				// table live for them: the roster as people arrive, and the host's next match.
+				_registry.MapLobbyConnection(Context.ConnectionId, gameId);
+				await Groups.AddToGroupAsync(Context.ConnectionId, $"lobby_{gameId}");
+
 				_logger?.LogDebug("Game {GameId} still in lobby, sending LobbyState", gameId);
-				await Clients.Caller.SendAsync("LobbyState", new
-				{
-					GameId = gameId,
-					Status = game.Status.ToString(),
-					Players = game.Players.Select(p => new { p.Id, p.Name, p.Token, p.IsHost, p.IsReady }).ToList()
-				});
+				// The whole sanitized table, exactly as LobbyUpdated sends it. It used to be a
+				// bespoke roster payload, which meant every field the table view needed — the invite
+				// code, the shared deck, the team count — had to be added to it one at a time while
+				// the very same document was already being broadcast on the next change.
+				await Clients.Caller.SendAsync("LobbyState", game.Sanitized());
 				await Clients.Caller.SendAsync("GameJoined", new { GameId = gameId, PlayerId = playerId, RejoinCode = player.RejoinCode });
 				return;
 			}

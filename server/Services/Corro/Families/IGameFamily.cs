@@ -65,6 +65,31 @@ public interface IGameFamily
 	GameState ProjectFor(GameState state, string? playerId) => state;
 
 	/// <summary>
+	/// The languages this package's CONTENT is written in, when that content is language-split and
+	/// the host must pick ONE deck for the whole table (forbidden's word decks, trivia's question
+	/// decks). Empty — the default — means the family's content is not language-split at all, and
+	/// the lobby simply offers no choice.
+	///
+	/// This is NOT the interface language: every player still reads and hears the UI in their own.
+	/// It is the language of the words being guessed or the questions being asked, which the whole
+	/// table necessarily shares. The lobby offers the picker whenever this returns more than one,
+	/// so a family adopting language-split content needs no lobby change.
+	/// </summary>
+	IReadOnlyList<string> ContentLanguages(GameDefinition definition) => Array.Empty<string>();
+
+	/// <summary>
+	/// The number of teams this family REQUIRES the lobby to arrange, or null (the default) when
+	/// team play is optional and the host picks. A family that answers N is only playable as N
+	/// equal teams: the lobby rejects any other team count, and any table size that cannot split
+	/// evenly into N. The forbidden family answers 2 — a clue-giver needs an opposing monitor, so
+	/// a lone player or an odd table has no legal seating at all.
+	///
+	/// Lives here rather than as a gameType check in the hub, so the lobby asks the registry the
+	/// same way every other family dispatch does.
+	/// </summary>
+	int? RequiredTeamCount => null;
+
+	/// <summary>
 	/// The spoken line when a player leaves the game for good (the "leave game"
 	/// flow). Only the property family has an estate to forfeit — its override keeps the
 	/// bankruptcy wording; everywhere else leaving is a plain retirement.

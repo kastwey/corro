@@ -15,7 +15,7 @@ const inst = (cardId: string, copy: number) => ({
 	cardId,
 });
 
-function game(hand: Array<ReturnType<typeof inst>>): GameState {
+function game(hand: ReturnType<typeof inst>[]): GameState {
 	const me: ExplodingSeatState = { playerId: 'me', hand, handCount: hand.length };
 	const rival: ExplodingSeatState = { playerId: 'rival', hand: [], handCount: 3 };
 	return {

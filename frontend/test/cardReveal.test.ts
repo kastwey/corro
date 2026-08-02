@@ -55,6 +55,6 @@ test('a classic card still reveals via its translation keys', () => {
 	cardReveal.show(card);
 
 	const title = document.querySelector('.card-reveal__title');
-	assert.ok(title && title.textContent && title.textContent.length > 0, 'classic title comes from its key');
+	assert.ok(title?.textContent && title.textContent.length > 0, 'classic title comes from its key');
 	cardReveal.hide();
 });

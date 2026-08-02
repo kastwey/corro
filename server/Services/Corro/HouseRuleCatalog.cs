@@ -64,6 +64,12 @@ public static class HouseRuleCatalog
 	public static readonly IReadOnlySet<string> SheddingStackingModes =
 		new HashSet<string> { "none", "sameType", "cross" };
 
+	/// <summary>The scoring directions the "sheddingScoring" choice rule accepts: "collect"
+	/// (the round winner banks the rivals' leftovers, highest score wins) or "penalty"
+	/// (everyone banks their own leftovers, reaching the target loses).</summary>
+	public static readonly IReadOnlySet<string> SheddingScoringModes =
+		new HashSet<string> { "collect", "penalty" };
+
 	private static readonly Dictionary<string, Func<SheddingRulesConfig, JsonElement, SheddingRulesConfig>> SheddingAppliers = new()
 	{
 		["sheddingAllowDoubles"] = (r, v) => r with { AllowDoubles = v.GetBoolean() },
@@ -73,12 +79,71 @@ public static class HouseRuleCatalog
 											 && SheddingStackingModes.Contains(v.GetString()!)
 			? r with { Stacking = v.GetString()! }
 			: r,
+		// A "choice" rule, same shape as sheddingStacking: an unrecognised string is ignored so
+		// the classic count stands.
+		["sheddingScoring"] = (r, v) => v.ValueKind == JsonValueKind.String
+										   && SheddingScoringModes.Contains(v.GetString()!)
+			? r with { Scoring = v.GetString()! }
+			: r,
 		["sheddingLastCardCall"] = (r, v) => r with { LastCardCall = v.GetBoolean() },
 		["sheddingLastCardPenalty"] = (r, v) => r with { LastCardPenalty = v.GetInt32() },
 	};
 
 	/// <summary>Whether the engine knows this SHEDDING rule code.</summary>
 	public static bool IsKnownShedding(string id) => SheddingAppliers.ContainsKey(id);
+
+	// ── Choice rules: the values the engine actually accepts ──────────────────
+
+	/// <summary>The value set each CHOICE rule code accepts. A package declares its own options
+	/// (ids + labels), so these are what those ids must be drawn from: every applier guards on
+	/// membership and silently keeps the default otherwise, which would turn an option the
+	/// engine never heard of into a radio that is offered, chosen, stored — and then ignored.</summary>
+	public static readonly IReadOnlyDictionary<string, IReadOnlySet<string>> ChoiceValues =
+		new Dictionary<string, IReadOnlySet<string>>
+		{
+			["sheddingStacking"] = SheddingStackingModes,
+			["sheddingScoring"] = SheddingScoringModes,
+		};
+
+	/// <summary>
+	/// Checks a declared house rule against the engine's value set for its code: returns the
+	/// problem to report, or null when the rule is coherent. Codes the engine does not gate by
+	/// value (toggles, numbers) pass untouched.
+	/// </summary>
+	public static string? ChoiceProblem(HouseRuleDef rule)
+	{
+		if (!ChoiceValues.TryGetValue(rule.Id, out var accepted))
+		{
+			return null;
+		}
+
+		var known = string.Join(", ", accepted.OrderBy(v => v, StringComparer.Ordinal));
+		if (rule.Type != "choice")
+		{
+			return $"house rule '{rule.Id}' must be declared as a choice between {known}, not a '{rule.Type}'";
+		}
+
+		var declared = (rule.Options ?? new List<HouseRuleOption>()).Select(o => o.Id).ToList();
+		if (declared.Count == 0)
+		{
+			return $"house rule '{rule.Id}' declares no options (the engine accepts {known})";
+		}
+
+		var unknown = declared.Where(id => !accepted.Contains(id)).ToList();
+		if (unknown.Count > 0)
+		{
+			return $"house rule '{rule.Id}' offers {string.Join(", ", unknown)}, which the engine would ignore "
+				+ $"(it accepts {known})";
+		}
+
+		var chosen = rule.Default?.ValueKind == JsonValueKind.String ? rule.Default.Value.GetString() : null;
+		if (chosen != null && !declared.Contains(chosen))
+		{
+			return $"house rule '{rule.Id}' defaults to '{chosen}', which is not one of the options it offers";
+		}
+
+		return null;
+	}
 
 	/// <summary>Returns shedding rules with the rule applied; unknown ids are left unchanged.</summary>
 	public static SheddingRulesConfig ApplyShedding(SheddingRulesConfig rules, string id, JsonElement value)

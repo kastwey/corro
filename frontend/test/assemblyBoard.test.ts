@@ -41,7 +41,7 @@ function seat(id: string, hand: string[], withPiece = false): AssemblySeatState 
 }
 
 beforeEach(() => {
-	try { localStorage.removeItem('corro.handPreferences'); } catch {}
+	try { localStorage.removeItem('corro.handPreferences'); } catch { /* jsdom may ship no storage */ }
 	document.body.innerHTML = '<div id="board"></div>';
 	boardElement = document.getElementById('board')!;
 	announced = [];

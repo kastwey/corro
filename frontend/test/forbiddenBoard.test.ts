@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ForbiddenBoard, protectReadOnlyTextArea } from '../src/forbiddenBoard.js';
 import {
+	forbiddenOtherRoleLines,
 	forbiddenRivalStatus,
 	forbiddenRole,
 	forbiddenStatusText,
@@ -197,11 +198,25 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 	const cardLabel = root.querySelector<HTMLLabelElement>('.forbidden-secret__label')!;
 
 	assert.equal(cardPanel.hidden, false);
-	assert.equal(cardLabel.textContent, 'Clue-giver: target and forbidden words');
+	// One word, and nothing repeated on every focus: no role, no "this box cannot be edited",
+	// no key list — that toll was paid on every visit, worst of all on a phone.
+	assert.equal(cardLabel.textContent, 'Words');
+	assert.equal(root.querySelector('#forbidden-card-hint'), null);
+	assert.equal(card.hasAttribute('aria-describedby'), false);
+	// The turn card now says MY duty only; who else does what is the list below it.
 	assert.equal(roleDetail.textContent,
-		'Red team. You are the clue-giver: describe the target without saying it or using its forbidden words. '
-		+ 'Berto guesses, and Cora monitors the target and forbidden words.');
-	assert.match(root.querySelector('#forbidden-card-hint')!.textContent!, /press Enter to start the timer/);
+		'You are the clue-giver: describe the target without saying it or using its forbidden words.');
+	assert.deepEqual(
+		[...root.querySelectorAll('.forbidden-role-list li')].map(item => item.textContent),
+		[
+			'Berto guesses for the Red team.',
+			'Cora monitors the target and the forbidden words for the blue team.',
+			'Dani supports the blue team this turn.',
+		]);
+	// The headline section: who is playing, loud and on its own.
+	assert.equal(root.querySelector('#forbidden-now-title')!.textContent, 'Who is playing');
+	assert.equal(root.querySelector('.forbidden-now__line')!.textContent,
+		'Turn 1 of cycle 1: your Red team is about to play, and you give the clues.');
 	assert.equal(card.rows, 7);
 	assert.equal(card.value,
 		'Target word: lighthouse.\nForbidden words:\ntower,\ncoast,\nbeam,\nship,\nsea.');
@@ -289,20 +304,27 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 	myId = 'p3';
 	board.update(state);
 	assert.equal(cardPanel.hidden, true);
-	assert.equal(roleDetail.textContent,
-		'Red team. Ada gives clues, Cora monitors the target and forbidden words, and Berto guesses.');
+	// The player with no assignment finally has a line of their own, and still sees the cast.
+	assert.equal(roleDetail.textContent, 'You support your team this turn, with no action of your own.');
+	assert.deepEqual(
+		[...root.querySelectorAll('.forbidden-role-list li')].map(item => item.textContent),
+		[
+			'Ada gives the clues for the Red team.',
+			'Berto guesses for the Red team.',
+			'Cora monitors the target and the forbidden words for the blue team.',
+		]);
+	assert.equal(root.querySelector('.forbidden-now__line')!.textContent,
+		'Turn 1 of cycle 1: the Red team is playing, and Ada gives the clues.');
 	assert.equal(document.activeElement, root.querySelector('.forbidden-shell'));
 
 	myId = 'p2';
 	board.update(state);
 	assert.equal(cardPanel.hidden, false);
-	assert.equal(cardLabel.textContent, 'Monitor: target and forbidden words');
+	assert.equal(cardLabel.textContent, 'Words'); // the same one word for every role
 	assert.equal(roleDetail.textContent,
-		'Red team. You are the monitor: press V if Ada says the target or any forbidden word. '
-		+ 'Ada gives clues, and Berto guesses.');
+		'You are the monitor: press V if Ada says the target or any forbidden word.');
 	assert.equal(violation.hidden, false);
 	assert.equal(violation.getAttribute('aria-keyshortcuts'), 'V');
-	assert.match(root.querySelector('#forbidden-card-hint')!.textContent!, /press V if the clue-giver says the target/);
 	let leakedToDocument = 0;
 	const documentKey = () => { leakedToDocument++; };
 	document.addEventListener('keydown', documentKey);
@@ -324,8 +346,7 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 	myId = 'p1';
 	board.update(state);
 	assert.equal(cardPanel.hidden, true);
-	assert.equal(roleDetail.textContent,
-		'Red team. You guess the target word this turn. Ada gives clues, and Cora monitors the target and forbidden words.');
+	assert.equal(roleDetail.textContent, 'You guess the target word this turn, out loud.');
 	assert.equal(root.querySelectorAll('.forbidden-controls button:not([hidden])').length, 0);
 
 	root.remove();
@@ -399,16 +420,27 @@ test('status shortcuts and pure role helpers produce flowing team sentences', ()
 	assert.equal(forbiddenRole(state.forbidden!.turn, 'p1'), 'guesser');
 	assert.equal(forbiddenRole(state.forbidden!.turn, 'p2'), 'monitor');
 	assert.equal(forbiddenRole(state.forbidden!.turn, 'p3'), 'spectator');
+	// T speaks exactly what the turn card shows: the headline, my duty, then everyone else.
 	assert.equal(
 		forbiddenTurnContextText(state, 'p0', translate),
-		'Red team. You are the clue-giver: describe the target without saying it or using its forbidden words. '
-		+ 'Berto guesses, and Cora monitors the target and forbidden words.',
+		'Turn 1 of cycle 1: your Red team is about to play, and you give the clues. '
+		+ 'You are the clue-giver: describe the target without saying it or using its forbidden words. '
+		+ 'Berto guesses for the Red team. '
+		+ 'Cora monitors the target and the forbidden words for the blue team. '
+		+ 'Dani supports the blue team this turn.',
 	);
 	assert.equal(
 		forbiddenTurnContextText(state, 'p3', translate),
-		'Red team. Ada gives clues, Cora monitors the target and forbidden words, and Berto guesses.',
+		'Turn 1 of cycle 1: the Red team is about to play, and Ada gives the clues. '
+		+ 'You support your team this turn, with no action of your own. '
+		+ 'Ada gives the clues for the Red team. '
+		+ 'Berto guesses for the Red team. '
+		+ 'Cora monitors the target and the forbidden words for the blue team.',
 		'an unassigned player hears every role without being assigned a fictitious one',
 	);
+	assert.deepEqual(
+		forbiddenOtherRoleLines(state, 'p0', translate).length, 3,
+		'the clue-giver hears the other three, never themselves');
 	assert.equal(
 		formatForbiddenCard('faro', ['costa', 'luz', 'torre'], 'en', translate),
 		'Target word: faro.\nForbidden words:\ncosta,\nluz,\ntorre.',

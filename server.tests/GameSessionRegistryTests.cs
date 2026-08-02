@@ -66,19 +66,62 @@ public class GameSessionRegistryTests
 		Assert.Contains("c1", reg.LobbyConnectionIds("g2"));
 	}
 
+	// A finished match ends the GAME, not the group that played it. What used to be one deletion is
+	// now a retirement: the clocks and the in-memory service go, the table stays, and the final
+	// snapshot moves to LastMatch so the result outlives the game that produced it.
 	[Fact]
-	public async Task CleanupIfGameOver_tears_the_game_down_when_it_is_over()
+	public async Task CleanupIfGameOver_retires_the_match_and_leaves_the_table_standing()
 	{
+		var reg = NewRegistry(out var timer, out var repo);
+		repo.Documents["g1"] = NewTable("g1");
+		var service = new FakeService(gameOver: true);
+		reg.RegisterService("g1", service);
+
+		await reg.CleanupIfGameOverAsync("g1", service);
+
+		Assert.False(reg.HasService("g1"));          // the match is out of memory
+		Assert.True(service.Ended);                   // EndGameAsync called
+		Assert.Contains("g1", timer.Stopped);         // its clocks stopped
+		Assert.Empty(repo.Deleted);                   // …and nothing was deleted
+
+		var table = await repo.LoadGameAsync("g1");
+		Assert.Equal(GameStatus.WaitingForPlayers, table!.Status);  // back at the table
+		Assert.Null(table.GameState);                                // no match running
+		Assert.True(table.LastMatch!.IsGameOver);                    // but the result is kept
+		Assert.Equal(1, table.MatchesPlayed);
+	}
+
+	[Fact]
+	public async Task CleanupIfGameOver_tells_the_table_the_match_ended()
+	{
+		// Whoever was not looking at the board — sitting in the table view, or reading the chat —
+		// learns it from the broadcast rather than from a state that simply stops arriving.
+		var hub = new NoopHubContext();
+		var repo = new RecordingRepo();
+		repo.Documents["g1"] = NewTable("g1");
+		var reg = new GameSessionRegistry(hub, repo, new RecordingTimer(), TestFixtures.NewPackageRestorer());
+		var service = new FakeService(gameOver: true);
+		reg.RegisterService("g1", service);
+
+		await reg.CleanupIfGameOverAsync("g1", service);
+
+		Assert.Contains("MatchEnded", hub.Sent);
+	}
+
+	[Fact]
+	public async Task CleanupIfGameOver_without_a_persisted_table_still_ends_the_match()
+	{
+		// An in-memory-only game (no document) has no table to keep; it must still not leak.
 		var reg = NewRegistry(out var timer, out var repo);
 		var service = new FakeService(gameOver: true);
 		reg.RegisterService("g1", service);
 
 		await reg.CleanupIfGameOverAsync("g1", service);
 
-		Assert.False(reg.HasService("g1"));          // removed from memory
-		Assert.True(service.Ended);                   // EndGameAsync called
-		Assert.Contains("g1", timer.Stopped);         // auction timers stopped
-		Assert.Contains("g1", repo.Deleted);          // deleted from storage (won game, no resume)
+		Assert.False(reg.HasService("g1"));
+		Assert.True(service.Ended);
+		Assert.Contains("g1", timer.Stopped);
+		Assert.Empty(repo.Deleted);
 	}
 
 	[Fact]
@@ -96,12 +139,16 @@ public class GameSessionRegistryTests
 	}
 
 	[Fact]
-	public async Task CleanupIfGameOver_deletes_the_voice_room()
+	public async Task CleanupIfGameOver_keeps_the_voice_room_because_it_belongs_to_the_table()
 	{
+		// The conversation is the table's. Tearing the room down between matches would cut everyone
+		// off mid-sentence and make them rejoin to talk about the game they just finished.
 		var voice = new RecordingVoiceService();
+		var repo = new RecordingRepo();
+		repo.Documents["g1"] = NewTable("g1");
 		var reg = new GameSessionRegistry(
 			new NoopHubContext(),
-			new RecordingRepo(),
+			repo,
 			new RecordingTimer(),
 			TestFixtures.NewPackageRestorer(),
 			voiceService: voice);
@@ -110,11 +157,31 @@ public class GameSessionRegistryTests
 
 		await reg.CleanupIfGameOverAsync("g1", service);
 
+		Assert.Empty(voice.DeletedRooms);
+	}
+
+	[Fact]
+	public async Task Deleting_the_table_deletes_its_voice_room()
+	{
+		// The room outlives matches, not the table itself.
+		var voice = new RecordingVoiceService();
+		var repo = new RecordingRepo();
+		repo.Documents["g1"] = NewTable("g1");
+		var reg = new GameSessionRegistry(
+			new NoopHubContext(),
+			repo,
+			new RecordingTimer(),
+			TestFixtures.NewPackageRestorer(),
+			voiceService: voice);
+		reg.RegisterService("g1", new FakeService(gameOver: true));
+
+		await reg.DeleteGameAsync("g1");
+
 		Assert.Equal(new[] { "g1" }, voice.DeletedRooms);
 	}
 
 	[Fact]
-	public async Task CleanupIfGameOver_deletes_the_uploaded_package_blob_recorded_by_the_game()
+	public async Task Deleting_the_table_releases_the_uploaded_package_blob_it_recorded()
 	{
 		var blobKey = "blob-" + Guid.NewGuid().ToString("N");
 		var blob = new CorroServer.Services.Corro.LocalFilePackageBlobStore(
@@ -142,10 +209,42 @@ public class GameSessionRegistryTests
 		var service = new FakeService(gameOver: true, packageToken: "runtime-token");
 		reg.RegisterService("g1", service);
 
-		await reg.CleanupIfGameOverAsync("g1", service);
+		await reg.DeleteGameAsync("g1");
 
 		Assert.Null(await repo.LoadGameAsync("g1"));
 		Assert.Null(await blob.GetAsync(blobKey));
+	}
+
+	[Fact]
+	public async Task A_finished_match_keeps_the_uploaded_package_for_the_next_one()
+	{
+		// The board a table just played is the board it is most likely to play again. Releasing the
+		// archive at game over would leave the table holding a reference to something that is gone.
+		var blobKey = "blob-" + Guid.NewGuid().ToString("N");
+		var blob = new CorroServer.Services.Corro.LocalFilePackageBlobStore(
+			Path.Combine(Path.GetTempPath(), "corro_retire_" + Guid.NewGuid().ToString("N")));
+		await blob.PutAsync(blobKey, new MemoryStream(new byte[] { 1, 2, 3 }));
+		var repo = new RecordingRepo();
+		repo.Documents["g1"] = NewTable("g1") with
+		{
+			PackageToken = "runtime-token",
+			PackageBlobKey = blobKey,
+		};
+		var restorer = new CorroServer.Services.Corro.PackageRestorer(
+			new CorroServer.Services.Corro.CorroPackageStore(
+				new CorroServer.Services.Sounds.CompositeSoundPackProvider(
+					new CorroServer.Services.Sounds.DefaultSoundPackProvider())),
+			new CorroServer.Services.Corro.ShippedPackageProvider(CorroTestPaths.PackagesRoot()),
+			blob);
+		var reg = new GameSessionRegistry(new NoopHubContext(), repo, new RecordingTimer(), restorer);
+		var service = new FakeService(gameOver: true, packageToken: "runtime-token");
+		reg.RegisterService("g1", service);
+
+		await reg.CleanupIfGameOverAsync("g1", service);
+
+		var table = await repo.LoadGameAsync("g1");
+		Assert.Equal(blobKey, table!.PackageBlobKey);
+		Assert.NotNull(await blob.GetAsync(blobKey));
 	}
 
 	[Fact]
@@ -163,6 +262,16 @@ public class GameSessionRegistryTests
 		Assert.Contains("g1", timer.Stopped);
 		Assert.Null(await reg.TearDownGameAsync("g1")); // idempotent: nothing left
 	}
+
+	/// <summary>A persisted table with no match running — what every game starts and ends as.</summary>
+	private static GameDocument NewTable(string gameId) => new()
+	{
+		Id = "game-" + gameId,
+		GameId = gameId,
+		Status = GameStatus.Active,
+		HostId = "host",
+		InviteCode = "INV",
+	};
 
 	// ── Fakes ────────────────────────────────────────────────────────────────
 
@@ -200,7 +309,12 @@ public class GameSessionRegistryTests
 		public Task<GameDocument?> GetByRejoinCodeAsync(string rejoinCode) => Task.FromResult<GameDocument?>(null);
 		public Task<GameDocument?> GetByInviteCodeAsync(string inviteCode) => Task.FromResult<GameDocument?>(null);
 		public Task<GameDocument> CreateGameAsync(GameDocument game) => Task.FromResult(game);
-		public Task<GameDocument> UpdateGameAsync(GameDocument game) => Task.FromResult(game);
+		public Task<GameDocument> UpdateGameAsync(GameDocument game)
+		{
+			// Stored, so a test can read back what a write actually left behind.
+			Documents[game.GameId] = game;
+			return Task.FromResult(game);
+		}
 	}
 
 	private sealed class RecordingVoiceService : ILiveKitVoiceService
@@ -247,13 +361,18 @@ public class GameSessionRegistryTests
 
 	private sealed class NoopHubContext : IHubContext<GameHub>
 	{
-		public IHubClients Clients { get; } = new NoopClients();
+		private readonly NoopClients _clients = new();
+		public IHubClients Clients => _clients;
 		public IGroupManager Groups { get; } = new NoopGroups();
+
+		/// <summary>Every method name pushed to any client target, so a test can pin a broadcast.</summary>
+		public IReadOnlyList<string> Sent => _clients.Proxy.Methods;
 
 		private sealed class NoopClients : IHubClients
 		{
-			private static readonly IClientProxy Proxy = new NoopProxy();
-			ISingleClientProxy IHubClients.Client(string connectionId) => (ISingleClientProxy)Proxy;
+			// Per-instance, so one test's broadcasts never leak into another's assertions.
+			internal readonly RecordingProxy Proxy = new();
+			ISingleClientProxy IHubClients.Client(string connectionId) => Proxy;
 			IClientProxy IHubClients<IClientProxy>.All => Proxy;
 			IClientProxy IHubClients<IClientProxy>.AllExcept(IReadOnlyList<string> e) => Proxy;
 			IClientProxy IHubClients<IClientProxy>.Client(string c) => Proxy;
@@ -264,9 +383,14 @@ public class GameSessionRegistryTests
 			IClientProxy IHubClients<IClientProxy>.User(string u) => Proxy;
 			IClientProxy IHubClients<IClientProxy>.Users(IReadOnlyList<string> u) => Proxy;
 		}
-		private sealed class NoopProxy : ISingleClientProxy
+		private sealed class RecordingProxy : ISingleClientProxy
 		{
-			public Task SendCoreAsync(string method, object?[] args, CancellationToken ct = default) => Task.CompletedTask;
+			public List<string> Methods { get; } = new();
+			public Task SendCoreAsync(string method, object?[] args, CancellationToken ct = default)
+			{
+				Methods.Add(method);
+				return Task.CompletedTask;
+			}
 			public Task<T> InvokeCoreAsync<T>(string method, object?[] args, CancellationToken ct = default) => throw new NotImplementedException();
 		}
 		private sealed class NoopGroups : IGroupManager

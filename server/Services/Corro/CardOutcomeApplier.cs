@@ -23,7 +23,7 @@ public static class CardOutcomeApplier
 				var needsModifier = outcome.RentMultiplier != 1 || outcome.UtilityTimesDice;
 				if (needsModifier)
 				{
-					context.PendingRentModifier = new RentModifier
+					context.Property.PendingRentModifier = new RentModifier
 					{
 						Multiplier = outcome.RentMultiplier,
 						UtilityTenTimesDice = outcome.UtilityTimesDice,
@@ -38,7 +38,7 @@ public static class CardOutcomeApplier
 				{
 					if (needsModifier)
 					{
-						context.PendingRentModifier = null;
+						context.Property.PendingRentModifier = null;
 					}
 				}
 				break;

@@ -35,11 +35,11 @@ function seat(id: string, hand: string[] = [], over: Partial<SheddingSeatState> 
 let gs: GameState;
 let boardEl: HTMLElement;
 let view: SheddingBoard;
-let played: Array<[string, string | null]>;
+let played: [string, string | null][];
 let drawn: number;
 let kept: number;
-let declared: number;
-let caught: number;
+let _declared: number;
+let _caught: number;
 let announced: string[];
 
 function game(seats: SheddingSeatState[]): GameState {
@@ -70,7 +70,7 @@ function rows(): HTMLElement[] {
 }
 
 beforeEach(() => {
-	try { (globalThis as any).window.localStorage.removeItem('corro.handPreferences'); } catch {}
+	try { (globalThis as any).window.localStorage.removeItem('corro.handPreferences'); } catch { /* jsdom may ship no storage */ }
 	document.body.innerHTML = '<div id="board"></div>';
 	boardEl = document.getElementById('board')!;
 	played = []; announced = []; drawn = 0; kept = 0; declared = 0; caught = 0;
@@ -212,7 +212,7 @@ test('sort by colour follows the colour NAME in the current language, not deck o
 	// The deck lists red before blue, but the localized names sort blue first
 	// ("colors.blue" < "colors.red"); grouping must follow the NAME, so blue leads.
 	(document.querySelector('.hand-panel__list-actions [data-focus-id="sort-colour"]') as HTMLButtonElement).click();
-	const seq = rows().map(r => (r.getAttribute('aria-label')!.match(/red7|blue7|wild/) ?? [''])[0]);
+	const seq = rows().map(r => ((/red7|blue7|wild/.exec((r.getAttribute('aria-label')!))) ?? [''])[0]);
 	assert.deepEqual(seq, ['blue7', 'red7', 'wild']);
 });
 
@@ -297,7 +297,7 @@ test('the table is an aria-hidden echo: top card, colour, direction and counters
 function boardWith(rules: Record<string, unknown>, hand: string[], seats?: SheddingSeatState[]) {
 	document.body.innerHTML = '<div id="board2"></div>';
 	const el = document.getElementById('board2')!;
-	const plays: Array<{ id: string; color: string | null; extras: string[] }> = [];
+	const plays: { id: string; color: string | null; extras: string[] }[] = [];
 	const calls = { declared: 0, caught: 0 };
 	const said: string[] = [];
 	const state = game(seats ?? [seat('me', hand), seat('r1', [], { handCount: 3 })]);
@@ -324,6 +324,18 @@ test('rulesSummary reads the effective rules for the active-rules dialog', () =>
 	const lines = view.rulesSummary();
 	assert.ok(lines.some(l => l.startsWith('game.shedding_rules_hand_size')));
 	assert.ok(lines.some(l => l.includes('game.shedding_rules_stacking')));
+});
+
+test('Shift+S words a rival score exactly as S words mine: penalty points when so ruled', () => {
+	const board = boardWith({ scoring: 'penalty' }, ['red-7'],
+		[seat('me', ['red-7']), seat('r1', [], { handCount: 1, score: 240 })]);
+
+	key(board.el, 'S', { shiftKey: true });
+
+	assert.equal(board.said[board.said.length - 1],
+		'N-r1: game.shedding_status_cards_one, game.shedding_status_score_penalty(240)');
+	assert.ok(board.view.rulesSummary()
+		.some(l => l === 'game.shedding_rules_scoring(game.shedding_rules_scoring_penalty)'));
 });
 
 test('doubles ON: marking identical numbers and sending plays the lead with the copies', () => {

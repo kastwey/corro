@@ -38,13 +38,13 @@ test('a re-entry code recovers the seat from a fresh browser; a live seat refuse
 
 	const code = await createGame(ana, 'Ana', BOARD);
 
-	// The waiting room shows the HOST her own re-entry code, with a copy button.
-	const hostCodeEl = ana.locator('#created-rejoin-mount .invite-code__value');
+	// The table shows the HOST her own re-entry code, with a copy button.
+	const hostCodeEl = ana.locator('#table-rejoin-mount .invite-code__value');
 	await expect(hostCodeEl).toHaveText(/^[A-HJ-NP-Z2-9]{8}$/);
 
 	await joinGame(berto, code, 'Berto');
 	// …and the GUEST his (different) one.
-	const bertoCodeEl = berto.locator('#joined-rejoin-mount .invite-code__value');
+	const bertoCodeEl = berto.locator('#table-rejoin-mount .invite-code__value');
 	await expect(bertoCodeEl).toHaveText(/^[A-HJ-NP-Z2-9]{8}$/);
 	const bertoCode = (await bertoCodeEl.textContent())!.trim();
 	expect(bertoCode).not.toBe((await hostCodeEl.textContent())!.trim());
@@ -117,4 +117,39 @@ test('a mid-game reload keeps the ownership visuals on the board', async ({ brow
 	await expect(ana.locator('.square[data-index="5"] .owner-badge')).toBeVisible({ timeout: 10_000 });
 	await expect(ana.locator('.square[data-index="6"] .owner-badge')).toBeVisible();
 	await expect(ana.locator('.player-token').first()).toBeVisible();
+});
+
+test('the board group shortcuts still work after a reload', async ({ browser }) => {
+	// Live-play report: "the colour shortcuts never work for me after reconnecting, but they do
+	// for my family". They are built from the game's squares and groups, which arrive with the
+	// first authoritative state, and used to be built ONCE at startup whether or not that state
+	// had landed — so whoever lost the race got no colour keys for the whole session.
+	//
+	// HONEST LIMIT: this asserts the shortcuts work after a reload, which is the user-visible
+	// property, but it does NOT reproduce the race — over localhost the state always wins, and it
+	// passes with the fix reverted. The fix removes the ordering dependency rather than making the
+	// race less likely; pinning it would need a delayed first state this harness cannot force.
+	const ana = await newPlayerPage(browser);
+	const berto = await newPlayerPage(browser);
+
+	const code = await createGame(ana, 'Ana', 'galactic-empire');
+	await joinGame(berto, code, 'Berto');
+	await startGame(ana, [ana, berto]);
+
+	// The board container holds the real DOM focus; the exploration cursor is a class.
+	const cursor = () => ana.locator('#board .square.focused').first();
+	await ana.locator('#board').focus();
+
+	// 'b' is the first group's key in this package: it walks the cursor onto one of its squares.
+	await ana.keyboard.press('b');
+	const afterFirstJump = await cursor().getAttribute('data-index');
+	expect(afterFirstJump, 'the group shortcut moved the cursor nowhere').not.toBeNull();
+
+	await ana.reload();
+	await expect(ana.locator('#board .square').first()).toBeVisible({ timeout: 15_000 });
+
+	// The same key must still reach the same group, with nobody having acted in between.
+	await ana.locator('#board').focus();
+	await ana.keyboard.press('b');
+	expect(await cursor().getAttribute('data-index')).toBe(afterFirstJump);
 });

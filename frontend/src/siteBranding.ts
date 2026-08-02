@@ -65,7 +65,7 @@ function configuredAsset(
 function assetUrl(value: unknown): string | null {
 	const url = text(value, MAX_ASSET_URL_LENGTH);
 	if (!url || url.startsWith('//') || url.includes('\\')) return null;
-	const scheme = url.match(/^([a-z][a-z0-9+.-]*):/i)?.[1]?.toLowerCase();
+	const scheme = (/^([a-z][a-z0-9+.-]*):/i.exec(url))?.[1]?.toLowerCase();
 	return !scheme || scheme === 'https' ? url : null;
 }
 
@@ -191,6 +191,5 @@ export async function initializeSiteBranding(
 	const branding = await loadSiteBranding(request);
 	const apply = () => applySiteBranding(branding, document, getLanguage());
 	apply();
-	document.addEventListener('languageChanged', apply);
 	return branding;
 }

@@ -2,6 +2,9 @@ import { resetCardBoard, registerStatusKeys, CARD_STATUS_SHORTCUTS } from './car
 import { teamDisplayName } from './enginePalette.js';
 import { buildForbiddenRulesLines } from './rulesSummaries.js';
 import {
+	forbiddenDutyText,
+	forbiddenNowPlayingText,
+	forbiddenOtherRoleLines,
 	forbiddenRivalStatus,
 	forbiddenRole,
 	forbiddenStatusText,
@@ -12,20 +15,20 @@ import type { GameState } from './models.js';
 import type { HelpShortcut } from './shortcuts.js';
 
 export interface ForbiddenBoardDeps {
-	getGameState(): GameState | null;
-	getMyPlayerId(): string | null;
-	announce(text: string): void;
-	tSync(key: string, vars?: Record<string, unknown>): string;
+	getGameState: () => GameState | null;
+	getMyPlayerId: () => string | null;
+	announce: (text: string) => void;
+	tSync: (key: string, vars?: Record<string, unknown>) => string;
 	sounds: {
-		playEvent(eventKey: string): void;
-		startLoop(eventKey: string): void;
-		stopLoop(eventKey: string): boolean;
+		playEvent: (eventKey: string) => void;
+		startLoop: (eventKey: string) => void;
+		stopLoop: (eventKey: string) => boolean;
 	};
 	commands: {
-		start(): void;
-		correct(cardSequence: number): void;
-		pass(cardSequence: number): void;
-		violation(cardSequence: number): void;
+		start: () => void;
+		correct: (cardSequence: number) => void;
+		pass: (cardSequence: number) => void;
+		violation: (cardSequence: number) => void;
 	};
 }
 
@@ -118,11 +121,11 @@ const visible = (element: HTMLElement) => !element.hidden;
 export class ForbiddenBoard {
 	private readonly shell: HTMLElement;
 	private readonly scoreList: HTMLOListElement;
-	private readonly roleLine: HTMLElement;
+	private readonly nowLine: HTMLElement;
 	private readonly roleDetail: HTMLElement;
+	private readonly roleList: HTMLUListElement;
 	private readonly cardPanel: HTMLElement;
 	private readonly cardLabel: HTMLLabelElement;
-	private readonly cardHint: HTMLElement;
 	private readonly cardText: HTMLTextAreaElement;
 	private readonly protectedCard: ProtectedTextAreaController;
 	private readonly timerPanel: HTMLElement;
@@ -151,17 +154,22 @@ export class ForbiddenBoard {
 				<span class="forbidden-hero__halo"></span>
 				<span class="forbidden-hero__mark">!</span>
 			</div>
-			<h2 class="forbidden-title"></h2>
-			<p class="forbidden-subtitle"></p>
+			<div class="forbidden-headline">
+				<h2 class="forbidden-title"></h2>
+				<p class="forbidden-subtitle"></p>
+			</div>
 			<section class="forbidden-scoreboard" aria-labelledby="forbidden-score-title">
 				<h3 id="forbidden-score-title"></h3>
 				<ol class="forbidden-score-list"></ol>
+			</section>
+			<section class="forbidden-now" aria-labelledby="forbidden-now-title">
+				<h3 id="forbidden-now-title"></h3>
+				<p class="forbidden-now__line"></p>
 			</section>
 			<section class="forbidden-turn-card" aria-labelledby="forbidden-turn-title">
 				<div class="forbidden-turn-card__heading">
 					<div>
 						<h3 id="forbidden-turn-title"></h3>
-						<p class="forbidden-role-line"></p>
 					</div>
 					<div class="forbidden-timer" role="timer" aria-live="off" hidden>
 						<span class="forbidden-timer__value" aria-hidden="true"></span>
@@ -169,12 +177,11 @@ export class ForbiddenBoard {
 					</div>
 				</div>
 				<p class="forbidden-role-detail"></p>
+				<ul class="forbidden-role-list"></ul>
 				<div class="forbidden-secret" hidden>
 					<div class="forbidden-secret__eyebrow"></div>
 					<label class="forbidden-secret__label" for="forbidden-card-text"></label>
-					<textarea id="forbidden-card-text" class="forbidden-secret__text" rows="7"
-						aria-describedby="forbidden-card-hint"></textarea>
-					<p id="forbidden-card-hint" class="forbidden-hint"></p>
+					<textarea id="forbidden-card-text" class="forbidden-secret__text" rows="7"></textarea>
 				</div>
 				<p class="forbidden-turn-summary"></p>
 				<div class="forbidden-controls">
@@ -189,11 +196,11 @@ export class ForbiddenBoard {
 		element.appendChild(this.shell);
 
 		this.scoreList = this.required('.forbidden-score-list');
-		this.roleLine = this.required('.forbidden-role-line');
+		this.nowLine = this.required('.forbidden-now__line');
+		this.roleList = this.required('.forbidden-role-list');
 		this.roleDetail = this.required('.forbidden-role-detail');
 		this.cardPanel = this.required('.forbidden-secret');
 		this.cardLabel = this.required('.forbidden-secret__label');
-		this.cardHint = this.required('#forbidden-card-hint');
 		this.cardText = this.required('.forbidden-secret__text');
 		this.protectedCard = protectReadOnlyTextArea(this.cardText);
 		this.timerPanel = this.required('.forbidden-timer');
@@ -274,12 +281,10 @@ export class ForbiddenBoard {
 
 		this.localizeStatic();
 		this.renderScores(gs);
-		this.roleLine.textContent = this.t('forbidden_turn_line', {
-			turn: turn.turnNumber,
-			cycle: state.cycle,
-		});
-		this.roleDetail.textContent = forbiddenTurnContextText(gs, myId, this.deps.tSync) ?? '';
-		this.localizeCardLabel(role);
+		this.nowLine.textContent = forbiddenNowPlayingText(gs, myId, this.deps.tSync) ?? '';
+		this.roleDetail.textContent = forbiddenDutyText(gs, myId, this.deps.tSync) ?? '';
+		this.renderRoles(gs, myId);
+		this.localizeCardLabel();
 
 		const canSeeCard = !!turn.target && (role === 'clue-giver' || role === 'monitor');
 		this.cardPanel.hidden = !canSeeCard;
@@ -382,6 +387,7 @@ export class ForbiddenBoard {
 		this.required('.forbidden-title').textContent = this.t('forbidden_title');
 		this.required('.forbidden-subtitle').textContent = this.t('forbidden_subtitle');
 		this.required('#forbidden-score-title').textContent = this.t('forbidden_scores_title');
+		this.required('#forbidden-now-title').textContent = this.t('forbidden_now_title');
 		this.required('#forbidden-turn-title').textContent = this.t('forbidden_turn_title');
 		this.required('.forbidden-secret__eyebrow').textContent = this.t('forbidden_secret_eyebrow');
 		this.startButton.textContent = this.t('forbidden_start_button');
@@ -390,16 +396,23 @@ export class ForbiddenBoard {
 		this.violationButton.textContent = this.t('forbidden_violation_button');
 	}
 
-	private localizeCardLabel(role: ReturnType<typeof forbiddenRole>): void {
-		if (role === 'clue-giver') {
-			this.cardLabel.textContent = this.t('forbidden_card_label_clue_giver');
-			this.cardHint.textContent = this.t('forbidden_card_hint_clue_giver');
-		} else if (role === 'monitor') {
-			this.cardLabel.textContent = this.t('forbidden_card_label_monitor');
-			this.cardHint.textContent = this.t('forbidden_card_hint_monitor');
-		} else {
-			this.cardLabel.textContent = this.t('forbidden_card_label');
-			this.cardHint.textContent = this.t('forbidden_card_hint');
+	/** The card's label is deliberately one word. Whatever a screen reader repeats on every
+	 *  focus — who I am, that the box does not take typing, which keys work here — is a toll
+	 *  paid on every visit, and worst on a phone; the duty line above says what to do, and F1
+	 *  holds the keys. */
+	private localizeCardLabel(): void {
+		this.cardLabel.textContent = this.t('forbidden_card_label');
+	}
+
+	/** Everyone else's assignment, one row each — including the players with no assignment at
+	 *  all, who had no line on this surface until now. */
+	private renderRoles(gs: GameState, myId: string): void {
+		this.roleList.innerHTML = '';
+		for (const line of forbiddenOtherRoleLines(gs, myId, this.deps.tSync)) {
+			const item = document.createElement('li');
+			item.className = 'forbidden-role-item';
+			item.textContent = line;
+			this.roleList.appendChild(item);
 		}
 	}
 

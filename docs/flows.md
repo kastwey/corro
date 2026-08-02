@@ -12,12 +12,17 @@ You are in a match-and-discard game, focused on a card in your hand, and you pre
 1. `handPanel` sees Enter on the focused card and calls the family's `onPlay`.
 2. `sheddingBoard.playCard(card)` checks it's your turn locally (a fast, spoken refusal if
    not — the server would reject it anyway) and, for a wild, opens the colour picker.
-3. It calls `gameManager.sheddingPlay(instanceId, chosenColor)`, which via `runAsMe`
-   resolves your player id and guards the turn, then calls
-   `gameClient.sheddingPlay(...)`, which does `invoke("SheddingPlay", ...)` over SignalR.
+3. It calls `gameManager.sheddingPlay(instanceId, chosenColor)`, which via `send` resolves
+   your player id, guards the turn and stamps the id onto the command
+   `{ $type: 'SHEDDING_PLAY', instanceId, chosenColor, … }`. That goes to
+   `gameClient.executeCommand(...)` — the single `invoke("ExecuteCommand", …)` every action
+   in the game shares.
 
 **Server — decide and narrate**
-4. `GameHub.SheddingPlay` packages a `SheddingPlayCommand` and calls `ExecuteCommand`.
+4. `GameHub.ExecuteCommand` receives it: System.Text.Json materializes the `"SHEDDING_PLAY"`
+   discriminator into a `SheddingPlayCommand` (only types on `GameCommand`'s derived-type
+   allowlist can be built at all), the caller-identity check confirms the command names *you*,
+   and it goes to the game service.
 5. `CommandDispatcher` runs the **turn guard** (are you the current player?) and the trade
    guard, then routes to `SheddingPlayHandler`.
 6. The handler calls the **pure** `SheddingRulebook.Play(...)`, which mutates the
@@ -102,8 +107,29 @@ Bots are outside the engine:
    (`PostStartAsync`). The service adopts that state and broadcasts it (projected).
 3. Every client navigates to the board and builds its family view lazily on the first
    state it receives.
+4. That navigation is a **handover**, and each page says so (`DeclareHandoff`) before
+   leaving. Without the warning, the waiting room's dying connection and the board's new
+   one read as a drop plus a reconnection, so the table heard a player leave and that
+   player heard "you have reconnected" seconds into a game nobody had left. The warning
+   covers exactly one connection's death; a genuine drop, which announces nothing, still
+   marks the player away.
 
-## 6. Reconnect / server restart
+## 6. Ending a game (the table stays)
+
+1. The rulebook sets `GameState.IsGameOver`; the final state is broadcast and the client
+   shows the end screen from it.
+2. The match is then **retired, not deleted** (see [tables.md](tables.md)): clocks stopped,
+   service dropped, the final snapshot moved from `gameState` to `lastMatch`, the status back
+   to waiting, and `MatchEnded` broadcast to everyone in the game.
+3. The package and the voice room survive, because both belong to the table rather than to
+   the match that just ended. Deleting a table — the host's action or the retention sweep —
+   is what still releases them.
+4. Closing the end screen hands the page to the **table view**: same document, so the chat
+   and voice panels are never remounted and a conversation carries straight on. The host
+   starts the next match from there; everyone's page swaps back to the board, with no
+   navigation anywhere in the round trip.
+
+## 7. Reconnect / server restart
 
 1. The full `GameState` is persisted to Cosmos as you play (via the background
    `GameStatePersister`).

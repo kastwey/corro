@@ -41,6 +41,23 @@ contradict. One authoritative voice keeps every player hearing the same, correct
   screen reader has usually just read the card you focused; a polite line would queue
   behind it and arrive too late to feel responsive.
 
+### A live region is a mouth, not a transcript
+
+**Every live region wipes itself once it has been spoken.** This is not tidiness. These regions
+are visually hidden but perfectly readable with the virtual cursor, so whatever is left in one
+becomes part of the page: text sitting in the middle of what a reader browses, to be stumbled
+into and read again long after it was heard. A region that *accumulates* is worse still — it
+grows a transcript inside the document.
+
+There are three (`announcer.ts`'s polite and assertive regions, the chat's spoken log, the
+lobby's `#lobby-live`), and every one of them now clears. The chat's and the lobby's did not,
+and both had quietly become transcripts.
+
+**And a live region carries no accessible name.** An announcement speaks the text that arrived,
+never the container's label, so a name buys nothing — while a *named* empty container is a stop
+in the browse buffer. The chat log had one, and it read out as "Chat, grouping" in the middle of
+the table (live report).
+
 ## The composed-line doctrine
 
 A screen reader hears a label or announcement as **one flowing line**. So every composed
@@ -68,6 +85,28 @@ inside a line in the listener's language, it rides as an i18n key and is resolve
 - **Keep the landmark tree flat** (no nested regions), and don't drive
   accessibility-critical work off `requestAnimationFrame` (it pauses in a background tab —
   the game must not stall because the player alt-tabbed).
+
+### Groups of actions are toolbars (`rovingToolbar.ts`)
+
+A `role="toolbar"` is **one tab stop** with ArrowLeft/Right + Home/End inside it. The reason
+that is not a trap is that a screen reader announces "toolbar" on the way in, which is exactly
+what tells the reader the arrows mean something here — so the bargain only holds if the arrows
+really work, and the buttons stay reachable in browse mode either way. (It does *not* force
+NVDA into focus mode; that is `role="application"`, which only the board wears.)
+
+The keyboard model lives in `rovingToolbar.ts` and is shared: the in-game action bar
+(`actions/actionBar.ts`) and the table's actions are the same machine with different contents.
+
+Two rules come with it:
+
+- **Buttons are described, not toggled.** A toolbar renders from a descriptor list computed for
+  whoever is reading it — only the host starts a match or ends a table. An action that is not on
+  offer is *absent*, not hidden: a button that is always in the document leaves a wrapper to be
+  kept in sync by hand, and anything counting the toolbar counts what is not there.
+- **Never the `disabled` attribute.** An action that is refusable-but-present carries
+  `aria-disabled` plus a described-by reason that is *spoken* on activation. "You are not the
+  host" is not a refusal, though — it is a different set of choices, so those buttons are simply
+  absent and a plain line says what the guest is waiting for.
 
 ## The accessible hand (`handPanel.ts`)
 

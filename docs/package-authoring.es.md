@@ -119,8 +119,13 @@ ayudas de autoría y se excluyen automáticamente del `.corro` final.
 Las familias de cartas no tienen `board.json`, y es correcto. `race` y `track` no necesitan
 `cards.json`. No crees archivos solo porque otra familia los tenga.
 
-En `forbidden`, cada archivo `words.<locale>.json` se convierte en una opción de idioma al crear la
-partida. El anfitrión elige un solo mazo común; los jugadores no reciben traducciones distintas de una carta.
+Cuando el CONTENIDO de una familia se divide por idioma, cada archivo de locale que incluyas se
+convierte en una opción del selector de idioma del contenido al crear la partida:
+`words.<locale>.json` en `forbidden` y `questions.<locale>.json` en `trivia`. El anfitrión elige un
+solo mazo común para toda la partida —todos adivinan las mismas palabras, o responden las mismas
+preguntas— mientras cada jugador sigue leyendo la interfaz en su propio idioma. Incluye un archivo
+de locale solo cuando su contenido esté realmente traducido: un locale que aparezca en el manifiesto
+pero no tenga archivo de contenido no se ofrece.
 
 La mayoría de las plantillas comienzan con exactamente dos jugadores para ser pequeñas y comprensibles;
 `forbidden` empieza con los cuatro que necesitan sus dos equipos. Para admitir más, aumenta `players.max`, añade suficientes fichas o asientos distintos y amplía los mazos cuando
@@ -163,6 +168,32 @@ Las palabras reales viven en ambos archivos de idioma:
 La clave debe resolverse en al menos un idioma, y un paquete pensado para ambos debería traducirla en
 los dos. Conserva estable la clave y traduce el valor. Nunca pongas un secreto, como un código de
 desbloqueo, dentro de las traducciones: estas se envían a los navegadores.
+
+### Poner nombre a los bots de tu tablero
+
+El anfitrión puede sentar un bot y pedir un nombre al azar. Si no haces nada, esos nombres salen de
+la lista del motor, que es deliberadamente neutra: tiene que quedar igual de mal junto a un juego de
+minas, a un imperio galáctico y a un viaje por carretera. Los rivales de tu tablero son de *tu*
+mundo, así que decláralos:
+
+```json
+// manifest.json
+"botNames": ["bots.capataz", "bots.canario", "bots.pico"]
+```
+
+```json
+// i18n/es.json                      // i18n/en.json
+{ "bots": {                          { "bots": {
+  "capataz": "Capataz Escombro",       "capataz": "Foreman Grit",
+  "canario": "Pepe Canario",           "canario": "Canary Pete",
+  "pico":    "Viejo Pico"              "pico":    "Old Pickaxe"
+} }                                  } }
+```
+
+Son claves como cualquier otro nombre que aporta tu paquete, así que cada anfitrión los lee en su
+idioma, y el validador avisa si una no resuelve en ningún locale — aquí una clave cruda se le
+ofrecería a una persona como nombre para aceptar. Declara los que quieras; la lista del motor solo
+se usa cuando no declaras ninguno.
 
 ### Tablero, cartas o preguntas
 

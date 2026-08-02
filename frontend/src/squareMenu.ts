@@ -94,7 +94,7 @@ export function squareMenuActions(ctx: SquareMenuContext): SquareMenuAction[] {
 	if (!s.ownerId) {
 		const pp = ctx.pendingPurchase;
 		const isMyTurn = !!ctx.myId && ctx.currentTurn === ctx.myId;
-		if (isMyTurn && pp && pp.playerId === ctx.myId && pp.squareIndex === ctx.index) {
+		if (isMyTurn && pp?.playerId === ctx.myId && pp.squareIndex === ctx.index) {
 			actions.push(affordable({ id: 'buy', amount: pp.price }, ctx.myMoney, pp.price));
 		}
 	}

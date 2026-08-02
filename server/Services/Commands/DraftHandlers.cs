@@ -227,15 +227,10 @@ public static class DraftTurnFlow
 
 /// <summary>Draft: commit (or replace) the caller's secret pick for this trick. The
 /// reveal, the pass, the scoring and the game end all cascade from the LAST pick.</summary>
-public class DraftPickHandler : ICommandHandler<DraftPickCommand>
+public class DraftPickHandler : PlayerCommandHandler<DraftPickCommand>
 {
-	public async Task<ServerResponse> HandleAsync(DraftPickCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(DraftPickCommand command, Player player, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
 		return await DraftTurnFlow.PickAsync(command, player, context);
 	}
 }

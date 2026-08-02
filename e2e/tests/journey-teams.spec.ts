@@ -22,9 +22,9 @@ test.beforeEach(async () => {
 /** The host adds a pool player to a team through the team box's add-player menu. */
 async function assign(host: Page, teamIndex: number, playerName: string): Promise<void> {
 	// The panel re-renders on every LobbyUpdated: locate the button fresh each time.
-	await host.locator('#host-team-panel .team-box').nth(teamIndex).locator('.team-box__add').click();
+	await host.locator('#table-team-panel .team-box').nth(teamIndex).locator('.team-box__add').click();
 	await host.locator('[role="menu"] [role="menuitem"]').filter({ hasText: playerName }).click();
-	await expect(host.locator('#host-team-panel .team-box').nth(teamIndex)).toContainText(playerName);
+	await expect(host.locator('#table-team-panel .team-box').nth(teamIndex)).toContainText(playerName);
 }
 
 test('pairs: host-arranged teams, one shared seat and car, interleaved turns, private hands', async ({ browser }) => {
@@ -38,21 +38,22 @@ test('pairs: host-arranged teams, one shared seat and car, interleaved turns, pr
 	await joinGame(carla, code, 'Carla');
 	await joinGame(david, code, 'David');
 
-	// The waiting room shows the two team boxes; guests see the same picture, read-only.
-	await expect(ana.locator('#host-team-panel .team-box')).toHaveCount(2);
-	await expect(berto.locator('#joined-team-panel .team-box')).toHaveCount(2);
-	await expect(berto.locator('#joined-team-panel button')).toHaveCount(0);
+	// The table shows the two team boxes; guests see the same picture, read-only.
+	await expect(ana.locator('#table-team-panel .team-box')).toHaveCount(2);
+	await expect(berto.locator('#table-team-panel .team-box')).toHaveCount(2);
+	await expect(berto.locator('#table-team-panel button')).toHaveCount(0);
 
-	// Starting with nobody placed is refused with the reason.
-	await ana.click('#start-game-btn');
-	await expect(ana.locator('#error-message')).toContainText(/sin equipo/i);
+	// Starting with nobody placed is refused, and the host HEARS the reason the server gave —
+	// not a generic "it could not be started", which tells them nothing they can act on.
+	await ana.click('#table-start-btn');
+	await expectAnnouncement(ana, /sin equipo/i);
 
 	// [Ana, Berto] red vs [Carla, David] blue — NOT the join order, so the interleave shows.
 	await assign(ana, 0, 'Ana');
 	await assign(ana, 0, 'Berto');
 	await assign(ana, 1, 'Carla');
 	await assign(ana, 1, 'David');
-	// Every move is spoken to the whole room (the polite lobby live region).
+	// Every move is spoken to the whole table.
 	await expectAnnouncement(berto, /David entra en el Equipo azul/);
 
 	await startGame(ana, [ana, berto, carla, david]);

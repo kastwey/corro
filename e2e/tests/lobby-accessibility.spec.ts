@@ -16,9 +16,12 @@ import {
 	newPlayerPage,
 	packageManifest,
 } from '../helpers/game';
+import { E2E_BASE_URL } from '../playwright.config';
 
 const TRACK_BOARD = 'snakes-and-ladders';
 const FORBIDDEN_BOARD = 'forbidden-words';
+const SHEDDING_BOARD = 'four-colours';
+const TRIVIA_BOARD = 'wheel-of-wits';
 
 /** A small, real .corro archive used to exercise the browser's successful upload state. */
 async function uploadedTrackPackage(): Promise<Buffer> {
@@ -86,34 +89,71 @@ test('switching shipped games keeps the loading feedback visual-only', async ({ 
 	expect(heard).not.toContain(loading);
 });
 
-test('Forbidden Words offers one accessible shared word-language choice', async ({ browser }) => {
+// Both families whose CONTENT is language-split reach the same picker: the words a Forbidden
+// Words table guesses, and the questions a trivia table answers. It is one shared deck for the
+// whole table, deliberately separate from each player's own interface language.
+for (const board of [
+	{ id: FORBIDDEN_BOARD, label: 'Forbidden Words' },
+	{ id: TRIVIA_BOARD, label: 'trivia' },
+]) {
+	test(`${board.label} offers one accessible shared content-language choice`, async ({ browser }) => {
+		const page = await newPlayerPage(browser, 'es-ES');
+		await gotoLobbyHome(page);
+		await page.locator('#go-create-btn').click();
+		await page.locator('#board-selector').selectOption(board.id);
+		const firstToken = packageManifest(board.id).tokens[0].id as string;
+		await expect(page.locator(`#create-form input.token-radio[value="${firstToken}"]`)).toBeAttached();
+
+		const group = page.locator('#content-language-group');
+		const select = page.locator('#content-language');
+		await expect(group).toBeVisible();
+		await expect(select).toHaveAccessibleName('Idioma del contenido');
+		await expect(select).toHaveAttribute('aria-describedby', 'content-language-hint');
+		await expect(select.locator('option')).toHaveText(['Inglés', 'Español']);
+		await expect(select).toHaveValue('es');
+		await flushAxeAudit(page);
+
+		// The host's explicit deck choice is theirs to keep, and nothing about their own interface
+		// rewrites it: the labels stay in the interface language while the VALUE stays as chosen.
+		// (Applying an interface language leaves this form altogether for that language's own lobby
+		// — one URL per language — which lobby-localization.spec.ts covers.)
+		await select.selectOption('en');
+		await expect(select).toHaveValue('en');
+		await expect(select.locator('option')).toHaveText(['Inglés', 'Español']);
+		await flushAxeAudit(page);
+
+		// A board whose content is NOT language-split offers no choice at all.
+		await page.locator('#board-selector').selectOption(TRACK_BOARD);
+		await expect(group).toBeHidden();
+	});
+}
+
+test('Four Colours offers the scoring direction as a named, accessible radio group', async ({ browser }) => {
 	const page = await newPlayerPage(browser, 'es-ES');
 	await gotoLobbyHome(page);
 	await page.locator('#go-create-btn').click();
-	await page.locator('#board-selector').selectOption(FORBIDDEN_BOARD);
-	const firstToken = packageManifest(FORBIDDEN_BOARD).tokens[0].id as string;
+	await page.locator('#board-selector').selectOption(SHEDDING_BOARD);
+	const firstToken = packageManifest(SHEDDING_BOARD).tokens[0].id as string;
 	await expect(page.locator(`#create-form input.token-radio[value="${firstToken}"]`)).toBeAttached();
 
-	const group = page.locator('#forbidden-word-language-group');
-	const select = page.locator('#forbidden-word-language');
-	await expect(group).toBeVisible();
-	await expect(select).toHaveAccessibleName('Idioma de las palabras');
-	await expect(select).toHaveAttribute('aria-describedby', 'forbidden-word-language-hint');
-	await expect(select.locator('option')).toHaveText(['Inglés', 'Español']);
-	await expect(select).toHaveValue('es');
+	await page.locator('#rules-details').evaluate(el => { (el as HTMLDetailsElement).open = true; });
+	const options = page.locator('#package-rules [data-rule-id="sheddingScoring"]');
+	await expect(options).toHaveCount(2);
+	// The radios live in their OWN fieldset, whose legend is what names the group for a
+	// screen reader (the `has` locator resolves relative to that fieldset).
+	const group = page.locator('#package-rules fieldset.rule-choice', {
+		has: page.locator('[data-rule-id="sheddingScoring"]'),
+	});
+	await expect(group.locator('legend')).toHaveText('Cómo se cuentan los puntos');
+	await expect(options.nth(0)).toBeChecked(); // the classic count is the default
+	await expect(options.nth(1)).not.toBeChecked();
 	await flushAxeAudit(page);
 
-	// Once the host makes an explicit deck choice, changing their personal interface must not
-	// silently rewrite it. Only the option labels follow the interface locale.
-	await select.selectOption('en');
-	await page.locator('#language-selector').selectOption('en');
-	await page.locator('#language-apply-btn').click();
-	await expect(select).toHaveValue('en');
-	await expect(select.locator('option')).toHaveText(['English', 'Spanish']);
+	// The other selection is a state of its own: keep it visible long enough to be audited.
+	await options.nth(1).dispatchEvent('click');
+	await expect(options.nth(1)).toBeChecked();
+	await expect(options.nth(0)).not.toBeChecked();
 	await flushAxeAudit(page);
-
-	await page.locator('#board-selector').selectOption(TRACK_BOARD);
-	await expect(group).toBeHidden();
 });
 
 test('home, dark theme, runtime language and create/join validation states are Axe-clean', async ({ browser }) => {
@@ -150,14 +190,20 @@ test('home, dark theme, runtime language and create/join validation states are A
 	expect(brandBox.y + brandBox.height).toBeLessThan(preferencesBox.y);
 
 	// Initial Spanish/light home is scanned by gotoLobbyHome; now exercise the other palette and
-	// a live language rebind before entering the forms.
+	// the English lobby the selector navigates to, before entering the forms.
 	await host.locator('#theme-toggle').click();
 	await expect(host.locator('html')).toHaveAttribute('data-theme', 'dark');
 	await expect(brand.locator('.brand-logo__image--light')).toBeHidden();
 	await expect(brand.locator('.brand-logo__image--dark')).toBeVisible();
 	await host.locator('#language-selector').selectOption('en');
 	await host.locator('#language-apply-btn').click();
-	await expect(host.locator('#home-heading')).toHaveText('Your games');
+	await expect(host).toHaveURL(new RegExp(`${E2E_BASE_URL}/?$`));
+	// Applying a language NAVIGATES to that language's own lobby, so what follows must wait for
+	// the new page to finish booting — the same readiness anchor gotoLobbyHome uses. Without it,
+	// a click can land before init() has attached its handlers (and be undone by its final
+	// showView), which is a race the old in-place retranslation never had.
+	await expect(host.locator('#your-games-empty, #your-games-list li').first()).toBeVisible();
+	await expect(host.locator('#home-heading')).toHaveText(appI18n('en').lobby.savedGames.heading as string);
 	await expect(host.locator('[data-site-tagline]')).toHaveText('Play together, play your way.');
 	await expect(corro).toHaveAttribute('aria-label', appI18n('en').footer.corroNewWindowLabel as string);
 	await expect(license).toHaveAttribute('aria-label', appI18n('en').footer.licenseNewWindowLabel as string);
@@ -177,8 +223,9 @@ test('home, dark theme, runtime language and create/join validation states are A
 	await expect(host.locator('#error-message')).toContainText('Please select a token');
 	await host.locator('#create-form input.token-radio').first().dispatchEvent('click');
 	await host.locator('#create-button').click();
-	await expect(host.locator('#lobby-created')).toBeVisible();
-	const inviteCode = (await host.locator('#lobby-code').textContent())!.trim();
+	// Creating lands the host at their TABLE, on the game page.
+	await expect(host.locator('#table-view')).toBeVisible();
+	const inviteCode = (await host.locator('#table-code').textContent())!.trim();
 
 	const guest = await newPlayerPage(browser);
 	await gotoLobbyHome(guest);
@@ -199,11 +246,14 @@ test('home, dark theme, runtime language and create/join validation states are A
 	await expect(guest.locator('#error-message')).toContainText(/ficha/i);
 	await guest.locator('#join-token-list input.token-radio:not([data-taken])').first().dispatchEvent('click');
 	await guest.locator('#join-final-button').click();
-	await expect(guest.locator('#lobby-joined')).toBeVisible();
-	await expect(host.locator('#host-player-list')).toContainText('Berto');
+	// The guest lands at the same table, and the host sees them arrive there.
+	await expect(guest.locator('#table-view')).toBeVisible();
+	await expect(host.locator('#table-players')).toContainText('Berto');
+	await flushAxeAudit(guest);
 
 	// A guest gets the remove-only saved-game variant (the host gets delete, covered below).
-	await guest.locator('#waiting-back-btn').dispatchEvent('click');
+	// Leaving the table returns to the lobby, where their saved game is waiting.
+	await guest.locator('#table-back').click();
 	await expect(guest.locator('#view-home')).toBeVisible();
 	const guestSaved = guest.locator('#your-games-list .saved-game-item');
 	await expect(guestSaved.locator('.saved-game-remove')).toBeVisible();
@@ -309,6 +359,10 @@ test('unlock prompt and its feedback are Axe-clean and announced from every lobb
 	// Regression: this live region used to sit inside the hidden waiting-room view, making home-screen
 	// unlock feedback silent to real assistive technology.
 	expect(await page.locator('#lobby-live').evaluate(element => element.closest('.lobby-view') === null)).toBe(true);
+	// …and what it says does not STAY said. It is visually hidden but perfectly readable with the
+	// virtual cursor, so a line left behind would sit at the bottom of the lobby to be stumbled on
+	// long after it was spoken (the same debt the chat's spoken log carried).
+	await expect(page.locator('#lobby-live')).toBeEmpty({ timeout: 10_000 });
 });
 
 test('an unlocked hidden shipped package can be selected and used to create a game', async ({ browser }) => {
@@ -346,13 +400,13 @@ test('an unlocked hidden shipped package can be selected and used to create a ga
 	await expect(host.locator('#create-form input.token-radio[value="circle"]')).toBeChecked();
 	await flushAxeAudit(host);
 	await notice.locator('.btn-primary').click();
-	await expect(host.locator('#lobby-created')).toBeVisible();
-	const inviteCode = (await host.locator('#lobby-code').textContent())!.trim();
+	await expect(host.locator('#table-view')).toBeVisible();
+	const inviteCode = (await host.locator('#table-code').textContent())!.trim();
 
 	// Joining never requires the unlock code: the invite identifies an already-created game.
 	const guest = await newPlayerPage(browser);
 	await joinGame(guest, inviteCode, 'Berto');
-	await host.locator('#start-game-btn').click();
+	await host.locator('#table-start-btn').click();
 	await expect.poll(() => host.url()).toMatch(/board\.html/);
 	await expect.poll(() => guest.url()).toMatch(/board\.html/);
 	await expect(host.locator('#board .track-cell[data-square="12"]')).toBeVisible();
@@ -370,14 +424,14 @@ test('saved-game card, resume, dark palette and delete confirmation states are A
 			value: { writeText: async () => {} },
 		});
 	});
-	await page.locator('#copy-code-btn').dispatchEvent('click');
-	await expect(page.locator('#copy-code-btn')).toContainText(/Copiado|Copied/);
+	await page.locator('#table-copy-code').dispatchEvent('click');
+	await expect(page.locator('#table-copy-code')).toContainText(/Copiado|Copied/);
 	await flushAxeAudit(page);
-	await page.locator('#copy-link-btn').dispatchEvent('click');
-	await expect(page.locator('#copy-link-btn')).toContainText(/Copiado|Copied/);
+	await page.locator('#table-copy-link').dispatchEvent('click');
+	await expect(page.locator('#table-copy-link')).toContainText(/Copiado|Copied/);
 	await flushAxeAudit(page);
 
-	await page.locator('#waiting-back-btn').dispatchEvent('click');
+	await page.locator('#table-back').click();
 	await expect(page.locator('#view-home')).toBeVisible();
 	const saved = page.locator('#your-games-list .saved-game-item');
 	await expect(saved).toHaveCount(1);
@@ -386,9 +440,10 @@ test('saved-game card, resume, dark palette and delete confirmation states are A
 
 	await page.locator('#theme-toggle').click();
 	await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+	// Resuming a table with no match running takes you back to the table itself.
 	await saved.locator('.saved-game-resume').dispatchEvent('click');
-	await expect(page.locator('#lobby-created')).toBeVisible();
-	await page.locator('#waiting-back-btn').dispatchEvent('click');
+	await expect(page.locator('#table-view')).toBeVisible();
+	await page.locator('#table-back').click();
 	await expect(page.locator('#view-home')).toBeVisible();
 	await expect(saved).toHaveCount(1);
 

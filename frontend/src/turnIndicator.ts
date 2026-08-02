@@ -39,7 +39,7 @@ class TurnIndicator {
 
 		// Insert directly above the board grid (inside its frame).
 		const board = document.getElementById('board');
-		if (board && board.parentElement) {
+		if (board?.parentElement) {
 			board.parentElement.insertBefore(this.container, board);
 		} else {
 			document.body.prepend(this.container);
@@ -60,7 +60,7 @@ class TurnIndicator {
 	/**
 	 * Set when a player is resolving debts
 	 */
-	setDebtorPlayer(player: Player | null, totalDebt: number = 0): void {
+	setDebtorPlayer(player: Player | null, totalDebt = 0): void {
 		this.state.debtorPlayer = player;
 		this.state.debtAmount = totalDebt;
 		this.render();

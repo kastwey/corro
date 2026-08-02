@@ -182,7 +182,7 @@ test('announceBankBuildingInventory says the supply is unlimited when shortage r
 
 test('nextOccupied leads with who is on the destination square (and where)', () => {
 	const announced: string[] = [];
-	const calls: Array<{ i: number; announceMove?: boolean }> = [];
+	const calls: { i: number; announceMove?: boolean }[] = [];
 	const players = [
 		{ id: 'a', name: 'Alice', position: 5 },
 		{ id: 'b', name: 'Bob', position: 5 },

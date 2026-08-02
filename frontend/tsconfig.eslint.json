@@ -1,0 +1,11 @@
+// Lint-only project. The build's tsconfig compiles src/ alone (test/ runs through tsx and must
+// never reach dist/), but type-aware linting needs the tests in a project too — otherwise every
+// test file fails to parse. Same compiler options, wider net, emits nothing.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}

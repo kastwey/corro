@@ -46,8 +46,16 @@ function persistDisclaimerDismissed(): void {
 	try { localStorage.setItem(DISCLAIMER_KEY, '1'); } catch { /* session-only then */ }
 }
 
-const LOG_CAP = 50;      // spoken-log children kept around (screen readers only need recent)
 const LIST_CAP = 200;    // rendered history (mirrors the server cap)
+/**
+ * How long a spoken line is left in the log region before it is wiped. It only has to outlive the
+ * screen reader picking it up; after that it is debris, and debris in a live region is not
+ * harmless — the region is visually hidden but fully readable with the virtual cursor, so
+ * yesterday's chat would sit in the middle of the page waiting to be read again in browse mode.
+ * The announcer learned the same lesson (see announcer.ts, scheduleTextClear); this is generous
+ * where that one is brisk, because a chat line is longer than an announcement.
+ */
+const LOG_CLEAR_MS = 3000;
 
 export class ChatPanel {
 	private deps: ChatPanelDeps | null = null;
@@ -75,13 +83,21 @@ export class ChatPanel {
 		this.createToggleButton(controlsMount);
 		const host = document.querySelector('main') ?? document.body;
 
-		// The spoken channel lives in <body> so it announces with the panel closed too.
+		// The spoken channel, so a message is heard with the panel closed. Two things about it are
+		// deliberate, and both were once wrong:
+		//
+		// It carries NO accessible name. A live region does not need one — an announcement speaks
+		// the text that arrived, never the container's label — but a NAMED empty container is a
+		// stop in the browse buffer, and this one sat right after the table's actions saying
+		// "Chat, grouping" to anyone reading down the page (live report).
+		//
+		// And it lives in <body>, outside <main>, because it is not part of the page: it is a
+		// mouth. Appending it to the main content put it in the middle of what a reader browses.
 		const log = document.createElement('div');
 		log.id = 'chat-log';
 		log.setAttribute('role', 'log');
-		log.setAttribute('aria-label', t('game.chat_title'));
 		log.className = 'visually-hidden';
-		host.appendChild(log);
+		document.body.appendChild(log);
 		this.logRegion = log;
 
 		// Chat is a persistent utility PANEL, not a dialog or a board choice. A native
@@ -523,7 +539,8 @@ export class ChatPanel {
 		const entry = document.createElement('div');
 		entry.textContent = `${message.playerName}: ${message.text}`;
 		log.appendChild(entry);
-		while (log.children.length > LOG_CAP) log.removeChild(log.firstChild!);
+		// Said, then taken away: the panel keeps the history, this only lends it a voice.
+		window.setTimeout(() => entry.remove(), LOG_CLEAR_MS);
 	}
 }
 

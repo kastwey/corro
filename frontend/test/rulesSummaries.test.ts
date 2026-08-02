@@ -29,6 +29,7 @@ test('shedding: lists the house rules by their state, shared on/off keys', () =>
 		{ ...sheddingBase, allowDoubles: true, stacking: 'cross', lastCardCall: true }, t);
 	assert.deepEqual(lines, [
 		'game.shedding_rules_hand_size(7)',
+		'game.shedding_rules_scoring(game.shedding_rules_scoring_collect)',
 		'game.shedding_rules_target(500)',
 		'game.shedding_rules_draw_play(game.rules_on)',
 		'game.shedding_rules_honest_wild(game.rules_on)',
@@ -38,10 +39,24 @@ test('shedding: lists the house rules by their state, shared on/off keys', () =>
 	]);
 });
 
+test('shedding: penalty scoring says so AND flips the target line, which would otherwise lie', () => {
+	const lines = buildSheddingRulesLines({ ...sheddingBase, scoring: 'penalty' }, t);
+	assert.equal(lines[1], 'game.shedding_rules_scoring(game.shedding_rules_scoring_penalty)');
+	assert.equal(lines[2], 'game.shedding_rules_target_penalty(500)');
+	// An unset (or unknown) mode is the classic count, target line included.
+	assert.equal(buildSheddingRulesLines({ ...sheddingBase, scoring: 'wobble' }, t)[2],
+		'game.shedding_rules_target(500)');
+});
+
 test('shedding: a zero target is a single round; missing rules fall back to defaults', () => {
-	assert.equal(buildSheddingRulesLines({ ...sheddingBase, targetScore: 0 }, t)[1],
+	assert.equal(buildSheddingRulesLines({ ...sheddingBase, targetScore: 0 }, t)[2],
+		'game.shedding_rules_target_single');
+	// The single-round line wins over BOTH target wordings.
+	assert.equal(buildSheddingRulesLines({ ...sheddingBase, targetScore: 0, scoring: 'penalty' }, t)[2],
 		'game.shedding_rules_target_single');
 	assert.equal(buildSheddingRulesLines(null, t)[0], 'game.shedding_rules_hand_size(7)');
+	assert.equal(buildSheddingRulesLines(null, t)[1],
+		'game.shedding_rules_scoring(game.shedding_rules_scoring_collect)');
 });
 
 // ── Property ─────────────────────────────────────────────────────────────────---

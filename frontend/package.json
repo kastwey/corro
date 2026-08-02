@@ -12,7 +12,9 @@
     "compile": "npx tsc",
     "watch": "node watch.js",
     "watch:ts": "tsc --watch --preserveWatchOutput",
-    "test": "node --import tsx --test test/**/*.test.ts"
+    "test": "node --import tsx --test test/**/*.test.ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "keywords": [
     "accessible",
@@ -22,10 +24,14 @@
   "author": "kastwey and contributors",
   "license": "AGPL-3.0-only",
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.1.2",
     "chokidar": "^4.0.3",
+    "eslint": "^10.8.0",
     "jsdom": "^29.1.1",
     "tsx": "^4.22.4",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.65.0"
   },
   "dependencies": {
     "@microsoft/signalr": "^9.0.6",

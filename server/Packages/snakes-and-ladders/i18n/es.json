@@ -18,5 +18,13 @@
     "track_effect_up_self": "¡Encuentras una escalera y trepas de la casilla {{from}} a la {{to}}!",
     "track_effect_down": "¡Una serpiente engulle a {{player}}! Resbala de la casilla {{from}} a la {{to}}",
     "track_effect_down_self": "¡Una serpiente te engulle! Resbalas de la casilla {{from}} a la {{to}}"
+  },
+  "bots": {
+    "escalera": "Don Escalera",
+    "serpiente": "Serpiente Astuta",
+    "casillaUno": "Vuelta a la Uno",
+    "sol": "Solecito",
+    "rayo": "Rayito",
+    "casiCasi": "Casi Casi"
   }
 }

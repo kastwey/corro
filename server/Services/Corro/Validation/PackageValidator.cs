@@ -24,9 +24,21 @@ public sealed class PackageValidator : IPackageValidator
 		CheckGameType(definition, problems);
 		CheckTokens(definition, problems);
 		CheckSquareNames(definition, problems);
+		CheckHouseRules(definition, problems);
 		CheckI18nReferences(definition, problems);
 		return problems;
 	}
+
+	/// <summary>A host-editable CHOICE rule must offer the values the engine actually accepts:
+	/// the appliers keep the default whenever the stored value is not one of theirs, so an option
+	/// the engine never heard of would be rendered in the lobby, chosen by the host, written to
+	/// the game document — and then quietly dropped, leaving a game that plays by a rule nobody
+	/// picked. Nothing else in the pipeline compares the two sets.</summary>
+	private static void CheckHouseRules(GameDefinition d, List<string> problems)
+		=> problems.AddRange(d.Manifest.HouseRules
+			.Select(HouseRuleCatalog.ChoiceProblem)
+			.Where(problem => problem != null)
+			.Select(problem => problem!));
 
 	/// <summary>Every package must declare which game family it targets, and it must be one this
 	/// engine version implements (the .corro format anticipates more — each family brings its
@@ -119,34 +131,34 @@ public sealed class PackageValidator : IPackageValidator
 			Add(tk.NameKey, $"token '{tk.Id}'");
 		}
 
+		// A bot name that resolves nowhere would reach the host as a raw key in the "roll me a
+		// name" hat — the one place the text is offered for them to accept as-is.
+		for (var i = 0; i < d.Manifest.BotNames.Count; i++)
+		{
+			Add(d.Manifest.BotNames[i], $"bot name #{i + 1}");
+		}
+
 		foreach (var c in d.Cards)
 		{
 			Add(c.TextKey, $"card '{c.Id}'");
 		}
 
+		// Every card of every family needs a translatable name; the family word in the report comes
+		// from the game type, so a new card family is covered without touching this sweep.
+		var family = d.Manifest.GameType;
+		foreach (var card in d.AllFamilyCards)
+		{
+			Add(card.NameKey, $"{family} card '{card.Id}'");
+		}
+
+		// A "played" line is the journey/assembly families' own second key per card.
 		foreach (var jc in d.JourneyDeck ?? new List<Models.Corro.JourneyCardDef>())
 		{
-			Add(jc.NameKey, $"journey card '{jc.Id}'");
 			Add(jc.PlayedKey, $"journey card '{jc.Id}' playedKey");
 		}
 		foreach (var ac in d.AssemblyDeck ?? new List<Models.Corro.AssemblyCardDef>())
 		{
-			Add(ac.NameKey, $"assembly card '{ac.Id}'");
 			Add(ac.PlayedKey, $"assembly card '{ac.Id}' playedKey");
-		}
-		foreach (var dc in d.DraftDeck ?? new List<Models.Corro.DraftCardDef>())
-		{
-			Add(dc.NameKey, $"draft card '{dc.Id}'");
-		}
-
-		foreach (var sc in d.SheddingDeck ?? new List<Models.Corro.SheddingCardDef>())
-		{
-			Add(sc.NameKey, $"shedding card '{sc.Id}'");
-		}
-
-		foreach (var ec in d.ExplodingDeck ?? new List<Models.Corro.ExplodingCardDef>())
-		{
-			Add(ec.NameKey, $"exploding card '{ec.Id}'");
 		}
 		// Wilds NAME the colour in force out loud: every deck colour needs a spoken name.
 		foreach (var color in (d.SheddingDeck ?? new List<Models.Corro.SheddingCardDef>())
@@ -158,6 +170,22 @@ public sealed class PackageValidator : IPackageValidator
 		foreach (var (term, key) in d.Manifest.Terminology)
 		{
 			Add(key, $"terminology '{term}'");
+		}
+
+		// The lobby falls back to the raw rule/option ID when a label is missing, so a dangling
+		// key here reads as "sheddingScoringPenalty" in the host's rules panel.
+		foreach (var g in d.Manifest.RuleGroups)
+		{
+			Add(g.NameKey, $"rule group '{g.Id}'");
+		}
+
+		foreach (var rule in d.Manifest.HouseRules)
+		{
+			Add(rule.NameKey, $"house rule '{rule.Id}'");
+			foreach (var option in rule.Options ?? new List<HouseRuleOption>())
+			{
+				Add(option.NameKey, $"house rule '{rule.Id}' option '{option.Id}'");
+			}
 		}
 
 		Add(d.Manifest.Currency.NameKey, "currency.name");

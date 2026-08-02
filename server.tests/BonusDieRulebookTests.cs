@@ -202,4 +202,33 @@ public class BonusDieRulebookTests
 		Assert.Null(CommandDispatcher.CheckBusChoiceFreeze(
 			new GetMoneyCommand { PlayerId = "a" }, state));
 	}
+
+	/// <summary>
+	/// Live-play report: while one player sat on their bonus-die choice, everyone ELSE was told
+	/// "choose your bonus-die movement before taking another action" — for a die they never threw —
+	/// and could not build, mortgage or answer a trade until that player decided.
+	///
+	/// Unlike a trade or an auction, this is not a table event. It freezes its owner only.
+	/// </summary>
+	[Fact]
+	public void PendingBusChoiceDoesNotFreezeTheOtherPlayers()
+	{
+		var state = TestFixtures.NewState([EligiblePlayer()]);
+		state.PendingBusChoice = new PendingBusChoice
+		{
+			PlayerId = "a", Die1 = 2, Die2 = 3, FromPosition = 0,
+		};
+
+		// A rival's off-turn economy keeps working…
+		Assert.Null(CommandDispatcher.CheckBusChoiceFreeze(
+			new BuildCommand { PlayerId = "b", SquareIndex = 1, Count = 1 }, state));
+		Assert.Null(CommandDispatcher.CheckBusChoiceFreeze(
+			new MortgagePropertyCommand { PlayerId = "b", SquareIndex = 1 }, state));
+		Assert.Null(CommandDispatcher.CheckBusChoiceFreeze(
+			new RespondTradeCommand { PlayerId = "b", TradeId = "t1", Accept = true }, state));
+
+		// …while the owner still cannot slip past their own pending choice.
+		Assert.Equal("BUS_CHOICE_REQUIRED", CommandDispatcher.CheckBusChoiceFreeze(
+			new BuildCommand { PlayerId = "a", SquareIndex = 1, Count = 1 }, state));
+	}
 }

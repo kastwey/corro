@@ -70,7 +70,7 @@ public partial class CorroRulebook
 
 		// Analyze landing
 		var landing = AnalyzeLanding(player.Position, player.Id, context);
-		context.LastDiceTotal = dice.StandardTotal;
+		context.Property.LastDiceTotal = dice.StandardTotal;
 		await ProcessLandingEffectsAsync(player, player.Position, context);
 
 		// NOTE: Doubles in holding does NOT give an extra turn, and the turn no longer
@@ -150,7 +150,7 @@ public partial class CorroRulebook
 
 		// Analyze landing
 		var landing = AnalyzeLanding(player.Position, player.Id, context);
-		context.LastDiceTotal = dice.StandardTotal;
+		context.Property.LastDiceTotal = dice.StandardTotal;
 		await ProcessLandingEffectsAsync(player, player.Position, context);
 
 		// The turn no longer auto-advances; the player keeps control and ends it explicitly.

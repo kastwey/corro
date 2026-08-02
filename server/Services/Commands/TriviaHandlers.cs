@@ -248,15 +248,10 @@ public static class TriviaTurnFlow
 }
 
 /// <summary>Trivia family: the host picks the judge before play begins (judgeMode "fixed").</summary>
-public class TriviaChooseJudgeHandler : ICommandHandler<TriviaChooseJudgeCommand>
+public class TriviaChooseJudgeHandler : PlayerCommandHandler<TriviaChooseJudgeCommand>
 {
-	public async Task<ServerResponse> HandleAsync(TriviaChooseJudgeCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(TriviaChooseJudgeCommand command, Player player, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
 		var trivia = context.GameState.Trivia;
 		if (trivia?.PendingJudgeSetup is not { } setup)
 		{
@@ -291,15 +286,10 @@ public class TriviaChooseJudgeHandler : ICommandHandler<TriviaChooseJudgeCommand
 }
 
 /// <summary>Trivia family: resolve the pending move by picking a legal landing square.</summary>
-public class TriviaMoveHandler : ICommandHandler<TriviaMoveCommand>
+public class TriviaMoveHandler : PlayerCommandHandler<TriviaMoveCommand>
 {
-	public async Task<ServerResponse> HandleAsync(TriviaMoveCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(TriviaMoveCommand command, Player player, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
 		var trivia = context.GameState.Trivia;
 		if (trivia?.PendingMove is not { } pending || pending.PlayerId != player.Id)
 		{
@@ -320,15 +310,10 @@ public class TriviaMoveHandler : ICommandHandler<TriviaMoveCommand>
 }
 
 /// <summary>Trivia family: the active player submits their answer (written text or a choice index).</summary>
-public class TriviaAnswerHandler : ICommandHandler<TriviaAnswerCommand>
+public class TriviaAnswerHandler : PlayerCommandHandler<TriviaAnswerCommand>
 {
-	public async Task<ServerResponse> HandleAsync(TriviaAnswerCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(TriviaAnswerCommand command, Player player, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
 		var trivia = context.GameState.Trivia;
 		if (trivia?.PendingQuestion is not { } q || q.PlayerId != player.Id)
 		{
@@ -399,15 +384,10 @@ public class TriviaAnswerHandler : ICommandHandler<TriviaAnswerCommand>
 }
 
 /// <summary>Trivia family: the designated judge rules on the submitted answer.</summary>
-public class TriviaJudgeHandler : ICommandHandler<TriviaJudgeCommand>
+public class TriviaJudgeHandler : PlayerCommandHandler<TriviaJudgeCommand>
 {
-	public async Task<ServerResponse> HandleAsync(TriviaJudgeCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(TriviaJudgeCommand command, Player judge, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var judge) is { } error)
-		{
-			return error;
-		}
-
 		var trivia = context.GameState.Trivia;
 		if (trivia?.PendingQuestion is not { } q)
 		{

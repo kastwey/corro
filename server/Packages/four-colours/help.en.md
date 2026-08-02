@@ -9,7 +9,7 @@ away (Enter) or keep it and pass (Space again).
 
 - **F1** opens this Four Colours guide.
 - **Ctrl+F1** opens the complete shortcut list for this game's active rules.
-- **Ctrl+Shift+F1** shows the active rules, such as draw stacking, doubles and the last-card call.
+- **Ctrl+Shift+F1** shows the active rules, such as the scoring direction, draw stacking, doubles and the last-card call.
 - With a card in your hand focused, **Shift+F1** opens its help and explains what it does and when it can be played.
 
 ## The cards
@@ -25,9 +25,17 @@ away (Enter) or keep it and pass (Space again).
 
 ## The match
 
-Emptying your hand wins the **round** and collects the points left in every rival hand
-(numbers at face value, actions 20, wilds 50). Rounds repeat until someone reaches
-**500**; each round's winner leads the next.
+Emptying your hand wins the **round**, and the cards left in the other hands are counted
+(numbers at face value, actions 20, wilds 50). Where those points land is the table's choice
+when the game is created:
+
+- **Collect** (the classic count): the round winner takes them. Rounds repeat until someone
+  reaches **500**, and that player wins the match.
+- **Penalties**: everyone keeps the points left in their own hand and the round winner banks
+  nothing. Reaching **500** loses the match, so the lowest score wins.
+
+Each round's winner leads the next either way, and **Ctrl+Shift+F1** tells you which count is
+in force.
 
 Nobody shouts here: every player's card count is **yours to check whenever you want** —
 **S** tells your own story (cards, colour in force, top card and points) and **Shift+S**

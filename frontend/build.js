@@ -97,6 +97,19 @@ webFiles.forEach(({ src, dest }) => {
 	}
 });
 
+// 5b. Emit the lobby pre-translated, one copy per language.
+// The browser cannot swap 81 strings before its first paint, so the page is served already
+// correct instead. See localizePages.js for why this also makes /es/ indexable.
+console.log('Localizing pages...');
+try {
+	const { localizePages } = require('./localizePages.js');
+	const written = localizePages({ srcDir: 'src', distDir: 'dist', localesDir: 'i18n/locales' });
+	written.forEach(file => console.log(`   dist/${file}`));
+} catch (error) {
+	console.error('Localization failed:', error.message);
+	process.exit(1);
+}
+
 // 6. Copy JSON configuration files.
 console.log('Copying configuration files...');
 // keymap.json now lives on the server (served at /api/config/keymap as the single source of truth).

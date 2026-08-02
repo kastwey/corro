@@ -226,7 +226,7 @@ class DialogManagerClass {
 		// Title
 		const titleEl = dialog.querySelector('.dialog-title') as HTMLElement;
 		if (options.titleI18nKey) {
-			titleEl.textContent = tSync(options.titleI18nKey, options.titleI18nVars || {});
+			titleEl.textContent = tSync(options.titleI18nKey, options.titleI18nVars ?? {});
 		} else {
 			titleEl.textContent = options.title;
 		}
@@ -273,7 +273,7 @@ class DialogManagerClass {
 			button.className = `btn btn-${btn.variant || 'secondary'}`;
 
 			if (btn.i18nKey) {
-				button.textContent = tSync(btn.i18nKey, btn.i18nVars || {});
+				button.textContent = tSync(btn.i18nKey, btn.i18nVars ?? {});
 			} else {
 				button.textContent = btn.label;
 			}
@@ -293,7 +293,7 @@ class DialogManagerClass {
 		// dialog as one more panel instead of a focus trap.
 		dialog.dataset.modal = isModal ? 'true' : 'false';
 		if (isModal) {
-			this.currentOnClose = options.onClose || null;
+			this.currentOnClose = options.onClose ?? null;
 			this.currentDismissable = options.dismissable !== false;
 			dialog.showModal();
 			// A modal dialog makes the rest of the page inert, silencing the announcer's live
@@ -303,7 +303,7 @@ class DialogManagerClass {
 			// Non-modal: the page stays interactive and the body-hosted live region keeps
 			// working, so the announcer host is left alone. Re-showing while open just
 			// re-renders in place (native show() is a no-op on an open dialog).
-			this.nonModalOnClose = options.onClose || null;
+			this.nonModalOnClose = options.onClose ?? null;
 			dialog.show();
 		}
 
@@ -482,7 +482,7 @@ class DialogManagerClass {
 		onCancel?: () => void;
 	}): void {
 		const message = options.messageI18nKey
-			? tSync(options.messageI18nKey, options.messageI18nVars || {})
+			? tSync(options.messageI18nKey, options.messageI18nVars ?? {})
 			: options.message;
 
 		this.show({
@@ -526,7 +526,7 @@ class DialogManagerClass {
 		onClose?: () => void;
 	}): void {
 		const message = options.messageI18nKey
-			? tSync(options.messageI18nKey, options.messageI18nVars || {})
+			? tSync(options.messageI18nKey, options.messageI18nVars ?? {})
 			: options.message;
 
 		this.show({

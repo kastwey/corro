@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { desiredModal } from '../src/modalReconcile.js';
 import type { GameState, Square } from '../src/models.js';
+import type { TradeReviewModalData } from '../src/modalReconcile.js';
 
 /**
  * Pure-logic tests for desiredModal: which blocking modal the authoritative game state
@@ -256,4 +257,59 @@ test('another player\'s pending race move shows me nothing', () => {
 		players: [], bank: { money: 0 }, currentTurn: 'rival', ownership: [], squares: [],
 	} as any;
 	assert.equal(desiredModal(state, 'me').kind, 'none');
+});
+
+test('a trade review names properties as the PLAYER reads them, not canonically', () => {
+	// Live-play report: "en los tratos, cuando dice tú das / tú recibes, las propiedades aparecen
+	// en inglés aunque el juego esté en español". The authoritative state carries the board's
+	// canonical names; GameManager.getSquares() resolves them to the player's language, and the
+	// review has to use THAT — the rest of the board already does.
+	const canonical = [
+		{ id: 0, name: 'Go', x: 0, y: 0 },
+		{ id: 1, name: 'Orion Hyperspace Station', x: 0, y: 1, color: 'blue', price: 200 },
+	] as Square[];
+	const localized = [
+		canonical[0],
+		{ ...canonical[1], name: 'Estación Hiperespacial Orión' },
+	] as Square[];
+
+	const withTrade = state({
+		squares: canonical,
+		activeTrade: {
+			id: 't1', isActive: true,
+			initiatorId: 'other', initiatorName: 'Berto',
+			targetId: 'me', targetName: 'Ana',
+			initiator: { properties: [1], money: 0, releasePasses: 0 },
+			target: { properties: [], money: 50, releasePasses: 0 },
+		},
+	});
+
+	const review = desiredModal(withTrade, 'me', Date.now(), localized);
+
+	assert.equal(review.kind, 'tradeReview');
+	assert.equal((review as { data: TradeReviewModalData }).data.offered.properties[0].name,
+		'Estación Hiperespacial Orión');
+});
+
+test('without localized squares the review still names the property, canonically', () => {
+	// A missing translation must never leave the offer blank — the canonical name is worse than
+	// the player's own language, but far better than nothing.
+	const canonical = [
+		{ id: 0, name: 'Go', x: 0, y: 0 },
+		{ id: 1, name: 'Orion Hyperspace Station', x: 0, y: 1 },
+	] as Square[];
+
+	const review = desiredModal(state({
+		squares: canonical,
+		activeTrade: {
+			id: 't1', isActive: true,
+			initiatorId: 'other', initiatorName: 'Berto',
+			targetId: 'me', targetName: 'Ana',
+			initiator: { properties: [1], money: 0, releasePasses: 0 },
+			target: { properties: [], money: 0, releasePasses: 0 },
+		},
+	}), 'me');
+
+	assert.equal((review as { data: TradeReviewModalData }).data.offered.properties[0].name,
+		'Orion Hyperspace Station');
 });

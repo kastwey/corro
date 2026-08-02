@@ -77,7 +77,7 @@ function listAction(action: string): HTMLElement {
 beforeEach(() => {
 	clearHandUpdatePacing();
 	// The panel persists ordering/display preferences: start every test from the defaults.
-	try { (globalThis as any).window.localStorage.removeItem('corro.handPreferences'); } catch {}
+	try { (globalThis as any).window.localStorage.removeItem('corro.handPreferences'); } catch { /* jsdom may ship no storage */ }
 	document.body.innerHTML = '<div id="mount"></div>';
 	// The body reset detached the dialog singleton's cached elements: drop the cache so
 	// the discard confirmation rebuilds fresh (same convention as the chat panel tests).
@@ -276,7 +276,7 @@ test('playable-first is independent of every built-in order and preserves that o
 	assert.equal(listAction('filter-playable').getAttribute('aria-pressed'), 'false');
 	assert.deepEqual(announced, ['game.hand_prioritize_playable_applied']);
 
-	const cases: Array<[string, string[]]> = [
+	const cases: [string, string[]][] = [
 		['sort-value', ['100 km', '25 km', '200 km', 'Stop']],
 		['sort-value-asc', ['25 km', '100 km', 'Stop', '200 km']],
 		['sort-colour', ['100 km', '25 km', 'Stop', '200 km']],

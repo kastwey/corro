@@ -35,15 +35,15 @@ export interface VoiceDeviceSnapshot {
 }
 
 export interface VoiceTransportCallbacks {
-	onParticipantJoined(participant: VoiceParticipant): void;
-	onParticipantLeft(participant: VoiceParticipant): void;
-	onParticipantsChanged(participants: VoiceParticipant[]): void;
-	onReconnecting(): void;
-	onReconnected(): void;
-	onDisconnected(unexpected: boolean): void;
-	onPlaybackBlocked(): void;
-	onDevicesChanged(): void;
-	onDevicePreferenceFallback(kind: 'audioinput' | 'audiooutput'): void;
+	onParticipantJoined: (participant: VoiceParticipant) => void;
+	onParticipantLeft: (participant: VoiceParticipant) => void;
+	onParticipantsChanged: (participants: VoiceParticipant[]) => void;
+	onReconnecting: () => void;
+	onReconnected: () => void;
+	onDisconnected: (unexpected: boolean) => void;
+	onPlaybackBlocked: () => void;
+	onDevicesChanged: () => void;
+	onDevicePreferenceFallback: (kind: 'audioinput' | 'audiooutput') => void;
 }
 
 export interface VoiceTransport {

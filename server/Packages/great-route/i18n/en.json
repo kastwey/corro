@@ -74,5 +74,23 @@
     "driving_ace": "Driving ace",
     "driving_ace_played": "{{player}} is crowned Driving ace!",
     "driving_ace_played_self": "You are crowned Driving ace!"
+  },
+  "bots": {
+    "granny": "Granny Nitro",
+    "handbrake": "Captain Handbrake",
+    "stalls": "Sir Stalls-a-Lot",
+    "turbo": "Turbo Ted",
+    "codriver": "The Phantom Co-driver",
+    "clutch": "Clutch Cassidy",
+    "miles": "Miles McGiggles",
+    "blinker": "Turn Signal Tim",
+    "roundabout": "Roundabout Rita",
+    "diesel": "Diesel Duck",
+    "gravel": "Gravel Gertie",
+    "wrongway": "Wrong-Way Wanda",
+    "pothole": "Pothole Pete",
+    "zoom": "Zoom Zoom Zelda",
+    "towtruck": "Gertie the Tow Truck",
+    "foggy": "Foggy Windshield"
   }
 }

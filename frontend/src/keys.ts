@@ -189,7 +189,7 @@ function createCommandExecutor(opts: KeyHandlersOptions) {
 				case 'WhoIsOnSquare':
 					return opts.gameCommands.announcePlayersOnSquare(opts.gameBoard.getActiveIndex());
 				case 'AnnounceOwner':
-					return opts.gameCommands.announceOwner(opts.gameBoard.getActiveIndex(), opts.gameManager?.getSquares() || []);
+					return opts.gameCommands.announceOwner(opts.gameBoard.getActiveIndex(), opts.gameManager?.getSquares() ?? []);
 				case 'AnnounceTurn':
 					if (opts.onAnnounceTurn?.()) return true;
 					// T is kept in every family (players reach for it), but a SIMULTANEOUS
@@ -210,9 +210,9 @@ function createCommandExecutor(opts: KeyHandlersOptions) {
 				case 'AnnounceCurrentPlayerReleasePasses':
 					return opts.gameCommands.announceCurrentPlayerReleasePasses();
 				case 'AnnounceGroup':
-					return opts.gameCommands.announceGroup(opts.gameBoard.getActiveIndex(), opts.gameManager?.getSquares() || []);
+					return opts.gameCommands.announceGroup(opts.gameBoard.getActiveIndex(), opts.gameManager?.getSquares() ?? []);
 				case 'AnnouncePrice':
-					return opts.gameCommands.announcePrice(opts.gameBoard.getActiveIndex(), opts.gameManager?.getSquares() || []);
+					return opts.gameCommands.announcePrice(opts.gameBoard.getActiveIndex(), opts.gameManager?.getSquares() ?? []);
 				case 'GoToMe':
 					return opts.gameBoard.goToMe(args?.forward !== false);
 				case 'GoToNextPiece':
@@ -239,7 +239,7 @@ function createCommandExecutor(opts: KeyHandlersOptions) {
 					}
 					const forward = args && typeof args.forward === 'boolean' ? args.forward : true;
 					const start = opts.gameBoard.getActiveIndex() === -1 ? 0 : opts.gameBoard.getActiveIndex();
-					return opts.gameCommands.nextOccupied(start, forward, opts.gameManager?.getSquares() || []);
+					return opts.gameCommands.nextOccupied(start, forward, opts.gameManager?.getSquares() ?? []);
 				}
 				case 'FocusPlayers':
 					opts.focusPlayersPanel();
@@ -257,7 +257,7 @@ function createCommandExecutor(opts: KeyHandlersOptions) {
 					}
 					return false;
 				case 'GroupNext': {
-					const group = args && args.group ? String(args.group) : '';
+					const group = args?.group ? String(args.group) : '';
 					const forward = args && typeof args.forward === 'boolean' ? args.forward : true;
 					return opts.gameCommands.groupNext(opts.gameBoard.getActiveIndex(), group, forward);
 				}
@@ -266,7 +266,7 @@ function createCommandExecutor(opts: KeyHandlersOptions) {
 					return opts.gameCommands.ownedNext(
 						opts.gameBoard.getActiveIndex(),
 						forward,
-						opts.gameManager?.getSquares() || []
+						opts.gameManager?.getSquares() ?? []
 					);
 				}
 				case 'UnownedNext': {
@@ -274,7 +274,7 @@ function createCommandExecutor(opts: KeyHandlersOptions) {
 					return opts.gameCommands.unownedNext(
 						opts.gameBoard.getActiveIndex(),
 						forward,
-						opts.gameManager?.getSquares() || []
+						opts.gameManager?.getSquares() ?? []
 					);
 				}
 				case 'MoveLeft':
@@ -291,7 +291,7 @@ function createCommandExecutor(opts: KeyHandlersOptions) {
 						return true;
 					}
 					if (opts.gameManager?.rollDice) {
-						opts.gameManager.rollDice();
+						void opts.gameManager.rollDice();
 						return true;
 					}
 					return false;
@@ -478,7 +478,7 @@ export function attachKeyHandlers(opts: KeyHandlersOptions) {
 				&& (target as HTMLInputElement).type !== 'number'
 				&& (target as HTMLInputElement).type !== 'range';
 			if (!typingText) {
-				const dlgMapping = (opts.keyMap || {})[fullSpec] ?? (opts.keyMap || {})[key];
+				const dlgMapping = opts.keyMap?.[fullSpec] ?? opts.keyMap?.[key];
 				const dlgCmd = typeof dlgMapping === 'string' ? dlgMapping : dlgMapping?.cmd;
 				// Read-only queries only, and NEVER a property-only one outside the property
 				// family — auction, Free Parking pot, owner… don't exist in trivia/race/track.
@@ -521,7 +521,7 @@ export function attachKeyHandlers(opts: KeyHandlersOptions) {
 		// Ctrl+F6 / Ctrl+Shift+F6 panel cycling) still pass through so the user can
 		// leave the toolbar. Plain F6 remains untouched for browser chrome and
 		// permission prompts.
-		const isInToolbar = !!(target && target.closest('[role="toolbar"]'));
+		const isInToolbar = !!target?.closest('[role="toolbar"]');
 		if (isInToolbar && !ev.ctrlKey && !ev.altKey && !ev.metaKey) {
 			return;
 		}
@@ -540,7 +540,7 @@ export function attachKeyHandlers(opts: KeyHandlersOptions) {
 		numberBuffer = '';
 
 		// 1) check mapper
-		const rawMap = opts.keyMap || {};
+		const rawMap = opts.keyMap ?? {};
 		const specKey = fullSpec.includes('+') ? fullSpec : normalizeKeyName(ev.key);
 		const mapping = rawMap[specKey];
 
@@ -558,7 +558,7 @@ export function attachKeyHandlers(opts: KeyHandlersOptions) {
 		if (isTextInput && !fullSpec.includes('ctrl') && !fullSpec.includes('meta')
 			&& !fullSpec.includes('alt') && !readOnlyShortcut) return;
 
-		if (spec && spec.cmd) {
+		if (spec?.cmd) {
 			// Board-scoped commands (movement, reading the focused square, roll/end via
 			// the bare keys) only act while the board owns focus, so they can't be fired
 			// by accident from another panel. Their modifier aliases (Ctrl+E, Ctrl+B,

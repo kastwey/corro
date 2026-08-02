@@ -9,7 +9,7 @@ namespace CorroServer.Models.Corro;
 // doctrine as every other family).
 
 /// <summary>One card DEFINITION in the deck catalog (the deck holds <see cref="Count"/> copies).</summary>
-public sealed record SheddingCardDef
+public sealed record SheddingCardDef : IPackageCardDef
 {
 	public string Id { get; init; } = string.Empty;
 	/// <summary>Sanitized path-data loaded from optional assets/cards/&lt;id&gt;.svg.</summary>
@@ -56,7 +56,8 @@ public sealed record SheddingRulesConfig
 	/// <summary>Cards dealt to each player at the start of every round.</summary>
 	public int HandSize { get; init; } = 7;
 
-	/// <summary>Match target: rounds repeat until someone crosses this score.
+	/// <summary>Match target: rounds repeat until someone crosses this score — which WINS the
+	/// match under "collect" <see cref="Scoring"/> and LOSES it under "penalty".
 	/// 0 = a single round (first empty hand wins outright).</summary>
 	public int TargetScore { get; init; } = 500;
 
@@ -81,6 +82,13 @@ public sealed record SheddingRulesConfig
 	/// on a +4), passing the growing total on; "cross" = any draw card stacks on any (a +4
 	/// answers a +2 and vice versa). Whoever cannot or will not stack draws the whole total.</summary>
 	public string Stacking { get; init; } = "none";
+
+	/// <summary>House rule: which direction the points run. "collect" = the classic count
+	/// (the round winner banks the points left in every rival hand and the HIGHEST score wins
+	/// the match); "penalty" = every player banks the points left in their OWN hand, the round
+	/// winner banks nothing, and reaching <see cref="TargetScore"/> LOSES the match, so the
+	/// lowest score wins. The two count the same cards — they only disagree on who carries them.</summary>
+	public string Scoring { get; init; } = "collect";
 
 	/// <summary>House rule: a player who plays down to one card must declare it,
 	/// or anyone may catch them (a real-time window that closes when the next player acts) and

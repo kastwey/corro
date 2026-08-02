@@ -313,7 +313,14 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--seat-color) 35%, transparent);
 }
 .exploding-seat--turn .exploding-seat__cards { color: var(--seat-ink); }
-.exploding-seat--exploded { opacity: 0.5; }
+/* A buried miner is out of the game, not out of the room: they keep watching, and their name
+ * must stay as readable as everyone else's. The state is told by the 💥 in place of their card
+ * count and by the announcement that put them there — not by fading text below contrast, which
+ * is what a blanket opacity did to the one word that identifies them. */
+.exploding-seat--exploded {
+  border-style: dashed;
+  background: transparent;
+}
 .exploding-seat__name { font-weight: 700; }
 .exploding-seat__cards { color: var(--text-muted); white-space: nowrap; }
 

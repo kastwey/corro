@@ -7,7 +7,7 @@ namespace CorroServer.Services.Commands;
 /// Handles the BuyProperty command - purchases a property for the current player.
 /// Validates and delegates to CorroRulebook.
 /// </summary>
-public class BuyPropertyHandler : ICommandHandler<BuyPropertyCommand>
+public class BuyPropertyHandler : PlayerCommandHandler<BuyPropertyCommand>
 {
 	private readonly ICorroRulebook _rulebook;
 
@@ -16,13 +16,8 @@ public class BuyPropertyHandler : ICommandHandler<BuyPropertyCommand>
 		_rulebook = rulebook;
 	}
 
-	public async Task<ServerResponse> HandleAsync(BuyPropertyCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(BuyPropertyCommand command, Player player, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
 		var outcome = await _rulebook.BuyPropertyAsync(player, command.SquareIndex, context);
 
 		if (outcome.AsError() is { } outcomeError)

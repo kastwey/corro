@@ -4,7 +4,7 @@ import type { AnnouncementEvent } from './gameClient.js';
 import type { AnnounceFn } from './announcer.js';
 import { commitAnnouncerBeforeState } from './announcer.js';
 import type { CardDrawnNotification } from './models.js';
-import type { GameState, Player, Square, CommandResponse, PropertyMortgagedResponse, BuildingsSoldResponse, BuildingBuiltResponse, TradeSideDto } from './models.js';
+import type { GameCommand, GameState, Player, Square, CommandResponse, PropertyMortgagedResponse, BuildingsSoldResponse, BuildingBuiltResponse, TradeSideDto } from './models.js';
 import { translateServerErrorSync, i18nBinder } from './i18nBinder.js';
 import { resolveSquareName } from './localizeSquare.js';
 import type { Board } from './board.js';
@@ -138,7 +138,7 @@ export function pickConsequenceState(
 }
 
 export class GameManager {
-	private eventHandlers = new Map<keyof GameManagerEvents, Array<(data: any) => void>>();
+	private eventHandlers = new Map<keyof GameManagerEvents, ((data: any) => void)[]>();
 	private GameState: GameState | null = null;
 	// Presentation state: the last state whose CONSEQUENCES the player has actually SEEN land (paced
 	// to the token hop by the announcement gate). Consequence READS — the Free Parking pot, the debt
@@ -274,9 +274,11 @@ export class GameManager {
 			this.turnSequencer.enqueueState(gameState);
 		});
 
-		gameClient.on('lobbyState', (lobbyState: any) => {
-			this.announce?.(createAnnouncement('game.waiting_for_start', { status: lobbyState.status }));
-		});
+		// `lobbyState` is NOT announced from here. It used to say "Waiting to start. Status:
+		// {{status}}" with the server's raw enum poured straight in — "Estado: WaitingForPlayers",
+		// untranslated in every language, on every reload of a table at rest (live report). The
+		// table view is what answers this question now, in a line written for whoever is reading
+		// it (host or guest), with the reading position placed on its heading. See app.ts.
 
 		gameClient.on('commandResponse', (response: CommandResponse) => {
 			this.handleCommandResponse(response);
@@ -316,6 +318,9 @@ export class GameManager {
 	 * Creates the context object for command handlers
 	 */
 	private createCommandContext(): CommandContext {
+		// The literal below exposes LIVE getters onto this manager; aliasing is how they reach
+		// it from inside the object.
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const manager = this;
 		return {
 			// Live getter, NOT a snapshot: a handler that reads `gameState` from a deferred
@@ -465,7 +470,7 @@ export class GameManager {
 	// === STATE ACCESS ===
 
 	getAllPlayers(): Player[] {
-		return this.GameState?.players || [];
+		return this.GameState?.players ?? [];
 	}
 
 	/** The re-entry code of the local player (null until the join ack delivers it). */
@@ -482,7 +487,7 @@ export class GameManager {
 	}
 
 	getSquares(): Square[] {
-		const squares = this.GameState?.squares || [];
+		const squares = this.GameState?.squares ?? [];
 		// Resolve each square's display name to the player's language, with fallbacks so a package
 		// board that doesn't name every square is never blank: a card square reads as its deck's
 		// name, and corners get a generic label from their behaviour.
@@ -495,7 +500,7 @@ export class GameManager {
 	}
 
 	getPlayer(id: string): Player | null {
-		return this.GameState?.players?.find(p => p.id === id) || null;
+		return this.GameState?.players?.find(p => p.id === id) ?? null;
 	}
 
 	getCurrentPlayer(): Player | null {
@@ -567,187 +572,184 @@ export class GameManager {
 	}
 
 	// === SERVER COMMANDS ===
-
-	async sendCommand(command: any): Promise<void> {
-		try {
-			await gameClient.executeCommand(command);
-		} catch (error) {
-			this.announce?.(createAnnouncement('game.command_error', { error: String(error) }));
-		}
-	}
-
-	async disconnectFromServer(): Promise<void> {
-		await this.disconnect();
-	}
-
-	async initializeGame(players: any[]): Promise<void> {
-		await this.sendCommand({ type: 'initializeGame', players });
-	}
-
-	async endTurn(playerId: string): Promise<void> {
-		await gameClient.endTurn(playerId);
-	}
+	//
+	// Every method below is the same three decisions made explicit: WHICH command, whether it is
+	// TURN-BOUND, and what the caller must supply. They all funnel into `send`, which stamps my
+	// player id, gates the turn and turns a transport failure into a spoken line. There is no
+	// per-action transport method beneath this — `gameClient.executeCommand` is the only hop.
 
 	/**
-	 * Run a command as the local player: resolve my id (announcing if unknown), optionally guard
-	 * that it is my turn, then invoke and turn any transport error into a spoken message. Centralizes
-	 * the guard boilerplate every command method used to repeat.
+	 * Send one command as the local player: resolve my id (announcing if unknown), optionally
+	 * guard that it is my turn, stamp the id and speak any transport error.
 	 */
-	private async runAsMe(op: (myId: string) => Promise<void>, opts: { requireTurn?: boolean } = {}): Promise<void> {
+	private async send(command: GameCommand, opts: { requireTurn?: boolean } = {}): Promise<void> {
 		const myId = this.getMyPlayerId();
 		if (!myId) { this.announce?.(createAnnouncement('game.player_not_identified', {})); return; }
 		if (opts.requireTurn && this.GameState?.currentTurn !== myId) {
 			this.announce?.(createAnnouncement('game.not_your_turn', {}));
 			return;
 		}
-		try { await op(myId); }
+		try { await gameClient.executeCommand({ ...command, playerId: myId }); }
 		catch (error) { this.announce?.(createAnnouncement('game.command_error', { error: String(error) })); }
 	}
 
+	async endTurn(): Promise<void> {
+		await this.send({ $type: 'END_TURN' }, { requireTurn: true });
+	}
+
 	async rollDice(): Promise<void> {
-		await this.runAsMe(id => gameClient.rollDice(id), { requireTurn: true });
+		await this.send({ $type: 'ROLL_DICE' }, { requireTurn: true });
 	}
 
 	/** Race family: answer the pending "which piece moves?" choice. */
 	async moveRacePiece(pieceIndex: number): Promise<void> {
-		await this.runAsMe(id => gameClient.moveRacePiece(id, pieceIndex), { requireTurn: true });
+		await this.send({ $type: 'MOVE_RACE_PIECE', pieceIndex }, { requireTurn: true });
 	}
 
 	/** Trivia family: the host picks the judge before play begins (off-turn setup). */
 	async triviaChooseJudge(judgeId: string): Promise<void> {
-		await this.runAsMe(id => gameClient.triviaChooseJudge(id, judgeId));
+		await this.send({ $type: 'TRIVIA_CHOOSE_JUDGE', judgeId });
 	}
 
 	/** Trivia family: choose which legal square to land on after a roll. */
 	async triviaMove(node: string): Promise<void> {
-		await this.runAsMe(id => gameClient.triviaMove(id, node), { requireTurn: true });
+		await this.send({ $type: 'TRIVIA_MOVE', node }, { requireTurn: true });
 	}
 
 	/** Trivia family: submit an answer to the pending question (the active player). */
 	async triviaAnswer(text: string | null, choice: number): Promise<void> {
-		await this.runAsMe(id => gameClient.triviaAnswer(id, text, choice));
+		await this.send({ $type: 'TRIVIA_ANSWER', text, choice });
 	}
 
-	/** Trivia family: rule on the submitted answer (off-turn — the judge is not the active player). */
+	/** Trivia family: rule on the submitted answer — OFF-TURN (the judge is not the active player). */
 	async triviaJudge(correct: boolean): Promise<void> {
-		await this.runAsMe(id => gameClient.triviaJudge(id, correct));
+		await this.send({ $type: 'TRIVIA_JUDGE', correct });
 	}
 
-	/** Forbidden family: role-authorized timed-turn actions. */
+	/** Forbidden family: role-authorized timed-turn actions (the server validates the role). */
 	async forbiddenStart(): Promise<void> {
-		await this.runAsMe(id => gameClient.forbiddenStart(id));
+		await this.send({ $type: 'FORBIDDEN_START' });
 	}
 
 	async forbiddenCorrect(cardSequence: number): Promise<void> {
-		await this.runAsMe(id => gameClient.forbiddenCorrect(id, cardSequence));
+		await this.send({ $type: 'FORBIDDEN_CORRECT', cardSequence });
 	}
 
 	async forbiddenPass(cardSequence: number): Promise<void> {
-		await this.runAsMe(id => gameClient.forbiddenPass(id, cardSequence));
+		await this.send({ $type: 'FORBIDDEN_PASS', cardSequence });
 	}
 
 	async forbiddenViolation(cardSequence: number): Promise<void> {
-		await this.runAsMe(id => gameClient.forbiddenViolation(id, cardSequence));
+		await this.send({ $type: 'FORBIDDEN_VIOLATION', cardSequence });
 	}
 
 	/** Journey family: draw the top card (the start of your turn). */
 	async journeyDraw(): Promise<void> {
-		await this.runAsMe(id => gameClient.journeyDraw(id), { requireTurn: true });
+		await this.send({ $type: 'JOURNEY_DRAW' }, { requireTurn: true });
 	}
 
 	/** Journey family: play a card (attacks carry the victim's id). */
 	async journeyPlay(instanceId: string, targetId: string | null = null): Promise<void> {
-		await this.runAsMe(id => gameClient.journeyPlay(id, instanceId, targetId), { requireTurn: true });
+		await this.send({ $type: 'JOURNEY_PLAY', instanceId, targetId }, { requireTurn: true });
 	}
 
 	/** Journey family: discard instead of playing. */
 	async journeyDiscard(instanceId: string): Promise<void> {
-		await this.runAsMe(id => gameClient.journeyDiscard(id, instanceId), { requireTurn: true });
+		await this.send({ $type: 'JOURNEY_DISCARD', instanceId }, { requireTurn: true });
 	}
 
 	/** Journey family: answer the coup fourré window — the VICTIM answers OUT of turn,
 	 *  so no turn gate here (the server validates they own the pending coup). */
 	async journeyCoup(accept: boolean): Promise<void> {
-		await this.runAsMe(id => gameClient.journeyCoup(id, accept));
+		await this.send({ $type: 'JOURNEY_COUP', accept });
 	}
 
 	/** Assembly family: play a card (attacks/specials carry their targeting). */
 	async assemblyPlay(instanceId: string, targeting: { targetPlayerId?: string | null; targetColor?: string | null; giveColor?: string | null } = {}): Promise<void> {
-		await this.runAsMe(id => gameClient.assemblyPlay(id, instanceId,
-			targeting.targetPlayerId ?? null, targeting.targetColor ?? null, targeting.giveColor ?? null),
-			{ requireTurn: true });
+		await this.send({
+			$type: 'ASSEMBLY_PLAY',
+			instanceId,
+			targetPlayerId: targeting.targetPlayerId ?? null,
+			targetColor: targeting.targetColor ?? null,
+			giveColor: targeting.giveColor ?? null,
+		}, { requireTurn: true });
 	}
 
 	/** Assembly family: discard cards face-down (empty list = the empty-hand pass). */
 	async assemblyDiscard(instanceIds: string[]): Promise<void> {
-		await this.runAsMe(id => gameClient.assemblyDiscard(id, instanceIds), { requireTurn: true });
+		await this.send({ $type: 'ASSEMBLY_DISCARD', instanceIds }, { requireTurn: true });
 	}
 
 	/** Draft family: commit (or replace) this trick's secret pick — optionally two
 	 *  cards riding a table "extra". The family is SIMULTANEOUS — there is no turn to
 	 *  guard (currentTurn stays null all game). */
 	async draftPick(instanceId: string, secondInstanceId: string | null = null): Promise<void> {
-		await this.runAsMe(id => gameClient.draftPick(id, instanceId, secondInstanceId));
+		await this.send({ $type: 'DRAFT_PICK', instanceId, secondInstanceId });
 	}
 
 	/** Shedding family: play a matching card (wilds carry the chosen colour). `extraInstanceIds`
 	 *  carry the further identical copies of a doubles play (the "doubles" house rule). */
 	async sheddingPlay(instanceId: string, chosenColor: string | null = null,
 		extraInstanceIds: string[] | null = null): Promise<void> {
-		await this.runAsMe(id => gameClient.sheddingPlay(id, instanceId, chosenColor, extraInstanceIds),
+		await this.send({ $type: 'SHEDDING_PLAY', instanceId, chosenColor, extraInstanceIds },
 			{ requireTurn: true });
 	}
 
 	/** Shedding family: draw one card (maybe pausing on the play-or-keep choice). */
 	async sheddingDraw(): Promise<void> {
-		await this.runAsMe(id => gameClient.sheddingDraw(id), { requireTurn: true });
+		await this.send({ $type: 'SHEDDING_DRAW' }, { requireTurn: true });
 	}
 
 	/** Shedding family: keep the just-drawn card and pass the turn. */
 	async sheddingKeep(): Promise<void> {
-		await this.runAsMe(id => gameClient.sheddingKeep(id), { requireTurn: true });
+		await this.send({ $type: 'SHEDDING_KEEP' }, { requireTurn: true });
 	}
 
 	/** Shedding family: declare the last card — OFF-TURN (during the window after playing
 	 *  your penultimate card, when it is no longer your turn). */
 	async sheddingDeclareLastCard(): Promise<void> {
-		await this.runAsMe(id => gameClient.sheddingDeclareLastCard(id));
+		await this.send({ $type: 'SHEDDING_DECLARE_LAST_CARD' });
 	}
 
 	/** Shedding family: catch a rival who forgot the declaration — OFF-TURN (anyone but the exposed
 	 *  player, until the next action closes the window). */
 	async sheddingCatchLastCard(): Promise<void> {
-		await this.runAsMe(id => gameClient.sheddingCatchLastCard(id));
+		await this.send({ $type: 'SHEDDING_CATCH_LAST_CARD' });
 	}
 
 	/** Exploding family: play an action card (with an optional target / cat pair). ON-TURN. */
 	async explodingPlay(instanceId: string, targetId?: string, secondInstanceId?: string): Promise<void> {
-		await this.runAsMe(
-			id => gameClient.explodingPlay(id, instanceId, targetId ?? null, secondInstanceId ?? null),
-			{ requireTurn: true });
+		await this.send({
+			$type: 'EXPLODING_PLAY',
+			instanceId,
+			targetId: targetId ?? null,
+			secondInstanceId: secondInstanceId ?? null,
+		}, { requireTurn: true });
 	}
 
 	/** Exploding family: as a Favor's target, give the requester a card — OFF-TURN (it's their turn). */
 	async explodingGive(instanceId: string): Promise<void> {
-		await this.runAsMe(id => gameClient.explodingGive(id, instanceId));
+		await this.send({ $type: 'EXPLODING_GIVE', instanceId });
 	}
 
 	/** Exploding family: draw one card, ending my turn (or detonating on a bomb). ON-TURN. */
 	async explodingDraw(): Promise<void> {
-		await this.runAsMe(id => gameClient.explodingDraw(id), { requireTurn: true });
+		await this.send({ $type: 'EXPLODING_DRAW' }, { requireTurn: true });
 	}
 
 	/** Exploding family: tuck the just-drawn (defused) bomb back at `depth`. ON-TURN
 	 *  (only the drawer, while pendingBomb is theirs). */
 	async explodingDefuse(depth: number): Promise<void> {
-		await this.runAsMe(id => gameClient.explodingDefuse(id, depth), { requireTurn: true });
+		await this.send({ $type: 'EXPLODING_DEFUSE', depth }, { requireTurn: true });
 	}
 
 	/** Exploding family: Nope the pending action — OFF-TURN (anyone holding a Nope during the window). */
 	async explodingNope(instanceId: string): Promise<void> {
-		await this.runAsMe(id => gameClient.explodingNope(id, instanceId));
+		await this.send({ $type: 'EXPLODING_NOPE', instanceId });
 	}
 
+	// Kept async so callers may await it uniformly with the commands beside it.
+	// eslint-disable-next-line @typescript-eslint/require-await
 	async announceTurn(playerId?: string): Promise<void> {
 		const player = playerId ? this.getPlayer(playerId) : this.getCurrentPlayer();
 		if (player) {
@@ -756,53 +758,53 @@ export class GameManager {
 	}
 
 	async buyProperty(squareIndex: number): Promise<void> {
-		await this.runAsMe(id => gameClient.buyProperty(id, squareIndex));
+		await this.send({ $type: 'BUY_PROPERTY', squareIndex });
 	}
 
 	// === HOLDING ACTIONS ===
 
 	async payReleaseCost(): Promise<void> {
-		await this.runAsMe(id => gameClient.payReleaseCost(id), { requireTurn: true });
+		await this.send({ $type: 'PAY_HOLDING_RELEASE_COST' }, { requireTurn: true });
 	}
 
 	async useReleasePass(): Promise<void> {
-		await this.runAsMe(id => gameClient.useReleasePass(id), { requireTurn: true });
+		await this.send({ $type: 'USE_RELEASE_PASS' }, { requireTurn: true });
 	}
 
 	// === AUCTION ACTIONS ===
 
 	async placeBid(squareIndex: number, amount: number): Promise<void> {
-		await this.runAsMe(id => gameClient.placeBid(id, squareIndex, amount));
+		await this.send({ $type: 'PLACE_BID', squareIndex, amount });
 	}
 
 	async passAuction(squareIndex: number): Promise<void> {
-		await this.runAsMe(id => gameClient.passAuction(id, squareIndex));
+		await this.send({ $type: 'PASS_AUCTION', squareIndex });
 	}
 
 	async busChoice(choice: 'die1' | 'die2' | 'both'): Promise<void> {
-		await this.runAsMe(id => gameClient.busChoice(id, choice), { requireTurn: true });
+		await this.send({ $type: 'BUS_CHOICE', choice }, { requireTurn: true });
 	}
 
 	// === DEBT & BANKRUPTCY ACTIONS ===
 
 	async mortgageProperty(squareIndex: number): Promise<void> {
-		await this.runAsMe(id => gameClient.mortgageProperty(id, squareIndex));
+		await this.send({ $type: 'MORTGAGE_PROPERTY', squareIndex });
 	}
 
 	async unmortgageProperty(squareIndex: number): Promise<void> {
-		await this.runAsMe(id => gameClient.unmortgageProperty(id, squareIndex));
+		await this.send({ $type: 'UNMORTGAGE_PROPERTY', squareIndex });
 	}
 
 	async sellBuildings(squareIndex: number, count: number): Promise<void> {
-		await this.runAsMe(id => gameClient.sellBuildings(id, squareIndex, count));
+		await this.send({ $type: 'SELL_BUILDINGS', squareIndex, count });
 	}
 
 	async build(squareIndex: number, count: number): Promise<void> {
-		await this.runAsMe(id => gameClient.build(id, squareIndex, count));
+		await this.send({ $type: 'BUILD', squareIndex, count });
 	}
 
 	async declareBankruptcy(): Promise<void> {
-		await this.runAsMe(id => gameClient.declareBankruptcy(id));
+		await this.send({ $type: 'DECLARE_BANKRUPTCY' });
 	}
 
 	// === TRADE ACTIONS ===
@@ -812,24 +814,24 @@ export class GameManager {
 		offered: { properties: number[]; money: number; releasePasses: number },
 		requested: { properties: number[]; money: number; releasePasses: number }
 	): Promise<void> {
-		await this.runAsMe(id => gameClient.proposeTrade(
-				id,
-				targetId,
-				offered.properties,
-				offered.money,
-				offered.releasePasses,
-				requested.properties,
-				requested.money,
-				requested.releasePasses
-			));
+		await this.send({
+			$type: 'PROPOSE_TRADE',
+			targetPlayerId: targetId,
+			offeredProperties: offered.properties,
+			offeredMoney: offered.money,
+			offeredReleasePasses: offered.releasePasses,
+			requestedProperties: requested.properties,
+			requestedMoney: requested.money,
+			requestedReleasePasses: requested.releasePasses,
+		});
 	}
 
 	async respondToTrade(tradeId: string, accept: boolean): Promise<void> {
-		await this.runAsMe(id => gameClient.respondTrade(id, tradeId, accept));
+		await this.send({ $type: 'RESPOND_TRADE', tradeId, accept });
 	}
 
 	async cancelTrade(tradeId: string): Promise<void> {
-		await this.runAsMe(id => gameClient.cancelTrade(id, tradeId));
+		await this.send({ $type: 'CANCEL_TRADE', tradeId });
 	}
 
 	// === EVENTS ===

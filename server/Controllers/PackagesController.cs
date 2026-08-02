@@ -159,26 +159,7 @@ public class PackagesController : ControllerBase
 	}
 
 	private static PackageUploadResponse Summarize(string token, CorroServer.Models.Corro.GameDefinition definition)
-		=> new()
-		{
-			Token = token,
-			GameType = string.IsNullOrWhiteSpace(definition.Manifest.GameType) ? "property" : definition.Manifest.GameType,
-			Name = new Dictionary<string, string>(definition.Manifest.Name),
-			Settings = GameDefinitionAdapter.ToSettings(definition),
-			RuleGroups = definition.Manifest.RuleGroups,
-			HouseRules = definition.Manifest.HouseRules,
-			Tokens = definition.Manifest.Tokens,
-			MinPlayers = definition.Manifest.Players.Min,
-			MaxPlayers = definition.Manifest.Players.Max,
-			Seats = definition.RaceBoard?.Seats
-				.Select(s => new LobbySeatInfo { Id = s.Id, Color = s.Color, NameKey = s.NameKey })
-				.ToList() ?? new(),
-			ForbiddenWordLanguages = definition.Manifest.GameType == "forbidden"
-				? CorroServer.Services.Corro.Families.ForbiddenFamily.AvailableWordLanguages(definition)
-				: new(),
-			// The board's create-time notice key (if any). NOT the unlock code — that never leaves the server.
-			Warning = definition.Manifest.Warning,
-		};
+		=> CorroServer.Services.Corro.PackageSummaries.For(token, definition);
 
 	/// <summary>
 	/// Serves a staged package's own translation file (<c>i18n/{lang}.json</c>) so the client can

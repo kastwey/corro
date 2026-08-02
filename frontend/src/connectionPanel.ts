@@ -14,8 +14,10 @@ const t = (key: string, vars?: Record<string, any>) => tSync(`game.${key}`, vars
 export type ConnectionStatus = 'connected' | 'reconnecting' | 'disconnected';
 
 export interface ConnectionPanelDeps {
-	/** Abandon the game for good (confirmed leave → bankruptcy, frees properties). */
+	/** Forfeit the MATCH in progress (confirmed → retirement/bankruptcy). You stay at the table. */
 	onLeaveGame: () => void;
+	/** Give up the seat at the TABLE for good — forfeits the match with it. */
+	onLeaveTable: () => void;
 	/** Drop the SignalR connection, leaving the others waiting. */
 	onDisconnect: () => void;
 	/** Copy the re-entry code to the clipboard (and announce the outcome). */
@@ -83,6 +85,15 @@ export class ConnectionPanel {
 		leaveBtn.tabIndex = 0;
 		leaveBtn.addEventListener('click', () => this.deps?.onLeaveGame());
 
+		// Leaving the MATCH and leaving the TABLE are different sizes of goodbye, so they are two
+		// controls rather than one whose meaning depends on where you happen to be.
+		const leaveTableBtn = document.createElement('button');
+		leaveTableBtn.type = 'button';
+		leaveTableBtn.className = 'connection-panel__btn connection-panel__btn--leave-table';
+		leaveTableBtn.textContent = tSync('table.abandon');
+		leaveTableBtn.tabIndex = -1;
+		leaveTableBtn.addEventListener('click', () => this.deps?.onLeaveTable());
+
 		const disconnectBtn = document.createElement('button');
 		disconnectBtn.type = 'button';
 		disconnectBtn.className = 'connection-panel__btn connection-panel__btn--disconnect';
@@ -90,14 +101,14 @@ export class ConnectionPanel {
 		disconnectBtn.tabIndex = -1;
 		disconnectBtn.addEventListener('click', () => this.deps?.onDisconnect());
 
-		actions.append(leaveBtn, disconnectBtn);
+		actions.append(leaveBtn, leaveTableBtn, disconnectBtn);
 		aside.append(title, statusRow, actions);
 		mount.appendChild(aside);
 
 		this.container = aside;
 		this.statusText = statusText;
 		this.actionsEl = actions;
-		this.buttons = [leaveBtn, disconnectBtn];
+		this.buttons = [leaveBtn, leaveTableBtn, disconnectBtn];
 		if (this.rejoinCode) this.renderRejoinButton();
 	}
 

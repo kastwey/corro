@@ -121,11 +121,6 @@ public interface ICorroRulebook
 	/// die; sharing the source keeps E2E dice scripting working across families).</summary>
 	int RollSingleDie();
 
-	/// <summary>The game's randomness source itself, for families that shuffle piles (journey
-	/// decks). Sharing it keeps the E2E environment deterministic: its scripted source
-	/// shuffles as the identity, so decks keep their cards.json order there too.</summary>
-	IRandomSource RandomSource { get; }
-
 	/// <summary>
 	/// Process landing effects when a player lands on a square.
 	/// </summary>

@@ -97,8 +97,11 @@ sequence “cause → movement → consequence” for both visual and screen-rea
 A new family normally touches these shared registries:
 
 - `GameFamilies.All` and `BotPolicies.All` on the server;
-- `CommandDispatcher` and the SignalR hub methods for its commands;
+- its command records (each with a `[JsonDerivedType]` entry on `GameCommand` — the wire
+  allowlist) and their handlers in `CommandDispatcher`. The hub needs **no** change: every
+  command travels through the one `ExecuteCommand`;
 - `GameState` and package-definition models;
+- the client's `GameCommand` union in `models.ts` and the typed methods in `gameManager.ts`;
 - `familyTraits.ts` and `gameFamilies.ts` on the client;
 - package validation, translations, sounds and the format specification.
 

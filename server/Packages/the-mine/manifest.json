@@ -45,5 +45,15 @@
       "id": "shovel",
       "nameKey": "tokens.shovel"
     }
+  ],
+  "botNames": [
+    "bots.foreman",
+    "bots.canary",
+    "bots.pickaxe",
+    "bots.sooty",
+    "bots.lamp",
+    "bots.quarry",
+    "bots.dynamite",
+    "bots.gallery"
   ]
 }

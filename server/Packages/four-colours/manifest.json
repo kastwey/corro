@@ -31,6 +31,24 @@
   ],
   "houseRules": [
     {
+      "id": "sheddingScoring",
+      "group": "shedding",
+      "type": "choice",
+      "default": "collect",
+      "options": [
+        {
+          "id": "collect",
+          "nameKey": "rules.sheddingScoringCollect"
+        },
+        {
+          "id": "penalty",
+          "nameKey": "rules.sheddingScoringPenalty"
+        }
+      ],
+      "editableByHost": true,
+      "nameKey": "rules.sheddingScoring"
+    },
+    {
       "id": "sheddingAllowDoubles",
       "group": "shedding",
       "type": "toggle",
@@ -90,5 +108,13 @@
       "id": "diamond",
       "nameKey": "tokens.diamond"
     }
+  ],
+  "botNames": [
+    "bots.rombo",
+    "bots.circulo",
+    "bots.esquina",
+    "bots.arcoiris",
+    "bots.simetria",
+    "bots.descarte"
   ]
 }

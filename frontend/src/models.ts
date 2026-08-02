@@ -86,7 +86,6 @@ export interface PendingPurchase {
   squareIndex: number;
   squareName: string;
   price: number;
-  wasDoublesRoll?: boolean;
 }
 
 /** One side of a trade as stored in the authoritative state: square indices + cash + cards. */
@@ -543,6 +542,10 @@ export interface SheddingRulesConfig {
   allowDoubles?: boolean;
   /** House rule: how draw cards may be stacked ("none" | "sameType" | "cross"). */
   stacking?: string;
+  /** House rule: which way the points run ("collect" = the winner banks the rivals'
+   *  leftovers and the highest score wins; "penalty" = you bank your own and reaching
+   *  the target loses). */
+  scoring?: string;
   /** House rule: declare your last card or be caught. */
   lastCardCall?: boolean;
   /** Cards drawn when caught without declaring the last card. */
@@ -780,7 +783,7 @@ export interface GameState {
   players: Player[];
   bank: { money: number; freeParkingPot?: number; freeParkingJackpot?: boolean };
   currentTurn: string | null;
-  ownership: Array<{ index: number; ownerId: string }>;
+  ownership: { index: number; ownerId: string }[];
   squares: Square[];
   /** The package's card decks; absent/empty for classic games (center falls back to chance/community). */
   decks?: DeckInfo[];
@@ -838,10 +841,20 @@ export interface GameInfo {
   board?: string;
   /** Host-selected package-content language, fixed when play starts. */
   language?: string;
-  /** Shared word-deck languages offered by a Forbidden Words game. */
-  forbiddenWordLanguages?: string[];
+  /** The languages this package's language-split CONTENT offers (a word deck, a question deck).
+   *  The host picks one for the whole table; absent/empty when content is not language-split.
+   *  NOT the interface locale — every player keeps their own. */
+  contentLanguages?: string[];
   /** Token of the .corro package backing this game; set for a package board. */
   packageToken?: string;
+  /** The family this table is set up to play ("property", "exploding"…), known even at rest. */
+  gameType?: string | null;
+  /** The host's chosen house-rule values for the next match (ruleId -> value). */
+  ruleValues?: Record<string, boolean | number | string> | null;
+  /** The match that just finished, kept while the table rests so its result outlives it. */
+  lastMatch?: GameState | null;
+  /** How many matches this table has finished. */
+  matchesPlayed?: number;
   /** The board's player tokens (id + SVG + name key); absent => the joiner uses the 8 built-ins. */
   tokens?: TokenInfo[];
   /** A race board's seats (squadron colours) so the joiner can pick one; absent otherwise. */
@@ -900,8 +913,6 @@ export interface CreateGameRequest {
   raceTeams?: boolean;
   /** Team mode: how many equal teams (a divisor of the exact player count). */
   teamCount?: number;
-  /** Initial host choice for the optional voice room. */
-  voiceChatEnabled?: boolean;
 }
 
 /** A group heading for the rules panel (id referenced by house rules + an i18n name key). */
@@ -941,14 +952,21 @@ export interface PackageUploadResponse {
   houseRules?: HouseRuleDef[];
   /** The package's player tokens (id + SVG path + name key); empty = built-in token set. */
   tokens?: TokenInfo[];
+  /** i18n keys (into the PACKAGE's bundle) for the names it offers when naming a bot at random.
+   *  Empty/absent leaves the engine's own, deliberately theme-less list. */
+  botNames?: string[];
   /** Fewest players this board can start with (the lobby's start guard mirrors it). */
   minPlayers: number;
   /** Most players this board supports (caps the player-count selector). */
   maxPlayers: number;
   /** A race board's seats (squadron colours) for the lobby's seat picker; empty for property. */
   seats?: LobbySeatInfo[];
-  /** Shared word-deck languages offered by a Forbidden Words package. */
-  forbiddenWordLanguages?: string[];
+  /** The languages this package's language-split CONTENT offers; empty when it has none.
+   *  The lobby shows the picker whenever there is more than one. */
+  contentLanguages?: string[];
+  /** How many teams this board REQUIRES, or absent when team play is optional. The player-count
+   *  selector offers only the table sizes that split evenly into that many. */
+  requiredTeamCount?: number | null;
   /**
    * An i18n key (in the PACKAGE's own translations) shown to the host as a notice when they create a
    * game with this board. Absent when the package declares none. The engine carries it verbatim and
@@ -1056,11 +1074,89 @@ export interface SavedGameInfo {
 }
 
 // === COMMANDS ===
-export interface GameCommand {
-  type: string;
-  playerId: string;
-  data?: any;
-}
+// One polymorphic envelope for every player action, mirroring the server's derived-type
+// allowlist on `GameCommand` (server/Models/Commands.cs). `$type` is the discriminator
+// System.Text.Json reads; `playerId` is stamped by gameManager, never by a caller — the
+// server rejects a command whose playerId is not the authenticated connection's own.
+//
+// Adding an action means one arm here and one on the server. There is no per-action hub
+// method and no per-action client method to keep in step.
+export type GameCommand =
+  | { $type: 'ROLL_DICE' }
+  | { $type: 'END_TURN' }
+  | { $type: 'BUY_PROPERTY'; squareIndex: number }
+  | { $type: 'ANNOUNCE_TURN' }
+  | { $type: 'GET_MONEY' }
+  | { $type: 'GET_RELEASE_PASSES' }
+  | { $type: 'BUS_CHOICE'; choice: 'die1' | 'die2' | 'both' }
+  | { $type: 'MOVE_RACE_PIECE'; pieceIndex: number }
+  // Trivia
+  | { $type: 'TRIVIA_CHOOSE_JUDGE'; judgeId: string }
+  | { $type: 'TRIVIA_MOVE'; node: string }
+  | { $type: 'TRIVIA_ANSWER'; text: string | null; choice: number }
+  | { $type: 'TRIVIA_JUDGE'; correct: boolean }
+  // Forbidden
+  | { $type: 'FORBIDDEN_START' }
+  | { $type: 'FORBIDDEN_CORRECT'; cardSequence: number }
+  | { $type: 'FORBIDDEN_PASS'; cardSequence: number }
+  | { $type: 'FORBIDDEN_VIOLATION'; cardSequence: number }
+  // Journey
+  | { $type: 'JOURNEY_DRAW' }
+  | { $type: 'JOURNEY_PLAY'; instanceId: string; targetId: string | null }
+  | { $type: 'JOURNEY_DISCARD'; instanceId: string }
+  | { $type: 'JOURNEY_COUP'; accept: boolean }
+  // Assembly
+  | {
+      $type: 'ASSEMBLY_PLAY'; instanceId: string; targetPlayerId: string | null;
+      targetColor: string | null; giveColor: string | null;
+    }
+  | { $type: 'ASSEMBLY_DISCARD'; instanceIds: string[] }
+  // Draft
+  | { $type: 'DRAFT_PICK'; instanceId: string; secondInstanceId: string | null }
+  // Shedding
+  | {
+      $type: 'SHEDDING_PLAY'; instanceId: string; chosenColor: string | null;
+      extraInstanceIds: string[] | null;
+    }
+  | { $type: 'SHEDDING_DRAW' }
+  | { $type: 'SHEDDING_KEEP' }
+  | { $type: 'SHEDDING_DECLARE_LAST_CARD' }
+  | { $type: 'SHEDDING_CATCH_LAST_CARD' }
+  // Exploding
+  | {
+      $type: 'EXPLODING_PLAY'; instanceId: string;
+      targetId: string | null; secondInstanceId: string | null;
+    }
+  | { $type: 'EXPLODING_GIVE'; instanceId: string }
+  | { $type: 'EXPLODING_NOPE'; instanceId: string }
+  | { $type: 'EXPLODING_DRAW' }
+  | { $type: 'EXPLODING_DEFUSE'; depth: number }
+  // Auction
+  | { $type: 'PLACE_BID'; squareIndex: number; amount: number }
+  | { $type: 'PASS_AUCTION'; squareIndex: number }
+  // Holding
+  | { $type: 'PAY_HOLDING_RELEASE_COST' }
+  | { $type: 'USE_RELEASE_PASS' }
+  // Property management
+  | { $type: 'MORTGAGE_PROPERTY'; squareIndex: number }
+  | { $type: 'UNMORTGAGE_PROPERTY'; squareIndex: number }
+  | { $type: 'SELL_BUILDINGS'; squareIndex: number; count: number }
+  | { $type: 'BUILD'; squareIndex: number; count: number }
+  // Debt
+  | { $type: 'DECLARE_BANKRUPTCY' }
+  | { $type: 'GET_DEBT_STATUS' }
+  | { $type: 'RESOLVE_DEBT'; debtId: string | null }
+  // Trade
+  | {
+      $type: 'PROPOSE_TRADE'; targetPlayerId: string;
+      offeredProperties: number[]; offeredMoney: number; offeredReleasePasses: number;
+      requestedProperties: number[]; requestedMoney: number; requestedReleasePasses: number;
+    }
+  | { $type: 'RESPOND_TRADE'; tradeId: string; accept: boolean }
+  | { $type: 'CANCEL_TRADE'; tradeId: string | null };
+
+/** A command as it goes on the wire: the action plus the acting player's id. */
+export type AddressedGameCommand = GameCommand & { playerId: string };
 
 export interface CommandResponse {
   success: boolean;

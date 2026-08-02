@@ -62,6 +62,7 @@ public class ExplodingTurnFlowTests
 			Settings = baseContext.Settings,
 			FamilyRuntime = new ExplodingRuntime(
 				ExplodingRulebook.Catalog(Deck()), Deck(), state.ExplodingRules!),
+			Random = baseContext.Random,
 			Announce = baseContext.Announce,
 			Announcer = baseContext.Announcer,
 			Presenter = baseContext.Presenter,

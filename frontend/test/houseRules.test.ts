@@ -19,12 +19,44 @@ test('renderHouseRules renders editable rules grouped, with package labels + dat
 			{ id: 'finesToCenterPot', group: 'money', type: 'toggle', default: true, editableByHost: true, nameKey: 'rules.finesToCenterPot' },
 		], tr);
 
-	assert.match(html, /<legend>Money<\/legend>/);
+	assert.match(html, /<legend><span data-i18n="rules\.group\.money">Money<\/span><\/legend>/);
 	assert.match(html, /Salary/);
 	assert.match(html, /data-rule-id="passStartBonus"/);
 	assert.match(html, /value="200"/);
 	assert.match(html, /data-rule-id="finesToCenterPot"/);
 	assert.match(html, /type="checkbox"[^>]*checked|checked/); // default true -> checked
+});
+
+// A package's words arrive AFTER its rule catalogue does, and this panel is built once. Without a
+// key on each label the first paint froze, and the table showed a rulebook written in identifiers
+// ("rules.passStartBonus") — reported from a real session. Two guarantees: every label carries the
+// key it was built from, and an unresolved key is shown as the readable id rather than raw.
+test('every label carries its key, so a late translation resolves it in place', () => {
+	const html = renderHouseRules(
+		[{ id: 'money', nameKey: 'rules.group.money' }],
+		[
+			{ id: 'passStartBonus', group: 'money', type: 'number', default: 200, editableByHost: true, nameKey: 'rules.passStartBonus' },
+			{ id: 'stacking', type: 'choice', default: 'none', editableByHost: true, nameKey: 'rules.stacking',
+				options: [{ id: 'none', nameKey: 'opt.none' }] },
+		], tr);
+
+	assert.match(html, /<span data-i18n="rules\.group\.money">Money<\/span>/);
+	assert.match(html, /<span data-i18n="rules\.passStartBonus">Salary<\/span>/);
+	assert.match(html, /data-i18n="rules\.stacking"/, 'a choice legend carries its key too');
+	assert.match(html, /data-i18n="opt\.none"/, 'and so does each option');
+});
+
+test('an unresolved key is shown as the rule id, never as the key itself', () => {
+	const html = renderHouseRules(
+		[{ id: 'money', nameKey: 'rules.group.money' }],
+		[{ id: 'passStartBonus', group: 'money', type: 'toggle', default: true, editableByHost: true, nameKey: 'rules.passStartBonus' }],
+		k => k); // nothing translates yet — the package bundle is still in flight
+
+	// The keys are still on the elements (that is how they get fixed), but not in the text.
+	const text = html.replace(/<[^>]*>/g, '');
+	assert.doesNotMatch(text, /rules\./);
+	assert.match(text, /passStartBonus/);
+	assert.match(text, /money/, 'the group falls back to its id as well');
 });
 
 test('renderHouseRules omits non-editable rules (and returns "" when none)', () => {
@@ -66,8 +98,8 @@ test('renderHouseRules renders a choice as a radio group with the default checke
 	assert.match(html, /<fieldset[^>]*class="[^"]*rule-choice/);
 	assert.match(html, /type="radio"[^>]*name="rule-stacking"/);
 	// Exactly one radio is checked, and it is the default option.
-	const checked = html.match(/value="([^"]+)"[^>]*checked/);
-	assert.ok(checked && checked[1] === 'sameType', 'the default option is pre-selected');
+	const checked = /value="([^"]+)"[^>]*checked/.exec(html);
+	assert.ok(checked?.[1] === 'sameType', 'the default option is pre-selected');
 	assert.equal((html.match(/checked/g) ?? []).length, 1);
 });
 

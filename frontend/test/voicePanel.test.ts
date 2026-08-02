@@ -19,10 +19,10 @@ before(() => setupDom());
 
 let panel: VoicePanel;
 let transport: FakeVoiceTransport;
-let announcements: Array<{ key: string; vars: Record<string, unknown>; instant: boolean }>;
+let announcements: { key: string; vars: Record<string, unknown>; instant: boolean }[];
 let availabilityChanges: boolean[];
 let hostMutes: string[];
-let presenceUpdates: Array<Array<{ id: string; muted: boolean; speaking: boolean }>>;
+let presenceUpdates: { id: string; muted: boolean; speaking: boolean }[][];
 let soundEvents: string[];
 let host = true;
 let nextConnectError: unknown = null;
@@ -52,7 +52,7 @@ class FakeVoiceTransport implements VoiceTransport {
 	connectedWith: { url: string; token: string } | null = null;
 	disconnects = 0;
 	muteChanges: boolean[] = [];
-	volumeChanges: Array<{ id: string; volume: number }> = [];
+	volumeChanges: { id: string; volume: number }[] = [];
 	connectError: unknown = null;
 	connectedPreferences: VoiceDevicePreferences | null = null;
 	deviceSnapshot: VoiceDeviceSnapshot = fakeDeviceSnapshot();
@@ -62,6 +62,9 @@ class FakeVoiceTransport implements VoiceTransport {
 	constructor(readonly callbacks: VoiceTransportCallbacks) { }
 
 	async connect(url: string, token: string, preferences?: VoiceDevicePreferences): Promise<void> {
+		// The fake rethrows whatever the test handed it, which includes non-Error rejections —
+		// that is exactly the case the panel's error path has to survive.
+		// eslint-disable-next-line @typescript-eslint/only-throw-error
 		if (this.connectError) throw this.connectError;
 		this.connectedWith = { url, token };
 		this.connectedPreferences = preferences ? { ...preferences } : null;
@@ -206,7 +209,7 @@ test('joining is explicit, starts unmuted, renders the roster and announces entr
 	const selfRow = document.querySelector('.voice-participant') as HTMLElement;
 	assert.equal(selfRow.tabIndex, 0, 'the roster exposes one roving tab stop');
 	assert.equal(selfRow.getAttribute('aria-label'),
-		'Ana (you) is in voice chat with the microphone on.');
+		'Ana (you) is in voice chat with the microphone on. Right Arrow for more actions.');
 	assert.equal(selfRow.querySelector('[role="toolbar"]')?.getAttribute('aria-label'), 'Actions for Ana (you)');
 	const selfMute = selfRow.querySelector('.voice-participant__self-mute') as HTMLButtonElement;
 	assert.equal(selfMute.textContent, 'Mute my microphone');
@@ -224,6 +227,62 @@ test('joining is explicit, starts unmuted, renders the roster and announces entr
 	assert.equal(persistentMicrophone.getAttribute('aria-pressed'), 'true');
 	assert.equal(persistentMicrophone.getAttribute('aria-label'), 'Microphone on; press to mute it.');
 	assert.equal(document.querySelector('[disabled]'), null, 'controls stay focusable; disabled is forbidden');
+});
+
+// Reported live: tabbing into the roster did not reliably drop NVDA into focus mode, so it read
+// the whole row — the person AND their slider and buttons. The roster is a widget you operate,
+// not a passage you read, so it says so: inside role="application" a screen reader builds no
+// virtual buffer and arriving at a row reads that row.
+//
+// A WRAPPER, deliberately. Putting the role on the <ul> would displace the list semantics, and
+// the count is worth keeping — it is how you learn how many people are in the room.
+test('the roster says it is a widget, without giving up being a list', async () => {
+	mountPanel();
+	openPastDisclaimer();
+	Array.from(document.querySelectorAll<HTMLButtonElement>('#voice-controls button'))
+		.find(button => button.textContent?.includes('Join with microphone'))!.click();
+	await settle();
+
+	const surface = document.getElementById('voice-participants-surface')!;
+	const list = document.getElementById('voice-participants')!;
+
+	assert.equal(surface.getAttribute('role'), 'application');
+	assert.equal(list.getAttribute('role'), 'list', 'the count survives the mode change');
+	assert.ok(list.closest('[role="application"]') === surface, 'the roster is inside it');
+
+	// Named once, on the surface: a label on both would announce the roster twice on entry.
+	assert.equal(surface.getAttribute('aria-label'), 'People in voice chat');
+	assert.equal(list.hasAttribute('aria-label'), false);
+
+	// Scoped to the roster alone — the panel around it stays ordinary browsable page.
+	assert.equal(document.getElementById('voice-status')!.closest('[role="application"]'), null);
+	assert.equal(document.getElementById('voice-controls')!.closest('[role="application"]'), null);
+});
+
+// The panel had a close button of its own, first in the tab order, for an act already available
+// three other ways: Escape, Control+Alt+V, and the header button that opened it — which is where
+// focus returns on close anyway. The chat panel never had one. Gone, and with it a stop every
+// keyboard user passed on the way to everything else.
+//
+// Its one real job was being the LAST RESORT of the panel's focus chains, and there is a state
+// with nothing else to focus: a guest at a table whose host has switched voice off sees a status
+// line and no controls at all. The title takes that job — focusable programmatically, never a tab
+// stop, so it costs nothing and keeps the reader inside the panel.
+test('closing lives where it opened, and the panel is never a focus dead end', () => {
+	mountPanel();
+	openPastDisclaimer();
+	assert.equal(document.querySelector('.voice-panel__close'), null);
+
+	const title = document.getElementById('voice-panel-title') as HTMLElement;
+	assert.equal(title.getAttribute('tabindex'), '-1', 'reachable by code, not by Tab');
+
+	// A GUEST at a table whose host switched voice off: no controls (the switch is the host's),
+	// no participants, nothing else in the panel to land on.
+	host = false;
+	panel.setGameEnabled(false);
+	assert.equal(document.querySelectorAll('#voice-controls button').length, 0);
+	assert.equal(panel.focus(), true, 'the panel still takes the keyboard');
+	assert.equal(document.activeElement, title);
 });
 
 test('saved voice devices are passed to LiveKit on the next join', async () => {
@@ -309,7 +368,7 @@ test('remote presence is voiced, speaking stays visual until queried, and volume
 	const bertoRow = document.querySelector('[data-player-id="berto"]') as HTMLElement;
 	assert.equal(bertoRow.classList.contains('voice-participant--speaking'), true);
 	assert.equal(bertoRow.getAttribute('aria-label'),
-		'Berto is in voice chat with the microphone on.',
+		'Berto is in voice chat with the microphone on. Right Arrow for more actions.',
 		'speaking stays visual and does not chatter in the stable row name');
 	assert.equal(announcements.some(a => a.key === 'game.voice_speakers'), false,
 		'active-speaker changes do not chatter at screen readers');

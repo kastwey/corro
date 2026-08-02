@@ -23,13 +23,13 @@ function buildContext(myPlayerId: string): {
 	context: CommandContext;
 	cursorMoves: SetActiveCall[];
 	emitted: string[];
-	deferredVisuals: Array<() => void>;
+	deferredVisuals: (() => void)[];
 	gateCalls: string[];
 	runDeferred: () => void;
 } {
 	const cursorMoves: SetActiveCall[] = [];
 	const emitted: string[] = [];
-	const deferredVisuals: Array<() => void> = [];
+	const deferredVisuals: (() => void)[] = [];
 	const gateCalls: string[] = [];
 	const board = {
 		setActiveIndex: (index: number, triggerEvents = true, announceMove = true) => {
@@ -141,7 +141,7 @@ test('the deferred turn refresh emits the CURRENT game state, not the one captur
 	// A LIVE context (getter), mirroring gameManager.createCommandContext: reading
 	// `gameState` always returns whatever is current — not the value at handle() time.
 	let current: GameState = staleState;
-	const emittedStates: Array<GameState | null | undefined> = [];
+	const emittedStates: (GameState | null | undefined)[] = [];
 	const board = { setActiveIndex: () => {} } as unknown as Board;
 	const context: CommandContext = {
 		get gameState() { return current; },

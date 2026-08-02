@@ -191,6 +191,7 @@ const ANNOUNCEMENT_SOUND_MAP: Readonly<Record<string, string>> = {
 	'game.shedding_drew_playable': 'card.draw',
 	'game.shedding_drew_unplayable': 'card.draw',
 	'game.shedding_round_won': 'shedding.round',
+	'game.shedding_round_cleared': 'shedding.round',
 
 	// Exploding family: EVERY playable action opens the same Nope window, so every public
 	// play line carries the rising warning immediately. Action-specific sounds belong to

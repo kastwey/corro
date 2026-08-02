@@ -5,18 +5,6 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>All Welcome</title>
 
-	<script>
-		// Apply the saved/system theme before first paint to avoid a flash.
-		(function () {
-			try {
-				var t = localStorage.getItem('corro-theme');
-				if (t !== 'dark' && t !== 'light') {
-					t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
-				}
-				document.documentElement.setAttribute('data-theme', t);
-			} catch (e) { /* ignore */ }
-		})();
-	</script>
 
 	<!-- CSS Styles -->
 	<link rel="stylesheet" href="css/theme.css">
@@ -136,12 +124,6 @@
 					<select id="max-players"></select>
 				</div>
 
-				<div class="form-check hidden" id="voice-chat-group" hidden>
-					<input type="checkbox" id="voice-chat-enabled">
-					<label for="voice-chat-enabled" data-i18n="lobby.voiceChat">Enable voice chat for this game</label>
-					<p class="form-hint" data-i18n="lobby.voiceChatHint">Players choose whether to join after the game starts.</p>
-				</div>
-
 				<!-- Journey boards only: team mode. Options are the divisors of the chosen
 					 player count that give equal teams of at least two; with teams, the
 					 player count is EXACT and the host arranges the teams while waiting. -->
@@ -151,10 +133,10 @@
 				</div>
 
 				<!-- Forbidden Words only: one shared real-content deck for the whole match. -->
-				<div class="form-group hidden" id="forbidden-word-language-group" hidden>
-					<label for="forbidden-word-language" data-i18n="lobby.wordLanguage">Word language:</label>
-					<select id="forbidden-word-language" aria-describedby="forbidden-word-language-hint"></select>
-					<p id="forbidden-word-language-hint" class="form-hint" data-i18n="lobby.wordLanguageHint">Everyone uses the same target and forbidden words; interface languages stay personal.</p>
+				<div class="form-group hidden" id="content-language-group" hidden>
+					<label for="content-language" data-i18n="lobby.contentLanguage">Content language:</label>
+					<select id="content-language" aria-describedby="content-language-hint"></select>
+					<p id="content-language-hint" class="form-hint" data-i18n="lobby.contentLanguageHint">The whole table shares one deck, so everyone plays with the same words and questions; each player still reads the interface in their own language.</p>
 				</div>
 
 				<details id="rules-details" class="rules-details">
@@ -311,70 +293,10 @@
 		</section>
 
 		<!-- VIEW: WAITING — the created/joined waiting room; hides the rest of the page -->
-		<section id="view-waiting" class="lobby-view hidden" aria-labelledby="waiting-heading" hidden>
-			<h2 id="waiting-heading" class="sr-only" data-i18n="lobby.waitingRoom">Waiting room</h2>
-			<button type="button" id="waiting-back-btn" class="secondary-button lobby-back-btn" data-i18n="lobby.backToHome">Back to home</button>
 
-			<!-- Host's room -->
-			<div id="lobby-created" class="hidden">
-				<div id="game-created-message" class="success" data-i18n="lobby.gameCreatedSuccess" tabindex="-1" aria-live="polite">Game created successfully!</div>
-				<div class="lobby-info">
-					<div class="invite-code">
-						<h3 data-i18n="lobby.gameCode">Game code</h3>
-						<div id="lobby-code" class="invite-code__value"></div>
-						<button class="copy-button" id="copy-code-btn" data-i18n="lobby.copyCode">Copy code</button>
-					</div>
-					<div class="invite-link">
-						<div data-i18n="lobby.inviteLink">Invite link:</div>
-						<div id="invite-url"></div>
-						<button class="copy-button" id="copy-link-btn" data-i18n="lobby.copyLink">Copy Link</button>
-					</div>
-					<div id="created-rejoin-mount"></div>
 
-					<div class="form-group hidden" id="host-forbidden-word-language-group" hidden>
-						<label for="host-forbidden-word-language" data-i18n="lobby.wordLanguage">Word language:</label>
-						<select id="host-forbidden-word-language" aria-describedby="host-forbidden-word-language-hint"></select>
-						<p id="host-forbidden-word-language-hint" class="form-hint" data-i18n="lobby.wordLanguageWaitingHint">The host may change this shared deck until the game starts.</p>
-					</div>
-
-					<div class="player-list">
-						<h4 data-i18n="lobby.playersInRoom">Players in room:</h4>
-						<ul id="host-player-list"></ul>
-					</div>
-
-					<!-- Journey team mode: the host arranges the teams here while waiting. -->
-					<div id="host-team-panel" class="team-panel hidden"></div>
-
-					<!-- Bot seats (families with a bot brain): the host fills empty chairs. -->
-					<button type="button" id="add-bot-btn" class="secondary-button hidden" data-i18n="lobby.addBot">Add a bot</button>
-
-					<button id="start-game-btn" data-i18n="lobby.startGame">Start Game</button>
-				</div>
-			</div>
-
-			<!-- Guest's room -->
-			<div id="lobby-joined" class="hidden">
-				<div id="game-joined-message" class="success" data-i18n="lobby.joinedSuccess" tabindex="-1" aria-live="polite">Successfully joined the game!</div>
-				<div class="lobby-info">
-					<h3 data-i18n="lobby.waitingRoom">Waiting room</h3>
-
-					<div id="joined-rejoin-mount"></div>
-					<p id="joined-forbidden-word-language" class="hidden" hidden></p>
-					<div class="player-list">
-						<h4 data-i18n="lobby.playersInRoom">Players in room:</h4>
-						<ul id="joined-player-list"></ul>
-					</div>
-
-					<!-- Journey team mode: the room watches the host's arrangement (read-only). -->
-					<div id="joined-team-panel" class="team-panel hidden"></div>
-
-					<div class="loading" data-i18n="lobby.waitingForHost">Waiting for host to start the game...</div>
-				</div>
-			</div>
-		</section>
-
-		<!-- Spoken lobby events (unlock feedback and waiting-room team moves). It must remain
-			 outside the mutually hidden views so announcements work from every lobby screen. -->
+		<!-- Spoken lobby events (the unlock feedback). It must remain outside the mutually hidden
+			 views so announcements work from every lobby screen. -->
 		<div id="lobby-live" class="sr-only" aria-live="polite"></div>
 		<div id="error-message" class="error hidden" aria-live="assertive" tabindex="-1"></div>
 		<div id="loading" class="loading hidden" data-i18n="lobby.processing" aria-live="polite">Processing...</div>

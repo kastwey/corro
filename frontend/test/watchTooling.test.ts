@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 // Tooling is CommonJS so dev.ps1 can launch it directly on every supported platform.
 // Requiring it is side-effect free: the watcher starts only when watch.js is the entry point.
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- watch.js is CommonJS by design
 const { destinationFor } = require('../watch.js') as {
 	destinationFor: (sourcePath: string) => string | null;
 };

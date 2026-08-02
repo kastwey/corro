@@ -459,10 +459,10 @@ public class AuctionRulebook : IAuctionRulebook
 
 		// The auction settled the normal landing. Complete any Express advance now; it
 		// may create a fresh purchase decision that must stay with the same player.
-		if (context.ResolveDeferredExpressMove is not null
+		if (context.Property.ResolveDeferredExpressMove is not null
 			&& context.GameState.PendingExpressMove?.PlayerId == playerBeforeAdvance?.Id)
 		{
-			await context.ResolveDeferredExpressMove(context);
+			await context.Property.ResolveDeferredExpressMove(context);
 		}
 
 		// Advance only when neither a doubles roll nor an obligation created by the Express

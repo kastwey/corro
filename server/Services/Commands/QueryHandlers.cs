@@ -5,15 +5,10 @@ namespace CorroServer.Services.Commands;
 /// <summary>
 /// Handles the GetMoney command - announces player's current money.
 /// </summary>
-public class GetMoneyHandler : ICommandHandler<GetMoneyCommand>
+public class GetMoneyHandler : PlayerCommandHandler<GetMoneyCommand>
 {
-	public async Task<ServerResponse> HandleAsync(GetMoneyCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(GetMoneyCommand command, Player player, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
 		var money = context.Helper.GetPlayerMoney(command.PlayerId);
 		await context.Announce("game.player_money", new Dictionary<string, object>
 		{
@@ -28,15 +23,10 @@ public class GetMoneyHandler : ICommandHandler<GetMoneyCommand>
 /// <summary>
 /// Handles the GetReleasePasses command - announces player's holding free cards.
 /// </summary>
-public class GetReleasePassesHandler : ICommandHandler<GetReleasePassesCommand>
+public class GetReleasePassesHandler : PlayerCommandHandler<GetReleasePassesCommand>
 {
-	public async Task<ServerResponse> HandleAsync(GetReleasePassesCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(GetReleasePassesCommand command, Player player, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
 		var releasePasses = context.Helper.GetPlayerReleasePasses(command.PlayerId);
 		var key = releasePasses > 0
 			? (releasePasses == 1 ? "game.release_passes_one" : "game.release_passes_multiple")

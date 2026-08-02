@@ -336,37 +336,17 @@ public static class AssemblyTurnFlow
 	}
 }
 
-/// <summary>Assembly: play a card (attacks/specials carry their targeting). Carries the
-/// rulebook for its randomness source: the end-of-turn refill may reshuffle the discards.</summary>
-public class AssemblyPlayHandler : ICommandHandler<AssemblyPlayCommand>
+/// <summary>Assembly: play a card (attacks/specials carry their targeting). The end-of-turn
+/// refill may reshuffle the discards through the context's randomness.</summary>
+public class AssemblyPlayHandler : PlayerCommandHandler<AssemblyPlayCommand>
 {
-	private readonly ICorroRulebook _rulebook;
-	public AssemblyPlayHandler(ICorroRulebook rulebook) => _rulebook = rulebook;
-
-	public async Task<ServerResponse> HandleAsync(AssemblyPlayCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await AssemblyTurnFlow.PlayAsync(command, player, context, _rulebook.RandomSource);
-	}
+	protected override Task<ServerResponse> HandleAsync(AssemblyPlayCommand command, Player player, GameContext context)
+		=> AssemblyTurnFlow.PlayAsync(command, player, context, context.Random);
 }
 
 /// <summary>Assembly: discard 1..MaxDiscard face-down (or pass with an empty hand).</summary>
-public class AssemblyDiscardHandler : ICommandHandler<AssemblyDiscardCommand>
+public class AssemblyDiscardHandler : PlayerCommandHandler<AssemblyDiscardCommand>
 {
-	private readonly ICorroRulebook _rulebook;
-	public AssemblyDiscardHandler(ICorroRulebook rulebook) => _rulebook = rulebook;
-
-	public async Task<ServerResponse> HandleAsync(AssemblyDiscardCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await AssemblyTurnFlow.DiscardAsync(command, player, context, _rulebook.RandomSource);
-	}
+	protected override Task<ServerResponse> HandleAsync(AssemblyDiscardCommand command, Player player, GameContext context)
+		=> AssemblyTurnFlow.DiscardAsync(command, player, context, context.Random);
 }

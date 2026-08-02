@@ -30,12 +30,12 @@ test('the host seats a bot on a property board; it plays its turn unattended and
 	await createGame(ana, 'Ana', BOARD);
 
 	// The "add bot" chair now exists for property (it was hidden before — no bot policy).
-	await ana.click('#add-bot-btn');
+	await ana.click('#table-add-bot');
 	const nameDialog = ana.locator('.game-dialog.dialog-bot-name');
 	await expect(nameDialog).toBeVisible();
 	await nameDialog.locator('#bot-name-input').fill('Crupier');
 	await nameDialog.locator('.btn-primary').click();
-	await expect(ana.locator('#host-player-list')).toContainText('Crupier');
+	await expect(ana.locator('#table-players')).toContainText('Crupier');
 
 	await startGame(ana, [ana]);
 

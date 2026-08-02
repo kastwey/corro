@@ -71,6 +71,24 @@ internal class Program
 			app.MapE2ETestEndpoints();
 		}
 
+		// The lobby is built once per language (frontend/localizePages.js), so `/es/` must answer
+		// with the Spanish page. UseDefaultFiles does NOT rewrite that directory — a request for
+		// `/es/` reaches the fallback below exactly like an unknown path would, and would silently
+		// be served the default-language page, undoing the whole point of building one per
+		// language. So each localized lobby gets its own fallback, ahead of the generic one.
+		//
+		// Discovered from what the build actually produced rather than from a list kept in step by
+		// hand: a directory holding an index.html at the web root IS a localized lobby.
+		foreach (var locale in webRootFiles.GetDirectoryContents(string.Empty)
+			.Where(entry => entry.IsDirectory)
+			.Select(entry => entry.Name)
+			.Where(name => webRootFiles.GetFileInfo($"{name}/index.html").Exists)
+			.OrderBy(name => name, StringComparer.Ordinal))
+		{
+			app.MapFallbackToFile($"/{locale}/{{*path:nonfile}}", $"{locale}/index.html",
+				new StaticFileOptions { FileProvider = webRootFiles });
+		}
+
 		// SPA-style fallback: any request that is not an API route, the SignalR hub, or a real static
 		// file returns index.html (so direct links / refresh don't 404), from the same provider.
 		app.MapFallbackToFile("index.html", new StaticFileOptions { FileProvider = webRootFiles });

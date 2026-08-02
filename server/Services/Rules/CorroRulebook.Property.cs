@@ -331,14 +331,14 @@ public partial class CorroRulebook
 	// ============================================================
 
 	// Rent dispatches on a GENERIC strategy per square type, read from the game's rent rules
-	// (context.RentRules — the classic config by default, or a loaded .corro package's).
+	// (context.Property.RentRules — the classic config by default, or a loaded .corro package's).
 	// The rulebook no longer hardcodes per-type formulas.
 	private int CalculateRent(Square square, Player landlord, GameContext context)
 	{
-		var modifier = context.PendingRentModifier;
+		var modifier = context.Property.PendingRentModifier;
 		var type = square.Type?.ToLower() ?? "";
 		var squares = context.Helper.GetSquares();
-		var rules = context.RentRules;
+		var rules = context.Property.RentRules;
 
 		var baseRent = rules.RentStrategies.GetValueOrDefault(type, "") switch
 		{
@@ -356,7 +356,7 @@ public partial class CorroRulebook
 
 			// Utility: dice × a factor that grows to "all" when the owner holds the whole group.
 			"diceMultiplier" => RentCalculator.DiceMultiplier(
-				context.LastDiceTotal > 0 ? context.LastDiceTotal : 7,
+				context.Property.LastDiceTotal > 0 ? context.Property.LastDiceTotal : 7,
 				CountOwnedOfType(squares, type, landlord.Id),
 				squares.Count(s => (s.Type?.ToLower() ?? "") == type),
 				rules.UtilityMultiplier),
@@ -428,7 +428,7 @@ public partial class CorroRulebook
 		context.Logger?.LogDebug(
 			"Rent check: {Tenant} ({TenantId}) landed on {Square} type={Type} owner={Owner} mortgaged={Mortgaged} diceTotal={DiceTotal}",
 			tenant.Name, tenant.Id, square.Name, square.Type,
-			string.IsNullOrEmpty(square.OwnerId) ? "(none)" : square.OwnerId, square.Mortgaged, context.LastDiceTotal);
+			string.IsNullOrEmpty(square.OwnerId) ? "(none)" : square.OwnerId, square.Mortgaged, context.Property.LastDiceTotal);
 
 		if (string.IsNullOrEmpty(square.OwnerId) || square.OwnerId == tenant.Id)
 		{
@@ -468,12 +468,12 @@ public partial class CorroRulebook
 		// "Advance to nearest utility" card on an owned utility: the rule is to throw the
 		// dice and pay 10× the result. Roll it here — only now that rent is actually due —
 		// and announce the throw so the extra, automated roll is visible to everyone.
-		if (context.PendingRentModifier?.UtilityTenTimesDice == true
-			&& context.RentRules.RentStrategies.GetValueOrDefault(square.Type ?? "") == "diceMultiplier")
+		if (context.Property.PendingRentModifier?.UtilityTenTimesDice == true
+			&& context.Property.RentRules.RentStrategies.GetValueOrDefault(square.Type ?? "") == "diceMultiplier")
 		{
 			var die1 = _random.Next(1, 7);
 			var die2 = _random.Next(1, 7);
-			context.PendingRentModifier = context.PendingRentModifier with { UtilityDiceTotal = die1 + die2 };
+			context.Property.PendingRentModifier = context.Property.PendingRentModifier with { UtilityDiceTotal = die1 + die2 };
 			await context.Announce("game.card_utility_rent_roll", new Dictionary<string, object>
 			{
 				{ "player", tenant.Name },

@@ -226,7 +226,9 @@ public record TradeOffer
 	/// <summary>Number of "Get out of holding free" cards being offered.</summary>
 	public int ReleasePasses { get; init; } = 0;
 
-	/// <summary>True when this side offers nothing at all.</summary>
+	/// <summary>True when this side offers nothing at all. Computed for the trade rulebook's own
+	/// checks — not a fact the client is told, so it stays off the wire.</summary>
+	[System.Text.Json.Serialization.JsonIgnore]
 	public bool IsEmpty => Properties.Count == 0 && Money == 0 && ReleasePasses == 0;
 }
 

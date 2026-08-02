@@ -361,7 +361,7 @@ test('the name length cap matches the one the server enforces', () => {
 	const source = readFileSync(
 		join(repoRoot, '..', 'server', 'Services', 'Accounts', 'UserAccountService.cs'),
 		'utf8');
-	const declared = source.match(/MaxDisplayNameLength\s*=\s*(\d+)/);
+	const declared = /MaxDisplayNameLength\s*=\s*(\d+)/.exec(source);
 
 	assert.ok(declared, 'the server declares a display-name cap');
 	assert.equal(Number(declared![1]), MAX_DISPLAY_NAME_LENGTH);

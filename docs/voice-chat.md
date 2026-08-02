@@ -11,7 +11,10 @@ works exactly as before and renders no dead voice control.
 
 ## Product decisions
 
-- The host can enable voice when creating a game or later from the in-game panel.
+- Voice belongs to the deployment, not to a decision taken before anyone knows they want it.
+  Every game a configured relay can serve offers the room from the start; creating a game asks
+  nothing about voice. The host closes or reopens it from the in-game panel at any time, so a
+  table that decides mid-game that it wants to talk always can.
 - Every player opts in separately. Joining is the consent boundary: it requests browser
   microphone permission and publishes **unmuted** immediately.
 - Leaving voice does not leave the game. Turning voice off disconnects everyone from the

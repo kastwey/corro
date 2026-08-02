@@ -394,15 +394,10 @@ public static class RaceTurnFlow
 }
 
 /// <summary>Resolves the current player's pending piece choice (race family).</summary>
-public class MoveRacePieceHandler : ICommandHandler<MoveRacePieceCommand>
+public class MoveRacePieceHandler : PlayerCommandHandler<MoveRacePieceCommand>
 {
-	public async Task<ServerResponse> HandleAsync(MoveRacePieceCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(MoveRacePieceCommand command, Player player, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
 		var race = context.GameState.Race;
 		if (race?.PendingMove is not { } pending || pending.PlayerId != player.Id)
 		{

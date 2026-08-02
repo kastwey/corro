@@ -47,7 +47,7 @@ function tool(action: string): HTMLElement | null {
 }
 
 beforeEach(() => {
-	try { (globalThis as any).window.localStorage.removeItem('corro.handPreferences'); } catch {}
+	try { (globalThis as any).window.localStorage.removeItem('corro.handPreferences'); } catch { /* jsdom may ship no storage */ }
 	document.body.innerHTML = '<div id="mount"></div>';
 	cards = [card('a'), card('b'), card('c')];
 	played = []; submitted = []; announced = []; sounds = []; drawn = 0;

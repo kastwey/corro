@@ -6,6 +6,7 @@
 
 import { soundEvents } from './soundEvents.js';
 import { RovingToolbarList } from './accessibleList.js';
+import { RovingToolbar, type ToolbarItem } from './rovingToolbar.js';
 import { reconcileChildren } from './domReconcile.js';
 import { popupMenu, type PopupMenuItem } from './popupMenu.js';
 import {
@@ -78,7 +79,15 @@ export class VoicePanel {
 	private controls: HTMLElement | null = null;
 	private deviceSettingsButton: HTMLButtonElement | null = null;
 	private list: HTMLUListElement | null = null;
+	/** The application wrapper around the roster — see the markup for why it is a wrapper. */
+	private participantsSurface: HTMLElement | null = null;
 	private participantNav: RovingToolbarList | null = null;
+	/**
+	 * The panel's own actions (join, mute, leave, open/close the room) as ONE tab stop with arrows
+	 * inside, instead of one stop each. Reaching the list of who is here meant passing five stops
+	 * first; this is four of them.
+	 */
+	private readonly controlsToolbar = new RovingToolbar();
 	private deploymentAvailable = false;
 	private gameEnabled = false;
 	private connected = false;
@@ -179,7 +188,7 @@ export class VoicePanel {
 			return this.isOpen();
 		}
 		const target = this.panel?.querySelector<HTMLElement>(
-			'#voice-disclaimer:not([hidden]) #voice-disclaimer-text, .voice-controls button:not([hidden]), .voice-device-settings:not([hidden]), .voice-participant, .voice-panel__close',
+			'#voice-disclaimer:not([hidden]) #voice-disclaimer-text, .voice-controls button:not([hidden]), .voice-device-settings:not([hidden]), .voice-participant, #voice-panel-title',
 		);
 		if (!target) return false;
 		target.focus();
@@ -255,24 +264,49 @@ export class VoicePanel {
 		panel.setAttribute('aria-labelledby', 'voice-panel-title');
 		panel.innerHTML = `
 			<div class="voice-panel__surface">
-				<h2 class="voice-panel__title" id="voice-panel-title"></h2>
-				<button type="button" class="voice-panel__close"></button>
+				<h2 class="voice-panel__title" id="voice-panel-title" tabindex="-1"></h2>
 				<div class="voice-disclaimer" id="voice-disclaimer" hidden>
 					<p id="voice-disclaimer-text" tabindex="0"></p>
 					<label><input type="checkbox" id="voice-disclaimer-dontshow"><span id="voice-disclaimer-dontshow-label"></span></label>
 					<button type="button" id="voice-disclaimer-dismiss" class="btn btn-secondary"></button>
 				</div>
-				<p class="voice-status" id="voice-status" tabindex="0"></p>
+				<!-- NOT focusable. It was a tab stop with no accessible name, sitting between the
+					 close button and everything worth reaching, and the panel's state is spoken by
+					 the announcer anyway — a stop that costs a keystroke and says nothing. -->
+				<p class="voice-status" id="voice-status"></p>
 				<div class="voice-controls" id="voice-controls"></div>
 				<button type="button" id="voice-device-settings" class="btn btn-secondary voice-device-settings" hidden></button>
-				<ul class="voice-participants" id="voice-participants" role="list"></ul>
+				<!-- The roster is a WIDGET you operate, not a passage you read, and it is wrapped in
+					 an application so a screen reader treats it as one. Inside an application NVDA
+					 builds no virtual buffer, so arriving at a row reads that ROW — its name and how
+					 that person is heard — instead of walking the reader through every control of
+					 every participant, which is what a browse-mode list does with rows that carry a
+					 slider and two buttons each (reported live).
+
+					 A WRAPPER, not the role on the <ul> itself: application would displace the list
+					 semantics, and "list, 3 items" is worth keeping — it is how you learn how many
+					 people are in the room. Scoped to the roster alone, so the panel's title, status
+					 and controls stay ordinary browsable page. The same shape the chat uses for its
+					 message list. -->
+				<div class="voice-participants-application" role="application" id="voice-participants-surface">
+					<ul class="voice-participants" id="voice-participants" role="list"></ul>
+				</div>
 			</div>`;
 		mount.appendChild(panel);
 		this.panel = panel;
 		this.status = panel.querySelector('#voice-status');
 		this.controls = panel.querySelector('#voice-controls');
+		if (this.controls) {
+			this.controlsToolbar.mount(this.controls, {
+				label: '', // named in render(), once the translator is known
+				className: 'voice-controls__bar',
+				buttonClassName: 'btn btn-secondary',
+				classPrefix: 'voice-controls',
+			});
+		}
 		this.deviceSettingsButton = panel.querySelector('#voice-device-settings');
 		this.list = panel.querySelector('#voice-participants');
+		this.participantsSurface = panel.querySelector('#voice-participants-surface');
 		this.participantNav = new RovingToolbarList({
 			list: this.list!,
 			itemSelector: '.voice-participant',
@@ -283,13 +317,12 @@ export class VoicePanel {
 			// Keep the popup inside the active page landmark, never orphaned under body.
 			menuHost: () => this.panel?.closest('main') ?? this.panel,
 			fallbackFocus: () => this.panel?.querySelector<HTMLElement>(
-				'.voice-controls button:not([hidden]), .voice-device-settings:not([hidden]), .voice-panel__close',
+				'.voice-controls button:not([hidden]), .voice-device-settings:not([hidden]), #voice-panel-title',
 			) ?? null,
 		});
 		this.deviceSettingsButton?.setAttribute('aria-haspopup', 'menu');
 		this.deviceSettingsButton?.setAttribute('aria-expanded', 'false');
 
-		panel.querySelector('.voice-panel__close')!.addEventListener('click', () => this.closePanel());
 		this.deviceSettingsButton?.addEventListener('click', () => void this.openDeviceSettings());
 		panel.addEventListener('keydown', event => {
 			if (event.key !== 'Escape') return;
@@ -318,6 +351,9 @@ export class VoicePanel {
 		let transport: VoiceTransport | null = null;
 		try {
 			const credentials = await this.deps.requestToken();
+			// Not const: the callbacks on the next line close over `created` BEFORE it is
+			// assigned, which is exactly what the definite-assignment form expresses.
+			// eslint-disable-next-line prefer-const
 			let created!: VoiceTransport;
 			const callbacks = this.transportCallbacks(() => created);
 			created = this.deps.createTransport?.(callbacks) ?? createVoiceTransport(callbacks);
@@ -737,14 +773,13 @@ export class VoicePanel {
 		if (!this.panel || !this.deps || !this.controls || !this.list) return;
 		const t = this.deps.t;
 		this.panel.querySelector('#voice-panel-title')!.textContent = t('game.voice_title');
-		const close = this.panel.querySelector<HTMLButtonElement>('.voice-panel__close')!;
-		close.textContent = t('game.voice_close');
-		close.setAttribute('aria-label', t('game.voice_close'));
-		close.setAttribute('aria-keyshortcuts', 'Control+Alt+V');
 		this.panel.querySelector('#voice-disclaimer-text')!.textContent = t('game.voice_disclaimer');
 		this.panel.querySelector('#voice-disclaimer-dontshow-label')!.textContent = t('game.voice_disclaimer_dontshow');
 		this.panel.querySelector<HTMLButtonElement>('#voice-disclaimer-dismiss')!.textContent = t('game.voice_disclaimer_dismiss');
-		this.list.setAttribute('aria-label', t('game.voice_participants'));
+		// The NAME goes on the application wrapper, not the list inside it: entering the roster
+		// should announce what it is once, and a label on both would say it twice. The list keeps
+		// its role, and with it the count — "list, 3 items" is how you learn who is in the room.
+		this.participantsSurface?.setAttribute('aria-label', t('game.voice_participants'));
 		if (this.deviceSettingsButton) {
 			this.deviceSettingsButton.hidden = !this.deploymentAvailable || !this.gameEnabled || this.joining;
 			this.deviceSettingsButton.textContent = t('game.voice_devices_button');
@@ -752,39 +787,40 @@ export class VoicePanel {
 			if (this.deviceSettingsButton.hidden) this.closeDeviceMenu();
 		}
 
-		this.controls.replaceChildren();
 		if (this.status) this.status.textContent = t(this.statusKey);
+		// Described rather than appended: what this panel offers depends on who is reading it and
+		// what the room is doing, and a control that is not on offer should not exist rather than
+		// be hidden. Ids are stable so a button that SURVIVES a re-render is never rebuilt under
+		// the keyboard — the point of reconciling (see rovingToolbar.ts).
+		const controls: ToolbarItem[] = [];
 		if (!this.deploymentAvailable) {
 			// Capability is reflected by the hidden header control; no actions are rendered.
 		} else if (!this.gameEnabled) {
 			if (this.deps.isHost()) {
-				this.controls.appendChild(this.controlButton(
-					t('game.voice_enable'),
-					() => void this.changeAvailability(true),
-					this.changingAvailability,
-				));
+				controls.push(this.control('enable', t('game.voice_enable'),
+					() => void this.changeAvailability(true), this.changingAvailability));
 			}
 		} else {
 			if (!this.connected && !this.joining) {
-				this.controls.appendChild(this.controlButton(t('game.voice_join'), () => void this.join()));
+				controls.push(this.control('join', t('game.voice_join'), () => void this.join()));
 			}
 			if (this.connected) {
-				this.controls.appendChild(this.controlButton(
+				controls.push(this.control(
+					'mute',
 					t(this.selfMuted ? 'game.voice_unmute' : 'game.voice_mute'),
 					() => void this.toggleSelfMute(),
 					false,
 					'Control+Alt+X',
 				));
-				this.controls.appendChild(this.controlButton(t('game.voice_leave'), () => void this.leave(true)));
+				controls.push(this.control('leave', t('game.voice_leave'), () => void this.leave(true)));
 			}
 			if (this.deps.isHost()) {
-				this.controls.appendChild(this.controlButton(
-					t('game.voice_disable'),
-					() => void this.changeAvailability(false),
-					this.changingAvailability,
-				));
+				controls.push(this.control('disable', t('game.voice_disable'),
+					() => void this.changeAvailability(false), this.changingAvailability));
 			}
 		}
+		this.controlsToolbar.setLabel(t('game.voice_controls_label'));
+		this.controlsToolbar.render(controls);
 
 		this.renderParticipants();
 		this.syncHeaderButton();
@@ -805,7 +841,7 @@ export class VoicePanel {
 			onRemoved: () => this.participantNav?.closeContextMenu(),
 			rescueFocus: () => this.list?.querySelector<HTMLElement>('.voice-participant')
 				?? this.panel?.querySelector<HTMLElement>(
-					'.voice-controls button:not([hidden]), .voice-device-settings:not([hidden]), .voice-panel__close',
+					'.voice-controls button:not([hidden]), .voice-device-settings:not([hidden]), #voice-panel-title',
 				) ?? null,
 		});
 		this.list.hidden = this.participants.length === 0;
@@ -851,12 +887,16 @@ export class VoicePanel {
 			: participant.name;
 		row.classList.toggle('voice-participant--speaking', participant.speaking && !participant.muted);
 		row.classList.toggle('voice-participant--muted', participant.muted);
-		row.setAttribute('aria-label', t(
+		// The row NAMES the person and says how they are heard. Its actions are a separate box that
+		// only exists once the row is reached (voice.css), so what a reader gets while browsing the
+		// list is who is here — not four controls each. The label is set at the END of this method,
+		// once it is known whether this row has any actions to promise.
+		const identity = t(
 			participant.muted
 				? 'game.voice_participant_label_muted'
 				: 'game.voice_participant_label_listening',
 			{ player: displayName },
-		));
+		);
 		row.querySelector('.voice-participant__name')!.textContent = displayName;
 		row.querySelector('.voice-participant__visual-state')!.textContent = participant.muted
 			? t('game.voice_muted_visual')
@@ -897,6 +937,15 @@ export class VoicePanel {
 			muteReason.textContent = '';
 		}
 		mute.onclick = () => void this.hostMute(participant, mute);
+
+		// …and only now, knowing what this row actually offers, does it say so. The Right Arrow is
+		// the only way in — the actions are not in the reading order until focus arrives — so a row
+		// that has some must announce the way, and a row that has none must not promise one.
+		const hasActions = [volumeLabel, selfMute, mute].some(action => !action.hidden);
+		const label = hasActions
+			? `${identity} ${t('game.voice_participant_more_actions')}`
+			: identity;
+		if (row.getAttribute('aria-label') !== label) row.setAttribute('aria-label', label);
 	}
 
 	private hideParticipantAction(element: HTMLElement, hidden: boolean, row: HTMLElement): void {
@@ -906,22 +955,22 @@ export class VoicePanel {
 		element.hidden = hidden;
 	}
 
-	private controlButton(
+	/** One of the panel's own actions, as a descriptor for the controls toolbar. */
+	private control(
+		id: string,
 		label: string,
 		action: () => void,
 		unavailable = false,
 		keyShortcut?: string,
-	): HTMLButtonElement {
-		const button = document.createElement('button');
-		button.type = 'button';
-		button.className = 'btn btn-secondary';
-		button.textContent = label;
-		if (keyShortcut) button.setAttribute('aria-keyshortcuts', keyShortcut);
-		if (unavailable) button.setAttribute('aria-disabled', 'true');
-		button.addEventListener('click', () => {
-			if (!unavailable) action();
-		});
-		return button;
+	): ToolbarItem {
+		return {
+			id,
+			label,
+			shortcut: keyShortcut,
+			// aria-disabled, never the `disabled` attribute: an action in flight stays reachable.
+			busy: unavailable,
+			onActivate: () => { if (!unavailable) action(); },
+		};
 	}
 
 	private setStatus(key: string): void {

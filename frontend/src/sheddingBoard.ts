@@ -12,7 +12,7 @@ import { popupMenu } from './popupMenu.js';
 import { escapeHtml } from './escapeHtml.js';
 import { contrastingTextColor } from './colorContrast.js';
 import {
-	canPlayCard, deckColors, sheddingCardHelp, sheddingCatalog, sheddingSeat,
+	canPlayCard, deckColors, sheddingCardHelp, sheddingCatalog, sheddingScoreText, sheddingSeat,
 	sheddingStatusText, sheddingWatchText, topDef,
 } from './sheddingRules.js';
 import { soundEvents } from './soundEvents.js';
@@ -25,20 +25,20 @@ import type { GameState } from './models.js';
 import type { HelpShortcut } from './shortcuts.js';
 
 export interface SheddingBoardDeps {
-	getGameState(): GameState | null;
-	getMyPlayerId(): string | null;
-	announce(text: string): void;
-	tSync(key: string, vars?: Record<string, unknown>): string;
-	onIdle(): void;
-	motionDisabled(): boolean;
+	getGameState: () => GameState | null;
+	getMyPlayerId: () => string | null;
+	announce: (text: string) => void;
+	tSync: (key: string, vars?: Record<string, unknown>) => string;
+	onIdle: () => void;
+	motionDisabled: () => boolean;
 	commands: {
-		play(instanceId: string, chosenColor?: string | null, extraInstanceIds?: string[] | null): void;
-		draw(): void;
-		keep(): void;
+		play: (instanceId: string, chosenColor?: string | null, extraInstanceIds?: string[] | null) => void;
+		draw: () => void;
+		keep: () => void;
 		/** Declare the last card (optional house rule). */
-		declareLastCard(): void;
+		declareLastCard: () => void;
 		/** Catch a rival who forgot the last-card declaration. */
-		catchLastCard(): void;
+		catchLastCard: () => void;
 	};
 }
 
@@ -117,7 +117,7 @@ export class SheddingBoard {
 			const cards = seat.handCount === 1
 				? this.deps.tSync('game.shedding_status_cards_one')
 				: this.deps.tSync('game.shedding_status_cards', { count: seat.handCount });
-			const score = this.deps.tSync('game.shedding_status_score', { total: seat.score });
+			const score = sheddingScoreText(gs, seat.score, this.deps.tSync);
 			return `${name}: ${cards}, ${score}`;
 		});
 		return lines.length > 0 ? lines.join('. ') : null;

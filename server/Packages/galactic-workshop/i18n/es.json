@@ -110,5 +110,13 @@
     "total_trade_in_played": "¡{{player}} permuta su taller entero con el de {{target}}!",
     "total_trade_in_played_self": "¡Permutas tu taller entero con el de {{target}}!",
     "total_trade_in_played_victim": "¡{{player}} permuta su taller entero con el tuyo!"
+  },
+  "bots": {
+    "chatarrin": "Chatarrín",
+    "tuercas": "Tuercas",
+    "soldador": "Soldadura",
+    "iman": "Doña Imán",
+    "dron": "Dron 7",
+    "averia": "Avería Leve"
   }
 }

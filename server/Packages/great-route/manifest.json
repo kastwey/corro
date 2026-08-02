@@ -99,5 +99,23 @@
       "id": "taxi",
       "nameKey": "tokens.taxi"
     }
+  ],
+  "botNames": [
+    "bots.granny",
+    "bots.handbrake",
+    "bots.stalls",
+    "bots.turbo",
+    "bots.codriver",
+    "bots.clutch",
+    "bots.miles",
+    "bots.blinker",
+    "bots.roundabout",
+    "bots.diesel",
+    "bots.gravel",
+    "bots.wrongway",
+    "bots.pothole",
+    "bots.zoom",
+    "bots.towtruck",
+    "bots.foggy"
   ]
 }

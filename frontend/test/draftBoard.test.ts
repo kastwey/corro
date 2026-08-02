@@ -48,7 +48,7 @@ function game(seats: DraftSeatState[], over: Record<string, unknown> = {}): Game
 let gs: GameState;
 let boardEl: HTMLElement;
 let view: DraftBoard;
-let picked: Array<[string, string | null]>;
+let picked: [string, string | null][];
 let announced: string[];
 
 /** Full-key fake translator: key + compact vars, so asserts read naturally. */

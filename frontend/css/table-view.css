@@ -1,0 +1,112 @@
+/* table-view.css — the table between matches, on the game page.
+ *
+ * The roster styling mirrors the waiting room's (lobby.css) rather than importing it: the game
+ * page does not load the lobby's stylesheet, and pulling all of it in for four rules would drag
+ * along every form and view rule with it. These few are duplicated on purpose and knowingly.
+ */
+
+/* The board's layout sets `display: grid`, which BEATS the `hidden` attribute's user-agent rule:
+ * without this the board stays on screen underneath the table — an empty grid at a table nobody
+ * is playing at, and a live one behind the table when a match ends. Same per-component pattern
+ * the action bar and the voice controls already use. */
+.game-layout[hidden] {
+	display: none;
+}
+
+.table-view {
+	max-width: 44rem;
+	margin: 1rem auto;
+	padding: 1.25rem;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+}
+
+.table-view__heading {
+	margin-top: 0;
+}
+
+.table-view__intro {
+	color: var(--text-muted);
+}
+
+.table-view__invite {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.table-view__players {
+	list-style: none;
+	padding: 0;
+	margin: 0.5rem 0 1rem;
+}
+
+/* The table's actions: an ARIA toolbar built by tableView.ts (see rovingToolbar.ts). The row lives
+   on the inner button box, since the toolbar element itself also holds the described-by hints.
+   Wrapping, not scrolling: at the largest text sizes these labels are whole sentences, and a row
+   that cannot wrap pushes "delete the table" off the side of the screen. */
+.table-view__actions {
+	margin: 1rem 0 0;
+}
+
+.table-actions-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+/* A refused action's reason is announced through aria-describedby, so it is kept out of the visual
+   flow — with a clip, NEVER display:none, which would take it out of the accessibility tree too. */
+.table-actions-hint {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	border: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+.table-view .player-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.5rem 0;
+	border-bottom: 1px solid var(--border);
+}
+
+.table-view .player-item:last-child {
+	border-bottom: none;
+}
+
+.table-view .player-info {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+
+.table-view .player-info .token-icon {
+	width: 1.3rem;
+	height: 1.3rem;
+}
+
+.table-view .player-name {
+	font-weight: 500;
+	color: var(--text);
+}
+
+.table-view .player-token-name {
+	color: var(--accent);
+	font-size: 0.85rem;
+}
+
+.table-view .player-status {
+	color: var(--text-muted);
+	font-size: 0.85rem;
+}

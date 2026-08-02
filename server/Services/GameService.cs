@@ -15,6 +15,9 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 	private readonly CommandDispatcher _commandDispatcher;
 	private readonly ILogger<GameService>? _logger;
 	private readonly IGameAnnouncer _announcer;
+	// The game's randomness, shared by every family that shuffles. Flows into each command's
+	// GameContext so a card family needs nothing from the property rulebook to reshuffle a pile.
+	private readonly IRandomSource _random;
 
 	// Serializes command execution so concurrent SignalR invocations cannot
 	// corrupt the shared, non-thread-safe GameState (one game = one lock).
@@ -63,11 +66,14 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 		ICorroRulebook rulebook,
 		IAuctionRulebook auctionRulebook,
 		string? gameId = null,
-		ILogger<GameService>? logger = null)
+		ILogger<GameService>? logger = null,
+		IRandomSource? randomSource = null)
 	{
 		_rulebook = rulebook ?? throw new ArgumentNullException(nameof(rulebook));
 		_commandDispatcher = new CommandDispatcher(rulebook, auctionRulebook);
 		_logger = logger;
+		// Production and E2E pass the DI singleton, so the scripted source reaches every family.
+		_random = randomSource ?? new SystemRandomSource();
 		GameId = gameId ?? Guid.NewGuid().ToString();
 		// Per-game announcer. During a command the sink buffers dispatches into the current
 		// batch; the batch is flushed as one OnGameEvents stream when the command ends. An
@@ -108,7 +114,7 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 			RaceTeams = raceTeams,
 			RuleValues = ruleValues,
 			Teams = teams,
-			Random = _rulebook.RandomSource,
+			Random = _random,
 		});
 
 		_gameState = game.State;
@@ -204,7 +210,7 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 				GameState = _gameState,
 				Helper = _gameHelper,
 				Settings = _settings,
-				RentRules = _rentRules,
+				Random = _random,
 				// A restored game whose package wasn't re-attached falls back to the snapshot's
 				// board (with the family's default rules), like it always did.
 				FamilyRuntime = _familyRuntime ?? GameFamilies.For(_gameState.GameType).RuntimeFromState(_gameState),
@@ -212,10 +218,16 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 				Announcer = _announcer,
 				Presenter = this,
 				Logger = _logger,
-				// Lets card effects (e.g. "go back 3 spaces") trigger landing effects
-				// without a rulebook ↔ card dependency cycle.
-				ProcessLanding = (p, idx, ctx) => _rulebook.ProcessLandingEffectsAsync(p, idx, ctx),
-				ResolveDeferredExpressMove = ctx => _rulebook.ResolveDeferredExpressMoveAsync(ctx)
+				// The property family's own slice. Filled for every game (it is cheap and keeps the
+				// context uniform), but only property ever reads it.
+				Property = new PropertyTurnContext
+				{
+					RentRules = _rentRules,
+					// Lets card effects (e.g. "go back 3 spaces") trigger landing effects without a
+					// rulebook ↔ card dependency cycle.
+					ProcessLanding = (p, idx, ctx) => _rulebook.ProcessLandingEffectsAsync(p, idx, ctx),
+					ResolveDeferredExpressMove = ctx => _rulebook.ResolveDeferredExpressMoveAsync(ctx),
+				},
 			};
 
 			// Dispatch command to appropriate handler

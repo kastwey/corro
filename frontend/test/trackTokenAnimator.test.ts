@@ -18,7 +18,7 @@ function gameState(positions: Record<string, number>): GameState {
 }
 
 function makeTimers() {
-	const queue: Array<{ fn: () => void; ms: number }> = [];
+	const queue: { fn: () => void; ms: number }[] = [];
 	return {
 		queue,
 		setTimer: (fn: () => void, ms: number) => { queue.push({ fn, ms }); return queue.length; },

@@ -1,10 +1,8 @@
-import test, { before, beforeEach } from 'node:test';
+import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { setupDom, installFakeI18next } from './helpers/dom.js';
 import { diceControl } from '../src/diceControl.js';
 
-let rollCount = 0;
-let unavailableReason = '';
 
 /**
  * The dice control shows the roll result. With motion ON it tumbles first; with motion OFF it
@@ -18,10 +16,7 @@ before(() => {
 	// The control is a singleton; mount it once (init() is a no-op after the first call).
 	const mount = document.createElement('div');
 	document.body.appendChild(mount);
-	diceControl.init(mount, {
-		onRoll: () => { rollCount++; },
-		onUnavailable: reason => { unavailableReason = reason; },
-	});
+	diceControl.init(mount);
 });
 
 function faces(): { die1: HTMLElement; die2: HTMLElement } {
@@ -71,28 +66,11 @@ test('the optional third die appears only on bonus-die rolls', () => {
 	assert.equal(bonusDie().querySelector('.die-glyph')?.textContent, '»');
 });
 
-test('the unavailable roll button stays focusable and explains why it cannot act', () => {
-	const button = document.getElementById('dice-button') as HTMLButtonElement;
-	diceControl.setEnabled(false);
-	button.focus();
-	button.click();
-
-	assert.equal(button.disabled, false, 'native disabled must not remove the button from the tab order');
-	assert.equal(button.getAttribute('aria-disabled'), 'true');
-	assert.equal(document.activeElement, button);
-	assert.equal(rollCount, 0);
-	assert.equal(unavailableReason, 'Roll dice (not your turn)');
-	assert.equal(
-		document.getElementById(button.getAttribute('aria-describedby')!)!.textContent,
-		'Roll dice (not your turn)');
-});
-
-test('the available roll button performs the action', () => {
-	const button = document.getElementById('dice-button') as HTMLButtonElement;
-	diceControl.setEnabled(true);
-	button.click();
-
-	assert.equal(button.getAttribute('aria-disabled'), 'false');
-	assert.equal(button.hasAttribute('aria-describedby'), false);
-	assert.equal(rollCount, 1);
+// The tray is for the EYES only: the result is announced by the server-driven pipeline, and a
+// screen reader that also read the dice would say every roll twice.
+test('the dice are shown, never spoken, and offer nothing to act on', () => {
+	assert.equal(document.getElementById('dice-button'), null,
+		'rolling lives in the action bar; a second button here knew less and acted the same');
+	assert.equal(document.querySelector('.dice-control button'), null);
+	assert.equal(document.querySelector('.dice-tray')?.getAttribute('aria-hidden'), 'true');
 });

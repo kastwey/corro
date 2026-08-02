@@ -15,7 +15,7 @@ test('package token path data is sanitized (no markup injection)', () => {
 	const html = tokenIconHtml('evil');
 	assert.doesNotMatch(html, /<script/);          // no injected element
 	assert.ok(!html.includes('alert(1)'));         // the "(1)" parens were stripped
-	const d = html.match(/d="([^"]*)"/)![1];        // the path data has no markup chars
+	const d = /d="([^"]*)"/.exec(html)![1];        // the path data has no markup chars
 	assert.doesNotMatch(d, /[<>"]/);
 	setPackageTokens(undefined);
 });

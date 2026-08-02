@@ -10,7 +10,7 @@ namespace CorroServer.Services.Commands;
 /// This handler only validates the request and delegates to the Rulebook.
 /// All game logic lives in CorroRulebook.
 /// </summary>
-public class RollDiceHandler : ICommandHandler<RollDiceCommand>
+public class RollDiceHandler : PlayerCommandHandler<RollDiceCommand>
 {
 	private readonly ICorroRulebook _rulebook;
 
@@ -19,13 +19,8 @@ public class RollDiceHandler : ICommandHandler<RollDiceCommand>
 		_rulebook = rulebook;
 	}
 
-	public async Task<ServerResponse> HandleAsync(RollDiceCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(RollDiceCommand command, Player player, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
 		// Validate it's this player's turn
 		if (context.GameState.CurrentTurn != command.PlayerId)
 		{

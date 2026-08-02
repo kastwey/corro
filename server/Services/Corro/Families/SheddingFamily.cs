@@ -42,36 +42,10 @@ public sealed class SheddingFamily : IGameFamily
 	/// and enough cards to deal every table size plus the opener.</summary>
 	public void ValidateDefinition(GameDefinition d)
 	{
-		var deck = d.SheddingDeck
-			?? throw new InvalidOperationException("shedding package has no deck (cards.json).");
-		if (deck.Count == 0)
-		{
-			throw new InvalidOperationException("shedding deck has no cards.");
-		}
-
-		var ids = deck.Select(c => c.Id).ToList();
-		if (ids.Any(string.IsNullOrWhiteSpace) || ids.Distinct().Count() != ids.Count)
-		{
-			throw new InvalidOperationException("every shedding card needs a unique id.");
-		}
+		var deck = DeckValidation.RequireWellFormedDeck(d.SheddingDeck, "shedding", CardTypes);
 
 		foreach (var card in deck)
 		{
-			if (!CardTypes.Contains(card.Type))
-			{
-				throw new InvalidOperationException($"shedding card '{card.Id}' has an unknown type '{card.Type}'.");
-			}
-
-			if (string.IsNullOrWhiteSpace(card.NameKey))
-			{
-				throw new InvalidOperationException($"shedding card '{card.Id}' has no name (add a nameKey).");
-			}
-
-			if (card.Count < 1)
-			{
-				throw new InvalidOperationException($"shedding card '{card.Id}' needs a positive count.");
-			}
-
 			if (WildTypes.Contains(card.Type) && card.Color != null)
 			{
 				throw new InvalidOperationException($"shedding card '{card.Id}' is wild: it carries no colour.");
@@ -119,6 +93,12 @@ public sealed class SheddingFamily : IGameFamily
 		{
 			throw new InvalidOperationException(
 				$"sheddingRules.stacking must be one of {string.Join(", ", HouseRuleCatalog.SheddingStackingModes)}.");
+		}
+
+		if (!HouseRuleCatalog.SheddingScoringModes.Contains(rules.Scoring))
+		{
+			throw new InvalidOperationException(
+				$"sheddingRules.scoring must be one of {string.Join(", ", HouseRuleCatalog.SheddingScoringModes)}.");
 		}
 
 		// House rules must reference SHEDDING codes the engine implements (same doctrine as

@@ -94,7 +94,7 @@ export interface TypeaheadMatch {
  * Returns null when nothing matches or `char` is not a single printable key.
  */
 export function typeaheadMatch(labels: readonly string[], char: string, fromIndex: number): TypeaheadMatch | null {
-	if (!char || char.length !== 1 || char === ' ') return null;
+	if (char?.length !== 1 || char === ' ') return null;
 	const needle = char.toLowerCase();
 	const count = labels.length;
 	const matches: number[] = [];
@@ -123,11 +123,11 @@ class PopupMenu {
 	private selecting = false;
 	private activeIndex = 0;
 	private menuAriaLabel = '';
-	private readonly parentMenus: Array<{
+	private readonly parentMenus: {
 		items: PopupMenuItem[];
 		ariaLabel: string;
 		returnIndex: number;
-	}> = [];
+	}[] = [];
 	private readonly outsideHandler = (e: Event) => this.onOutsidePointer(e);
 
 	open(opts: PopupMenuOptions): void {

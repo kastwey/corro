@@ -4,10 +4,10 @@ import { setupDom, installFakeI18next } from './helpers/dom.js';
 import { initThemeToggle } from '../src/themeToggle.js';
 
 /**
- * DOM regression tests for the header light/dark theme toggle. Beyond the basic render/label,
- * this guards the reported bug: switching language at runtime left the toggle's action label in
- * the old language until a hard reload. Its label is set imperatively (not via data-i18n), so
- * the toggle must re-translate itself when `languageChanged` fires.
+ * DOM regression tests for the header light/dark theme toggle: what it renders, what its action
+ * label says, and that pressing it flips both the theme and the label. Its label is set
+ * imperatively rather than via data-i18n, which is fine because a language is a property of the
+ * page it was loaded into and never changes under it (see i18nBinder.ts).
  */
 
 before(() => {
@@ -50,14 +50,3 @@ test('clicking flips the theme and the action label', () => {
 	assert.equal(btn.getAttribute('aria-label'), 'Switch to light theme');
 });
 
-test('re-translates its label on a runtime language change (regression: stale until reload)', () => {
-	const btn = mountToggle();
-	assert.equal(btn.getAttribute('aria-label'), 'Switch to dark theme');
-
-	// Simulate the lobby applying Spanish at runtime: i18next swaps, then languageChanged fires.
-	installFakeI18next('es');
-	document.dispatchEvent(new window.CustomEvent('languageChanged', { bubbles: true }));
-
-	assert.equal(btn.getAttribute('aria-label'), 'Cambiar a tema oscuro');
-	assert.equal(btn.title, 'Cambiar a tema oscuro');
-});

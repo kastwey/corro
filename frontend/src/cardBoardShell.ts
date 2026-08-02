@@ -46,13 +46,13 @@ export function resetCardBoard(element: HTMLElement, modeClass: string): void {
 }
 
 export interface StatusKeysDeps {
-	getGameState(): GameState | null;
-	getMyPlayerId(): string | null;
-	announce(text: string): void;
+	getGameState: () => GameState | null;
+	getMyPlayerId: () => string | null;
+	announce: (text: string) => void;
 	/** "How am I doing?" (S) — my own status line. */
-	mine(gs: GameState, myId: string): string | null;
+	mine: (gs: GameState, myId: string) => string | null;
 	/** "How are the OTHERS doing?" (Shift+S) — my own is left out (S already covers it). */
-	rivals(gs: GameState, myId: string): string | null;
+	rivals: (gs: GameState, myId: string) => string | null;
 }
 
 /**
@@ -76,9 +76,9 @@ export function registerStatusKeys(element: HTMLElement, deps: StatusKeysDeps): 
 }
 
 export interface PileStatusKeyDeps {
-	announce(text: string): void;
+	announce: (text: string) => void;
 	/** The localized pile sentence for the current authoritative state. */
-	read(): string | null;
+	read: () => string | null;
 }
 
 /**

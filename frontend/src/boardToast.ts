@@ -54,7 +54,7 @@ class BoardToast {
 	 * board was re-rendered and detached the previous host.
 	 */
 	private ensureHost(): HTMLElement | null {
-		if (this.host && this.host.isConnected) return this.host;
+		if (this.host?.isConnected) return this.host;
 		const parent = document.querySelector('.board-center') ?? document.getElementById('board');
 		if (!parent) return null;
 		const host = document.createElement('div');

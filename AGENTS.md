@@ -155,6 +155,16 @@ token id/title. Optional card art lives in `assets/cards/<id>.svg` (64×64 path 
 the loader/format first, update every relevant family/model/schema/SDK/doc surface, grep for leaked
 content ids, and add a boundary regression.
 
+**Local packages ship too (mandatory).** Some packages under `server/Packages/` are gitignored
+(`git check-ignore server/Packages/<id>` tells you which). They are not drafts: they are published
+as hidden packages on the maintainer's server, so they must work as well as the committed ones —
+and no diff, review or CI run will ever show them. Every rule, house rule, key or engine
+improvement that lands in a shipped package MUST land in every local package of the same family
+too: manifest, both locales and both help files. Then prove it, don't assume it —
+`dotnet test` runs `KeyIntegrityTests` over every package present on disk, and
+`dotnet tools/Corro.PackageCli/bin/Debug/net10.0/corro-package.dll validate server/Packages/<id>`
+checks one. Say in your summary which local packages you touched, since the diff cannot.
+
 **Style.** No inline styles in HTML. No `console.log` in production (use
 `console.debug`). Handlers emit events, not direct DOM manipulation.
 

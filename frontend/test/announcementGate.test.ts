@@ -11,14 +11,14 @@ import type { AnnounceOptions } from '../src/announcer.js';
 
 interface GateHarness {
 	gate: AnnouncementGate;
-	delivered: Array<{ event: AnnouncementEvent; options?: AnnounceOptions }>;
+	delivered: { event: AnnouncementEvent; options?: AnnounceOptions }[];
 	setAnimating: (v: boolean) => void;
 	fireSafety: () => void;
 	safetyArmed: () => boolean;
 }
 
 function makeGate(): GateHarness {
-	const delivered: Array<{ event: AnnouncementEvent; options?: AnnounceOptions }> = [];
+	const delivered: { event: AnnouncementEvent; options?: AnnounceOptions }[] = [];
 	const animating = { value: false };
 	let safetyFn: (() => void) | null = null;
 	const gate = new AnnouncementGate({

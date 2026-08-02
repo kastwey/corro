@@ -594,84 +594,44 @@ public static class ExplodingTurnFlow
 // ── Command handlers ──────────────────────────────────────────────────────────
 
 /// <summary>Exploding: play an action card (opens the Nope window).</summary>
-public class ExplodingPlayHandler : ICommandHandler<ExplodingPlayCommand>
+public class ExplodingPlayHandler : PlayerCommandHandler<ExplodingPlayCommand>
 {
-	public async Task<ServerResponse> HandleAsync(ExplodingPlayCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await ExplodingTurnFlow.PlayAsync(command, player, context);
-	}
+	protected override Task<ServerResponse> HandleAsync(ExplodingPlayCommand command, Player player, GameContext context)
+		=> ExplodingTurnFlow.PlayAsync(command, player, context);
 }
 
 /// <summary>Exploding: play a Nope (off-turn).</summary>
-public class ExplodingNopeHandler : ICommandHandler<ExplodingNopeCommand>
+public class ExplodingNopeHandler : PlayerCommandHandler<ExplodingNopeCommand>
 {
-	public async Task<ServerResponse> HandleAsync(ExplodingNopeCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await ExplodingTurnFlow.NopeAsync(command, player, context);
-	}
+	protected override Task<ServerResponse> HandleAsync(ExplodingNopeCommand command, Player player, GameContext context)
+		=> ExplodingTurnFlow.NopeAsync(command, player, context);
 }
 
-/// <summary>Exploding: draw to end the turn — carries the rulebook's randomness for a shuffle.</summary>
-public class ExplodingDrawHandler : ICommandHandler<ExplodingDrawCommand>
+/// <summary>Exploding: draw to end the turn — an emptied pile reshuffles through the context's randomness.</summary>
+public class ExplodingDrawHandler : PlayerCommandHandler<ExplodingDrawCommand>
 {
-	private readonly ICorroRulebook _rulebook;
-	public ExplodingDrawHandler(ICorroRulebook rulebook) => _rulebook = rulebook;
-
-	public async Task<ServerResponse> HandleAsync(ExplodingDrawCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await ExplodingTurnFlow.DrawAsync(player, context, _rulebook.RandomSource);
-	}
+	protected override Task<ServerResponse> HandleAsync(ExplodingDrawCommand command, Player player, GameContext context)
+		=> ExplodingTurnFlow.DrawAsync(player, context, context.Random);
 }
 
 /// <summary>Exploding: tuck a defused bomb back at a chosen secret depth.</summary>
-public class ExplodingDefuseHandler : ICommandHandler<ExplodingDefuseCommand>
+public class ExplodingDefuseHandler : PlayerCommandHandler<ExplodingDefuseCommand>
 {
-	public async Task<ServerResponse> HandleAsync(ExplodingDefuseCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await ExplodingTurnFlow.DefuseReinsertAsync(command, player, context);
-	}
+	protected override Task<ServerResponse> HandleAsync(ExplodingDefuseCommand command, Player player, GameContext context)
+		=> ExplodingTurnFlow.DefuseReinsertAsync(command, player, context);
 }
 
 /// <summary>Exploding: as a Favor's target, give the requester a card of your choice (off-turn).</summary>
-public class ExplodingGiveHandler : ICommandHandler<ExplodingGiveCommand>
+public class ExplodingGiveHandler : PlayerCommandHandler<ExplodingGiveCommand>
 {
-	public async Task<ServerResponse> HandleAsync(ExplodingGiveCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await ExplodingTurnFlow.GiveAsync(command, player, context);
-	}
+	protected override Task<ServerResponse> HandleAsync(ExplodingGiveCommand command, Player player, GameContext context)
+		=> ExplodingTurnFlow.GiveAsync(command, player, context);
 }
 
-/// <summary>Exploding: resolve the pending action once its Nope window elapsed (timer-driven).</summary>
+/// <summary>Exploding: resolve the pending action once its Nope window elapsed (timer-driven —
+/// no acting player to resolve, so this one stays on the bare interface).</summary>
 public class ExplodingResolveWindowHandler : ICommandHandler<ExplodingResolveWindowCommand>
 {
-	private readonly ICorroRulebook _rulebook;
-	public ExplodingResolveWindowHandler(ICorroRulebook rulebook) => _rulebook = rulebook;
-
-	public async Task<ServerResponse> HandleAsync(ExplodingResolveWindowCommand command, GameContext context)
-		=> await ExplodingTurnFlow.ResolveWindowAsync(context, _rulebook.RandomSource);
+	public Task<ServerResponse> HandleAsync(ExplodingResolveWindowCommand command, GameContext context)
+		=> ExplodingTurnFlow.ResolveWindowAsync(context, context.Random);
 }

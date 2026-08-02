@@ -391,26 +391,55 @@ public static class SheddingTurnFlow
 		});
 	}
 
-	/// <summary>The hand emptied: collect every rival hand's points, and either open the
-	/// next round (the winner leads it) or close the match.</summary>
+	/// <summary>The hand emptied: bank the points the round left in every hand — to the winner
+	/// under "collect" scoring, against each holder under "penalty" — and either open the next
+	/// round (the winner leads it either way) or close the match.</summary>
 	private static async Task<(bool RoundEnded, bool GameEnded)> EndRoundAsync(
 		GameContext context, Player winner, IRandomSource random)
 	{
 		var shedding = context.GameState.Shedding!;
 		var runtime = context.Family<SheddingRuntime>();
 		var round = shedding.Round;
+		var penalty = runtime.Rules.Scoring == "penalty";
 
-		var score = SheddingRulebook.ScoreRound(shedding, winner.Id, runtime.Catalog);
-		await context.Announce("game.shedding_round_won", VisualNarrativeVars.Add(new()
+		var score = SheddingRulebook.ScoreRound(shedding, winner.Id, runtime.Catalog, runtime.Rules);
+		if (penalty)
 		{
-			["player"] = winner.Name,
-			["actorId"] = winner.Id,
-			["round"] = round,
-			["points"] = score.Points,
-			["total"] = score.Total,
-		}, "milestone", targetPlayerId: winner.Id, tone: "gain"));
+			// Here winning the round means banking NOTHING: the points stay with whoever still
+			// held them, so the winner's line and each rival's line are separate facts.
+			await context.Announce("game.shedding_round_cleared", VisualNarrativeVars.Add(new()
+			{
+				["player"] = winner.Name,
+				["actorId"] = winner.Id,
+				["round"] = round,
+				["total"] = score.Total,
+			}, "milestone", targetPlayerId: winner.Id, tone: "gain"));
 
-		if (runtime.Rules.TargetScore > 0 && score.Total < runtime.Rules.TargetScore)
+			foreach (var bank in score.Banked)
+			{
+				var holder = context.GameState.Players.FirstOrDefault(p => p.Id == bank.Seat.PlayerId);
+				await context.Announce("game.shedding_round_banked", VisualNarrativeVars.Add(new()
+				{
+					["player"] = holder?.Name ?? bank.Seat.PlayerId,
+					["actorId"] = bank.Seat.PlayerId,
+					["points"] = bank.Points,
+					["total"] = bank.Total,
+				}, "detail", targetPlayerId: bank.Seat.PlayerId, tone: "loss"));
+			}
+		}
+		else
+		{
+			await context.Announce("game.shedding_round_won", VisualNarrativeVars.Add(new()
+			{
+				["player"] = winner.Name,
+				["actorId"] = winner.Id,
+				["round"] = round,
+				["points"] = score.Points,
+				["total"] = score.Total,
+			}, "milestone", targetPlayerId: winner.Id, tone: "gain"));
+		}
+
+		if (!SheddingRulebook.MatchOver(shedding, runtime.Rules))
 		{
 			shedding.Round++;
 			var opener = SheddingRulebook.DealRound(shedding, runtime.Deck, runtime.Rules, random);
@@ -429,98 +458,79 @@ public static class SheddingTurnFlow
 			return (true, false);
 		}
 
-		foreach (var (seat, index) in SheddingRulebook.Placings(shedding).Select((s, i) => (s, i)))
+		var placings = SheddingRulebook.Placings(shedding, runtime.Rules, winner.Id);
+		foreach (var (seat, index) in placings.Select((s, i) => (s, i)))
 		{
 			var p = context.GameState.Players.FirstOrDefault(pl => pl.Id == seat.PlayerId);
 			if (p != null) { p.FinishPlace = index + 1; p.Status = PlayerStatus.Finished; }
 		}
-		context.GameState.WinnerId = winner.Id;
+
+		// The match goes to whoever heads the placings: still the round winner under "collect"
+		// (no other seat can be at the target, and a level score goes to the hand that emptied),
+		// the lowest score under "penalty". Reading it off the placings keeps WinnerId and first
+		// place naming the same player in both directions.
+		var champion = context.GameState.Players
+			.FirstOrDefault(p => p.Id == placings.FirstOrDefault()?.PlayerId) ?? winner;
+
+		if (penalty && placings.Count > 0 && placings[^1].Score >= runtime.Rules.TargetScore
+			&& runtime.Rules.TargetScore > 0)
+		{
+			// Last place carries the highest total: those are the points that ended the match.
+			var busted = placings[^1];
+			var bustedPlayer = context.GameState.Players.FirstOrDefault(p => p.Id == busted.PlayerId);
+			await context.Announce("game.shedding_match_lost", VisualNarrativeVars.Add(new()
+			{
+				["player"] = bustedPlayer?.Name ?? busted.PlayerId,
+				["actorId"] = busted.PlayerId,
+				["target"] = runtime.Rules.TargetScore,
+				["total"] = busted.Score,
+			}, "outcome", targetPlayerId: busted.PlayerId, tone: "loss"));
+		}
+
+		context.GameState.WinnerId = champion.Id;
+		context.GameState.WinnerName = champion.Name; // populated alongside the id, as every other family does
 		context.GameState.IsGameOver = true;
 		await context.Announce("game.game_over", new()
 		{
-			["winner"] = winner.Name,
-			["actorId"] = winner.Id,
+			["winner"] = champion.Name,
+			["actorId"] = champion.Id,
 		});
 		return (true, true);
 	}
 }
 
-/// <summary>Shedding: play a matching card (wilds carry the chosen colour). Carries the
-/// rulebook for its randomness source: penalty draws may reshuffle the buried discards.</summary>
-public class SheddingPlayHandler : ICommandHandler<SheddingPlayCommand>
+/// <summary>Shedding: play a matching card (wilds carry the chosen colour). Penalty draws
+/// may reshuffle the buried discards, so this reads the game's randomness from the context.</summary>
+public class SheddingPlayHandler : PlayerCommandHandler<SheddingPlayCommand>
 {
-	private readonly ICorroRulebook _rulebook;
-	public SheddingPlayHandler(ICorroRulebook rulebook) => _rulebook = rulebook;
-
-	public async Task<ServerResponse> HandleAsync(SheddingPlayCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await SheddingTurnFlow.PlayAsync(command, player, context, _rulebook.RandomSource);
-	}
+	protected override Task<ServerResponse> HandleAsync(SheddingPlayCommand command, Player player, GameContext context)
+		=> SheddingTurnFlow.PlayAsync(command, player, context, context.Random);
 }
 
 /// <summary>Shedding: draw one card — and maybe get the play-it-or-keep-it pause.</summary>
-public class SheddingDrawHandler : ICommandHandler<SheddingDrawCommand>
+public class SheddingDrawHandler : PlayerCommandHandler<SheddingDrawCommand>
 {
-	private readonly ICorroRulebook _rulebook;
-	public SheddingDrawHandler(ICorroRulebook rulebook) => _rulebook = rulebook;
-
-	public async Task<ServerResponse> HandleAsync(SheddingDrawCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await SheddingTurnFlow.DrawAsync(player, context, _rulebook.RandomSource);
-	}
+	protected override Task<ServerResponse> HandleAsync(SheddingDrawCommand command, Player player, GameContext context)
+		=> SheddingTurnFlow.DrawAsync(player, context, context.Random);
 }
 
 /// <summary>Shedding: keep the just-drawn card and pass the turn.</summary>
-public class SheddingKeepHandler : ICommandHandler<SheddingKeepCommand>
+public class SheddingKeepHandler : PlayerCommandHandler<SheddingKeepCommand>
 {
-	public async Task<ServerResponse> HandleAsync(SheddingKeepCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await SheddingTurnFlow.KeepAsync(player, context);
-	}
+	protected override Task<ServerResponse> HandleAsync(SheddingKeepCommand command, Player player, GameContext context)
+		=> SheddingTurnFlow.KeepAsync(player, context);
 }
 
 /// <summary>Shedding: declare the last card. Off-turn.</summary>
-public class SheddingDeclareLastCardHandler : ICommandHandler<SheddingDeclareLastCardCommand>
+public class SheddingDeclareLastCardHandler : PlayerCommandHandler<SheddingDeclareLastCardCommand>
 {
-	public async Task<ServerResponse> HandleAsync(SheddingDeclareLastCardCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await SheddingTurnFlow.DeclareLastCardAsync(player, context);
-	}
+	protected override Task<ServerResponse> HandleAsync(SheddingDeclareLastCardCommand command, Player player, GameContext context)
+		=> SheddingTurnFlow.DeclareLastCardAsync(player, context);
 }
 
 /// <summary>Shedding: catch a rival who forgot the last-card declaration. Off-turn.</summary>
-public class SheddingCatchLastCardHandler : ICommandHandler<SheddingCatchLastCardCommand>
+public class SheddingCatchLastCardHandler : PlayerCommandHandler<SheddingCatchLastCardCommand>
 {
-	private readonly ICorroRulebook _rulebook;
-	public SheddingCatchLastCardHandler(ICorroRulebook rulebook) => _rulebook = rulebook;
-
-	public async Task<ServerResponse> HandleAsync(SheddingCatchLastCardCommand command, GameContext context)
-	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
-		return await SheddingTurnFlow.CatchLastCardAsync(player, context, _rulebook.RandomSource);
-	}
+	protected override Task<ServerResponse> HandleAsync(SheddingCatchLastCardCommand command, Player player, GameContext context)
+		=> SheddingTurnFlow.CatchLastCardAsync(player, context, context.Random);
 }

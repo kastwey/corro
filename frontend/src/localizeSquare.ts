@@ -105,7 +105,7 @@ const CORNER_NAME_KEY: Record<string, string> = {
 export function resolveSquareName(
 	square: Pick<Square, 'name' | 'names' | 'deck' | 'behavior'>,
 	lang: string,
-	decks: ReadonlyArray<{ id: string; label: string }>,
+	decks: readonly { id: string; label: string }[],
 	translate: (key: string) => string,
 ): string {
 	const explicit = localizedSquareName(square, lang);

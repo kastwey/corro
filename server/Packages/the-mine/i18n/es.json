@@ -37,5 +37,15 @@
     "exploding_saw_future": "{{player}} suelta al canario y observa las próximas vetas.",
     "exploding_noped": "{{player}} responde «¡ni hablar!».",
     "exploding_noped_self": "Respondes «¡ni hablar!»."
+  },
+  "bots": {
+    "foreman": "Capataz Escombro",
+    "canary": "Pepe Canario",
+    "pickaxe": "Viejo Pico",
+    "sooty": "Tiznado",
+    "lamp": "Lucerna",
+    "quarry": "Cantera",
+    "dynamite": "Mecha Corta",
+    "gallery": "Galería Honda"
   }
 }

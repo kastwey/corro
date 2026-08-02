@@ -5,16 +5,20 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>All Welcome</title>
   <script>
-	// Apply the saved/system theme before first paint to avoid a flash.
-	(function () {
-	  try {
-		var t = localStorage.getItem('corro-theme');
-		if (t !== 'dark' && t !== 'light') {
-		  t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
-		}
-		document.documentElement.setAttribute('data-theme', t);
-	  } catch (e) { /* ignore */ }
-	})();
+  	// Language before first paint, mirroring the theme block above. A screen reader picks its
+  	// voice from this attribute, so it must never be wrong even briefly — and it is the one part
+  	// of localization that CAN be resolved synchronously, since the strings themselves are
+  	// fetched. i18nBinder re-applies the same value once those arrive.
+  	(function () {
+  	  try {
+  		var m = document.cookie.match(/(?:^|;\s*)corro_language=([^;]*)/);
+  		var lang = m ? decodeURIComponent(m[1]) : '';
+  		if (lang !== 'en' && lang !== 'es') {
+  		  lang = (navigator.language || 'en').slice(0, 2) === 'es' ? 'es' : 'en';
+  		}
+  		document.documentElement.lang = lang;
+  	  } catch (e) { /* the binder sets it again once the strings load */ }
+  	})();
   </script>
   <link rel="stylesheet" href="css/theme.css" />
   <link rel="stylesheet" href="styles.css" />
@@ -30,6 +34,8 @@
 	<link rel="stylesheet" href="css/visual-narrative.css" />
   <link rel="stylesheet" href="css/action-bar.css" />
   <link rel="stylesheet" href="css/end-screen.css" />
+  <link rel="stylesheet" href="css/table-view.css" />
+  <link rel="stylesheet" href="css/team-panel.css" />
   <link rel="stylesheet" href="css/race-board.css" />
   <link rel="stylesheet" href="css/track-board.css" />
   <link rel="stylesheet" href="css/journey-board.css" />
@@ -50,7 +56,73 @@
 	<p id="game-surface-intro" class="app-intro" data-i18n="game.surface_intro.loading" data-i18n-defer hidden>Focus will move automatically to the game's main area when loading finishes. Press Control plus F1 to view the shortcuts.</p>
 	<div id="voice-panel-mount"></div>
 
-	<div class="game-layout">
+	<!-- The table between matches: who is here, the code that brings someone else, and the
+		 host's way to start the next game. Chat and voice stay mounted above it, which is why
+		 this lives on the game page instead of sending everyone back to the lobby. -->
+	<section id="table-view" class="table-view" hidden>
+	  <h2 id="table-heading" class="table-view__heading" tabindex="-1" data-i18n="table.heading">At the table</h2>
+	  <!-- Written for whoever is reading it: the host is not waiting for the host. Both the key
+		   and the text are set from the table (see tableView.ts), the way the game-surface
+		   introduction does it, so a language change still re-translates the right line. -->
+	  <p class="table-view__intro" id="table-intro" data-i18n="table.introGuest">No game is running. Talk while the others arrive; the host starts when you are ready.</p>
+	  <p class="table-view__invite">
+		<span data-i18n="table.inviteLabel">Invite code:</span>
+		<strong id="table-code"></strong>
+		<button type="button" id="table-copy-code" class="secondary-button" data-i18n="table.copyCode" hidden>Copy code</button>
+	  </p>
+	  <p class="table-view__invite">
+		<span data-i18n="lobby.inviteLink">Invite link:</span>
+		<span id="table-invite-url"></span>
+		<button type="button" id="table-copy-link" class="secondary-button" data-i18n="lobby.copyLink" hidden>Copy link</button>
+	  </p>
+
+	  <!-- The player's own re-entry code: the one thing worth writing down, since it recovers
+		   this seat from any browser if the saved session is lost. -->
+	  <div id="table-rejoin-mount"></div>
+
+	  <!-- Language-split content (a word deck, a question deck): one shared choice for the whole
+		   table, which the host may change until a match starts. Everyone else reads it. -->
+	  <div class="form-group" id="table-content-language-group" hidden>
+		<label for="table-content-language" data-i18n="lobby.contentLanguage">Content language:</label>
+		<select id="table-content-language" aria-describedby="table-content-language-hint"></select>
+		<p id="table-content-language-hint" class="form-hint" data-i18n="lobby.contentLanguageWaitingHint">The host may change this shared deck until the game starts.</p>
+	  </div>
+	  <p id="table-content-language-current" hidden></p>
+
+	  <!-- The table remembers the last game it played, so the result outlives the match — and a
+		   player who reconnects afterwards can still find out how it ended. -->
+	  <p class="table-view__last-match" id="table-last-match" hidden>
+		<span id="table-last-match-line"></span>
+		<button type="button" id="table-standings" class="secondary-button" data-i18n="table.viewStandings">See the standings</button>
+	  </p>
+
+	  <h3 class="table-view__players-heading" data-i18n="table.playersHeading">Who is here</h3>
+	  <ul id="table-players" class="table-view__players player-list"></ul>
+	  <!-- Bot seats (families with a bot brain): the host fills empty chairs. -->
+	  <button type="button" id="table-add-bot" class="secondary-button" data-i18n="lobby.addBot" hidden>Add a bot</button>
+
+	  <!-- Team boards: the host arranges everyone before there is a game to play; the rest of
+		   the table watches the same picture, read-only. -->
+	  <div id="table-team-panel" class="team-panel hidden" hidden></div>
+
+	  <!-- The board's own house rules, for the NEXT match. A table plays again and again, and
+		   the game that just ended is exactly when a group decides to change them. -->
+	  <details id="table-rules" class="rules-details" hidden>
+		<summary data-i18n="table.rulesHeading">Rules for the next match</summary>
+		<div id="table-rules-fields"></div>
+	  </details>
+	  <p id="table-waiting-host" class="loading" data-i18n="lobby.waitingForHost" hidden>Waiting for host to start the game...</p>
+	  <!-- The table's actions: an ARIA toolbar, built by tableView.ts from what THIS reader may
+		   actually do. They are not written here because they are not the same for everyone —
+		   only the host starts a match or ends the table — and a button that is sometimes absent
+		   is better described than hidden. See docs/accessibility.md. -->
+	  <div id="table-actions"></div>
+	</section>
+
+	<!-- Starts hidden: this page serves a TABLE or a MATCH, and which one is only known when the
+		 server answers. Showing the board first flashed an empty grid at everyone who was only
+		 sitting down at their table. -->
+	<div class="game-layout" id="game-layout" hidden>
 	  <div class="game-layout__board">
 		<div class="board-frame">
 		  <!-- The turn indicator is inserted dynamically above the board. -->

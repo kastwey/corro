@@ -12,13 +12,14 @@
 //
 // Pure helpers (tradeableProperties / summarizeSide) are exported for unit testing without DOM.
 
-import { tSync, money, localizeColor, i18nBinder } from './i18nBinder.js';
+import { tSync, money, localizeColor } from './i18nBinder.js';
 import { groupDisplayName } from './localizeSquare.js';
 import { setAnnouncerHost } from './announcer.js';
 import { makeDialogDraggable } from './dialogDrag.js';
 import { RovingCheckboxList } from './accessibleList.js';
 import { MORTGAGE_RATE } from './managePropertiesDialog.js';
 import { isOwnableSquare } from './squareBehavior.js';
+import { joinList } from './listFormat.js';
 import type { Player, Square, TradeSideDto, TradePropertyDto } from './models.js';
 
 const t = (key: string, vars?: Record<string, any>) => tSync(`game.${key}`, vars);
@@ -98,16 +99,6 @@ export function tradePropertyLabel(p: TradePropertyDto, formatMoney: (v: number)
 	return details ? `${p.name} (${details})` : p.name;
 }
 
-/** Join items the way a SPOKEN sentence needs them — "A, B y C" / "A, B, and C". The screen
- *  reader hears a composed label as one line, so the last connector carries the flow; visual
- *  separators ("·", ";") don't speak and leave a soup of juxtaposed facts. */
-export function joinList(items: string[], lang: string = i18nBinder.getCurrentLanguage()): string {
-	try {
-		return new Intl.ListFormat(lang, { style: 'long', type: 'conjunction' }).format(items);
-	} catch {
-		return items.join(', ');
-	}
-}
 
 /** Human-readable summary of one side of a trade (for review text + aria), flowing as ONE
  *  sentence: "Elda (150₡), 200₡ in cash and 1 release pass". Money is worded as cash so
@@ -377,7 +368,7 @@ class TradeDialogClass {
 		const validateAmounts = (): HTMLInputElement | null => {
 			const target = currentTarget();
 			const me = myLive();
-			const checks: Array<{ input: HTMLInputElement; max: number; over: () => string }> = [
+			const checks: { input: HTMLInputElement; max: number; over: () => string }[] = [
 				{ input: giveMoney, max: me.money, over: () => t('trade_error_money_over_you', { max: money(me.money) }) },
 				{ input: giveReleasePasses, max: me.releasePasses ?? 0, over: () => t('trade_error_release_pass_over_you', { count: me.releasePasses ?? 0 }) },
 				{ input: reqMoney, max: target.money, over: () => t('trade_error_money_over_target', { name: target.name, max: money(target.money) }) },

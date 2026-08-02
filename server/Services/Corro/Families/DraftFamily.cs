@@ -40,36 +40,10 @@ public sealed class DraftFamily : IGameFamily
 	/// attributes, named cards, and enough cards to deal every round at every table size.</summary>
 	public void ValidateDefinition(GameDefinition d)
 	{
-		var deck = d.DraftDeck
-			?? throw new InvalidOperationException("draft package has no deck (cards.json).");
-		if (deck.Count == 0)
-		{
-			throw new InvalidOperationException("draft deck has no cards.");
-		}
-
-		var ids = deck.Select(c => c.Id).ToList();
-		if (ids.Any(string.IsNullOrWhiteSpace) || ids.Distinct().Count() != ids.Count)
-		{
-			throw new InvalidOperationException("every draft card needs a unique id.");
-		}
+		var deck = DeckValidation.RequireWellFormedDeck(d.DraftDeck, "draft", CardTypes);
 
 		foreach (var card in deck)
 		{
-			if (!CardTypes.Contains(card.Type))
-			{
-				throw new InvalidOperationException($"draft card '{card.Id}' has an unknown type '{card.Type}'.");
-			}
-
-			if (string.IsNullOrWhiteSpace(card.NameKey))
-			{
-				throw new InvalidOperationException($"draft card '{card.Id}' has no name (add a nameKey).");
-			}
-
-			if (card.Count < 1)
-			{
-				throw new InvalidOperationException($"draft card '{card.Id}' needs a positive count.");
-			}
-
 			switch (card.Type)
 			{
 				case "points" when card.Value < 1:

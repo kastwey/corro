@@ -65,7 +65,7 @@ export function attackableSlots(card: AssemblyCardDef, target: AssemblySeatState
 /** Rivals holding at least one hittable slot, with those slots (empty = unplayable). */
 export function attackTargets(
 	gs: GameState, myId: string, card: AssemblyCardDef,
-): Array<{ seat: AssemblySeatState; slots: AssemblySlot[] }> {
+): { seat: AssemblySeatState; slots: AssemblySlot[] }[] {
 	return (gs.assembly?.seats ?? [])
 		.filter(s => s.playerId !== myId)
 		.map(seat => ({ seat, slots: attackableSlots(card, seat) }))
@@ -92,7 +92,7 @@ export function canSwapPair(
 /** Rivals with at least one stealable slot (non-locked, of a colour my rack lacks). */
 export function stealTargets(
 	gs: GameState, myId: string,
-): Array<{ seat: AssemblySeatState; slots: AssemblySlot[] }> {
+): { seat: AssemblySeatState; slots: AssemblySlot[] }[] {
 	const mine = assemblySeat(gs, myId);
 	if (!mine) return [];
 	const myColors = new Set(mine.slots.map(s => s.color));
@@ -106,7 +106,7 @@ export function stealTargets(
  *  SOME of my non-locked slots forms a legal pair with it. */
 export function swapTargets(
 	gs: GameState, myId: string,
-): Array<{ seat: AssemblySeatState; slots: AssemblySlot[] }> {
+): { seat: AssemblySeatState; slots: AssemblySlot[] }[] {
 	const mine = assemblySeat(gs, myId);
 	if (!mine || mine.slots.length === 0) return [];
 	return (gs.assembly?.seats ?? [])

@@ -196,24 +196,15 @@ public sealed class CorroPackageLoader
 	private static GameDefinition ResolveCardArt(GameDefinition definition, string packageDir)
 	{
 		var ids = definition.Cards.Select(c => c.Id)
-			.Concat(definition.JourneyDeck?.Select(c => c.Id) ?? [])
-			.Concat(definition.AssemblyDeck?.Select(c => c.Id) ?? [])
-			.Concat(definition.DraftDeck?.Select(c => c.Id) ?? [])
-			.Concat(definition.SheddingDeck?.Select(c => c.Id) ?? [])
-			.Concat(definition.ExplodingDeck?.Select(c => c.Id) ?? [])
+			.Concat(definition.AllFamilyCards.Select(c => c.Id))
 			.ToHashSet(StringComparer.Ordinal);
 		var art = ReadCardArtFiles(packageDir, ids);
-		CardArt For(string id) => art.GetValueOrDefault(id) ?? new CardArt(null, false);
 
-		return definition with
+		return definition.WithResolvedCardArt(id =>
 		{
-			Cards = definition.Cards.Select(c => c with { Svg = For(c.Id).Svg, HasPngArt = For(c.Id).HasPng }).ToList(),
-			JourneyDeck = definition.JourneyDeck?.Select(c => c with { Svg = For(c.Id).Svg, HasPngArt = For(c.Id).HasPng }).ToList(),
-			AssemblyDeck = definition.AssemblyDeck?.Select(c => c with { Svg = For(c.Id).Svg, HasPngArt = For(c.Id).HasPng }).ToList(),
-			DraftDeck = definition.DraftDeck?.Select(c => c with { Svg = For(c.Id).Svg, HasPngArt = For(c.Id).HasPng }).ToList(),
-			SheddingDeck = definition.SheddingDeck?.Select(c => c with { Svg = For(c.Id).Svg, HasPngArt = For(c.Id).HasPng }).ToList(),
-			ExplodingDeck = definition.ExplodingDeck?.Select(c => c with { Svg = For(c.Id).Svg, HasPngArt = For(c.Id).HasPng }).ToList(),
-		};
+			var resolved = art.GetValueOrDefault(id);
+			return (resolved?.Svg, resolved?.HasPng ?? false);
+		});
 	}
 
 	private sealed record CardArt(string? Svg, bool HasPng);
@@ -574,11 +565,7 @@ public sealed class CorroPackageLoader
 	private static void ValidateCardArtColors(GameDefinition definition)
 	{
 		var colors = definition.Cards.Select(card => (card.Id, card.ArtColor))
-			.Concat(definition.JourneyDeck?.Select(card => (card.Id, card.ArtColor)) ?? [])
-			.Concat(definition.AssemblyDeck?.Select(card => (card.Id, card.ArtColor)) ?? [])
-			.Concat(definition.DraftDeck?.Select(card => (card.Id, card.ArtColor)) ?? [])
-			.Concat(definition.SheddingDeck?.Select(card => (card.Id, card.ArtColor)) ?? [])
-			.Concat(definition.ExplodingDeck?.Select(card => (card.Id, card.ArtColor)) ?? []);
+			.Concat(definition.AllFamilyCards.Select(card => (card.Id, card.ArtColor)));
 		foreach (var (id, color) in colors)
 		{
 			if (color is not null && !Regex.IsMatch(color, "^#[0-9A-Fa-f]{6}$"))

@@ -47,5 +47,13 @@
       "id": "welder",
       "nameKey": "tokens.welder"
     }
+  ],
+  "botNames": [
+    "bots.chatarrin",
+    "bots.tuercas",
+    "bots.soldador",
+    "bots.iman",
+    "bots.dron",
+    "bots.averia"
   ]
 }

@@ -201,7 +201,7 @@ class AnnouncerQueue {
 	/** The current polite batch must flush through the ASSERTIVE region (own-action story). */
 	private batchAssertive = false;
 	/** Resolvers waiting for the next polite live-region write before state may repaint. */
-	private politeWriteWaiters: Array<() => void> = [];
+	private politeWriteWaiters: (() => void)[] = [];
 	/** Rolling history of spoken game announcements, oldest first. */
 	private history: string[] = [];
 	/** Index into history currently under review; -1 means "live" (not browsing). */
@@ -602,9 +602,7 @@ let queue: AnnouncerQueue | null = null;
 
 /** Create (or reuse) the page announcer and return its announce function. */
 export function createAnnouncer(): AnnounceFn {
-	if (!queue) {
-		queue = new AnnouncerQueue();
-	}
+	queue ??= new AnnouncerQueue();
 	const instance = queue;
 	return (event: AnnouncementEvent, options?: AnnounceOptions) => instance.announce(event, options);
 }

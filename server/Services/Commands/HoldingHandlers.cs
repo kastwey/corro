@@ -7,7 +7,7 @@ namespace CorroServer.Services.Commands;
 /// Handles paying release cost to get out of holding.
 /// Validates and delegates to CorroRulebook.
 /// </summary>
-public class PayReleaseCostHandler : ICommandHandler<PayReleaseCostCommand>
+public class PayReleaseCostHandler : PlayerCommandHandler<PayReleaseCostCommand>
 {
 	private readonly ICorroRulebook _rulebook;
 
@@ -16,13 +16,8 @@ public class PayReleaseCostHandler : ICommandHandler<PayReleaseCostCommand>
 		_rulebook = rulebook;
 	}
 
-	public async Task<ServerResponse> HandleAsync(PayReleaseCostCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(PayReleaseCostCommand command, Player player, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
 		var outcome = await _rulebook.PayReleaseCostAsync(player, context);
 
 		if (outcome.AsError() is { } outcomeError)
@@ -45,7 +40,7 @@ public class PayReleaseCostHandler : ICommandHandler<PayReleaseCostCommand>
 /// Handler for using a release pass.
 /// Validates and delegates to CorroRulebook.
 /// </summary>
-public class UseReleasePassHandler : ICommandHandler<UseReleasePassCommand>
+public class UseReleasePassHandler : PlayerCommandHandler<UseReleasePassCommand>
 {
 	private readonly ICorroRulebook _rulebook;
 
@@ -54,13 +49,8 @@ public class UseReleasePassHandler : ICommandHandler<UseReleasePassCommand>
 		_rulebook = rulebook;
 	}
 
-	public async Task<ServerResponse> HandleAsync(UseReleasePassCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(UseReleasePassCommand command, Player player, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
-
 		var outcome = await _rulebook.UseReleasePassAsync(player, context);
 
 		if (outcome.AsError() is { } outcomeError)

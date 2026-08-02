@@ -9,9 +9,7 @@
 import {
 	resolveLocalizedVars, resolveTeamVars, resolveTokenVar, translateWithSelfFallback,
 } from './announcer.js';
-import { genericCardArtHtml, genericCardBackHtml } from './cardArt.js';
-import { explodingCardArtHtml, explodingCardBackHtml } from './explodingCardArt.js';
-import { journeyCardArtHtml, journeyCardBackHtml } from './journeyCardArt.js';
+import { familyCardBackHtml, familyCardFaceHtml } from './familyCardCatalog.js';
 import { tSync } from './i18nBinder.js';
 import { isTokenMotionDisabled } from './motion.js';
 import {
@@ -21,8 +19,8 @@ import type { AnnouncementEvent } from './gameClient.js';
 import type { GameState } from './models.js';
 
 export interface VisualNarrativeDeps {
-	getGameState(): GameState | null;
-	getMyPlayerId(): string | null;
+	getGameState: () => GameState | null;
+	getMyPlayerId: () => string | null;
 }
 
 interface VisualMeta {
@@ -127,9 +125,7 @@ class VisualNarrative {
 		const text = this.translate(event);
 		if (text) this.pending.push({ text, meta });
 		this.playEffect(meta);
-		if (this.flushTimer === null) {
-			this.flushTimer = window.setTimeout(() => this.flush(), 0);
-		}
+		this.flushTimer ??= window.setTimeout(() => this.flush(), 0);
 	}
 
 	private translate(event: AnnouncementEvent): string {
@@ -448,35 +444,11 @@ class VisualNarrative {
 	}
 
 	private cardMarkup(cardId: string | null): string {
-		const state = this.deps?.getGameState();
-		if (cardId && state?.gameType === 'exploding') {
-			const def = state.explodingDeck?.find(card => card.id === cardId);
-			if (def) return explodingCardArtHtml(def, tSync(def.nameKey));
-		}
-		if (cardId && state?.gameType === 'assembly') {
-			const def = state.assemblyDeck?.find(card => card.id === cardId);
-			if (def) return genericCardArtHtml(def, tSync(def.nameKey));
-		}
-		if (cardId && state?.gameType === 'journey') {
-			const def = state.journeyDeck?.find(card => card.id === cardId);
-			if (def) return journeyCardArtHtml(def, tSync(def.nameKey));
-		}
-		if (cardId && state?.gameType === 'draft') {
-			const def = state.draftDeck?.find(card => card.id === cardId);
-			if (def) return genericCardArtHtml(def, tSync(def.nameKey));
-		}
-		if (cardId && state?.gameType === 'shedding') {
-			const def = state.sheddingDeck?.find(card => card.id === cardId);
-			if (def) return genericCardArtHtml(def, tSync(def.nameKey));
-		}
-		return this.cardBackMarkup();
+		return familyCardFaceHtml(this.deps?.getGameState(), cardId);
 	}
 
 	private cardBackMarkup(): string {
-		const family = this.deps?.getGameState()?.gameType;
-		if (family === 'exploding') return explodingCardBackHtml();
-		if (family === 'journey') return journeyCardBackHtml();
-		return genericCardBackHtml();
+		return familyCardBackHtml(this.deps?.getGameState());
 	}
 
 	private localCard(playerId: string | null, cardId: string | null): HTMLElement | null {

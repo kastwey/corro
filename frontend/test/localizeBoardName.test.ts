@@ -1,7 +1,7 @@
 import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { setupDom, installFakeI18next } from './helpers/dom.js';
-import { localizeBoardName, formatGameDate, parseHubErrorCode, isResumableToBoardStatus, pickPackageName, renderBoardOptions } from '../src/lobby/ui.js';
+import { localizeBoardName, formatGameDate, parseHubErrorCode, isTableAtRestStatus, pickPackageName, renderBoardOptions } from '../src/lobby/ui.js';
 
 before(() => {
 	setupDom();
@@ -85,21 +85,19 @@ test('parseHubErrorCode returns null when there is no recognizable HubException 
 	assert.equal(parseHubErrorCode('plain string'), null);
 });
 
-test('an in-progress status resumes straight to the board (snake_case from the server)', () => {
-	assert.equal(isResumableToBoardStatus('active'), true);
-	assert.equal(isResumableToBoardStatus('paused'), true);
-	assert.equal(isResumableToBoardStatus('starting'), true);
+test('a table with no match running is resumed by re-authenticating first', () => {
+	assert.equal(isTableAtRestStatus('waiting_for_players'), true);
 });
 
-test('a waiting/finished/missing status reconnects to the waiting room instead of the board', () => {
-	assert.equal(isResumableToBoardStatus('waiting_for_players'), false);
-	assert.equal(isResumableToBoardStatus('completed'), false);
-	assert.equal(isResumableToBoardStatus('abandoned'), false);
-	assert.equal(isResumableToBoardStatus(undefined), false);
+test('a table with a match in it is walked straight into', () => {
+	assert.equal(isTableAtRestStatus('active'), false);
+	assert.equal(isTableAtRestStatus('paused'), false);
+	assert.equal(isTableAtRestStatus('starting'), false);
+	assert.equal(isTableAtRestStatus(undefined), false);
 });
 
 test('PascalCase status values never match (guards against the old casing bug)', () => {
-	assert.equal(isResumableToBoardStatus('Active'), false);
-	assert.equal(isResumableToBoardStatus('Paused'), false);
-	assert.equal(isResumableToBoardStatus('Starting'), false);
+	// The hub serializes GameStatus as SnakeCaseLower; comparing against the C# spelling was a
+	// real bug once, and it fails silently — everything just resumes to the wrong place.
+	assert.equal(isTableAtRestStatus('WaitingForPlayers'), false);
 });

@@ -45,9 +45,9 @@ export interface AnnouncementGateOptions {
  * decide wait-vs-release), and call {@link settle} when the token animation finishes.
  */
 export class AnnouncementGate {
-	private readonly buffer: Array<{ event: AnnouncementEvent; options?: AnnounceOptions }> = [];
+	private readonly buffer: { event: AnnouncementEvent; options?: AnnounceOptions }[] = [];
 	/** Visual side-effects (e.g. the card-reveal flip) paced to the same hop as the buffer. */
-	private readonly visualBuffer: Array<() => void> = [];
+	private readonly visualBuffer: (() => void)[] = [];
 	/** True once a `move` line has arrived: this action's `resolve` lines are being paced. */
 	private armed = false;
 	private safetyTimer: unknown = null;

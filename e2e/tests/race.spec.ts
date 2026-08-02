@@ -77,7 +77,7 @@ test('lobby seats: a taken colour says who holds it, bounces away, and the choic
 	await berto.locator('#join-token-list input.token-radio:not([data-taken])').first().dispatchEvent('click');
 	await berto.locator('#join-seat-list input[value="blue"]').dispatchEvent('click');
 	await berto.click('#join-final-button');
-	await expect(berto.locator('#lobby-joined')).toBeVisible();
+	await expect(berto.locator('#table-view')).toBeVisible();
 	await startGame(ana, [ana, berto]);
 
 	await expect(berto.locator('.player-card', { hasText: 'Ana' }))

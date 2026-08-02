@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Reflection;
 using CorroServer.Hubs;
 using CorroServer.Models;
@@ -136,7 +138,13 @@ public class GameHubRoutingTests
 		var service = new FakeGameService(
 			new AuctionEndedResponse { SquareIndex = 1, SquareName = "Square 1", PropertySold = true, WinnerId = "a", WinningBid = 12 })
 		{
-			GameStateOverride = new GameState { CurrentTurn = "a" }
+			// A LIVE auction, which is the only situation in which the bid timer legitimately
+			// fires; a tick arriving after one already resolved is ignored (see the test below).
+			GameStateOverride = new GameState
+			{
+				CurrentTurn = "a",
+				ActiveAuction = new AuctionState { SquareIndex = 1, SquareName = "Square 1", InitiatorPlayerId = "a" },
+			},
 		};
 
 		var hubContext = new FakeHubContext();
@@ -151,6 +159,38 @@ public class GameHubRoutingTests
 		Assert.True(hubContext.GroupProxy.Received("CommandResponse"));
 		// ...AND the full state must be broadcast so ownership/money/turn repaint everywhere.
 		Assert.True(service.NotifyStateChangedCalled);
+	}
+
+	/// <summary>
+	/// Live-play report: a bid nobody could match ended the auction, and a moment later every
+	/// player was shown the server insisting there was no active auction.
+	///
+	/// The bid timer runs on its own clock. When the auction resolves through the normal command
+	/// path the timer is retired by the state change that follows, but a tick already in flight
+	/// cannot be recalled — it issued EndAuctionCommand against nothing, and the NO_ACTIVE_AUCTION
+	/// error was broadcast to the whole group as if the auction had failed.
+	/// </summary>
+	[Fact]
+	public async Task BidTimeout_AfterTheAuctionAlreadyResolved_IsIgnoredInsteadOfErroringTheTable()
+	{
+		var gameId = "g-" + Guid.NewGuid().ToString("N");
+		var service = new FakeGameService(
+			new AuctionEndedResponse { SquareIndex = 1, SquareName = "Square 1", PropertySold = true, WinnerId = "a", WinningBid = 12 })
+		{
+			// The auction is over: the winning bid was accepted and the state already reflects it.
+			GameStateOverride = new GameState { CurrentTurn = "a", ActiveAuction = null },
+		};
+
+		var hubContext = new FakeHubContext();
+		var timer = new RaisableAuctionTimer();
+		var registry = new GameSessionRegistry(hubContext, new FakeRepository(), timer, TestFixtures.NewPackageRestorer());
+		registry.RegisterService(gameId, service);
+
+		await timer.RaiseBidTimeout(gameId);
+
+		Assert.Null(service.LastCommand);
+		Assert.False(hubContext.GroupProxy.Received("CommandResponse"),
+			"a resolved auction must not tell the table that anything went wrong");
 	}
 
 	[Fact]
@@ -203,42 +243,97 @@ public class GameHubRoutingTests
 	}
 
 	[Fact]
-	public async Task PayReleaseCost_RoutesPayReleaseCostCommand_WithCallerPlayerId()
+	public async Task ExecuteCommand_ForAnotherPlayer_IsRejected_AndNeverReachesTheGame()
 	{
-		var (hub, _, _, _, service) = BuildHubWithService(
+		// The single polymorphic entry point makes this the ONE guard standing between a client and
+		// every command in the engine, so it is pinned here: a payload naming somebody else's player
+		// id must be refused before the game service ever sees it.
+		var (hub, clients, _, _, service) = BuildHubWithService(
 			new BidPlacedResponse { SquareIndex = 0, SquareName = "", BidderId = "", BidderName = "", Amount = 0 });
 
-		await hub.PayReleaseCost("a");
+		await hub.ExecuteCommand(new RollDiceCommand { PlayerId = "b" });
 
-		var command = Assert.IsType<PayReleaseCostCommand>(service.LastCommand);
-		Assert.Equal("a", command.PlayerId);
+		Assert.Equal("CANNOT_EXECUTE_FOR_OTHERS", clients.Caller.LastError());
+		Assert.Null(service.LastCommand);
 	}
 
+	/// <summary>
+	/// The wire contract: a command the client is allowed to send round-trips through the
+	/// polymorphic allowlist into its own concrete type, carrying its payload. If a command is
+	/// ever added without a <c>[JsonDerivedType]</c> entry, its arm here stops deserializing.
+	/// </summary>
+	[Theory]
+	[InlineData("ROLL_DICE", typeof(RollDiceCommand), "")]
+	[InlineData("END_TURN", typeof(EndTurnCommand), "")]
+	[InlineData("PAY_HOLDING_RELEASE_COST", typeof(PayReleaseCostCommand), "")]
+	[InlineData("USE_RELEASE_PASS", typeof(UseReleasePassCommand), "")]
+	[InlineData("FORBIDDEN_CORRECT", typeof(ForbiddenCorrectCommand), ",\"cardSequence\":3")]
+	[InlineData("SHEDDING_PLAY", typeof(SheddingPlayCommand), ",\"instanceId\":\"red5#0\"")]
+	[InlineData("EXPLODING_NOPE", typeof(ExplodingNopeCommand), ",\"instanceId\":\"nope#0\"")]
+	[InlineData("PROPOSE_TRADE", typeof(ProposeTradeCommand), ",\"targetPlayerId\":\"b\"")]
+	public void GameCommand_DeserializesFromItsWireDiscriminator(string discriminator, Type expected, string payload)
+	{
+		var json = $$"""{"$type":"{{discriminator}}","playerId":"a"{{payload}}}""";
+
+		var command = JsonSerializer.Deserialize<GameCommand>(json, WireJson);
+
+		Assert.IsType(expected, command);
+		Assert.Equal("a", command!.PlayerId);
+		Assert.Equal(discriminator, command.Type);
+	}
+
+	/// <summary>
+	/// The other half of that contract, and the reason the allowlist is written by hand: the three
+	/// commands only <c>GameSessionRegistry</c>'s timers may raise — ending an auction, resolving a
+	/// Nope window, expiring a Forbidden turn — are absent from it, so a client cannot forge one
+	/// however it shapes the payload. Adding any of them to the list would fail this test.
+	/// </summary>
+	[Theory]
+	[InlineData("END_AUCTION")]
+	[InlineData("EXPLODING_RESOLVE_WINDOW")]
+	[InlineData("FORBIDDEN_EXPIRE_TURN")]
+	public void GameCommand_ServerOnlyCommands_CannotBeDeserializedFromTheWire(string discriminator)
+	{
+		var json = $$"""{"$type":"{{discriminator}}","playerId":"a"}""";
+
+		Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<GameCommand>(json, WireJson));
+	}
+
+	/// <summary>
+	/// The bid timer follows the STATE, not whichever command ran. It used to be stopped by the
+	/// hub's PassAuction method, which meant every other route out of an auction had to remember
+	/// to do it — and left auction-specific code sitting in the one entry point every family's
+	/// commands share. It is now reconciled on each state change, beside the Nope window and the
+	/// Forbidden clock.
+	/// </summary>
 	[Fact]
-	public async Task UseReleasePass_RoutesUseReleasePassCommand_WithCallerPlayerId()
+	public void BidTimer_RunsWhileTheAuctionIsLive_AndIsRetiredOnceItResolves()
 	{
-		var (hub, _, _, _, service) = BuildHubWithService(
-			new BidPlacedResponse { SquareIndex = 0, SquareName = "", BidderId = "", BidderName = "", Amount = 0 });
+		var live = new GameState
+		{
+			ActiveAuction = new AuctionState { SquareIndex = 1, SquareName = "Square 1", InitiatorPlayerId = "a" }
+		};
+		Assert.Same(live.ActiveAuction, GameSessionRegistry.ShouldRunBidTimer(live));
 
-		await hub.UseReleasePass("a");
+		// Resolved (a bid won it, or the last rival passed): IsActive goes false and the timer
+		// must not keep ticking against a finished auction.
+		var resolved = new GameState
+		{
+			ActiveAuction = new AuctionState
+			{
+				SquareIndex = 1, SquareName = "Square 1", InitiatorPlayerId = "a", IsActive = false
+			}
+		};
+		Assert.Null(GameSessionRegistry.ShouldRunBidTimer(resolved));
 
-		var command = Assert.IsType<UseReleasePassCommand>(service.LastCommand);
-		Assert.Equal("a", command.PlayerId);
+		// And an ordinary turn in any family — no auction at all — never arms it.
+		Assert.Null(GameSessionRegistry.ShouldRunBidTimer(new GameState()));
+		Assert.Null(GameSessionRegistry.ShouldRunBidTimer(null));
 	}
 
-	[Fact]
-	public async Task RollDice_RoutesRollDiceCommand_WithCallerPlayerId()
-	{
-		// Pins RollDice's routing so it can be simplified to delegate to ExecuteCommand (like the
-		// other command hub methods) instead of re-implementing auth/lookup/dispatch itself.
-		var (hub, _, _, _, service) = BuildHubWithService(
-			new BidPlacedResponse { SquareIndex = 0, SquareName = "", BidderId = "", BidderName = "", Amount = 0 });
-
-		await hub.RollDice("a");
-
-		var command = Assert.IsType<RollDiceCommand>(service.LastCommand);
-		Assert.Equal("a", command.PlayerId);
-	}
+	/// <summary>Deserializes the way SignalR's JSON protocol does (camelCase properties).</summary>
+	private static readonly JsonSerializerOptions WireJson =
+		new(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
 	[Fact]
 	public async Task CreateGameLobby_PersistsLobbySettings_NotJustTheDefaults()
@@ -374,7 +469,7 @@ public class GameHubRoutingTests
 	}
 
 	[Fact]
-	public async Task CreateGameLobby_PersistsTheExplicitForbiddenWordLanguageAndChoices()
+	public async Task CreateGameLobby_PersistsTheExplicitContentLanguageAndChoices()
 	{
 		var repository = new CapturingRepository();
 		var store = new CorroPackageStore(
@@ -399,12 +494,12 @@ public class GameHubRoutingTests
 		});
 
 		Assert.Equal("es", repository.Created!.Language);
-		Assert.Equal(new[] { "en", "es" }, repository.Created.ForbiddenWordLanguages);
+		Assert.Equal(new[] { "en", "es" }, repository.Created.ContentLanguages);
 		store.Release(token);
 	}
 
 	[Fact]
-	public async Task CreateGameLobby_RejectsAForbiddenWordLanguageOutsideThePackage()
+	public async Task CreateGameLobby_RejectsAContentLanguageOutsideThePackage()
 	{
 		var repository = new CapturingRepository();
 		var store = new CorroPackageStore(
@@ -434,7 +529,7 @@ public class GameHubRoutingTests
 	}
 
 	[Fact]
-	public async Task Host_can_change_the_Forbidden_Words_language_while_waiting()
+	public async Task Host_can_change_the_shared_content_language_while_waiting()
 	{
 		var repository = new CapturingRepository();
 		repository.Seed(WaitingForbiddenGame());
@@ -444,7 +539,7 @@ public class GameHubRoutingTests
 		registry.MapConnectionToGame(hub.Context.ConnectionId, "g1");
 		registry.AuthenticateConnection(hub.Context.ConnectionId, "host");
 
-		await hub.SetForbiddenWordLanguage(new SetForbiddenWordLanguageRequest
+		await hub.SetContentLanguage(new SetContentLanguageRequest
 		{
 			GameId = "g1",
 			HostId = "host",
@@ -453,11 +548,11 @@ public class GameHubRoutingTests
 
 		Assert.Equal("es", repository.Created!.Language);
 		Assert.True(clients.Group("lobby_g1").Received("LobbyUpdated"));
-		Assert.True(clients.Group("lobby_g1").Received("ForbiddenWordLanguageChanged"));
+		Assert.True(clients.Group("lobby_g1").Received("ContentLanguageChanged"));
 	}
 
 	[Fact]
-	public async Task Guest_cannot_change_the_Forbidden_Words_language()
+	public async Task Guest_cannot_change_the_shared_content_language()
 	{
 		var repository = new CapturingRepository();
 		repository.Seed(WaitingForbiddenGame());
@@ -467,7 +562,7 @@ public class GameHubRoutingTests
 		registry.MapConnectionToGame(hub.Context.ConnectionId, "g1");
 		registry.AuthenticateConnection(hub.Context.ConnectionId, "guest");
 
-		await hub.SetForbiddenWordLanguage(new SetForbiddenWordLanguageRequest
+		await hub.SetContentLanguage(new SetContentLanguageRequest
 		{
 			GameId = "g1",
 			HostId = "host",
@@ -476,11 +571,11 @@ public class GameHubRoutingTests
 
 		Assert.Equal("en", repository.Created!.Language);
 		Assert.True(clients.Caller.Received("Error"));
-		Assert.False(clients.Group("lobby_g1").Received("ForbiddenWordLanguageChanged"));
+		Assert.False(clients.Group("lobby_g1").Received("ContentLanguageChanged"));
 	}
 
 	[Fact]
-	public async Task Forbidden_Words_language_is_locked_after_the_game_starts()
+	public async Task The_content_language_is_locked_once_the_game_starts()
 	{
 		var repository = new CapturingRepository();
 		repository.Seed(WaitingForbiddenGame() with { Status = GameStatus.Active });
@@ -490,7 +585,7 @@ public class GameHubRoutingTests
 		registry.MapConnectionToGame(hub.Context.ConnectionId, "g1");
 		registry.AuthenticateConnection(hub.Context.ConnectionId, "host");
 
-		await hub.SetForbiddenWordLanguage(new SetForbiddenWordLanguageRequest
+		await hub.SetContentLanguage(new SetContentLanguageRequest
 		{
 			GameId = "g1",
 			HostId = "host",
@@ -499,7 +594,133 @@ public class GameHubRoutingTests
 
 		Assert.Equal("en", repository.Created!.Language);
 		Assert.True(clients.Caller.Received("Error"));
-		Assert.False(clients.Group("lobby_g1").Received("ForbiddenWordLanguageChanged"));
+		Assert.False(clients.Group("lobby_g1").Received("ContentLanguageChanged"));
+	}
+
+	// A table outlives the process that staged its board. Reported from a real session: after a
+	// restart the roster named every player's piece by its raw id ("stout pint" for stout_pint),
+	// because the pieces only ever reached the client through a staged package the server no longer
+	// held. Asking through the hub — which has the game document — puts it back.
+	[Fact]
+	public async Task A_table_gets_its_package_even_after_the_process_forgot_it()
+	{
+		var repository = new CapturingRepository();
+		var store = new CorroPackageStore(
+			new CompositeSoundPackProvider(new DefaultSoundPackProvider()),
+			Path.Combine(Path.GetTempPath(), "corro_table_pkg_" + Guid.NewGuid().ToString("N")));
+		var restorer = new CorroServer.Services.Corro.PackageRestorer(
+			store,
+			new CorroServer.Services.Corro.ShippedPackageProvider(CorroTestPaths.PackagesRoot()),
+			new CorroServer.Services.Corro.LocalFilePackageBlobStore());
+		var token = "forbidden-" + Guid.NewGuid().ToString("N");
+		await store.StageFromDirectoryAsync(token, CorroTestPaths.PackageDir("forbidden-words"));
+		repository.Seed(WaitingForbiddenGame() with
+		{
+			PackageToken = token,
+			ShippedBoardId = "forbidden-words",
+		});
+		var registry = new GameSessionRegistry(
+			new FakeHubContext(), repository, new FakeAuctionTimer(), restorer);
+		var hub = CreateLobbyHub(repository, registry, out _, store, restorer);
+		registry.MapConnectionToGame(hub.Context.ConnectionId, "g1");
+		registry.AuthenticateConnection(hub.Context.ConnectionId, "host");
+
+		var staged = await hub.GetTablePackage();
+		Assert.NotEmpty(staged!.Tokens);
+
+		// The process forgets it — a restart, or a staging that expired.
+		store.Release(token);
+		Assert.Null(store.GetDefinition(token));
+
+		var restored = await hub.GetTablePackage();
+		Assert.NotNull(restored);
+		Assert.NotEmpty(restored!.Tokens);
+		// The SAME token, so the endpoints that serve the package's words and guide by token work
+		// again too — that is the other half of what a restart broke.
+		Assert.Equal(token, restored.Token);
+		store.Release(token);
+	}
+
+	[Fact]
+	public async Task An_unauthenticated_connection_gets_no_package()
+	{
+		var repository = new CapturingRepository();
+		repository.Seed(WaitingForbiddenGame());
+		var registry = new GameSessionRegistry(
+			new FakeHubContext(), repository, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
+		var hub = CreateLobbyHub(repository, registry, out var clients);
+
+		Assert.Null(await hub.GetTablePackage());
+		Assert.True(clients.Caller.Received("Error"));
+	}
+
+	// A table plays again and again, so the rules it starts from must be editable between matches —
+	// the game that just ended is exactly when a group decides that auctions were a mistake.
+	[Fact]
+	public async Task Host_can_change_the_house_rules_for_the_next_match()
+	{
+		var repository = new CapturingRepository();
+		repository.Seed(WaitingForbiddenGame());
+		var registry = new GameSessionRegistry(
+			new FakeHubContext(), repository, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
+		var hub = CreateLobbyHub(repository, registry, out var clients);
+		registry.MapConnectionToGame(hub.Context.ConnectionId, "g1");
+		registry.AuthenticateConnection(hub.Context.ConnectionId, "host");
+
+		await hub.SetTableRules(new SetTableRulesRequest
+		{
+			GameId = "g1",
+			HostId = "host",
+			RuleValues = new() { ["auctions"] = JsonSerializer.SerializeToElement(false) },
+		});
+
+		Assert.False(repository.Created!.RuleValues!["auctions"].GetBoolean());
+		Assert.True(clients.Group("lobby_g1").Received("LobbyUpdated"));
+	}
+
+	[Fact]
+	public async Task Guest_cannot_change_the_house_rules()
+	{
+		var repository = new CapturingRepository();
+		repository.Seed(WaitingForbiddenGame());
+		var registry = new GameSessionRegistry(
+			new FakeHubContext(), repository, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
+		var hub = CreateLobbyHub(repository, registry, out var clients);
+		registry.MapConnectionToGame(hub.Context.ConnectionId, "g1");
+		registry.AuthenticateConnection(hub.Context.ConnectionId, "guest");
+
+		await hub.SetTableRules(new SetTableRulesRequest
+		{
+			GameId = "g1",
+			HostId = "host",
+			RuleValues = new() { ["auctions"] = JsonSerializer.SerializeToElement(false) },
+		});
+
+		Assert.Null(repository.Created!.RuleValues);
+		Assert.True(clients.Caller.Received("Error"));
+	}
+
+	[Fact]
+	public async Task The_house_rules_are_locked_while_a_match_is_running()
+	{
+		// Changing them under a live game would mean two different rulebooks in one match.
+		var repository = new CapturingRepository();
+		repository.Seed(WaitingForbiddenGame() with { Status = GameStatus.Active });
+		var registry = new GameSessionRegistry(
+			new FakeHubContext(), repository, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
+		var hub = CreateLobbyHub(repository, registry, out var clients);
+		registry.MapConnectionToGame(hub.Context.ConnectionId, "g1");
+		registry.AuthenticateConnection(hub.Context.ConnectionId, "host");
+
+		await hub.SetTableRules(new SetTableRulesRequest
+		{
+			GameId = "g1",
+			HostId = "host",
+			RuleValues = new() { ["auctions"] = JsonSerializer.SerializeToElement(false) },
+		});
+
+		Assert.Null(repository.Created!.RuleValues);
+		Assert.True(clients.Caller.Received("Error"));
 	}
 
 	[Fact]
@@ -514,7 +735,7 @@ public class GameHubRoutingTests
 		var game = await hub.ReconnectLobby("g1", "host", "secret");
 
 		Assert.Equal("en", game.Language);
-		Assert.Equal(new[] { "en", "es" }, game.ForbiddenWordLanguages);
+		Assert.Equal(new[] { "en", "es" }, game.ContentLanguages);
 		Assert.Contains(hub.Context.ConnectionId, registry.LobbyConnectionIds("g1"));
 	}
 
@@ -526,7 +747,7 @@ public class GameHubRoutingTests
 		HostId = "host",
 		InviteCode = "INVITE",
 		Language = "en",
-		ForbiddenWordLanguages = new() { "en", "es" },
+		ContentLanguages = new() { "en", "es" },
 		Players = new()
 		{
 			new LobbyPlayer
@@ -545,7 +766,8 @@ public class GameHubRoutingTests
 		IGameRepository repository,
 		GameSessionRegistry registry,
 		out FakeClients clients,
-		CorroPackageStore? packageStore = null)
+		CorroPackageStore? packageStore = null,
+		CorroServer.Services.Corro.PackageRestorer? restorer = null)
 	{
 		clients = new FakeClients();
 		return new GameHub(
@@ -553,7 +775,7 @@ public class GameHubRoutingTests
 			new FakeGameServiceFactory(),
 			new FakeAuctionTimer(),
 			packageStore ?? new CorroPackageStore(new CompositeSoundPackProvider(new DefaultSoundPackProvider())),
-			TestFixtures.NewPackageRestorer(),
+			restorer ?? TestFixtures.NewPackageRestorer(),
 			registry,
 			NullLogger<GameHub>.Instance)
 		{
@@ -615,10 +837,20 @@ public class GameHubRoutingTests
 	private sealed class RecordingProxy : ISingleClientProxy
 	{
 		private readonly List<string> _methods = new();
+		private readonly List<string> _errors = new();
 		public bool Received(string method) => _methods.Contains(method);
+
+		/// <summary>The last error CODE pushed to this target, or null if none — the hub sends
+		/// rejections as <c>Error</c> with the code as its single argument.</summary>
+		public string? LastError() => _errors.Count > 0 ? _errors[^1] : null;
+
 		public Task SendCoreAsync(string method, object?[] args, CancellationToken cancellationToken = default)
 		{
 			_methods.Add(method);
+			if (method == "Error" && args is [string code, ..])
+			{
+				_errors.Add(code);
+			}
 			return Task.CompletedTask;
 		}
 		public Task<T> InvokeCoreAsync<T>(string method, object?[] args, CancellationToken cancellationToken = default)

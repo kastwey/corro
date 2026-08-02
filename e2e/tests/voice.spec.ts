@@ -31,19 +31,18 @@ test.beforeEach(async () => {
 	await resetDice();
 });
 
-test('voice chat: host enables it, players join unmuted, query speakers, adjust volume and moderate once', async ({ browser }) => {
+test('voice chat: every game offers it, the host closes and reopens it, players join unmuted, query speakers, adjust volume and moderate once', async ({ browser }) => {
 	const ana = await newPlayerPage(browser);
 	const berto = await newPlayerPage(browser);
 
-	// The deployment capability makes the create-time host choice visible and operable.
+	// Voice belongs to the DEPLOYMENT, not to a decision made before anyone knows they will want
+	// to talk: creating a game asks nothing about it, and every game the relay can serve offers
+	// the room from the start.
 	await gotoLobbyHome(ana);
 	await ana.click('#go-create-btn');
-	await expect(ana.locator('#voice-chat-group')).toBeVisible();
-	await expect(ana.locator('#voice-chat-enabled')).not.toBeChecked();
-	await ana.locator('#voice-chat-enabled').check();
+	await expect(ana.locator('#voice-chat-group')).toHaveCount(0);
 	await flushAxeAudit(ana);
 
-	// This game starts with voice off so the in-game host activation path is covered too.
 	const code = await createGame(ana, 'Ana', 'galactic-empire');
 	await joinGame(berto, code, 'Berto');
 	await startGame(ana, [ana, berto]);
@@ -78,12 +77,42 @@ test('voice chat: host enables it, players join unmuted, query speakers, adjust 
 	await expect(ana.locator('#voice-disclaimer-text')).toBeFocused();
 	await flushAxeAudit(ana);
 	await ana.locator('#voice-disclaimer-dismiss').click();
-	await expect(ana.locator('#voice-status')).toHaveText(es.voice_off);
+	await expect(ana.locator('#voice-status')).toHaveText(es.voice_ready);
 	await flushAxeAudit(ana);
 
-	// Only the host sees availability control. SignalR broadcasts the authoritative switch
-	// to both clients and each hears it through the normal announcer.
-	await ana.getByRole('button', { name: es.voice_enable }).click();
+	// Reaching the people in the room used to cost five tab stops: a close button that duplicated
+	// the header toggle, a focusable status paragraph with no name, then one stop per control. The
+	// controls are an ARIA toolbar now — one stop, arrows inside — the status is read where it
+	// stands, and the panel is closed the three ways it already could be (Escape, Control+Alt+V,
+	// and the header button focus returns to anyway).
+	await expect(ana.locator('.voice-panel__close')).toHaveCount(0);
+	await expect(ana.locator('#voice-status')).not.toHaveAttribute('tabindex');
+	const voiceControls = ana.getByRole('toolbar', { name: es.voice_controls_label });
+	await expect(voiceControls).toBeVisible();
+	// From the title (which the panel can fall back to, but never as a TAB stop), one Tab reaches
+	// the controls: nothing sits between the heading and something worth doing.
+	await expect(ana.locator('#voice-panel-title')).toHaveAttribute('tabindex', '-1');
+	await ana.locator('#voice-panel-title').focus();
+	await ana.keyboard.press('Tab');
+	const firstControl = voiceControls.getByRole('button').first();
+	await expect(firstControl).toBeFocused();
+	// One tab stop: the NEXT Tab leaves the group entirely instead of walking through it.
+	await ana.keyboard.press('Tab');
+	expect(await ana.evaluate(() => !!document.activeElement?.closest('.voice-controls__bar')))
+		.toBe(false);
+	await firstControl.focus();
+	await ana.keyboard.press('ArrowRight');
+	await expect(voiceControls.getByRole('button').nth(1)).toBeFocused();
+
+	// Only the host holds the switch, and it is authoritative for the table in both directions:
+	// a room nobody is using can be closed, and — the case that matters — a table that decides
+	// mid-game that it wants to talk can have it opened again. Each client hears the change
+	// through the normal announcer.
+	await ana.getByRole('button', { name: es.voice_disable, exact: true }).click();
+	await expect(ana.locator('#voice-status')).toHaveText(es.voice_off);
+	await expectAnnouncement(berto, exact(es.voice_disabled));
+	await flushAxeAudit(ana);
+	await ana.getByRole('button', { name: es.voice_enable, exact: true }).click();
 	await expect(ana.locator('#voice-status')).toHaveText(es.voice_ready);
 	await expect(berto.locator('#voice-toggle')).toHaveClass(/voice-toggle--enabled/);
 	await expectAnnouncement(berto, exact(es.voice_enabled));
@@ -115,10 +144,12 @@ test('voice chat: host enables it, players join unmuted, query speakers, adjust 
 	await expect(anaVoiceRow).toContainText(es.voice_listening_visual);
 	await expect(anaVoiceRow.locator('.voice-participant__volume')).toBeHidden();
 	await expect(anaVoiceRow).toHaveAttribute('tabindex', '0');
-	await expect(anaVoiceRow).toHaveAttribute('aria-label', interpolate(
+	// The row NAMES the person and how they are heard, then says how to reach their controls —
+	// Right Arrow is the only way in, so a row that has actions must announce the way.
+	await expect(anaVoiceRow).toHaveAttribute('aria-label', `${interpolate(
 		es.voice_participant_label_listening,
 		{ player: interpolate(es.voice_participant_self, { player: 'Ana' }) },
-	));
+	)} ${es.voice_participant_more_actions}`);
 	await expect(anaVoiceRow.getByRole('toolbar')).toHaveAttribute('aria-label', interpolate(
 		es.actions_for,
 		{ name: interpolate(es.voice_participant_self, { player: 'Ana' }) },
@@ -258,8 +289,9 @@ test('voice chat: host enables it, players join unmuted, query speakers, adjust 
 	await expect(bertoPlayerCard.locator('.player-tag--voice')).toHaveText(es.voice_speaking_visual);
 	await flushAxeAudit(ana);
 	// Presence belongs to the game surface, not to the settings dialog: closing the latter
-	// leaves the active speaker visible beside that player's normal game state.
-	await ana.getByRole('button', { name: es.voice_close }).click();
+	// leaves the active speaker visible beside that player's normal game state. Closed from the
+	// header button that opened it — the panel no longer carries a close of its own.
+	await ana.locator('#voice-toggle').click();
 	await expect(ana.locator('#voice-panel')).toBeHidden();
 	await expect(ana.locator('#voice-toggle')).toHaveAttribute('aria-expanded', 'false');
 	await expect(bertoPlayerCard).toHaveClass(/is-voice-speaking/);
@@ -329,10 +361,10 @@ test('voice chat: host enables it, players join unmuted, query speakers, adjust 
 	await expect(berto.locator('.voice-participant').first()).toHaveClass(/voice-participant--muted/);
 	await expect(bertoRow).not.toHaveClass(/voice-participant--speaking/);
 	await expect(bertoRow).toContainText(es.voice_muted_visual);
-	await expect(bertoRow).toHaveAttribute('aria-label', interpolate(
+	await expect(bertoRow).toHaveAttribute('aria-label', `${interpolate(
 		es.voice_participant_label_muted,
 		{ player: 'Berto' },
-	));
+	)} ${es.voice_participant_more_actions}`);
 	await expect(bertoPlayerCard).not.toHaveClass(/is-voice-speaking/);
 	await expect(bertoPlayerCard.locator('.player-tag--voice')).toHaveText(es.voice_muted_visual);
 	await flushAxeAudit(ana);

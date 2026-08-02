@@ -145,6 +145,16 @@ public sealed record Manifest
 	/// <summary>The player tokens the package provides (id + inline SVG + i18n name key); empty means
 	/// the built-in token set is used.</summary>
 	public List<TokenDef> Tokens { get; init; } = new();
+	/// <summary>
+	/// i18n keys (resolved against the PACKAGE's OWN translations) for the names offered when the host
+	/// seats a bot and asks for a random one. Empty means the engine's own names are used.
+	///
+	/// A board's opponents belong to its world: the engine's list cannot be right for a mining game, a
+	/// galactic empire and a road trip at once, and shipping one theme made bots on every other board
+	/// sound like they had wandered in from somewhere else. Declared as KEYS, like every other name a
+	/// package contributes, so they arrive in the reader's language for free.
+	/// </summary>
+	public List<string> BotNames { get; init; } = new();
 	/// <summary>How many players this board supports; absent means the engine default (2..8).</summary>
 	public PlayersDef Players { get; init; } = new();
 	/// <summary>How the board's buildings work (how many small make a big, and their names).</summary>
@@ -327,6 +337,42 @@ public sealed record GameDefinition
 	/// exploding family has no board either.</summary>
 	public List<ExplodingCardDef>? ExplodingDeck { get; init; }
 	public List<CardDef> Cards { get; init; } = new();
+
+	// ── Every card, whatever family owns it ────────────────────────────────────
+	//
+	// Three passes over a package treat all cards alike regardless of family: resolving their art
+	// files, checking their accent colours, and collecting their translation keys. Each used to
+	// enumerate the five card decks by hand in a different file, so adding a card family meant
+	// remembering all three — and forgetting one failed silently (art that never loads, a colour
+	// that is never validated, a missing translation nobody reports).
+	//
+	// The two members below are the ONLY places the decks are enumerated. A new card family adds
+	// its slot above and its line here; the loader and the validator do not change.
+
+	/// <summary>Every card in the package as the shared card shape, whatever family owns it.</summary>
+	public IEnumerable<IPackageCardDef> AllFamilyCards =>
+		(JourneyDeck ?? Enumerable.Empty<IPackageCardDef>())
+			.Concat(AssemblyDeck ?? Enumerable.Empty<IPackageCardDef>())
+			.Concat(DraftDeck ?? Enumerable.Empty<IPackageCardDef>())
+			.Concat(SheddingDeck ?? Enumerable.Empty<IPackageCardDef>())
+			.Concat(ExplodingDeck ?? Enumerable.Empty<IPackageCardDef>());
+
+	/// <summary>
+	/// The same definition with every card's art resolved from <paramref name="art"/> (keyed by
+	/// card id) — the property family's <see cref="Cards"/> included. The record rewrite has to
+	/// name each deck because the card types are distinct records, so it lives HERE, beside the
+	/// slots it rewrites, rather than in the loader.
+	/// </summary>
+	public GameDefinition WithResolvedCardArt(Func<string, (string? Svg, bool HasPng)> art)
+		=> this with
+		{
+			Cards = Cards.Select(c => c with { Svg = art(c.Id).Svg, HasPngArt = art(c.Id).HasPng }).ToList(),
+			JourneyDeck = JourneyDeck?.Select(c => c with { Svg = art(c.Id).Svg, HasPngArt = art(c.Id).HasPng }).ToList(),
+			AssemblyDeck = AssemblyDeck?.Select(c => c with { Svg = art(c.Id).Svg, HasPngArt = art(c.Id).HasPng }).ToList(),
+			DraftDeck = DraftDeck?.Select(c => c with { Svg = art(c.Id).Svg, HasPngArt = art(c.Id).HasPng }).ToList(),
+			SheddingDeck = SheddingDeck?.Select(c => c with { Svg = art(c.Id).Svg, HasPngArt = art(c.Id).HasPng }).ToList(),
+			ExplodingDeck = ExplodingDeck?.Select(c => c with { Svg = art(c.Id).Svg, HasPngArt = art(c.Id).HasPng }).ToList(),
+		};
 	/// <summary>The package's own translations (lang -> flattened key -> text), loaded from
 	/// i18n/{lang}.json. Used server-side to resolve square names into per-locale text; the client
 	/// merges the same files for everything it resolves itself (cards, groups, announcements).</summary>

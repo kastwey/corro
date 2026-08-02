@@ -7,7 +7,7 @@ import type {
 	GameState, GameInfo,
 	CreateGameRequest, CreateGameResponse, JoinGameRequest, JoinGameResponse,
 	ResolvedJoinCode, SeatClaimedSession,
-	StartGameRequest, StartGameResponse, GameCommand, CommandResponse,
+	StartGameRequest, StartGameResponse, AddressedGameCommand, CommandResponse,
 	CardDrawnNotification, AuctionTimerTick, SavedGameInfo, PackageUploadResponse, ShippedBoard,
 	ChatMessageDto,
 } from './models.js';
@@ -18,7 +18,7 @@ export type {
 	TokenKey, Player, Square, GameState, GameInfo, LobbyPlayer,
 	CreateGameRequest, CreateGameResponse, JoinGameRequest, JoinGameResponse,
 	ResolvedJoinCode, SeatClaimedSession,
-	StartGameRequest, StartGameResponse, GameCommand, CommandResponse,
+	StartGameRequest, StartGameResponse, GameCommand, AddressedGameCommand, CommandResponse,
 	CardDrawnNotification
 } from './models.js';
 
@@ -30,6 +30,9 @@ function unlockHeaders(candidate?: string): Record<string, string> {
 	const value = unlockHeaderValue(candidate);
 	return value ? { [UNLOCK_HEADER]: value } : {};
 }
+
+/** How long a handover warning may hold up the navigation that follows it (see declareHandoff). */
+const HANDOFF_WARNING_TIMEOUT_MS = 1500;
 
 // Type for server announcements (frontend translates)
 export interface AnnouncementEvent {
@@ -62,8 +65,19 @@ export interface GameClientEvents {
 	'gameStarted': StartGameResponse;
 	'lobbyUpdated': GameInfo;
 	'teamAssigned': { gameId: string; playerId: string; playerName: string; teamIndex: number | null };
-	'forbiddenWordLanguageChanged': { gameId: string; language: string };
-	'lobbyState': { gameId: string; status: string; players: any[] };
+	'teamsFilled': { gameId: string };
+	'contentLanguageChanged': { gameId: string; language: string };
+	/** The table as it stands, sent to a player who authenticates while no match is running. */
+	'lobbyState': GameInfo;
+	/** The match ended and its TABLE is back at rest, with the roster that is still sitting at it. */
+	'matchEnded': GameInfo;
+	/** Somebody gave up their seat for good; `newHostName` is set when the sceptre moved with them. */
+	'playerLeftTable': {
+		gameId: string; playerId: string; playerName: string;
+		newHostId?: string | null; newHostName?: string | null;
+	};
+	/** The host handed the sceptre over without leaving. */
+	'hostChanged': { gameId: string; hostId: string; hostName?: string | null };
 	'playerJoined': { playerId: string; playerName: string };
 	'playerLeft': { playerId: string };
 	'gameStateChanged': GameState;
@@ -91,11 +105,11 @@ export interface GameClientEvents {
 
 export class UnifiedGameClient {
 	private connection: HubConnection | null = null;
-	private eventHandlers = new Map<keyof GameClientEvents, Array<(data: any) => void>>();
+	private eventHandlers = new Map<keyof GameClientEvents, ((data: any) => void)[]>();
 	private isConnected = false;
 	private hubUrl: string;
 
-	constructor(hubUrl: string = '/gamehub') {
+	constructor(hubUrl = '/gamehub') {
 		this.hubUrl = hubUrl;
 	}
 
@@ -199,8 +213,13 @@ export class UnifiedGameClient {
 			this.emit('teamAssigned', data);
 		});
 
-		this.connection.on('ForbiddenWordLanguageChanged', (data: { gameId: string; language: string }) => {
-			this.emit('forbiddenWordLanguageChanged', data);
+		// The host dealt the whole room into the teams in one move.
+		this.connection.on('TeamsFilled', (data: { gameId: string }) => {
+			this.emit('teamsFilled', data);
+		});
+
+		this.connection.on('ContentLanguageChanged', (data: { gameId: string; language: string }) => {
+			this.emit('contentLanguageChanged', data);
 		});
 
 		this.connection.on('PlayerJoined', (data: any) => {
@@ -211,8 +230,20 @@ export class UnifiedGameClient {
 			this.emit('playerLeft', data);
 		});
 
-		this.connection.on('LobbyState', (data: { gameId: string; status: string; players: any[] }) => {
-			this.emit('lobbyState', data);
+		this.connection.on('LobbyState', (table: GameInfo) => {
+			this.emit('lobbyState', table);
+		});
+
+		this.connection.on('MatchEnded', (table: GameInfo) => {
+			this.emit('matchEnded', table);
+		});
+
+		this.connection.on('PlayerLeftTable', (data: GameClientEvents['playerLeftTable']) => {
+			this.emit('playerLeftTable', data);
+		});
+
+		this.connection.on('HostChanged', (data: GameClientEvents['hostChanged']) => {
+			this.emit('hostChanged', data);
 		});
 
 		// Game events
@@ -319,9 +350,14 @@ export class UnifiedGameClient {
 		await this.invoke("AssignTeam", request);
 	}
 
-	/** Change the one shared Forbidden Words deck language while the game is waiting. */
-	async setForbiddenWordLanguage(request: { gameId: string; hostId: string; language: string }): Promise<void> {
-		await this.invoke('SetForbiddenWordLanguage', request);
+	/** Team mode (host only): deal every player in the room into the teams at random. */
+	async fillTeamsAtRandom(request: { gameId: string; hostId: string }): Promise<void> {
+		await this.invoke("FillTeamsAtRandom", request);
+	}
+
+	/** Change the one shared content deck (words to guess, questions to answer) while waiting. */
+	async setContentLanguage(request: { gameId: string; hostId: string; language: string }): Promise<void> {
+		await this.invoke('SetContentLanguage', request);
 	}
 
 	/** Rejoin the authenticated waiting-room SignalR group after a page reload. */
@@ -418,6 +454,27 @@ export class UnifiedGameClient {
 		await this.invoke("JoinGameWithAuth", gameId, playerId, playerSecretId);
 	}
 
+	/**
+	 * Warns the server that this page is about to navigate to another page of the same game, so the
+	 * disconnection that follows reads as a handover instead of the player walking away.
+	 *
+	 * Best effort by construction. A page that is already disconnected has nothing to hand over, and
+	 * a warning that does not come straight back is abandoned rather than reconnected for: losing it
+	 * costs the false "left / came back" pair this prevents, while waiting on it would hold the
+	 * player out of a game that has already started.
+	 */
+	async declareHandoff(): Promise<void> {
+		if (!this.isConnected || !this.connection) return;
+		try {
+			await Promise.race([
+				this.connection.invoke('DeclareHandoff'),
+				new Promise(resolve => setTimeout(resolve, HANDOFF_WARNING_TIMEOUT_MS)),
+			]);
+		} catch (error) {
+			console.error('Error invoking DeclareHandoff:', error);
+		}
+	}
+
 	/** Sends an in-game chat message (authenticated with the player's secret, like the rejoin). */
 	async sendChatMessage(gameId: string, playerId: string, playerSecretId: string, text: string): Promise<void> {
 		await this.invoke("SendChatMessage", { gameId, playerId, playerSecretId, text });
@@ -504,235 +561,15 @@ export class UnifiedGameClient {
 		}
 	}
 
-	async executeCommand(command: GameCommand): Promise<void> {
+	/**
+	 * Sends one player action. Every in-game command — a roll, a card play, a mortgage, a bid —
+	 * travels through this single hub call: {@link AddressedGameCommand} is polymorphic on the
+	 * wire and the server materialises it only into a type on its derived-type allowlist. There
+	 * is deliberately no per-action method here; the typed, turn-guarded surface lives in
+	 * gameManager, and the wire contract is the command shape itself.
+	 */
+	async executeCommand(command: AddressedGameCommand): Promise<void> {
 		await this.invoke("ExecuteCommand", command);
-	}
-
-	async endTurn(playerId: string): Promise<void> {
-		await this.invoke("EndTurn", playerId);
-	}
-
-	async rollDice(playerId: string): Promise<void> {
-		await this.invoke("RollDice", playerId);
-	}
-
-	/** Race family: resolve the pending piece choice by picking which piece moves. */
-	async moveRacePiece(playerId: string, pieceIndex: number): Promise<void> {
-		await this.invoke("MoveRacePiece", playerId, pieceIndex);
-	}
-
-	/** Trivia family: the host picks the judge before play begins. */
-	async triviaChooseJudge(playerId: string, judgeId: string): Promise<void> {
-		await this.invoke("TriviaChooseJudge", playerId, judgeId);
-	}
-
-	/** Trivia family: choose which legal square to land on after a roll. */
-	async triviaMove(playerId: string, node: string): Promise<void> {
-		await this.invoke("TriviaMove", playerId, node);
-	}
-
-	/** Trivia family: submit an answer (written text, or a choice index; -1 when unused). */
-	async triviaAnswer(playerId: string, text: string | null, choice: number): Promise<void> {
-		await this.invoke("TriviaAnswer", playerId, text, choice);
-	}
-
-	/** Trivia family: the judge rules on the submitted answer. */
-	async triviaJudge(playerId: string, correct: boolean): Promise<void> {
-		await this.invoke("TriviaJudge", playerId, correct);
-	}
-
-	async forbiddenStart(playerId: string): Promise<void> {
-		await this.invoke('ForbiddenStart', playerId);
-	}
-
-	async forbiddenCorrect(playerId: string, cardSequence: number): Promise<void> {
-		await this.invoke('ForbiddenCorrect', playerId, cardSequence);
-	}
-
-	async forbiddenPass(playerId: string, cardSequence: number): Promise<void> {
-		await this.invoke('ForbiddenPass', playerId, cardSequence);
-	}
-
-	async forbiddenViolation(playerId: string, cardSequence: number): Promise<void> {
-		await this.invoke('ForbiddenViolation', playerId, cardSequence);
-	}
-
-	/** Journey family: draw the top card (the start of your turn). */
-	async journeyDraw(playerId: string): Promise<void> {
-		await this.invoke("JourneyDraw", playerId);
-	}
-
-	/** Journey family: play a card from the hand (attacks carry the victim's id). */
-	async journeyPlay(playerId: string, instanceId: string, targetId: string | null): Promise<void> {
-		await this.invoke("JourneyPlay", playerId, instanceId, targetId);
-	}
-
-	/** Journey family: discard instead of playing. */
-	async journeyDiscard(playerId: string, instanceId: string): Promise<void> {
-		await this.invoke("JourneyDiscard", playerId, instanceId);
-	}
-
-	/** Journey family: answer the coup fourré window (the victim, out of turn). */
-	async journeyCoup(playerId: string, accept: boolean): Promise<void> {
-		await this.invoke("JourneyCoup", playerId, accept);
-	}
-
-	/** Assembly family: play a card (attacks/specials carry their targeting). */
-	async assemblyPlay(playerId: string, instanceId: string, targetPlayerId: string | null,
-		targetColor: string | null, giveColor: string | null): Promise<void> {
-		await this.invoke("AssemblyPlay", playerId, instanceId, targetPlayerId, targetColor, giveColor);
-	}
-
-	/** Assembly family: discard 1..N cards face-down (empty list = pass). */
-	async assemblyDiscard(playerId: string, instanceIds: string[]): Promise<void> {
-		await this.invoke("AssemblyDiscard", playerId, instanceIds);
-	}
-
-	/** Draft family: commit (or replace) this trick's secret pick — never turn-bound.
-	 *  The second card rides an "extra" waiting on the picker's table. */
-	async draftPick(playerId: string, instanceId: string, secondInstanceId: string | null): Promise<void> {
-		await this.invoke("DraftPick", playerId, instanceId, secondInstanceId);
-	}
-
-	/** Shedding family: play a matching card (wilds carry the chosen colour). `extraInstanceIds`
-	 *  are further identical copies for a doubles play (the "doubles" house rule). */
-	async sheddingPlay(playerId: string, instanceId: string, chosenColor: string | null,
-		extraInstanceIds: string[] | null = null): Promise<void> {
-		await this.invoke("SheddingPlay", playerId, instanceId, chosenColor, extraInstanceIds);
-	}
-
-	/** Shedding family: draw one card (maybe pausing on the play-or-keep choice). */
-	async sheddingDraw(playerId: string): Promise<void> {
-		await this.invoke("SheddingDraw", playerId);
-	}
-
-	/** Shedding family: declare the last card (optional house rule; off-turn). */
-	async sheddingDeclareLastCard(playerId: string): Promise<void> {
-		await this.invoke("SheddingDeclareLastCard", playerId);
-	}
-
-	/** Shedding family: catch a rival who forgot the last-card declaration (off-turn). */
-	async sheddingCatchLastCard(playerId: string): Promise<void> {
-		await this.invoke("SheddingCatchLastCard", playerId);
-	}
-
-	/** Exploding family: play an action card. targetId = favor/cat victim; secondInstanceId = the
-	 *  matching cat of a pair. */
-	async explodingPlay(playerId: string, instanceId: string,
-		targetId: string | null = null, secondInstanceId: string | null = null): Promise<void> {
-		await this.invoke("ExplodingPlay", playerId, instanceId, targetId, secondInstanceId);
-	}
-
-	/** Exploding family: as a Favor's target, give the requester a card of your choice. */
-	async explodingGive(playerId: string, instanceId: string): Promise<void> {
-		await this.invoke("ExplodingGive", playerId, instanceId);
-	}
-
-	/** Exploding family: Nope the pending action — OFF-TURN (anyone holding a Nope, during the window). */
-	async explodingNope(playerId: string, instanceId: string): Promise<void> {
-		await this.invoke("ExplodingNope", playerId, instanceId);
-	}
-
-	/** Exploding family: draw one card, ending the turn (or detonating on a bomb). */
-	async explodingDraw(playerId: string): Promise<void> {
-		await this.invoke("ExplodingDraw", playerId);
-	}
-
-	/** Exploding family: tuck the just-drawn (defused) bomb back at `depth` cards from the top. */
-	async explodingDefuse(playerId: string, depth: number): Promise<void> {
-		await this.invoke("ExplodingDefuse", playerId, depth);
-	}
-
-	/** Shedding family: keep the just-drawn card and pass the turn. */
-	async sheddingKeep(playerId: string): Promise<void> {
-		await this.invoke("SheddingKeep", playerId);
-	}
-
-	async buyProperty(playerId: string, squareIndex: number): Promise<void> {
-		await this.invoke("BuyProperty", playerId, squareIndex);
-	}
-
-	// ==========================================
-	// AUCTION OPERATIONS
-	// ==========================================
-
-	async placeBid(playerId: string, squareIndex: number, amount: number): Promise<void> {
-		await this.invoke("PlaceBid", playerId, squareIndex, amount);
-	}
-
-	async busChoice(playerId: string, choice: 'die1' | 'die2' | 'both'): Promise<void> {
-		await this.invoke('BusChoice', playerId, choice);
-	}
-
-	async passAuction(playerId: string, squareIndex: number): Promise<void> {
-		await this.invoke("PassAuction", playerId, squareIndex);
-	}
-
-	// ==========================================
-	// TRADE OPERATIONS
-	// ==========================================
-
-	async proposeTrade(
-		playerId: string,
-		targetPlayerId: string,
-		offeredProperties: number[],
-		offeredMoney: number,
-		offeredReleasePasses: number,
-		requestedProperties: number[],
-		requestedMoney: number,
-		requestedReleasePasses: number
-	): Promise<void> {
-		await this.invoke(
-				"ProposeTrade",
-				playerId,
-				targetPlayerId,
-				offeredProperties,
-				offeredMoney,
-				offeredReleasePasses,
-				requestedProperties,
-				requestedMoney,
-				requestedReleasePasses
-			);
-	}
-
-	async respondTrade(playerId: string, tradeId: string, accept: boolean): Promise<void> {
-		await this.invoke("RespondTrade", playerId, tradeId, accept);
-	}
-
-	async cancelTrade(playerId: string, tradeId: string | null): Promise<void> {
-		await this.invoke("CancelTrade", playerId, tradeId);
-	}
-
-	// ==========================================
-	// DEBT & BANKRUPTCY OPERATIONS
-	// ==========================================
-
-	async mortgageProperty(playerId: string, squareIndex: number): Promise<void> {
-		await this.invoke("MortgageProperty", playerId, squareIndex);
-	}
-
-	async unmortgageProperty(playerId: string, squareIndex: number): Promise<void> {
-		await this.invoke("UnmortgageProperty", playerId, squareIndex);
-	}
-
-	async sellBuildings(playerId: string, squareIndex: number, count: number): Promise<void> {
-		await this.invoke("SellBuildings", playerId, squareIndex, count);
-	}
-
-	async build(playerId: string, squareIndex: number, count: number): Promise<void> {
-		await this.invoke("Build", playerId, squareIndex, count);
-	}
-
-	async declareBankruptcy(playerId: string): Promise<void> {
-		await this.invoke("DeclareBankruptcy", playerId);
-	}
-
-	async payReleaseCost(playerId: string): Promise<void> {
-		await this.invoke("PayReleaseCost", playerId);
-	}
-
-	async useReleasePass(playerId: string): Promise<void> {
-		await this.invoke("UseReleasePass", playerId);
 	}
 
 	/**
@@ -762,6 +599,38 @@ export class UnifiedGameClient {
 			throw new Error(message || `HTTP Error: ${response.status}`);
 		}
 		return await response.json() as PackageUploadResponse;
+	}
+
+	/**
+	 * The package THIS table plays: its pieces, its rule catalogue, its player range. Asked over
+	 * the hub rather than by token over REST, because a staged package lives in the process and a
+	 * table outlives processes — only the server, holding the game document, can put it back. It
+	 * does so here, which is also what makes the package's translations and guide fetchable again,
+	 * so this is the first thing a table asks for.
+	 */
+	async getTablePackage(): Promise<PackageUploadResponse | null> {
+		return await this.invoke<PackageUploadResponse | null>('GetTablePackage');
+	}
+
+	/**
+	 * Give up this seat for good: forfeits a match in progress, hands the sceptre on if this was
+	 * the host, and deletes the table when nobody is left at it. Not the same as disconnecting,
+	 * which keeps the seat and is how a player comes back.
+	 */
+	async leaveTable(): Promise<void> {
+		await this.invoke('LeaveTable');
+	}
+
+	/** Host only: hand the sceptre to another human at this table. */
+	async transferHost(newHostId: string): Promise<void> {
+		await this.invoke('TransferHost', newHostId);
+	}
+
+	/** Host only: the board's house-rule values for the NEXT match at this table. */
+	async setTableRules(request: {
+		gameId: string; hostId: string; ruleValues?: Record<string, boolean | number | string>;
+	}): Promise<void> {
+		await this.invoke('SetTableRules', request);
 	}
 
 	/**
@@ -806,7 +675,7 @@ export class UnifiedGameClient {
 				players: gameDocument.players || [],
 				board: gameDocument.board,
 				language: gameDocument.language,
-				forbiddenWordLanguages: gameDocument.forbiddenWordLanguages || [],
+				contentLanguages: gameDocument.contentLanguages || [],
 				packageToken: gameDocument.packageToken,
 				teamCount: gameDocument.teamCount,
 				voiceChatEnabled: gameDocument.voiceChatEnabled,

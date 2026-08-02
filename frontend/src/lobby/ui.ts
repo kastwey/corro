@@ -30,19 +30,18 @@ export function localizeBoardName(boardId: string): string {
  * then es, then any). Pure over its inputs — no globals — so it is unit-testable directly.
  */
 export function pickPackageName(name: Record<string, string>, lang: string): string {
-	return name[lang] ?? name['en'] ?? name['es'] ?? Object.values(name)[0] ?? '';
+	return name[lang] ?? name.en ?? name.es ?? Object.values(name)[0] ?? '';
 }
 
 /**
  * (Re)fills a board <select> with one <option> per board, each labelled in `lang`, preserving the
- * currently-selected board when it still exists. This is the seam the language-switch re-render
- * uses: keeping it a pure function (no orchestrator, no network, no globals) makes "the board
- * picker re-localizes and keeps your choice" testable directly, instead of through the
- * network-coupled lobby class.
+ * currently-selected board when it still exists. Kept a pure function (no orchestrator, no
+ * network, no globals) so "the picker localizes every board and keeps your choice" is testable
+ * directly rather than through the network-coupled lobby class.
  */
 export function renderBoardOptions(
 	select: HTMLSelectElement,
-	boards: ReadonlyArray<{ id: string; name: Record<string, string> }>,
+	boards: readonly { id: string; name: Record<string, string> }[],
 	lang: string,
 ): void {
 	const previous = select.value;
@@ -53,8 +52,8 @@ export function renderBoardOptions(
 		option.textContent = pickPackageName(board.name, lang);
 		select.appendChild(option);
 	}
-	// Preserve the host's choice across the re-render (e.g. a language switch); when it's gone the
-	// browser falls back to the first option on its own.
+	// Preserve the host's choice across the re-render; when it's gone the browser falls back to
+	// the first option on its own.
 	if (previous && boards.some(b => b.id === previous)) select.value = previous;
 }
 
@@ -72,13 +71,13 @@ export function formatGameDate(iso: string, lang?: string): string {
 }
 
 /**
- * Decides whether resuming a saved game should jump straight to the board (a game
- * already in progress) or reconnect to the waiting room. The status comes from the
- * server's SignalR payload, where the GameStatus enum is serialized SnakeCaseLower
- * (e.g. "active", "paused", "starting"), so the comparison MUST use snake_case.
+ * Whether a saved table has no match running, so resuming it means re-authenticating this
+ * browser's session at the table rather than walking into a game. The status comes from the
+ * server's SignalR payload, where the GameStatus enum is serialized SnakeCaseLower (e.g.
+ * "active", "paused", "waiting_for_players"), so the comparison MUST use snake_case.
  */
-export function isResumableToBoardStatus(status: string | undefined): boolean {
-	return status === 'active' || status === 'paused' || status === 'starting';
+export function isTableAtRestStatus(status: string | undefined): boolean {
+	return status === 'waiting_for_players';
 }
 
 /** Translate server error codes to readable messages */
@@ -95,8 +94,10 @@ export function translateServerError(errorCode: string): string {
  * error is not a recognizable HubException, so callers can fall back to a generic message.
  */
 export function parseHubErrorCode(error: unknown): string | null {
-	const raw = error instanceof Error ? error.message : String(error ?? '');
-	const match = raw.match(/HubException:\s*([A-Z_]+)/);
+	// Only an Error or a string can carry a hub code. Stringifying anything else would
+	// produce "[object Object]", which fails the match below for no discoverable reason.
+	const raw = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+	const match = /HubException:\s*([A-Z_]+)/.exec(raw);
 	return match ? match[1] : null;
 }
 

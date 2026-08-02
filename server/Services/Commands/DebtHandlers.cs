@@ -7,7 +7,7 @@ namespace CorroServer.Services.Commands;
 /// Handler for declare bankruptcy command.
 /// Validates and delegates to CorroRulebook.
 /// </summary>
-public class DeclareBankruptcyHandler : ICommandHandler<DeclareBankruptcyCommand>
+public class DeclareBankruptcyHandler : PlayerCommandHandler<DeclareBankruptcyCommand>
 {
 	private readonly ICorroRulebook _rulebook;
 
@@ -16,14 +16,9 @@ public class DeclareBankruptcyHandler : ICommandHandler<DeclareBankruptcyCommand
 		_rulebook = rulebook;
 	}
 
-	public async Task<ServerResponse> HandleAsync(DeclareBankruptcyCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(DeclareBankruptcyCommand command, Player player, GameContext context)
 	{
 		context.Logger?.LogDebug("DeclareBankruptcyHandler: {PlayerId}", command.PlayerId);
-
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
 
 		var outcome = await _rulebook.DeclareBankruptcyAsync(player, context);
 
@@ -56,7 +51,7 @@ public class DeclareBankruptcyHandler : ICommandHandler<DeclareBankruptcyCommand
 /// assets they could liquidate. It shares the rulebook's valuation so the figure shown to
 /// the player matches the one that triggers forced bankruptcy (assets &lt; debt).
 /// </summary>
-public class GetDebtStatusHandler : ICommandHandler<GetDebtStatusCommand>
+public class GetDebtStatusHandler : PlayerCommandHandler<GetDebtStatusCommand>
 {
 	private readonly ICorroRulebook _rulebook;
 
@@ -65,13 +60,8 @@ public class GetDebtStatusHandler : ICommandHandler<GetDebtStatusCommand>
 		_rulebook = rulebook;
 	}
 
-	public Task<ServerResponse> HandleAsync(GetDebtStatusCommand command, GameContext context)
+	protected override Task<ServerResponse> HandleAsync(GetDebtStatusCommand command, Player player, GameContext context)
 	{
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return Task.FromResult<ServerResponse>(error);
-		}
-
 		var debts = context.GameState.PendingDebts
 			.Where(d => d.DebtorId == command.PlayerId)
 			.ToList();
@@ -133,7 +123,7 @@ public class GetDebtStatusHandler : ICommandHandler<GetDebtStatusCommand>
 /// Handler for resolve debt command.
 /// Validates and delegates to CorroRulebook.
 /// </summary>
-public class ResolveDebtHandler : ICommandHandler<ResolveDebtCommand>
+public class ResolveDebtHandler : PlayerCommandHandler<ResolveDebtCommand>
 {
 	private readonly ICorroRulebook _rulebook;
 
@@ -142,14 +132,9 @@ public class ResolveDebtHandler : ICommandHandler<ResolveDebtCommand>
 		_rulebook = rulebook;
 	}
 
-	public async Task<ServerResponse> HandleAsync(ResolveDebtCommand command, GameContext context)
+	protected override async Task<ServerResponse> HandleAsync(ResolveDebtCommand command, Player player, GameContext context)
 	{
 		context.Logger?.LogDebug("ResolveDebtHandler: {PlayerId}", command.PlayerId);
-
-		if (context.RequirePlayer(command.PlayerId, out var player) is { } error)
-		{
-			return error;
-		}
 
 		var outcome = await _rulebook.ResolveDebtAsync(player, command.DebtId, context);
 

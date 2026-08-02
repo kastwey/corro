@@ -114,8 +114,7 @@ export class TokenAnimator {
 
 	/** The square where a player's token should currently be drawn. */
 	displayPosition(playerId: string, authoritative: number): number {
-		const d = this.display.get(playerId);
-		return d === undefined ? authoritative : d;
+		return this.display.get(playerId) ?? authoritative;
 	}
 
 	/**

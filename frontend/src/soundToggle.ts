@@ -47,13 +47,7 @@ export function initSoundToggle(mount: HTMLElement, opts: SoundToggleOptions): S
 	btn.id = 'sound-toggle';
 	btn.className = 'icon-btn';
 
-	// Remember the last state so a language switch can repaint the label without new state.
-	let lastMuted = opts.initialMuted;
-	let lastBlocked = opts.initialBlocked ?? false;
-
 	const sync = (muted: boolean, blocked = false) => {
-		lastMuted = muted;
-		lastBlocked = blocked;
 		// "Blocked" only matters when the player actually wants sound: a muted player
 		// chose silence, so we show the plain off state for them.
 		const showBlocked = blocked && !muted;
@@ -74,10 +68,6 @@ export function initSoundToggle(mount: HTMLElement, opts: SoundToggleOptions): S
 
 	mount.appendChild(btn);
 	sync(opts.initialMuted, opts.initialBlocked ?? false);
-
-	// The action label is set imperatively (not via data-i18n): repaint it on a runtime language
-	// switch, reusing the last-known mute/blocked state.
-	document.addEventListener('languageChanged', () => sync(lastMuted, lastBlocked));
 
 	return { sync };
 }

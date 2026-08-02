@@ -39,36 +39,7 @@ public sealed class ExplodingFamily : IGameFamily
 	/// ordinary cards to fill the opening hands (the deck-size sweep uses the largest table).</summary>
 	public void ValidateDefinition(GameDefinition d)
 	{
-		var deck = d.ExplodingDeck
-			?? throw new InvalidOperationException("exploding package has no deck (cards.json).");
-		if (deck.Count == 0)
-		{
-			throw new InvalidOperationException("exploding deck has no cards.");
-		}
-
-		var ids = deck.Select(c => c.Id).ToList();
-		if (ids.Any(string.IsNullOrWhiteSpace) || ids.Distinct().Count() != ids.Count)
-		{
-			throw new InvalidOperationException("every exploding card needs a unique id.");
-		}
-
-		foreach (var card in deck)
-		{
-			if (!CardTypes.Contains(card.Type))
-			{
-				throw new InvalidOperationException($"exploding card '{card.Id}' has an unknown type '{card.Type}'.");
-			}
-
-			if (string.IsNullOrWhiteSpace(card.NameKey))
-			{
-				throw new InvalidOperationException($"exploding card '{card.Id}' has no name (add a nameKey).");
-			}
-
-			if (card.Count < 1)
-			{
-				throw new InvalidOperationException($"exploding card '{card.Id}' needs a positive count.");
-			}
-		}
+		var deck = DeckValidation.RequireWellFormedDeck(d.ExplodingDeck, "exploding", CardTypes);
 
 		var rules = d.Manifest.ExplodingRules ?? new ExplodingRulesConfig();
 		if (rules.HandSize < 1)

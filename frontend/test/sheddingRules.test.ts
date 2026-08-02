@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-	canPlayCard, canStackOn, deckColors, sheddingCardHelp, sheddingStatusText, topDef,
+	canPlayCard, canStackOn, deckColors, sheddingCardHelp, sheddingScoreText, sheddingStatusText,
+	topDef,
 } from '../src/sheddingRules.js';
 import type { GameState, SheddingSeatState } from '../src/models.js';
 
@@ -38,7 +39,10 @@ function game(seats: SheddingSeatState[], over: Record<string, unknown> = {}): G
 			currentColor: 'red', direction: 1, ...((over.shedding as object) ?? {}),
 		},
 		sheddingDeck: DECK,
-		sheddingRules: { handSize: 7, targetScore: 500, drawnCardPlayable: true, wildDrawRequiresNoMatch: true },
+		sheddingRules: {
+			handSize: 7, targetScore: 500, drawnCardPlayable: true, wildDrawRequiresNoMatch: true,
+			...((over.sheddingRules as object) ?? {}),
+		},
 		players: seats.map(s => ({ id: s.playerId, name: `N-${s.playerId}` })),
 		currentTurn: seats[0]?.playerId ?? null,
 	} as unknown as GameState;
@@ -94,6 +98,21 @@ test('the status line: cards, the top and its colour, the reversed exception, th
 	const gone = seat('me', [], { retired: true, score: 88 });
 	assert.equal(sheddingStatusText(game([gone, seat('r1')]), 'me', t),
 		'game.status_retired, game.shedding_status_score(88)');
+});
+
+test('under penalty scoring the same number is spoken as points AGAINST you, retired too', () => {
+	const penalty = { sheddingRules: { scoring: 'penalty' } };
+	const me = seat('me', ['red-7'], { score: 120 });
+	const gs = game([me, seat('r1')], penalty);
+	assert.ok(sheddingStatusText(gs, 'me', t)!.endsWith('game.shedding_status_score_penalty(120)'));
+
+	const gone = seat('me', [], { retired: true, score: 88 });
+	assert.equal(sheddingStatusText(game([gone, seat('r1')], penalty), 'me', t),
+		'game.status_retired, game.shedding_status_score_penalty(88)');
+
+	// The helper both surfaces share, so S and Shift+S can never word it two ways.
+	assert.equal(sheddingScoreText(gs, 40, t), 'game.shedding_status_score_penalty(40)');
+	assert.equal(sheddingScoreText(game([me, seat('r1')]), 40, t), 'game.shedding_status_score(40)');
 });
 
 // Stacking (house rule): while a penalty pile is in flight, only a stacking draw card is

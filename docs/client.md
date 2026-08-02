@@ -132,6 +132,21 @@ Everything spoken or shown is a **translation key**, resolved by i18next against
 neutral words ("piece" → "module") without touching code. Both locales must always define
 every key — the translation-parity tests enforce it.
 
+The **lobby** is not translated in the browser at all: `localizePages.js` emits one
+pre-translated copy per language at build time, the default at `/` and every other at
+`/<locale>/`. A language is therefore a URL, and the selector navigates to it rather than
+swapping the strings in place — so the address, `<html lang>` and the text on screen can
+never disagree, and a player's language is a link they can share. The saved choice is
+written before the jump, because the root page redirects by cookie. The **board** keeps a
+single URL (a private session, indexed by nobody) and translates at runtime, resolving its
+language before the first paint so a screen reader never starts in the wrong voice.
+
+The game page hosts two surfaces that take turns: the **board** and the **table**
+(`tableView.ts`, see [tables.md](tables.md)). The table is what it shows while no match is
+running — the roster, the invite code, and the host's way to start the next game. They swap
+inside one document on purpose: the chat and voice panels are mounted here, and a navigation
+between matches would tear down the LiveKit connection and cut the conversation in half.
+
 ## Testing the client
 
 `frontend/test/` runs `node:test` with jsdom: game surfaces, the hand panel, the status

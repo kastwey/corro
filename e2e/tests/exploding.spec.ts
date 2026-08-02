@@ -319,12 +319,36 @@ test('exploding: draw the bomb, defuse and tuck it, then explode into a win', as
 	await expect(ana.locator('.end-screen')).toBeVisible();
 	await expect(berto.locator('.end-screen')).toBeVisible();
 
-	// A guest leaving the finished game navigates only that browser. This is the exact
-	// regression for the intermittent report that "Back home" might eject everybody.
+	// A guest dismissing the finished match lands at the TABLE — same page, so the chat and the
+	// voice room they were in are never torn down — and it is only their own browser that moves
+	// on. This is the exact regression for the intermittent report that closing the end screen
+	// might eject everybody.
 	await berto.locator('.dialog-end-screen .btn-primary').click();
-	await expect(berto).toHaveURL(/\/$/);
+	await expect(berto.locator('#table-view')).toBeVisible();
+	await expect(berto).toHaveURL(/board\.html/);
 	await expect(ana.locator('.end-screen')).toBeVisible();
 	await expect(ana).toHaveURL(/board\.html/);
+
+	// The group outlives the game: both are still at their table, with the roster and the code
+	// that brings someone else, and the host starts the next match from where they already are.
+	await ana.locator('.dialog-end-screen .btn-primary').click();
+	await expect(ana.locator('#table-view')).toBeVisible();
+	// The finished board goes away with it: leaving it on screen behind the table was invisible
+	// to a test that only checked the table had appeared.
+	await expect(ana.locator('#game-layout')).toBeHidden();
+	await expect(ana.locator('#table-players li')).toHaveCount(2);
+	await expect(ana.locator('#table-code')).not.toBeEmpty();
+	await flushAxeAudit(ana);
+	// Only the host is offered it.
+	await expect(berto.locator('#table-start-btn')).toBeHidden();
+
+	await ana.locator('#table-start-btn').click();
+	await expect(ana.locator('#table-view')).toBeHidden();
+	await expect(berto.locator('#table-view')).toBeHidden();
+	// A second match at the same table, in the same page: fresh hands, nobody navigated.
+	await expect(ana.locator('.hand-card:not(.hand-card--info)')).toHaveCount(8);
+	await expect(berto.locator('.hand-card:not(.hand-card--info)')).toHaveCount(8);
+	await expect(ana.locator('.end-screen')).toBeHidden();
 });
 
 test('exploding: announces an ordinary draw before adding the card to the hand', async ({ browser }) => {

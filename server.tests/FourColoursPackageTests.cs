@@ -59,13 +59,44 @@ public class FourColoursPackageTests
 		Assert.Equal(2, def.Manifest.Players.Min);
 		Assert.Equal(5, def.Manifest.Players.Max);
 
-		// The package exposes the two shedding house rules: the doubles toggle and the
-		// stacking choice (three options), each a known engine code.
+		Assert.Equal("collect", rules.Scoring); // the classic count unless the host says otherwise
+
+		// The package exposes the shedding house rules: the doubles toggle and two choices —
+		// stacking (three options) and scoring — each a known engine code.
 		var doubles = Assert.Single(def.Manifest.HouseRules, r => r.Id == "sheddingAllowDoubles");
 		Assert.Equal("toggle", doubles.Type);
 		var stacking = Assert.Single(def.Manifest.HouseRules, r => r.Id == "sheddingStacking");
 		Assert.Equal("choice", stacking.Type);
 		Assert.Equal(new[] { "none", "sameType", "cross" }, stacking.Options!.Select(o => o.Id));
+		var scoring = Assert.Single(def.Manifest.HouseRules, r => r.Id == "sheddingScoring");
+		Assert.Equal("choice", scoring.Type);
+		Assert.True(scoring.EditableByHost);
+		// The declared options must be exactly the modes the engine accepts, or the host's pick
+		// would be rendered, persisted and then silently dropped by the applier.
+		Assert.Equal(new[] { "collect", "penalty" }, scoring.Options!.Select(o => o.Id));
+		Assert.Equal(
+			CorroServer.Services.Corro.HouseRuleCatalog.SheddingScoringModes.OrderBy(m => m),
+			scoring.Options!.Select(o => o.Id).OrderBy(m => m));
+	}
+
+	[Fact]
+	public async Task Every_house_rule_and_option_is_named_in_both_locales()
+	{
+		// PackageValidator walks cards, colours, tokens and terminology but NOT house-rule
+		// nameKeys, so a typo there would silently render the raw rule id as the lobby label.
+		var def = await Loaded;
+		var keys = def.Manifest.HouseRules
+			.SelectMany(rule => new[] { rule.NameKey }
+				.Concat((rule.Options ?? new List<HouseRuleOption>()).Select(o => o.NameKey)))
+			.Where(k => !string.IsNullOrEmpty(k))
+			.ToList();
+
+		Assert.Contains("rules.sheddingScoringPenalty", keys);
+		foreach (var locale in new[] { "en", "es" })
+		{
+			Assert.All(keys, key => Assert.True(
+				def.I18n[locale].ContainsKey(key!), $"{locale} is missing the house-rule label '{key}'"));
+		}
 	}
 
 	[Fact]

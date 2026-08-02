@@ -31,6 +31,11 @@ public sealed class GameSessionRegistry
 	private readonly ConcurrentDictionary<string, GameStatePersister> _persisters = new();
 	// Coalesce concurrent deletion requests (game-over, host action and retention) per game.
 	private readonly ConcurrentDictionary<string, Lazy<Task<bool>>> _deletions = new();
+	// Connections that announced they are about to be replaced by the same player's next page
+	// (the waiting room handing over to the board). See DeclareHandoff.
+	private readonly ConcurrentDictionary<string, byte> _handoffConnections = new();
+	// One gate per game for read-modify-write changes to its document (see MutateDocumentAsync).
+	private readonly ConcurrentDictionary<string, SemaphoreSlim> _documentLocks = new();
 
 	private readonly IHubContext<GameHub> _hub;
 	private readonly IGameRepository _repository;
@@ -101,6 +106,21 @@ public sealed class GameSessionRegistry
 	public bool TryRemoveGameConnection(string connectionId, out string gameId) => _connectionGameMap.TryRemove(connectionId, out gameId!);
 	public bool TryRemoveAuthConnection(string connectionId, out string playerId) => _authenticatedConnections.TryRemove(connectionId, out playerId!);
 	public bool TryRemoveLobbyConnection(string connectionId, out string gameId) => _lobbyConnections.TryRemove(connectionId, out gameId!);
+
+	/// <summary>
+	/// Records that this connection is about to be replaced by the same player's next page, so its
+	/// death is a handover rather than a departure. Leaving the waiting room for the board is a full
+	/// page navigation: the old connection dies and a new one authenticates a moment later, which
+	/// otherwise reads exactly like a drop and a reconnection — the whole table hears "X went away"
+	/// and the player themselves "you have reconnected", seconds into a game they never left.
+	/// </summary>
+	public void DeclareHandoff(string connectionId) => _handoffConnections[connectionId] = 0;
+
+	/// <summary>
+	/// Whether this connection's death was announced in advance, clearing the record. Every
+	/// connection disconnects eventually, so consuming it there is what keeps this from growing.
+	/// </summary>
+	public bool TryConsumeHandoff(string connectionId) => _handoffConnections.TryRemove(connectionId, out _);
 
 	/// <summary>The authenticated connection + its game for a connection, or false when not authenticated.</summary>
 	public bool IsAuthenticated(string connectionId, out string? playerId, out string? gameId)
@@ -196,6 +216,44 @@ public sealed class GameSessionRegistry
 		return saved;
 	}
 
+	/// <summary>
+	/// Read-modify-write a game document under a per-game lock, so two clients changing the same
+	/// table at the same moment cannot each save a version that still contains the other's change.
+	///
+	/// The read happens INSIDE the lock and goes to the repository, never to the cache: the whole
+	/// point is to see what the previous writer just saved. Two people leaving a table at the same
+	/// instant is the case this exists for — without it the second write puts the first one's seat
+	/// back, and a table nobody is sitting at survives because each of them saw the other.
+	///
+	/// `mutate` returns null when it decides there is nothing to change. Returns the saved document
+	/// (or the untouched one), or null when the game no longer exists.
+	/// </summary>
+	public async Task<GameDocument?> MutateDocumentAsync(string gameId, Func<GameDocument, GameDocument?> mutate)
+	{
+		var gate = _documentLocks.GetOrAdd(gameId, _ => new SemaphoreSlim(1, 1));
+		await gate.WaitAsync();
+		try
+		{
+			var document = await _repository.LoadGameAsync(gameId);
+			if (document is null)
+			{
+				return null;
+			}
+			var mutated = mutate(document);
+			if (mutated is null)
+			{
+				return document;
+			}
+			var saved = await _repository.UpdateGameAsync(mutated);
+			_persistedDocuments[gameId] = saved;
+			return saved;
+		}
+		finally
+		{
+			gate.Release();
+		}
+	}
+
 	/// <summary>Persist the host's platform-level voice switch through the same document cache
 	/// used by state/chat writes, so a concurrent game snapshot cannot restore an older value.</summary>
 	public async Task<GameDocument?> SetVoiceChatEnabledAsync(string gameId, bool enabled)
@@ -217,19 +275,17 @@ public sealed class GameSessionRegistry
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
 	/// <summary>
-	/// Stop timers and drop the in-memory game service for a game being deleted from the lobby. Returns
-	/// the removed service (already un-tracked) so the caller can end it; null when none was live.
+	/// Stop the clocks and drop the in-memory game service. Returns the removed service (already
+	/// un-tracked) so the caller can dispose it; null when none was live.
+	///
+	/// Deliberately does NOT touch the voice room: a match ends far more often than a table does,
+	/// and the conversation is the table's, not the match's.
 	/// </summary>
-	public async Task<IGameService?> TearDownGameAsync(string gameId)
+	private async Task<IGameService?> StopLiveMatchAsync(string gameId)
 	{
 		_timers.StopTimers(gameId);
 		_nopeWindow?.Cancel(gameId);
 		_forbiddenTimer?.Cancel(gameId);
-		if (_voiceService?.IsConfigured == true)
-		{
-			try { await _voiceService.DeleteRoomAsync(gameId); }
-			catch (Exception ex) { _logger?.LogWarning(ex, "Could not delete voice room for game {GameId}", gameId); }
-		}
 		if (_gameServices.TryRemove(gameId, out var service))
 		{
 			try { await service.EndGameAsync(); }
@@ -237,6 +293,19 @@ public sealed class GameSessionRegistry
 			return service;
 		}
 		return null;
+	}
+
+	/// <summary>
+	/// Stop live work for a game being deleted: the match AND the room it was talking in.
+	/// </summary>
+	public async Task<IGameService?> TearDownGameAsync(string gameId)
+	{
+		if (_voiceService?.IsConfigured == true)
+		{
+			try { await _voiceService.DeleteRoomAsync(gameId); }
+			catch (Exception ex) { _logger?.LogWarning(ex, "Could not delete voice room for game {GameId}", gameId); }
+		}
+		return await StopLiveMatchAsync(gameId);
 	}
 
 	/// <summary>
@@ -310,14 +379,24 @@ public sealed class GameSessionRegistry
 			}
 		}
 
+		_documentLocks.TryRemove(gameId, out _);
 		_logger?.LogInformation("Game {GameId} permanently deleted", gameId);
 		return true;
 	}
 
 	/// <summary>
-	/// Removes, finishes and DELETES a game once it is over so it neither leaks in <c>_gameServices</c>
-	/// nor lingers in Cosmos. Game-over is read from the authoritative <see cref="GameState.IsGameOver"/>
-	/// flag (set by the rulebook for both a manual bankruptcy and an auto-forced one).
+	/// Retires a finished match and leaves its TABLE standing. Game-over is read from the
+	/// authoritative <see cref="GameState.IsGameOver"/> flag (set by the rulebook for both a manual
+	/// bankruptcy and an auto-forced one).
+	///
+	/// A finished match used to delete everything, which made the last roll of a game the end of the
+	/// group that played it: the chat, the seats, the invite code and the voice room all went with
+	/// it, and playing again meant starting from an empty form. The people are the durable part, so
+	/// they are what survives. What is disposed of is the match: its clocks, its in-memory service
+	/// and its live snapshot — which is not thrown away but moved to <c>LastMatch</c>, so the result
+	/// outlives the game that produced it.
+	///
+	/// Deletion is still what happens to a TABLE, from the host's own action or the retention sweep.
 	/// </summary>
 	public async Task CleanupIfGameOverAsync(string gameId, IGameService gameService)
 	{
@@ -330,8 +409,67 @@ public sealed class GameSessionRegistry
 			return;
 		}
 
-		try { await DeleteGameAsync(gameId); }
-		catch (Exception ex) { _logger?.LogError(ex, "Error deleting finished game {GameId}", gameId); }
+		try { await RetireMatchAsync(gameId, state); }
+		catch (Exception ex) { _logger?.LogError(ex, "Error retiring the finished match of table {GameId}", gameId); }
+	}
+
+	/// <summary>
+	/// Ends the live match and returns the table to rest: clocks stopped, service dropped, the final
+	/// snapshot moved from <c>GameState</c> to <c>LastMatch</c> and the status back to waiting. The
+	/// package is NOT released and the voice room is NOT deleted — both belong to the table, which is
+	/// still there and, most likely, about to play again.
+	///
+	/// Returns the saved table document, or null when there was nothing persisted to retire.
+	/// </summary>
+	public async Task<GameDocument?> RetireMatchAsync(string gameId, GameState finalState)
+	{
+		var removed = await StopLiveMatchAsync(gameId);
+		if (removed is IDisposable disposable)
+		{
+			disposable.Dispose();
+		}
+
+		// EndGameAsync may have queued one last snapshot. Wait for it, and drop the persister, so a
+		// late write cannot put the finished match back into the table as if it were still running.
+		if (_persisters.TryRemove(gameId, out var persister))
+		{
+			try { await persister.WaitForIdleAsync(); }
+			catch (Exception ex) { _logger?.LogError(ex, "Error flushing persister for game {GameId}", gameId); }
+		}
+
+		var document = await _repository.LoadGameAsync(gameId)
+			?? (_persistedDocuments.TryGetValue(gameId, out var cached) ? cached : null);
+		if (document == null)
+		{
+			return null;
+		}
+
+		var saved = await _repository.UpdateGameAsync(document with
+		{
+			Status = GameStatus.WaitingForPlayers,
+			GameState = null,
+			LastMatch = finalState,
+			MatchesPlayed = document.MatchesPlayed + 1,
+		});
+		_persistedDocuments[gameId] = saved;
+
+		// Everyone still connected has stopped playing at this table and is now just sitting at it,
+		// so they move into its waiting-room group. Without this the host's NEXT match would be
+		// announced to a group none of them is in, and the table would look abandoned from inside.
+		foreach (var connectionId in GameConnectionIds(gameId))
+		{
+			MapLobbyConnection(connectionId, gameId);
+			try { await _hub.Groups.AddToGroupAsync(connectionId, $"lobby_{gameId}"); }
+			catch (Exception ex) { _logger?.LogWarning(ex, "Could not seat connection {ConnectionId} at table {GameId}", connectionId, gameId); }
+		}
+
+		// The table is at rest and everyone in it should know, whether or not they were looking at
+		// the board when it happened.
+		await _hub.Clients.Group(gameId).SendAsync("MatchEnded", saved.Sanitized());
+
+		_logger?.LogInformation(
+			"Match {Number} retired for table {GameId}; the table remains", saved.MatchesPlayed, gameId);
+		return saved;
 	}
 
 	// ── Wiring (moved verbatim from the Hub's static callbacks) ───────────────
@@ -404,6 +542,34 @@ public sealed class GameSessionRegistry
 			_nopeWindow.Cancel(gameId);
 		}
 	}
+
+	/// <summary>Run the per-second bid timer while an auction is live, and retire it the moment
+	/// the auction resolves — however it resolved (the last rival passing, a bid winning it, the
+	/// property family's own paths). Like its two siblings above this is driven by the STATE, not
+	/// by which command ran, so no caller has to remember to stop it.
+	///
+	/// Re-arming on every state change is free: the countdown is computed from the authoritative
+	/// <see cref="AuctionState.CurrentPhaseStartedAt"/> (see
+	/// <c>AuctionTimerService.EvaluateBidTick</c>), never from the timer's own elapsed time, so the
+	/// timer is only a heartbeat. Restoring a game is the one case that arms explicitly instead
+	/// (GameHub gives the revived auction a FRESH window first, then arms).</summary>
+	private void ArmOrCancelAuctionTimer(string gameId, IGameService gameService)
+	{
+		if (ShouldRunBidTimer(gameService.GameState) is { } auction)
+		{
+			_timers.StartTimers(gameId, gameService.Settings, auction);
+		}
+		else
+		{
+			_timers.StopTimers(gameId);
+		}
+	}
+
+	/// <summary>The auction the bid timer should be running for, or null when it must be retired.
+	/// Pure, so the rule is unit-testable without a registry, timers or a live game — the same
+	/// treatment the dispatcher's guards and <c>AuctionTimerService.EvaluateBidTick</c> get.</summary>
+	internal static AuctionState? ShouldRunBidTimer(GameState? state)
+		=> state?.ActiveAuction is { IsActive: true } auction ? auction : null;
 
 	/// <summary>Keep the forbidden turn clock aligned with the live projected state. Card
 	/// changes do not reset it: every re-arm samples the same StartedAt value.</summary>
@@ -514,6 +680,20 @@ public sealed class GameSessionRegistry
 				return;
 			}
 
+			// The auction may already be over: a winning bid nobody could match, or the last rival
+			// passing, resolves it through the normal command path. The bid timer is retired by the
+			// state change that follows (ArmOrCancelAuctionTimer), but a tick already in flight
+			// cannot be recalled — it would issue EndAuctionCommand against nothing, and the
+			// resulting NO_ACTIVE_AUCTION error was broadcast to EVERY player as if something had
+			// gone wrong with an auction that in fact ended correctly. There is simply nothing to do.
+			if (gameService.GameState?.ActiveAuction is null or { IsActive: false })
+			{
+				_logger?.LogDebug(
+					"EndAuctionViaCommand: auction for {GameId} already resolved; ignoring the {Reason} tick",
+					gameId, reason);
+				return;
+			}
+
 			_logger?.LogInformation("EndAuctionViaCommand: Ending auction for {GameId} (reason: {Reason})", gameId, reason);
 
 			var command = new EndAuctionCommand { PlayerId = currentTurn, Reason = reason };
@@ -590,6 +770,7 @@ public sealed class GameSessionRegistry
 			// so a Nope — which moves that stamp and re-fires this event — restarts the countdown.
 			ArmOrCancelNopeWindow(gameId, gameService);
 			ArmOrCancelForbiddenTimer(gameId, gameService);
+			ArmOrCancelAuctionTimer(gameId, gameService);
 
 			// Persist OFF the awaited command path: a per-game background writer coalesces (latest-wins)
 			// and reuses the cached GameDocument (no per-command Cosmos read).

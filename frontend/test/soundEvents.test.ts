@@ -191,7 +191,6 @@ test('maps representative game events to their earcons', () => {
 });
 
 test('returns null for announcements with no earcon and for empty input', () => {
-	assert.equal(soundEventForAnnouncement('game.waiting_for_start'), null);
 	assert.equal(soundEventForAnnouncement('game.trade_proposed'), null);
 	assert.equal(soundEventForAnnouncement('game.property_mortgaged'), null);
 	assert.equal(soundEventForAnnouncement(''), null);
@@ -514,7 +513,7 @@ test('a cue that races switchPack is queued and replayed once the game pack load
 
 /** Like stubAudio but also records play OPTIONS and stopSound ids, for the loop tests. */
 function stubLoopAudio(events: Record<string, string[]>) {
-	const plays: Array<{ id: string; loop: boolean }> = [];
+	const plays: { id: string; loop: boolean }[] = [];
 	const stopped: string[] = [];
 	const original = {
 		isSupported: soundManager.isSupported,

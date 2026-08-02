@@ -38,5 +38,13 @@
     "portion_2": "Double tapas tray",
     "portion_3": "Triple tapas tray",
     "caramel_custard": "Homemade flan"
+  },
+  "bots": {
+    "aceituna": "Olive Oli",
+    "palillo": "Toothpick Tito",
+    "sobremesa": "The Long Lunch",
+    "vermut": "Vermouth Vera",
+    "ultima": "Last Croquette",
+    "camarero": "Waiter Wally"
   }
 }

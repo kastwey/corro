@@ -28,12 +28,12 @@ const t = (deps: RaceBoardDeps, key: string, vars?: Record<string, unknown>) =>
 
 /** Perimeter walk of a W×H grid, clockwise from the top-left: exactly the cell coordinates
  *  (col,row 1-based) for a ring of N squares. W/H are derived from N (2W+2H-4 = N). */
-export function ringPositions(n: number): Array<{ col: number; row: number }> {
+export function ringPositions(n: number): { col: number; row: number }[] {
 	// Closest to square: W ≈ H. Perimeter = 2(W+H) - 4 = n → W+H = n/2 + 2.
 	const sum = Math.floor(n / 2) + 2;
 	const w = Math.ceil(sum / 2);
 	const h = sum - w;
-	const cells: Array<{ col: number; row: number }> = [];
+	const cells: { col: number; row: number }[] = [];
 	for (let c = 1; c <= w; c++) cells.push({ col: c, row: 1 });
 	for (let r = 2; r <= h; r++) cells.push({ col: w, row: r });
 	for (let c = w - 1; c >= 1; c--) cells.push({ col: c, row: h });
@@ -49,7 +49,7 @@ export class RaceBoard {
 	/** Optional callback to get animated piece positions (from tokenAnimator). */
 	private displayPosition: ((seatIndex: number, pieceIndex: number) => any) | null = null;
 	/** Direct manipulation: pending move options to highlight + clickable destinations. */
-	private moveOptions: Array<{ cursor: RaceCursor; pieceIndex: number; label?: string }> | null = null;
+	private moveOptions: { cursor: RaceCursor; pieceIndex: number; label?: string }[] | null = null;
 	private onMoveSelected: ((pieceIndex: number) => void) | null = null;
 	/** The option whose dialog button holds focus (its destination gets the strong ring). */
 	private focusedOptionPiece: number | null = null;
@@ -66,7 +66,7 @@ export class RaceBoard {
 	 *  square 7. Captures Berto's counter"), so a screen reader exploring the board — by touch
 	 *  or with the arrows — hears the move, not just the cell's contents. */
 	setMoveOptions(
-		options: Array<{ cursor: RaceCursor; pieceIndex: number; label?: string }> | null,
+		options: { cursor: RaceCursor; pieceIndex: number; label?: string }[] | null,
 		onSelect: ((pieceIndex: number) => void) | null,
 	): void {
 		this.moveOptions = options;
