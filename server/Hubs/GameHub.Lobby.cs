@@ -740,6 +740,52 @@ public partial class GameHub
 		return result.Session;
 	}
 
+	/// <summary>
+	/// Take back the seat this account holds at a table, from a device that has never seen it.
+	/// The account-less path asks for a code the player had to keep; this one asks for nothing,
+	/// because the seat already knows whose it is.
+	///
+	/// The guards are the SAME ones (see RejoinService): the table must still be playable and
+	/// nobody may be sitting on that seat right now, and the claim rotates the seat's secret, so
+	/// an old browser still holding the previous one loses it. Signing in does not let you evict
+	/// yourself from a seat you are actively using somewhere else.
+	/// </summary>
+	public async Task<SeatClaimedResponse> ClaimSeatAsAccount(string gameId)
+	{
+		var userId = SignedInUserId();
+		if (userId == null)
+		{
+			// Not a lookup failure and not worth a distinct code: an anonymous caller has no seat
+			// to claim, which is exactly what "no seat found" means.
+			throw new HubException("GAME_NOT_FOUND");
+		}
+
+		RejoinService.ClaimResult result;
+		try
+		{
+			result = await RejoinService.ClaimForUserAsync(
+				gameId,
+				userId,
+				_gameRepository,
+				id => _registry.ConnectedPlayerIds(id));
+		}
+		catch (Exception ex)
+		{
+			_logger?.LogError(ex, "Error in ClaimSeatAsAccount");
+			throw new HubException("GAME_LOOKUP_ERROR");
+		}
+
+		if (result.Session == null)
+		{
+			throw new HubException(result.Error);
+		}
+
+		_registry.CacheDocument(result.Session.GameId, result.UpdatedGame!);
+		_logger?.LogInformation("Seat {PlayerId} in game {GameId} reclaimed by its account",
+			result.Session.PlayerId, result.Session.GameId);
+		return result.Session;
+	}
+
 	/// <summary>The joinable-game projection shared by the code paths: board, tokens, race
 	/// seats and the players WITHOUT any credentials.</summary>
 	private async Task<object> BuildJoinableGameInfoAsync(GameDocument game)

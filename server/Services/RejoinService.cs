@@ -3,13 +3,18 @@ using CorroServer.Models;
 namespace CorroServer.Services;
 
 /// <summary>
-/// Reclaiming a seat with a player's RE-ENTRY code (the account-less recovery path: the
-/// browser data is gone, or the player moved to another device). The code is the
-/// credential; the guards are: the game must still be playable, and NOBODY may be
-/// connected on that seat. A successful claim ROTATES the seat's secret id — any older
-/// browser session is invalidated and the claimer becomes the only owner — while the
-/// code itself stays stable (rotating it would strand the player again if the new one
-/// were lost).
+/// Reclaiming a seat you already hold, from a browser that cannot prove it — the data is gone, or
+/// you moved to another device. There are two ways to prove the seat is yours, and they differ
+/// ONLY in that proof:
+///
+///  * a RE-ENTRY code, the account-less path: the code IS the credential;
+///  * a signed-in ACCOUNT, which the seat recorded when it was taken.
+///
+/// Everything after the proof is deliberately one piece of code, because it is where the security
+/// lives: the game must still be playable, NOBODY may be connected on that seat, and a successful
+/// claim ROTATES the seat's secret id, so any older browser session is invalidated and the claimer
+/// becomes its only owner. The re-entry code itself stays stable — rotating it would strand the
+/// player again if the new one were lost.
 /// </summary>
 public static class RejoinService
 {
@@ -23,13 +28,45 @@ public static class RejoinService
 		public GameDocument? UpdatedGame { get; init; }
 	}
 
+	/// <summary>Claim with the player's own re-entry code.</summary>
 	public static async Task<ClaimResult> ClaimAsync(
 		string code,
 		IGameRepository repository,
 		Func<string, IEnumerable<string>> connectedPlayerIds)
 	{
 		var game = await repository.GetByRejoinCodeAsync(code);
-		if (game == null)
+		var player = game?.Players.FirstOrDefault(p => p.RejoinCode == code);
+		return await ClaimSeatAsync(game, player, repository, connectedPlayerIds);
+	}
+
+	/// <summary>
+	/// Claim the seat this ACCOUNT holds at a table. No code to type and none to have kept: the
+	/// seat recorded whose it was when it was taken, so a new device with the same session is
+	/// simply the same person coming back.
+	///
+	/// `userId` comes from the caller's session and never from a request — the hub reads it from
+	/// its own principal. If that ever changed, this would become "claim anyone's seat".
+	/// </summary>
+	public static async Task<ClaimResult> ClaimForUserAsync(
+		string gameId,
+		string userId,
+		IGameRepository repository,
+		Func<string, IEnumerable<string>> connectedPlayerIds)
+	{
+		var game = await repository.LoadGameAsync(gameId);
+		var player = game?.Players.FirstOrDefault(p => p.UserId == userId);
+		return await ClaimSeatAsync(game, player, repository, connectedPlayerIds);
+	}
+
+	/// <summary>The half that is the same however the seat was proved: the guards, the rotation
+	/// and the fresh session.</summary>
+	private static async Task<ClaimResult> ClaimSeatAsync(
+		GameDocument? game,
+		LobbyPlayer? player,
+		IGameRepository repository,
+		Func<string, IEnumerable<string>> connectedPlayerIds)
+	{
+		if (game == null || player == null)
 		{
 			return new ClaimResult { Error = "GAME_NOT_FOUND" };
 		}
@@ -39,7 +76,6 @@ public static class RejoinService
 			return new ClaimResult { Error = "GAME_OVER" };
 		}
 
-		var player = game.Players.First(p => p.RejoinCode == code);
 		if (connectedPlayerIds(game.GameId).Contains(player.Id))
 		{
 			return new ClaimResult { Error = "SEAT_CONNECTED" };
@@ -67,7 +103,7 @@ public static class RejoinService
 				IsHost = player.IsHost,
 				Board = game.Board,
 				Status = game.Status,
-				RejoinCode = code,
+				RejoinCode = player.RejoinCode,
 			},
 		};
 	}

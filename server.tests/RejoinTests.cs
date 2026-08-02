@@ -5,11 +5,11 @@ using Xunit;
 namespace CorroServer.Tests;
 
 /// <summary>
-/// The account-less seat recovery: a player's 8-character RE-ENTRY code reclaims their
-/// seat from any browser — as long as the game is still playable and nobody is connected
-/// on that seat — rotating the secret id so the claimer becomes the only owner. Also pins
-/// the credential hygiene around it: codes are unambiguous, and every client-bound
-/// document is stripped of secrets.
+/// Seat recovery, by either proof: the account-less 8-character RE-ENTRY code, and the signed-in
+/// ACCOUNT the seat recorded when it was taken. Both reclaim a seat from any browser as long as
+/// the game is still playable and nobody is connected on that seat, and both rotate the secret id
+/// so the claimer becomes the only owner. Also pins the credential hygiene around it: codes are
+/// unambiguous, and every client-bound document is stripped of secrets.
 /// </summary>
 public class RejoinTests
 {
@@ -26,7 +26,7 @@ public class RejoinTests
 			InviteCode = "INV111",
 			Players = new List<LobbyPlayer>
 			{
-				new() { Id = "host", Name = "Ana", Token = "star", IsHost = true, PlayerSecretId = "secret-ana", RejoinCode = "AAAABBBB" },
+				new() { Id = "host", Name = "Ana", Token = "star", IsHost = true, PlayerSecretId = "secret-ana", RejoinCode = "AAAABBBB", UserId = "user-ana" },
 				new() { Id = "p2", Name = "Berto", Token = "moon", PlayerSecretId = "secret-berto", RejoinCode = "CCCCDDDD" },
 			},
 		};
@@ -35,6 +35,71 @@ public class RejoinTests
 	}
 
 	private static readonly Func<string, IEnumerable<string>> NobodyConnected = _ => Array.Empty<string>();
+
+	// ── claiming with an account instead of a code ───────────────────────────
+	//
+	// Same seat, same guards, a different proof. The point of the account path is that there is
+	// nothing to have kept: a new device with the same session is the same person coming back.
+
+	[Fact]
+	public async Task An_account_reclaims_its_own_seat_without_any_code()
+	{
+		var (repo, _) = GameWith();
+
+		var result = await RejoinService.ClaimForUserAsync("ABC123", "user-ana", repo, NobodyConnected);
+
+		Assert.Null(result.Error);
+		Assert.Equal("host", result.Session!.PlayerId);
+		Assert.Equal("Ana", result.Session.PlayerName);
+		// Rotated, exactly as the code path does: an old browser holding the previous secret loses it.
+		Assert.NotEqual("secret-ana", result.Session.PlayerSecretId);
+		// …and the player gets their own re-entry code back, so the new browser can store it.
+		Assert.Equal("AAAABBBB", result.Session.RejoinCode);
+	}
+
+	[Fact]
+	public async Task An_account_cannot_claim_a_seat_that_is_not_its_own()
+	{
+		// Berto's seat is anonymous, and no account may adopt it by asking. This is the whole
+		// security of the path: the seat says whose it is, the claimer does not.
+		var (repo, _) = GameWith();
+
+		var result = await RejoinService.ClaimForUserAsync("ABC123", "user-berto", repo, NobodyConnected);
+
+		Assert.Equal("GAME_NOT_FOUND", result.Error);
+		Assert.Null(result.Session);
+	}
+
+	[Fact]
+	public async Task An_account_cannot_evict_a_seat_somebody_is_sitting_on()
+	{
+		// The same refusal the code path gives, and for the same reason: signing in elsewhere must
+		// not throw you out of the table you are actually playing at.
+		var (repo, _) = GameWith();
+
+		var result = await RejoinService.ClaimForUserAsync(
+			"ABC123", "user-ana", repo, _ => new[] { "host" });
+
+		Assert.Equal("SEAT_CONNECTED", result.Error);
+	}
+
+	[Fact]
+	public async Task An_account_cannot_claim_a_seat_at_a_table_that_is_over()
+	{
+		var (repo, _) = GameWith(GameStatus.Completed);
+
+		Assert.Equal("GAME_OVER",
+			(await RejoinService.ClaimForUserAsync("ABC123", "user-ana", repo, NobodyConnected)).Error);
+	}
+
+	[Fact]
+	public async Task An_unknown_table_is_the_same_refusal_as_an_unknown_seat()
+	{
+		var (repo, _) = GameWith();
+
+		Assert.Equal("GAME_NOT_FOUND",
+			(await RejoinService.ClaimForUserAsync("NOPE", "user-ana", repo, NobodyConnected)).Error);
+	}
 
 	// ── the claim flow ───────────────────────────────────────────────────────
 
