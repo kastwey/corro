@@ -13,6 +13,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { E2E_BASE_URL } from '../playwright.config';
 import { installAxeAudit } from './axeAudit';
+import { trackPlayerContext } from './playerContexts';
 
 // ── Server script control ─────────────────────────────────────────────────────
 
@@ -71,6 +72,9 @@ export async function newPlayerPage(
 		locale,
 		reducedMotion: options.reducedMotion ?? 'reduce',
 	});
+	// Handed to the test's teardown, which closes it. Nothing used to, and a full run ended with
+	// dozens of live contexts holding open connections — the load that makes later tests flaky.
+	trackPlayerContext(context);
 	await installAxeAudit(context);
 	// Context-level so EVERY page in this player's browser gets the collector —
 	// including a page reopened after a disconnect (the reconnection flow).
