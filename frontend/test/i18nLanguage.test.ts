@@ -7,8 +7,8 @@ import { I18nBinder } from '../src/i18nBinder.js';
 // `corro_language` cookie. When they open a game, init() must honour that cookie instead
 // of forcing a hardcoded language (the game page used to force Spanish, ignoring the lobby).
 
-// A minimal i18next stand-in: init/changeLanguage just record the active language so the
-// binder can run without the real engine or network resources.
+// A minimal i18next stand-in: init just records the active language so the binder can run
+// without the real engine or network resources.
 function fakeI18next(translations: Record<string, string> = {}) {
 	const obj: any = {
 		language: 'en',
@@ -32,9 +32,6 @@ beforeEach(() => {
 	g.window = dom.window;
 	g.document = dom.window.document;
 	g.navigator = dom.window.navigator;
-	// The binder dispatches `new CustomEvent(...)` on document; map jsdom's constructor onto the
-	// global so the event is a jsdom Event that document.dispatchEvent accepts and propagates.
-	g.CustomEvent = dom.window.CustomEvent;
 	g.window.i18next = fakeI18next();
 });
 
@@ -82,29 +79,18 @@ test('applyI18n reveals deferred copy only after localization and keeps readable
 	assert.equal(fallback.textContent, 'Readable fallback');
 });
 
-// Regression: the languageChanged event MUST bubble. The lobby subscribes on `window`; a
-// non-bubbling event dispatched on `document` never reaches a window listener, so the whole
-// live-refresh (token/board selectors, saved games, theme toggle) silently never ran and those
-// imperatively-set labels stayed in the old language until a hard reload.
-test('changeLanguage dispatches a bubbling languageChanged event that reaches window listeners', async () => {
+// The language in force comes from the PAGE — there is no in-place switch to test (see the note
+// in i18nBinder.ts). So the locale-sensitive behaviour is checked across two binders, which is
+// also how a player actually meets it: one page per language.
+test('formatNumber follows the language in force, not a hardcoded locale', async () => {
 	document.cookie = 'corro_language=en';
-	const binder = newBinder();
-	await binder.init();
+	const english = newBinder();
+	await english.init();
+	assert.equal(english.formatNumber(1234), (1234).toLocaleString('en'));
 
-	let heardOnWindow: string | null = null;
-	window.addEventListener('languageChanged', (e: any) => { heardOnWindow = e.detail?.language ?? null; });
-
-	await binder.changeLanguage('es');
-
-	assert.equal(heardOnWindow, 'es');
-});
-
-test('formatNumber follows the active language instead of a hardcoded locale', async () => {
-	document.cookie = 'corro_language=en';
-	const binder = newBinder();
-	await binder.init();
-
-	assert.equal(binder.formatNumber(1234), (1234).toLocaleString('en'));
-	await binder.changeLanguage('es');
-	assert.equal(binder.formatNumber(1234), (1234).toLocaleString('es'));
+	document.documentElement.lang = 'es';
+	const spanish = newBinder();
+	await spanish.init();
+	assert.equal(spanish.formatNumber(1234), (1234).toLocaleString('es'),
+		'the page it was loaded into decides, over the cookie');
 });

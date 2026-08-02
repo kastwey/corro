@@ -100,15 +100,3 @@ test('a muted player never shows the blocked hint (they chose silence)', () => {
 	assert.equal(btn.getAttribute('aria-label'), 'Turn sound effects on');
 });
 
-test('re-translates its label on a runtime language change (regression: stale until reload)', () => {
-	const { btn } = mountToggle(false);
-	assert.equal(btn.getAttribute('aria-label'), 'Turn sound effects off');
-
-	// Simulate the lobby applying Spanish at runtime: i18next swaps, then languageChanged fires.
-	// The label is set imperatively, so the toggle must repaint itself using its last state.
-	installFakeI18next('es');
-	document.dispatchEvent(new window.CustomEvent('languageChanged', { bubbles: true }));
-
-	assert.equal(btn.getAttribute('aria-label'), 'Desactivar efectos de sonido');
-	assert.equal(btn.title, 'Desactivar efectos de sonido');
-});

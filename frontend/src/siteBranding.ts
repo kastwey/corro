@@ -191,6 +191,5 @@ export async function initializeSiteBranding(
 	const branding = await loadSiteBranding(request);
 	const apply = () => applySiteBranding(branding, document, getLanguage());
 	apply();
-	document.addEventListener('languageChanged', apply);
 	return branding;
 }

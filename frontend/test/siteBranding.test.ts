@@ -113,24 +113,6 @@ test('localized taglines follow exact, base-language, English and first-availabl
 	assert.equal(siteTagline({ ...branding, tagline: '' }, 'es'), '');
 });
 
-test('initialized branding follows runtime language changes', async () => {
-	const dom = new JSDOM(`<!doctype html><html lang="es"><head><title>Fallback</title></head><body>
-		<p data-site-tagline>Fallback</p>
-	</body></html>`);
-	const request = async () => new Response(JSON.stringify({
-		title: 'All Welcome',
-		tagline: null,
-		taglines: { en: 'English line.', es: 'Línea española.' },
-	}), { status: 200, headers: { 'Content-Type': 'application/json' } });
-	let language = 'es';
-	await initializeSiteBranding(dom.window.document, request as typeof fetch, () => language);
-	assert.equal(dom.window.document.querySelector('[data-site-tagline]')?.textContent, 'Línea española.');
-
-	language = 'en';
-	dom.window.document.dispatchEvent(new dom.window.CustomEvent('languageChanged'));
-	assert.equal(dom.window.document.querySelector('[data-site-tagline]')?.textContent, 'English line.');
-});
-
 test('text branding updates title and tagline when deployment assets are omitted', () => {
 	const document = shellDocument();
 	applySiteBranding({

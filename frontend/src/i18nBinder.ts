@@ -307,48 +307,19 @@ export class I18nBinder {
 	console.debug(`Applied translations for language: ${this.currentLanguage} (${textElements.length} text elements, ${attrCount} attributes)`);
 	}
 
-	/**
-	* Changes the language and reapplies translations
-	*/
-	async changeLanguage(language: string, container: Element | Document = document): Promise<void> {
-	if (!this.initialized) {
-		console.warn('i18next not initialized. Call init() first.');
-		return;
-	}
-
-	if (!this.config.supportedLanguages.includes(language)) {
-		console.warn(`Language ${language} is not supported`);
-		return;
-	}
-
-	try {
-		const i18next = await this.getI18next();
-		const previousLanguage = this.currentLanguage;
-	  
-		await i18next.changeLanguage(language);
-		this.currentLanguage = language;
-	  
-		// Save to cookie
-		this.saveLanguageToCookie(language);
-	  
-		await this.applyI18n(container);
-	  
-		// Dispatch custom event to notify the change. It MUST bubble: the lobby subscribes on
-		// `window`, and a non-bubbling event dispatched on `document` never reaches a `window`
-		// listener (window is an ancestor of document in the propagation path). Without this the
-		// whole onLanguageChanged refresh — token/board selectors, saved games — silently never
-		// ran, so anything set imperatively via t() kept its old-language text until a reload.
-		const event = new CustomEvent('languageChanged', {
-		bubbles: true,
-		detail: { language, previousLanguage }
-		});
-		document.dispatchEvent(event);
-	  
-		console.debug(`Language changed to: ${language} (saved to cookie)`);
-	} catch (error) {
-		console.error(`Failed to change language to ${language}:`, error);
-	}
-	}
+	/*
+	 * There is NO changeLanguage() and no `languageChanged` event, deliberately.
+	 *
+	 * A language is not a setting this app switches at runtime: each page is BUILT in its own
+	 * language and served already translated (see languageUrl.ts, localizePages.js), and the
+	 * language in force is read from the page's own <html lang> ahead of any cookie. Choosing a
+	 * language is therefore navigation — `rememberLanguage()` records it and the player lands on
+	 * the page for it, where everything is right by construction.
+	 *
+	 * Retranslating in place could only ever have been asked to change X to X, so the event fired
+	 * for a change that had not happened and everything listening for it repainted identical text.
+	 * If in-place switching is ever wanted, it needs building on purpose — not restoring from here.
+	 */
 
 	/**
 	* Gets a translation directly (for use in JavaScript)
@@ -443,8 +414,6 @@ export const i18nBinder = new I18nBinder();
 // Async convenience functions for global use.
 export const t = async (key: string, options?: any) => await i18nBinder.t(key, options);
 export const applyI18n = async (container?: Element | Document) => await i18nBinder.applyI18n(container);
-export const changeLanguage = async (language: string, container?: Element | Document) => 
-	await i18nBinder.changeLanguage(language, container);
 
 // Synchronous functions for use in code that cannot be async
 export const tSync = (key: string, options?: any) => i18nBinder.tSync(key, options);

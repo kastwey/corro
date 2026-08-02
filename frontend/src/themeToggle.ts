@@ -68,9 +68,4 @@ export function initThemeToggle(mount: HTMLElement): void {
 
 	mount.appendChild(btn);
 	sync();
-
-	// The action label is set imperatively (not via data-i18n), so applyI18n never reaches it on
-	// a runtime language switch. Re-run sync() on `languageChanged` so it re-translates; sync()
-	// reads the current theme from the DOM, so it needs no arguments.
-	document.addEventListener('languageChanged', sync);
 }

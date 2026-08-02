@@ -285,8 +285,11 @@ class UnifiedLobbyUI {
 			// first because the root page redirects by cookie — a stale one would send a player who
 			// just asked for English straight back to Spanish. The query string and hash travel along
 			// so an invite link survives the switch.
+			// Already on that language's page: there is nothing to translate and nowhere to go, but
+			// the CHOICE still has to be recorded — someone who arrived on /es/ from a shared link
+			// and pressed Apply has just told us where to send them from the root next time.
 			if (isLobbyPathFor(window.location.pathname, language)) {
-				void i18nBinder.changeLanguage(language);
+				i18nBinder.rememberLanguage(language);
 				return;
 			}
 			i18nBinder.rememberLanguage(language);
