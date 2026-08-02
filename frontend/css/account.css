@@ -35,10 +35,16 @@
 /* The sign-in affordances navigate away, so they are links. They are STYLED like buttons for
  * pointer users while keeping the link role, and they carry an underline so the styling is not the
  * only thing distinguishing them from surrounding text. */
+/* A real list in the accessibility tree and a row on screen. `list-style: none` is what makes a
+   browser drop the list semantics, which is why the markup carries an explicit role="list"; here we
+   only take the bullets and the indent away. */
 .account-providers {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 8px;
+	list-style: none;
+	margin: 0;
+	padding: 0;
 }
 
 .account-signin-link {

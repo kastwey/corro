@@ -296,27 +296,37 @@ export async function initAccountBar(
 		prompt.textContent = tSync('account.signInPrompt');
 		mount.appendChild(prompt);
 
-		// role="group" rather than a landmark or a <section>: the lobby's landmark tree stays flat,
-		// and the links still read as one named set.
-		const group = document.createElement('div');
-		group.className = 'account-providers';
-		group.setAttribute('role', 'group');
-		group.setAttribute('aria-labelledby', prompt.id);
+		// A LIST, because that is what these are: one way in per provider, and how many there are is
+		// worth knowing before you start through them ("list, 2 items"). A role="group" named them
+		// as a set but could not count them. Named from the prompt above it, so entering the list
+		// says what it is for. `role="list"` is explicit because `list-style: none` makes browsers
+		// drop the semantics, and the layout needs it.
+		//
+		// LINKS, not buttons, and deliberately: signing in is a full page navigation to the
+		// provider, so it must behave like one — middle-click, open in a new tab, and the status bar
+		// showing where it goes.
+		const list = document.createElement('ul');
+		list.className = 'account-providers';
+		list.setAttribute('role', 'list');
+		list.setAttribute('aria-labelledby', prompt.id);
 
 		for (const provider of providers) {
+			const item = document.createElement('li');
 			const link = document.createElement('a');
 			link.className = 'account-signin-link';
 			link.dataset.provider = provider;
 			link.href = signInPath(provider, returnUrl);
 			link.textContent = tSync('account.signInWith', { provider: providerName(provider) });
-			group.appendChild(link);
+			item.appendChild(link);
+			list.appendChild(item);
 		}
 
-		mount.appendChild(group);
+		mount.appendChild(list);
 	};
 
 	render();
-	// Labels are set imperatively, so applyI18n never reaches them on a runtime language switch.
-	document.addEventListener('languageChanged', render);
+	// No `languageChanged` listener: there is no runtime language change to hear. Each language is
+	// served as its own pre-translated page and choosing one is a navigation, so this rendered once
+	// in the right language or not at all (see i18nBinder.ts).
 	return session;
 }

@@ -243,17 +243,23 @@ test('the sign-in affordances are links, because they navigate away', async () =
 	assert.equal(el.querySelectorAll('a.account-signin-link').length, 2);
 });
 
-test('the provider links form one named group without adding a landmark', async () => {
-	// The lobby's landmark tree has to stay flat, so this is a role="group", not a region.
+test('the ways in are a named list, without adding a landmark', async () => {
+	// One way in per provider is a LIST — and how many there are is worth knowing before you start
+	// through them, which a role="group" could name but never count. The lobby's landmark tree still
+	// has to stay flat, so it is not a region either.
 	const el = mount();
 	const { impl } = fakeFetch({ ...BOTH_PROVIDERS, '/api/auth/me': { signedIn: false } });
 
 	await initAccountBar(el, { fetchImpl: impl });
 
-	const group = el.querySelector('.account-providers')!;
-	assert.equal(group.getAttribute('role'), 'group');
-	const labelledBy = group.getAttribute('aria-labelledby')!;
-	assert.ok(document.getElementById(labelledBy)?.textContent, 'the group label resolves to real text');
+	const list = el.querySelector('.account-providers')!;
+	assert.equal(list.tagName, 'UL');
+	assert.equal(list.getAttribute('role'), 'list', 'explicit: list-style:none drops the semantics');
+	assert.equal(list.querySelectorAll(':scope > li > a.account-signin-link').length, 2,
+		'one item per provider, each holding its link');
+
+	const labelledBy = list.getAttribute('aria-labelledby')!;
+	assert.ok(document.getElementById(labelledBy)?.textContent, 'the list label resolves to real text');
 	assert.equal(el.querySelectorAll('section, [role="region"]').length, 0);
 });
 
@@ -386,15 +392,15 @@ test('the lobby page mounts the account control hidden, above the preferences', 
 		'who you are comes before how the page is displayed');
 });
 
-test('switching language re-translates the imperatively built labels', async () => {
-	// Nothing here is built with data-i18n, so applyI18n never reaches it on a runtime switch.
+test('it renders in the language of the page it was loaded into', async () => {
+	// There is no runtime language change to re-translate for: each language is served as its own
+	// pre-translated page and choosing one is a navigation (see i18nBinder.ts). So the only thing
+	// this has to get right is being built in the language already in force.
 	const el = mount();
-	const { impl } = fakeFetch({ ...BOTH_PROVIDERS, '/api/auth/me': SIGNED_IN_BODY });
-	await initAccountBar(el, { fetchImpl: impl });
-	assert.equal(el.querySelector('.account-status')?.textContent, 'Signed in as Ana.');
-
 	installFakeI18next('es');
-	document.dispatchEvent(new (globalThis as any).window.Event('languageChanged'));
+	const { impl } = fakeFetch({ ...BOTH_PROVIDERS, '/api/auth/me': SIGNED_IN_BODY });
+
+	await initAccountBar(el, { fetchImpl: impl });
 
 	assert.equal(el.querySelector('.account-status')?.textContent, 'Sesión iniciada como Ana.');
 	assert.equal(el.querySelector('#account-signout-btn')?.textContent, 'Cerrar sesión');

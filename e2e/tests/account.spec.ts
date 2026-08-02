@@ -33,8 +33,12 @@ test('signed out, the lobby offers a sign-in link that navigates rather than a b
 	await expect(link).toHaveAttribute('href', /\/api\/auth\/signin\/e2e\?returnUrl=/);
 	await expect(page.getByRole('button', { name: signInLinkName() })).toHaveCount(0);
 
-	// The provider links read as one named set without adding a landmark to the lobby.
-	await expect(page.locator('#account-bar .account-providers')).toHaveAttribute('role', 'group');
+	// One way in per provider is a LIST: named, and counted — "list, 1 item" is worth hearing before
+	// you start through them, which a bare group could name but never count. Still no landmark: the
+	// lobby's landmark tree stays flat.
+	const ways = page.getByRole('list', { name: /.+/ }).filter({ has: page.locator('.account-signin-link') });
+	await expect(ways.getByRole('listitem')).toHaveCount(1); // the E2E stand-in is the only provider
+	await expect(page.locator('#account-bar section, #account-bar [role="region"]')).toHaveCount(0);
 });
 
 test('signing in names the player and offers signing out again', async ({ browser }) => {
