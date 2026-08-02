@@ -280,7 +280,8 @@
         "message": "Everyone connected will be disconnected and the game progress will be lost. This cannot be undone.",
         "confirm": "Delete",
         "cancel": "Cancel"
-      }
+      },
+      "adopted": "{{count}} table(s) from this browser were added to your account."
     },
     "rejoin": {
       "title": "Return to your game",

@@ -257,6 +257,119 @@ public class GameHubSavedGamesTests
 			byAccount.Players.Select(p => (p.Id, p.Name, p.IsHost, p.Connected)));
 	}
 
+	// ── Adopting the seats a browser holds ──────────────────────────────────
+	//
+	// Somebody who played for months before signing in has all of it in one browser. Signing in
+	// should not mean starting again on the next device — but the seat's own secret is what makes
+	// that safe, and these are mostly about what CANNOT be adopted.
+
+	[Fact]
+	public async Task AdoptSeats_TakesASeatTheBrowserCanProve()
+	{
+		var gameId = NewId();
+		var repo = new StubRepository(DocFor(gameId, hostId: "host", hostSecret: "secret"));
+		var (hub, _, _) = BuildHub(repo, signedInUserId: "user-1");
+
+		var adopted = await hub.AdoptSeats(new List<SeatAdoption>
+		{
+			new() { GameId = gameId, PlayerId = "host", PlayerSecretId = "secret" },
+		});
+
+		Assert.Equal(1, adopted);
+		Assert.Equal("user-1", (await repo.LoadGameAsync(gameId))!.Players.Single(p => p.Id == "host").UserId);
+	}
+
+	[Fact]
+	public async Task AdoptSeats_RefusesASeatWithoutItsSecret()
+	{
+		// The secret IS the proof. Without it this would be "name a game id, take a seat".
+		var gameId = NewId();
+		var repo = new StubRepository(DocFor(gameId, hostId: "host", hostSecret: "secret"));
+		var (hub, _, _) = BuildHub(repo, signedInUserId: "user-1");
+
+		var adopted = await hub.AdoptSeats(new List<SeatAdoption>
+		{
+			new() { GameId = gameId, PlayerId = "host", PlayerSecretId = "wrong" },
+		});
+
+		Assert.Equal(0, adopted);
+		Assert.Null((await repo.LoadGameAsync(gameId))!.Players.Single(p => p.Id == "host").UserId);
+	}
+
+	[Fact]
+	public async Task AdoptSeats_NeverTakesASeatAnotherAccountAlreadyOwns()
+	{
+		// Even holding the secret. Moving a seat between accounts is the takeover this design
+		// refuses everywhere else, and a shared browser is exactly where it would happen.
+		var gameId = NewId();
+		var repo = new StubRepository(DocFor(gameId, hostId: "host", hostSecret: "secret", userId: "user-2"));
+		var (hub, _, _) = BuildHub(repo, signedInUserId: "user-1");
+
+		var adopted = await hub.AdoptSeats(new List<SeatAdoption>
+		{
+			new() { GameId = gameId, PlayerId = "host", PlayerSecretId = "secret" },
+		});
+
+		Assert.Equal(0, adopted);
+		Assert.Equal("user-2", (await repo.LoadGameAsync(gameId))!.Players.Single(p => p.Id == "host").UserId);
+	}
+
+	[Fact]
+	public async Task AdoptSeats_DoesNothingForAnAnonymousCaller()
+	{
+		var gameId = NewId();
+		var repo = new StubRepository(DocFor(gameId, hostId: "host", hostSecret: "secret"));
+		var (hub, _, _) = BuildHub(repo);
+
+		Assert.Equal(0, await hub.AdoptSeats(new List<SeatAdoption>
+		{
+			new() { GameId = gameId, PlayerId = "host", PlayerSecretId = "secret" },
+		}));
+	}
+
+	[Fact]
+	public async Task AdoptSeats_TakesTheOnesItCanAndSkipsTheRest()
+	{
+		// One good, one unprovable, one belonging to somebody else, one that no longer exists. A
+		// single bad entry must not cost the player the others.
+		var mine = NewId();
+		var theirs = NewId();
+		var wrongSecret = NewId();
+		var repo = new StubRepository(
+			DocFor(mine, hostId: "host", hostSecret: "secret"),
+			DocFor(theirs, hostId: "host", hostSecret: "secret", userId: "user-2"),
+			DocFor(wrongSecret, hostId: "host", hostSecret: "secret"));
+		var (hub, _, _) = BuildHub(repo, signedInUserId: "user-1");
+
+		var adopted = await hub.AdoptSeats(new List<SeatAdoption>
+		{
+			new() { GameId = mine, PlayerId = "host", PlayerSecretId = "secret" },
+			new() { GameId = theirs, PlayerId = "host", PlayerSecretId = "secret" },
+			new() { GameId = wrongSecret, PlayerId = "host", PlayerSecretId = "nope" },
+			new() { GameId = NewId(), PlayerId = "host", PlayerSecretId = "secret" },
+		});
+
+		Assert.Equal(1, adopted);
+	}
+
+	[Fact]
+	public async Task AdoptSeats_IsHarmlessToRepeat()
+	{
+		// It runs whenever the lobby loads, so the second time must simply find nothing new: a
+		// seat this account already owns is not adopted again.
+		var gameId = NewId();
+		var repo = new StubRepository(DocFor(gameId, hostId: "host", hostSecret: "secret"));
+		var (hub, _, _) = BuildHub(repo, signedInUserId: "user-1");
+		var seats = new List<SeatAdoption>
+		{
+			new() { GameId = gameId, PlayerId = "host", PlayerSecretId = "secret" },
+		};
+
+		Assert.Equal(1, await hub.AdoptSeats(seats));
+		Assert.Equal(0, await hub.AdoptSeats(seats));
+		Assert.Equal("user-1", (await repo.LoadGameAsync(gameId))!.Players.Single(p => p.Id == "host").UserId);
+	}
+
 	private static GameDocument DocFor(string gameId, string hostId, string hostSecret, string? extraPlayerId = null,
 		string? packageToken = null, string? shippedBoardId = null, string? packageBlobKey = null,
 		string? userId = null)
@@ -395,7 +508,14 @@ public class GameHubSavedGamesTests
 				_games.Values.FirstOrDefault(g => g.InviteCode == inviteCode));
 		}
 		public Task<GameDocument> CreateGameAsync(GameDocument game) => Task.FromResult(game);
-		public Task<GameDocument> UpdateGameAsync(GameDocument game) => Task.FromResult(game);
+		/// <summary>Stores it, rather than handing it back and forgetting. A repository stub that
+		/// silently discards writes makes every test that checks what was SAVED pass for the wrong
+		/// reason — or fail for one, which is how this was found.</summary>
+		public Task<GameDocument> UpdateGameAsync(GameDocument game)
+		{
+			_games[game.GameId] = game;
+			return Task.FromResult(game);
+		}
 	}
 
 	// ── SignalR fakes ────────────────────────────────────────────────────────

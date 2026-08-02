@@ -1052,6 +1052,27 @@ class UnifiedLobbyUI {
 		}
 
 		const remaining = GameSessionStore.getGames();
+		const onTheAccount = new Set(accountTables.map(i => i.gameId));
+
+		// Seats this browser can prove but the account does not know about yet: hand them over, so
+		// months of playing before signing in do not stay stranded on one device. Nothing is
+		// removed from the browser — its own entry keeps working signed out, which is a second way
+		// back rather than a duplicate (the list below shows each table once regardless).
+		const unclaimed = remaining.filter(g => g.playerSecretId && !onTheAccount.has(g.gameId));
+		if (unclaimed.length > 0) {
+			const adopted = await gameClient.adoptSeats(unclaimed.map(g => ({
+				gameId: g.gameId,
+				playerId: g.playerId,
+				playerSecretId: g.playerSecretId,
+			}))).catch(error => { console.error('Error adopting the tables held by this browser:', error); return 0; });
+
+			if (adopted > 0) {
+				// Said out loud rather than shown: it happened TO them, they did not ask for it.
+				this.announceInLobby(
+					t('lobby.savedGames.adopted').replace('{{count}}', String(adopted)));
+			}
+		}
+
 		const known = new Set(remaining.map(g => g.gameId));
 		// A table the account holds that this browser has never seen: the cross-device case, and
 		// the whole point of signing in. It has no stored credentials, so entering it goes through

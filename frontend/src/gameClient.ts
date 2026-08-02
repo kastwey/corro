@@ -432,6 +432,18 @@ export class UnifiedGameClient {
 		return await this.connection.invoke("GetMyTables");
 	}
 
+	/**
+	 * Offer this browser's seats to the signed-in account. Each carries the seat's own secret,
+	 * which is the proof; the server takes only the ones that check out and that nobody else owns,
+	 * and answers with how many. Signed out, the answer is 0.
+	 */
+	async adoptSeats(seats: { gameId: string; playerId: string; playerSecretId: string }[]): Promise<number> {
+		if (!this.isConnected || !this.connection || seats.length === 0) {
+			return 0;
+		}
+		return await this.connection.invoke("AdoptSeats", seats);
+	}
+
 	async getGameByInviteCode(inviteCode: string): Promise<GameInfo> {
 		if (!this.isConnected || !this.connection) {
 			throw new Error("Not connected to server");

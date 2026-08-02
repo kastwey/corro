@@ -280,7 +280,8 @@
         "message": "Todos los conectados serán desconectados y se perderá el progreso de la partida. Esta acción no se puede deshacer.",
         "confirm": "Eliminar",
         "cancel": "Cancelar"
-      }
+      },
+      "adopted": "Se han añadido a tu cuenta {{count}} mesa(s) de este navegador."
     },
     "rejoin": {
       "title": "Volver a tu partida",

@@ -189,6 +189,17 @@ public record StartGameResponse
 
 // Live information about a game the user has saved locally, used to populate the
 // "your games" list in the lobby (status + who is currently connected).
+/// <summary>
+/// A seat a browser says it holds, offered to an account at sign-in. The secret is the PROOF, sent
+/// back from where the browser stored it — not a request to be trusted.
+/// </summary>
+public record SeatAdoption
+{
+	public required string GameId { get; init; }
+	public required string PlayerId { get; init; }
+	public required string PlayerSecretId { get; init; }
+}
+
 public record SavedGameInfo
 {
 	public required string GameId { get; init; }

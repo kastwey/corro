@@ -741,6 +741,81 @@ public partial class GameHub
 	}
 
 	/// <summary>
+	/// Adopt into this account the seats this BROWSER can prove it holds.
+	///
+	/// Somebody who played for months before signing in has all of it in one browser's storage.
+	/// Signing in should not mean starting again on the next device, so the seats come across —
+	/// and from then on the account carries them.
+	///
+	/// THE PROOF IS THE SEAT'S OWN SECRET, sent back from where it was stored. That is the same
+	/// credential every other authenticated call uses; a seat whose secret does not match is
+	/// skipped in silence, because a caller guessing game ids learns nothing from the difference.
+	///
+	/// A seat that ALREADY belongs to an account is never taken. Adoption is for seats nobody has
+	/// claimed, and moving one between accounts is the takeover this design refuses everywhere else.
+	///
+	/// Nothing is deleted from the browser. Its stored seat stays valid and keeps working signed
+	/// out — this ADDS a way back, it does not replace one.
+	/// </summary>
+	public async Task<int> AdoptSeats(List<SeatAdoption> seats)
+	{
+		var userId = SignedInUserId();
+		if (userId == null || seats == null || seats.Count == 0)
+		{
+			return 0;
+		}
+
+		var adopted = 0;
+		foreach (var seat in seats.Take(MyTablesLimit))
+		{
+			try
+			{
+				// The flag is set INSIDE the mutation, because that is the only place that knows a
+				// change was made. Reading the result afterwards cannot tell "I just took this" from
+				// "this was already mine" — and since the lobby runs this on every load, that
+				// difference is the one being counted: it would otherwise announce the same tables
+				// as newly added, every single time.
+				var took = false;
+				await _registry.MutateDocumentAsync(seat.GameId, game =>
+				{
+					var player = game.Players.FirstOrDefault(p => p.Id == seat.PlayerId);
+					// Unproven, already owned, or a bot's chair: not ours to take.
+					if (player is null
+						|| player.PlayerSecretId != seat.PlayerSecretId
+						|| player.UserId != null)
+					{
+						return null;
+					}
+
+					took = true;
+					return game with
+					{
+						Players = game.Players
+							.Select(p => p.Id == seat.PlayerId ? p with { UserId = userId } : p)
+							.ToList(),
+					};
+				});
+
+				if (took)
+				{
+					adopted++;
+				}
+			}
+			catch (Exception ex)
+			{
+				// One unreachable table must not cost the player the rest.
+				_logger?.LogError(ex, "Could not adopt seat {PlayerId} in {GameId}", seat.PlayerId, seat.GameId);
+			}
+		}
+
+		if (adopted > 0)
+		{
+			_logger?.LogInformation("Adopted {Count} browser-held seat(s) into account {UserId}", adopted, userId);
+		}
+		return adopted;
+	}
+
+	/// <summary>
 	/// Take back the seat this account holds at a table, from a device that has never seen it.
 	/// The account-less path asks for a code the player had to keep; this one asks for nothing,
 	/// because the seat already knows whose it is.
