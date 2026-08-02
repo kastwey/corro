@@ -267,8 +267,8 @@ public class AuthController : ControllerBase
 			return Redirect(LinkResultUrl(returnUrl, provider, link.Outcome));
 		}
 
-		await IssueSessionAsync(identity, ct);
-		return Redirect(returnUrl);
+		var secondAccount = await IssueSessionAsync(identity, ct);
+		return Redirect(secondAccount ? SecondAccountUrl(returnUrl) : returnUrl);
 	}
 
 	/// <summary>
@@ -308,7 +308,9 @@ public class AuthController : ControllerBase
 
 	/// <summary>Resolves the account and issues this app's session, dropping the provider's
 	/// external cookie now that it has served its one purpose.</summary>
-	private async Task IssueSessionAsync(ExternalIdentity identity, CancellationToken ct)
+	/// <summary>Returns true when this sign-in quietly created the player a SECOND account, so the
+	/// destination can say so (see UserAccountService.ShouldSuggestLinkingAsync).</summary>
+	private async Task<bool> IssueSessionAsync(ExternalIdentity identity, CancellationToken ct)
 	{
 		var user = await _accounts.SignInAsync(identity, DateTime.UtcNow, ct);
 
@@ -318,6 +320,7 @@ public class AuthController : ControllerBase
 			new AuthenticationProperties { IsPersistent = true });
 
 		await HttpContext.SignOutAsync(AuthenticationExtensions.ExternalScheme);
+		return await _accounts.ShouldSuggestLinkingAsync(user, identity, ct);
 	}
 
 	/// <summary>
@@ -332,6 +335,15 @@ public class AuthController : ControllerBase
 	/// back to the app rather than showing a server error page, because the player can still play
 	/// without an account.</summary>
 	private static string SignInFailureUrl() => "/?signInError=1";
+
+	/// <summary>
+	/// Back where the player started, flagged so the lobby can explain that this login made a NEW
+	/// account rather than opening the one they already had — and how to join the two. Carried in the
+	/// URL for the same reason the link outcome is: a provider round-trip is a full page navigation
+	/// and leaves no response to put it in.
+	/// </summary>
+	private static string SecondAccountUrl(string returnUrl) =>
+		returnUrl + (returnUrl.Contains('?') ? "&" : "?") + "secondAccount=1";
 
 	/// <summary>
 	/// Back where the player started, carrying what became of the link. A provider round-trip is a

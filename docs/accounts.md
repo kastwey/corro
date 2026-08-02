@@ -39,6 +39,28 @@ deliberately produces **two separate accounts**.
 [`server.tests/UserAccountServiceTests.cs`](../server.tests/UserAccountServiceTests.cs) is where it
 is pinned.
 
+## When somebody makes a second account by accident
+
+The rule above has one genuinely surprising consequence: sign in with Google, then later with
+Microsoft using the same address, and you have **two accounts**. People meet that as "where did my
+tables go?", which is the worst possible way to learn it.
+
+So the server notices and the lobby explains it, in the words of what to DO rather than the words
+of the rule: sign out, sign back in with the first service, open *Your account*, press *Add* beside
+the other one, accept on its page. Nothing is merged and nothing offers to — linking stays a
+deliberate act from inside a session that already holds both logins.
+
+`ShouldSuggestLinkingAsync` says when, and each of its three conditions is a refusal to guess:
+
+- **the account was created by this sign-in.** After the first time the player has been told;
+  repeating it at every sign-in would be nagging about a decision they have made.
+- **the provider verified the address** (`email_verified`). This is the load-bearing one. A
+  work/school Microsoft address is a directory attribute a tenant admin sets to anything they like,
+  so acting on an unverified one would let a stranger with their own tenant ask this service
+  whether *you* have an account here. Answering that is account enumeration, and it is the one way
+  a helpful notice could become a leak.
+- **another account actually holds it.**
+
 ## Linking a second provider
 
 Two providers only ever share an account because the player **explicitly linked them from inside an

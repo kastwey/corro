@@ -25,6 +25,7 @@ import { initAccountBar } from '../account.js';
 import { openAccountSettings } from '../accountSettings.js';
 import { initializeSiteBranding } from '../siteBranding.js';
 import { initPrivacyNotice } from '../privacyNotice.js';
+import { showSecondAccountNotice } from '../secondAccountNotice.js';
 import { applyRuleSettings, readRuleSettings } from './ruleFields.js';
 import { chooseContentLanguage, contentLanguageName, fillContentLanguageSelect } from './contentLanguage.js';
 import {
@@ -97,16 +98,23 @@ class UnifiedLobbyUI {
 		// round-trip is a full page navigation with no response left to carry it. Consume the
 		// markers right away so a later reload cannot replay a stale outcome.
 		const signInFailed = getUrlParam('signInError') === '1';
+		// This login made a SECOND account rather than opening the one they already had. The most
+		// surprising thing this feature does, so it is explained rather than left to be discovered
+		// as "where did my tables go?".
+		const secondAccount = getUrlParam('secondAccount') === '1';
 		const linkCode = getUrlParam('linkResult');
 		const linkReturn = linkCode
 			? { code: linkCode, provider: getUrlParam('linkProvider') || '' }
 			: null;
-		if (signInFailed || linkReturn) {
+		if (signInFailed || linkReturn || secondAccount) {
 			const url = new URL(window.location.href);
-			for (const marker of ['signInError', 'linkResult', 'linkProvider']) {
+			for (const marker of ['signInError', 'linkResult', 'linkProvider', 'secondAccount']) {
 				url.searchParams.delete(marker);
 			}
 			window.history.replaceState({}, '', url.toString());
+		}
+		if (secondAccount) {
+			showSecondAccountNotice();
 		}
 
 		// Come back to the lobby exactly where the player left it (a game link keeps working).

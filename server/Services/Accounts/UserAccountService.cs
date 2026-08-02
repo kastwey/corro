@@ -11,7 +11,20 @@ namespace CorroServer.Services.Accounts;
 /// <param name="Subject">The provider's immutable id for this person (OIDC <c>sub</c>).</param>
 /// <param name="DisplayName">Profile name, when the provider supplied one.</param>
 /// <param name="Email">Address the provider reported. Stored for display only.</param>
-public sealed record ExternalIdentity(string Issuer, string Subject, string? DisplayName, string? Email);
+/// <param name="EmailVerified">
+/// Whether the provider says it CHECKED that address, from the `email_verified` claim. Never used
+/// to match accounts — the matching rule is (issuer, subject) and nothing else — but it decides
+/// whether the address is trustworthy enough to mention out loud. A work/school Microsoft account's
+/// address is a directory attribute a tenant admin sets, so it arrives unverified, and telling
+/// somebody "an account already exists with this address" on that basis would answer a question
+/// they had no right to ask.
+/// </param>
+public sealed record ExternalIdentity(
+	string Issuer,
+	string Subject,
+	string? DisplayName,
+	string? Email,
+	bool EmailVerified = false);
 
 /// <summary>Why an attempt to add a provider to an account ended the way it did.</summary>
 public enum LinkOutcome
@@ -117,6 +130,45 @@ public sealed class UserAccountService
 
 		_logger.LogInformation("Created account {UserId} from a first {Issuer} sign-in.", user.UserId, identity.Issuer);
 		return await _repository.UpsertUserAsync(user, ct);
+	}
+
+	/// <summary>
+	/// Whether the player has just made a SECOND account without meaning to, and should be told.
+	///
+	/// Signing in with Google and then with Microsoft using the same address gives two separate
+	/// accounts, on purpose (see the class summary). That is right, and it is also the single most
+	/// surprising thing about this feature — somebody meets it as "where did my tables go?". So
+	/// when it happens, say so.
+	///
+	/// Three conditions, and each one is a refusal to guess:
+	///
+	///  * the account was created by THIS sign-in. Saying it every time would be nagging, and after
+	///    the first time the player has already been told;
+	///  * the provider VERIFIED the address. A work/school Microsoft address is a directory
+	///    attribute an admin can set to anything, so acting on an unverified one would let a
+	///    stranger with their own tenant ask this service whether you have an account here;
+	///  * another account actually holds it.
+	///
+	/// Nothing is merged and nothing is changed. The player is told, and linking stays what it has
+	/// always been: a deliberate act from inside a session that already holds both logins.
+	/// </summary>
+	public async Task<bool> ShouldSuggestLinkingAsync(
+		UserDocument user,
+		ExternalIdentity identity,
+		CancellationToken ct = default)
+	{
+		if (user.CreatedAtUtc != user.LastSignInUtc)
+		{
+			return false; // a returning account, not one just made
+		}
+
+		var email = Clean(identity.Email);
+		if (!identity.EmailVerified || string.IsNullOrWhiteSpace(email))
+		{
+			return false;
+		}
+
+		return await _repository.HasOtherAccountWithEmailAsync(email, user.UserId, ct);
 	}
 
 	/// <summary>The account behind an established session, or null when it has since been erased.</summary>

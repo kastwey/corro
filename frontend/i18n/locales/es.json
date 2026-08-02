@@ -58,6 +58,18 @@
       "eraseConfirm": "¿Borrar tu cuenta definitivamente?",
       "eraseCancel": "Conservar mi cuenta",
       "eraseConfirmButton": "Sí, bórrala"
+    },
+    "secondAccount": {
+      "heading": "Esto ha creado una segunda cuenta",
+      "body": "Ya tenías una cuenta aquí con este correo, y entrar de esta forma ha creado otra nueva y separada. Tus mesas y tus ajustes están en la primera; esta empieza vacía.",
+      "why": "Es a propósito: que dos servicios de acceso digan el mismo correo no demuestra que sean la misma persona, así que nunca unimos cuentas por el correo.",
+      "howHeading": "Para juntarlas",
+      "step1": "Cierra la sesión de esta cuenta.",
+      "step2": "Vuelve a entrar con el servicio que usaste la PRIMERA vez.",
+      "step3": "Abre «Tu cuenta».",
+      "step4": "En «Formas de iniciar sesión», pulsa «Añadir» junto al servicio que acabas de probar.",
+      "step5": "Acepta en la página de ese servicio. A partir de ahí, cualquiera de los dos te abre la misma cuenta.",
+      "dismiss": "Entendido"
     }
   },
   "lobby": {

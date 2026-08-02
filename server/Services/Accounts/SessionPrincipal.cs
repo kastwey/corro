@@ -62,6 +62,10 @@ public static class ExternalLogin
 			Issuer: issuer,
 			Subject: subject,
 			DisplayName: principal.FindFirstValue(ClaimTypes.Name),
-			Email: principal.FindFirstValue(ClaimTypes.Email));
+			Email: principal.FindFirstValue(ClaimTypes.Email),
+			// OIDC's own flag for "we checked this address". Absent means no: an address nobody
+			// vouched for is not one to act on.
+			EmailVerified: string.Equals(
+				principal.FindFirstValue("email_verified"), "true", StringComparison.OrdinalIgnoreCase));
 	}
 }

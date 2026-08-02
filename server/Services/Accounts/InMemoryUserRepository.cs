@@ -27,6 +27,12 @@ public class InMemoryUserRepository : IUserRepository
 		CancellationToken ct = default) =>
 		Task.FromResult(_identities.GetOrAdd(link.IdentityKey, link));
 
+	public Task<bool> HasOtherAccountWithEmailAsync(string email, string exceptUserId, CancellationToken ct = default)
+		=> Task.FromResult(_users.Values.Any(u =>
+			u.UserId != exceptUserId
+			&& !string.IsNullOrWhiteSpace(u.Email)
+			&& string.Equals(u.Email, email, StringComparison.OrdinalIgnoreCase)));
+
 	public Task<UserDocument> UpsertUserAsync(UserDocument user, CancellationToken ct = default)
 	{
 		_users[user.UserId] = user;
