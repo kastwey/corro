@@ -26,6 +26,11 @@ export interface AccountUser {
 	/** Null when the provider supplied no name; the caller renders a localized placeholder. */
 	displayName: string | null;
 	email: string | null;
+	/** The public name they chose, or null while they have none. Only this is ever published in
+	 *  the list of who is connected — never the display name above. */
+	handle: string | null;
+	/** Whether they asked to appear in that list. Off unless they turned it on. */
+	listedPublicly: boolean;
 	identities: LinkedIdentityView[];
 }
 
@@ -58,6 +63,8 @@ export function parseSession(raw: unknown): AccountSession {
 			userId: user.userId,
 			displayName: typeof user.displayName === 'string' && user.displayName ? user.displayName : null,
 			email: typeof user.email === 'string' && user.email ? user.email : null,
+			handle: typeof user.handle === 'string' && user.handle ? user.handle : null,
+			listedPublicly: user.listedPublicly === true,
 			identities: Array.isArray(user.identities)
 				? user.identities
 					.filter((i: any) => i && typeof i.issuer === 'string' && i.issuer)
@@ -191,6 +198,75 @@ export async function renameAccount(
 		return 'failed';
 	} catch {
 		return 'failed';
+	}
+}
+
+/** What came of trying to set a handle: either it is yours, or the reason it is not. */
+export interface HandleSaveResult {
+	readonly ok: boolean;
+	/** A key under account.settings.* — each refusal is its own thing to say. */
+	readonly code: string;
+	readonly vars?: Record<string, unknown>;
+}
+
+/**
+ * Claim a public name, or change to another one. POST rather than PATCH-on-me because it is its
+ * own operation with its own refusals: taken, too soon, or not a usable name at all.
+ */
+export async function saveHandle(
+	fetchImpl: typeof fetch,
+	handle: string,
+): Promise<HandleSaveResult> {
+	try {
+		const response = await fetchImpl('/api/auth/handle', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ handle }),
+		});
+		if (response.ok) return { ok: true, code: 'handleSaved' };
+		if (response.status === 401) return { ok: false, code: 'signedOut' };
+
+		const body = await response.json().catch(() => ({})) as { code?: string; changeableAtUtc?: string };
+		switch (body.code) {
+			case 'HANDLE_TAKEN': return { ok: false, code: 'handleTaken' };
+			case 'HANDLE_TOO_SOON': return {
+				ok: false,
+				code: 'handleTooSoon',
+				// The date is the useful half: "not yet" without "until when" is just a refusal.
+				vars: { date: formatDate(body.changeableAtUtc) },
+			};
+			case 'HANDLE_TOOSHORT': return { ok: false, code: 'handleTooShort' };
+			case 'HANDLE_TOOLONG': return { ok: false, code: 'handleTooLong' };
+			case 'HANDLE_RESERVED': return { ok: false, code: 'handleReserved' };
+			default: return { ok: false, code: 'handleBadCharacters' };
+		}
+	} catch {
+		return { ok: false, code: 'handleFailed' };
+	}
+}
+
+/** A date somebody can read, in their own language; empty when the server sent nothing usable. */
+function formatDate(iso?: string): string {
+	if (!iso) return '';
+	const date = new Date(iso);
+	return Number.isNaN(date.getTime())
+		? ''
+		: date.toLocaleDateString(document.documentElement.lang || undefined, {
+			year: 'numeric', month: 'long', day: 'numeric',
+		});
+}
+
+/** Appear in the list of who is connected, or not. True when the server stored the choice. */
+export async function saveVisibility(fetchImpl: typeof fetch, listed: boolean): Promise<boolean> {
+	try {
+		const response = await fetchImpl('/api/auth/visibility', {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ listed }),
+		});
+		return response.ok;
+	} catch {
+		return false;
 	}
 }
 

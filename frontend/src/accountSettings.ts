@@ -16,7 +16,7 @@ import { tSync } from './i18nBinder.js';
 import {
 	AccountSession, MAX_DISPLAY_NAME_LENGTH,
 	deleteAccount, fetchProviders, fetchSession, linkPath, providerName,
-	renameAccount, unlinkProvider,
+	renameAccount, saveHandle, saveVisibility, unlinkProvider,
 } from './account.js';
 
 /** What a provider redirect reported about the link the player just attempted. */
@@ -150,6 +150,91 @@ export async function openAccountSettings(options: AccountSettingsOptions = {}):
 
 	nameGroup.append(nameLabel, nameInput, nameHint, nameSave);
 	content.appendChild(nameGroup);
+
+	// ── the public name, and whether it is published ─────────────────────────
+	//
+	// Two separate decisions on purpose. The handle is what strangers can see; the display name
+	// above is usually a real name imported from the provider and is NEVER published by the list.
+
+	const handleGroup = document.createElement('div');
+	handleGroup.className = 'form-group account-settings-handle';
+
+	const handleLabel = document.createElement('label');
+	handleLabel.htmlFor = 'account-handle-input';
+	handleLabel.textContent = tSync('account.settings.handleLabel');
+
+	const handleInput = document.createElement('input');
+	handleInput.type = 'text';
+	handleInput.id = 'account-handle-input';
+	handleInput.autocomplete = 'off';
+	handleInput.maxLength = 20;
+	handleInput.value = session.user?.handle ?? '';
+
+	const handleHint = document.createElement('p');
+	handleHint.className = 'account-settings-hint';
+	handleHint.id = 'account-handle-hint';
+	handleHint.textContent = tSync('account.settings.handleHint');
+	handleInput.setAttribute('aria-describedby', handleHint.id);
+
+	const handleSave = document.createElement('button');
+	handleSave.type = 'button';
+	handleSave.id = 'account-handle-save';
+	handleSave.className = 'secondary-button';
+	handleSave.textContent = tSync('account.settings.handleSave');
+	handleSave.addEventListener('click', async () => {
+		const result = await saveHandle(fetchImpl, handleInput.value);
+		if (result.ok) {
+			session = await fetchSession(fetchImpl);
+			setStatus(tSync('account.settings.handleSaved'));
+			options.onChanged?.();
+			return;
+		}
+		// Each refusal is a different thing to tell somebody — taken, too soon, bad characters —
+		// so each has its own words rather than one "invalid".
+		setStatus(tSync(`account.settings.${result.code}`, result.vars));
+	});
+
+	handleGroup.append(handleLabel, handleInput, handleHint, handleSave);
+	content.appendChild(handleGroup);
+
+	const listedGroup = document.createElement('div');
+	listedGroup.className = 'form-group account-settings-listed';
+
+	const listedLabel = document.createElement('label');
+	listedLabel.htmlFor = 'account-listed-input';
+
+	const listedInput = document.createElement('input');
+	listedInput.type = 'checkbox';
+	listedInput.id = 'account-listed-input';
+	listedInput.checked = session.user?.listedPublicly ?? false;
+
+	const listedText = document.createElement('span');
+	listedText.textContent = tSync('account.settings.listedLabel');
+
+	const listedHint = document.createElement('p');
+	listedHint.className = 'account-settings-hint';
+	listedHint.id = 'account-listed-hint';
+	listedHint.textContent = tSync('account.settings.listedHint');
+	listedInput.setAttribute('aria-describedby', listedHint.id);
+
+	listedInput.addEventListener('change', async () => {
+		const saved = await saveVisibility(fetchImpl, listedInput.checked);
+		if (!saved) {
+			// Put the control back to what the server still holds rather than leaving it showing a
+			// choice that was never stored.
+			listedInput.checked = !listedInput.checked;
+			setStatus(tSync('account.settings.listedFailed'));
+			return;
+		}
+		setStatus(tSync(listedInput.checked
+			? 'account.settings.listedOn'
+			: 'account.settings.listedOff'));
+		options.onChanged?.();
+	});
+
+	listedLabel.append(listedInput, listedText);
+	listedGroup.append(listedLabel, listedHint);
+	content.appendChild(listedGroup);
 
 	// ── ways to sign in ──────────────────────────────────────────────────────
 

@@ -131,7 +131,7 @@ export function hideSection(sectionId: string): void {
  * `view-waiting` (the created/joined waiting room). Splitting the page this way keeps
  * the waiting room from showing the games list behind it.
  */
-export const LOBBY_VIEWS = ['view-home', 'view-create', 'view-join', 'view-waiting'] as const;
+export const LOBBY_VIEWS = ['view-home', 'view-create', 'view-join', 'view-online', 'view-waiting'] as const;
 export type LobbyView = typeof LOBBY_VIEWS[number];
 
 /**

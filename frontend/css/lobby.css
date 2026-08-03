@@ -437,3 +437,49 @@
 	color: var(--text-muted);
 	font-size: 0.85rem;
 }
+
+/* ---- Who is online ------------------------------------------------------ */
+/* The same roster shape as the table and the in-game players panel, so somebody who has met one
+   has met all three. The surface scrolls once the room is big; its rows are the focus stops. */
+
+.online-surface {
+	max-height: 22rem;
+	overflow-y: auto;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface-2);
+}
+
+.online-list {
+	margin: 0;
+	padding: 0.25rem;
+	list-style: none;
+}
+
+.online-player {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	padding: 0.55rem 0.7rem;
+	border-radius: var(--radius-sm);
+	color: var(--text);
+}
+
+.online-player + .online-player {
+	border-top: 1px solid var(--border);
+}
+
+/* Each person is one focus stop, so the row itself has to show where the keyboard is. */
+.online-player:focus,
+.online-player:focus-visible {
+	outline: 3px solid var(--focus, #ffd24d);
+	outline-offset: -3px;
+	background: var(--surface);
+}
+
+.online-player__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+}

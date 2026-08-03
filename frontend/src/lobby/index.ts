@@ -27,6 +27,7 @@ import { initializeSiteBranding } from '../siteBranding.js';
 import { initPrivacyNotice } from '../privacyNotice.js';
 import { wireLanguageSelector } from '../languageSelector.js';
 import { ComboBox } from '../comboBox.js';
+import { OnlineList } from '../onlinePlayers.js';
 import { listenForShake, requestShakePermission } from '../shakeGesture.js';
 import { initializeSiteMetrics } from '../siteMetrics.js';
 import { showSecondAccountNotice } from '../secondAccountNotice.js';
@@ -58,6 +59,8 @@ class UnifiedLobbyUI {
 	private liveClearTimer: number | null = null;
 	/** The game picker. Owns the catalogue, its ordering and its filtering. */
 	private boardPicker: ComboBox | null = null;
+	/** Who is connected. Built when the view is first opened; members only. */
+	private onlineList: OnlineList | null = null;
 
 	constructor() {
 		void this.init();
@@ -159,6 +162,12 @@ class UnifiedLobbyUI {
 			signInFailed,
 			onManageAccount: () => openSettings(),
 		}).then(session => {
+			// The list of who is connected is members-only, so the way in is only offered to
+			// somebody who can actually get through: a button that always answers "sign in first"
+			// is a dead end with extra steps.
+			const online = getElement('go-online-btn');
+			if (online) online.hidden = !session.signedIn;
+
 			// A link that has just come back reopens the settings where the player started it, so
 			// the outcome is reported in context instead of vanishing into a page reload.
 			if (linkReturn && session.signedIn) {
@@ -725,9 +734,29 @@ class UnifiedLobbyUI {
 	 * back to home is always non-destructive — a created/joined game keeps living on the
 	 * server and in this browser's saved list, so it simply reappears in the home list.
 	 */
+	/**
+	 * Who is connected. The list is fetched on arrival and never polls: people coming and going is
+	 * a stream of changes nobody asked to be read, and this is a page you visit rather than a
+	 * ticker. Anonymous callers are turned away by the server, so the way in is only offered to
+	 * somebody signed in (see setupAccountBar).
+	 */
+	private async showOnlineView(): Promise<void> {
+		showView('view-online');
+		window.history.pushState({ view: 'view-online' }, '');
+		this.onlineList ??= new OnlineList({
+			list: getElement('online-list')!,
+			empty: getElement('online-empty'),
+			error: getElement('online-error'),
+			t: (key, vars) => i18nBinder.tSync(key, vars),
+		});
+		await this.onlineList.refresh();
+	}
+
 	private setupHomeNavigation(): void {
 		getElement('go-create-btn')?.addEventListener('click', () => this.showCreateView());
 		getElement('go-join-btn')?.addEventListener('click', () => this.showJoinView());
+		getElement('go-online-btn')?.addEventListener('click', () => void this.showOnlineView());
+		getElement('online-back-btn')?.addEventListener('click', () => window.history.back());
 		// The in-page "Back" buttons unwind history so the on-screen button and the browser's
 		// Back button traverse the same stack (create/join → home) — never off the site.
 		getElement('create-back-btn')?.addEventListener('click', () => window.history.back());

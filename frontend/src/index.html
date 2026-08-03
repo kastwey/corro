@@ -56,6 +56,9 @@
 			<div class="home-actions">
 				<button type="button" id="go-create-btn" class="home-action-btn" data-i18n="lobby.home.createButton">Create game</button>
 				<button type="button" id="go-join-btn" class="home-action-btn secondary-button" data-i18n="lobby.home.joinButton">Join with a code</button>
+				<!-- Revealed only for a signed-in player: the list is members-only, so offering the
+					 way in to somebody who would be turned away is a dead end with extra steps. -->
+				<button type="button" id="go-online-btn" class="home-action-btn secondary-button" data-i18n="lobby.home.onlineButton" hidden>Who is online</button>
 			</div>
 			<ul id="your-games-list" class="saved-game-list"></ul>
 			<p id="your-games-empty" class="your-games-empty hidden" data-i18n="lobby.savedGames.empty">You don't have any games yet. Create a new one or join with a code.</p>
@@ -248,6 +251,25 @@
 
 				<button type="submit" id="create-button" data-i18n="lobby.createGame">Create New Game</button>
 			</form>
+		</section>
+
+		<!-- VIEW: ONLINE — who is connected right now. Members only: an open list of everybody
+			 online is a census anybody could harvest on a timer, and sending a friend request will
+			 need an account anyway. -->
+		<section id="view-online" class="lobby-view hidden" aria-labelledby="online-heading" hidden>
+			<button type="button" id="online-back-btn" class="secondary-button lobby-back-btn" data-i18n="lobby.backToHome">Back to home</button>
+			<h2 id="online-heading" data-view-heading tabindex="-1" data-i18n="lobby.online.heading">Who is online</h2>
+			<p class="form-hint" data-i18n="lobby.online.hint">Only players who chose a public name and asked to be listed appear here.</p>
+			<!-- The same roster widget the table and the players panel use: one tab stop, arrows
+				 between people, and Shift+F10 for a person's actions once there are any to offer
+				 (asking to be friends, and messaging, come with those features). role="application"
+				 is what tells a screen reader the arrows mean something here; it is on a WRAPPER so
+				 the list semantics survive. -->
+			<div class="online-surface" role="application" aria-labelledby="online-heading">
+				<ul id="online-list" class="online-list" role="list"></ul>
+			</div>
+			<p id="online-empty" class="your-games-empty" data-i18n="lobby.online.empty" hidden>Nobody is listed right now.</p>
+			<p id="online-error" class="form-hint" role="status" aria-live="polite"></p>
 		</section>
 
 		<!-- VIEW: JOIN — enter a code, then pick name and piece -->

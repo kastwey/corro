@@ -8,7 +8,7 @@ let showView: typeof import('../src/lobby/ui.js').showView;
 let LOBBY_VIEWS: typeof import('../src/lobby/ui.js').LOBBY_VIEWS;
 let lobbyViewFromState: typeof import('../src/lobby/ui.js').lobbyViewFromState;
 
-/** Build the four-view skeleton the real index.html ships, minimally. */
+/** Build the view skeleton the real index.html ships, minimally. */
 function renderViews(): void {
 	document.body.innerHTML = `
 		<section id="view-home" class="lobby-view">
@@ -19,6 +19,9 @@ function renderViews(): void {
 		</section>
 		<section id="view-join" class="lobby-view hidden" hidden>
 			<h2 id="join-heading" data-view-heading tabindex="-1">Join</h2>
+		</section>
+		<section id="view-online" class="lobby-view hidden" hidden>
+			<h2 id="online-heading" data-view-heading tabindex="-1">Who is online</h2>
 		</section>
 		<section id="view-waiting" class="lobby-view hidden" hidden>
 			<div id="game-created-message" tabindex="-1">Created</div>
