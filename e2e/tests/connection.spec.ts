@@ -7,6 +7,7 @@
 // every flag clears.
 
 import { test, expect } from '../helpers/test';
+import { flushAxeAudit } from '../helpers/axeAudit';
 import {
 	actionButton,
 	appI18n,
@@ -45,6 +46,11 @@ test('disconnect is seen and heard, "t" voices the absence, rejoin announces the
 	// come back exactly like a player reopening the tab.
 	const bertoUrl = berto.url();
 	const bertoContext = berto.context();
+	// The audit cannot inspect a page that no longer exists, and this one is closed as part of the
+	// scenario rather than in teardown. Without a flush, whether Berto's board was audited at all
+	// depended on it happening to hold still for one whole scan before he vanished — on a loaded
+	// CI runner a busy board does not, and the run failed with "no Axe scan completed".
+	await flushAxeAudit(berto);
 	await berto.close();
 
 	// Ana HEARS the disconnection (server-owned voice, from the app's own strings)…

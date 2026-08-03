@@ -5,6 +5,7 @@
 // data" (or "I switched devices") escape hatch.
 
 import { test, expect, type Page } from '../helpers/test';
+import { flushAxeAudit } from '../helpers/axeAudit';
 import {
 	actionButton,
 	buyPendingProperty,
@@ -65,6 +66,8 @@ test('a re-entry code recovers the seat from a fresh browser; a live seat refuse
 	await expect(berto2.locator('#error-message')).toContainText(/conectado/i);
 
 	// ── Berto's original browser goes away (the data-loss scenario). ──────────
+	// Audited before it goes: a closed page cannot be inspected, and this one leaves mid-scenario.
+	await flushAxeAudit(berto);
 	await berto.context().close();
 	await expectAnnouncement(ana, /Berto se ha desconectado/);
 
