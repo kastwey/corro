@@ -14,6 +14,7 @@ import * as path from 'node:path';
 import { E2E_BASE_URL } from '../playwright.config';
 import { installAxeAudit } from './axeAudit';
 import { trackPlayerContext } from './playerContexts';
+import { installCoverage } from './coverage';
 
 // ── Server script control ─────────────────────────────────────────────────────
 
@@ -76,6 +77,7 @@ export async function newPlayerPage(
 	// dozens of live contexts holding open connections — the load that makes later tests flaky.
 	trackPlayerContext(context);
 	await installAxeAudit(context);
+	await installCoverage(context);
 	// Context-level so EVERY page in this player's browser gets the collector —
 	// including a page reopened after a disconnect (the reconnection flow).
 	await context.addInitScript(() => {

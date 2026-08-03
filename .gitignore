@@ -525,6 +525,7 @@ playwright-report/
 playwright-report-*/
 # Measured per-file E2E durations, used to balance the shards. Machine-specific by nature.
 e2e/.durations/
+e2e/.coverage/
 
 # Mac bundle stuff
 *.dmg

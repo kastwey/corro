@@ -16,6 +16,7 @@
 // is exactly one test's worth.
 
 import type { BrowserContext } from '@playwright/test';
+import { collectCoverage } from './coverage';
 
 const open = new Set<BrowserContext>();
 
@@ -37,5 +38,9 @@ export function trackPlayerContext(context: BrowserContext): void {
 export async function closePlayerContexts(): Promise<void> {
 	const contexts = [...open];
 	open.clear();
+	// Coverage dies with the page, so it is read here — the last moment every page still exists.
+	// A no-op unless the run is measuring (coverage.ts).
+	await Promise.all(contexts.flatMap(context =>
+		context.pages().map(page => collectCoverage(page).catch(() => { /* already gone */ }))));
 	await Promise.all(contexts.map(context => context.close().catch(() => { /* already gone */ })));
 }

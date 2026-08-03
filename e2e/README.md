@@ -131,3 +131,41 @@ Known gotchas:
 - The announcer CLEARS the live region ~300 ms after writing. The collector reads the
   MutationRecords (added nodes keep their text after removal), never the current
   `textContent` — reading it in the callback can arrive late and miss the line.
+
+## Running only what a change could break
+
+`npm test` runs everything, and so do the pre-push hook and CI. That is the gate and it stays the
+gate. For the inner loop there is a narrower run:
+
+```bash
+npm run test:map          # once: measure which modules each spec exercises (a slow full run)
+npm run test:affected     # then: run only the specs that could care about your changes
+npm run test:affected HEAD~3   # against another base (default: origin/main)
+```
+
+The map is **measured, not written**. A hand-kept list of file → spec answers this question wrongly
+the first time somebody adds a module and forgets to update it, and it does so in silence. So
+`test:map` records it from a real run using V8 coverage (`helpers/coverage.ts`), keyed on whether a
+module's functions actually RAN — not on whether it loaded, which would be useless here, since the
+lobby statically imports nearly everything.
+
+Every rule fails **open**: a changed file the map cannot account for — a brand-new module, anything
+under `server/`, the harness itself — means "run the whole suite", and it says so. The day this
+narrows too far is the day an accessibility regression ships, so it is never allowed to be the
+thing that decides a change is safe.
+
+What it actually buys, measured on this suite:
+
+| changed | specs selected |
+| --- | --- |
+| `frontend/src/forbiddenBoard.ts` | 1 of 39 |
+| `frontend/src/raceBoard.ts` | 3 of 39 |
+| `frontend/src/comboBox.ts` | 38 of 39 |
+| `server/**` | all |
+
+Family work — a board, its rules, its dialogs — is where this pays: seconds instead of minutes.
+Shared lobby plumbing is not, and that is not a defect in the map: every scenario really does
+create its game through the lobby, so a change there really can break any of them. A tool that
+claimed otherwise would be lying.
+
+Re-run `test:map` after adding a spec or a module. A stale map costs time, never coverage.

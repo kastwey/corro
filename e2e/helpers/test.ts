@@ -1,6 +1,7 @@
 import { test as base, expect } from '@playwright/test';
 import { beginAxeAudit, finishAxeAudit } from './axeAudit';
 import { closePlayerContexts } from './playerContexts';
+import { beginCoverage, finishCoverage } from './coverage';
 
 /**
  * Every E2E test gets an automatic Axe lifecycle. Player contexts install the
@@ -16,9 +17,18 @@ import { closePlayerContexts } from './playerContexts';
  * The other way round, teardown would be auditing pages that no longer exist.
  */
 export const test = base.extend<{ _playerContexts: void; _axeAudit: void }>({
-	_playerContexts: [async ({}, use) => {
+	_playerContexts: [async ({}, use, testInfo) => {
+		// Off unless E2E_COVERAGE is set. It records which client modules this spec actually
+		// EXERCISES, so a later change to one of them knows which specs could care (coverage.ts).
+		//
+		// Both ends live in THIS fixture, and that is the whole point: closePlayerContexts is what
+		// reads each page's coverage before the page goes away, so the ledger is only complete
+		// after it. Written into the dependent fixture below — the obvious place — it was flushed
+		// before a single page had been read, and every measured run produced an empty map.
+		beginCoverage(testInfo);
 		await use();
 		await closePlayerContexts();
+		await finishCoverage();
 	}, { auto: true }],
 
 	_axeAudit: [async ({ _playerContexts }, use, testInfo) => {
