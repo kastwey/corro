@@ -44,6 +44,12 @@ cd e2e && npm test   # run from e2e/, NEVER from the repo root
 serially with its own scripted-dice queue — the determinism is unchanged, the wall clock is
 not. `npm test 1` is the classic single-server run when a failure needs to be pinned down.
 
+For the inner loop, `npm run test:affected` runs only the specs that could care about your
+changes, chosen from a **measured** spec → module map. **Adding a spec or a frontend module
+means re-running `npm run test:map`** (a slow full run, so do it once the change settles).
+Skipping it never loses coverage — an unmapped spec or module falls open to the whole suite,
+which `affected.mjs` enforces — but it does throw away the speed-up. Never hand-edit the map.
+
 Always finish a change by running the frontend tests (incl. translation parity)
 **and** `dotnet test`; run the E2E suite when the change touches a flow it covers
 (lobby, trades, purchases, announcements).
@@ -136,7 +142,9 @@ something genuinely can't be covered, say so explicitly.
   validation error, dialog/menu, loading/success/failure and disabled/unplayable state.
   `lobby-accessibility.spec.ts` is the lobby matrix.
 - For a state dismissed faster than the quiet period, assert it, call
-  `flushAxeAudit(page)`, then close it. Final-state-only scans are forbidden.
+  `flushAxeAudit(page)`, then close it. Final-state-only scans are forbidden. The same
+  applies before closing a PAGE or context mid-scenario: a page that disappears unflushed
+  may never have been audited at all, and a busy board on a loaded runner never is.
 - Never suppress Axe rules, exclude selectors, filter impacts or clear genuine violations.
   Fix the product. Preserve visual quality; WCAG is the floor, not the design goal.
 - The recurring rule families are `color-contrast`, `aria-allowed-role`, `heading-order`,

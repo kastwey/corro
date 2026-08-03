@@ -188,6 +188,19 @@ The lists live at the top of `affected.mjs` so the trade can be argued with.
 Note what the rule keys on: which MODULE changed, not how many specs it drags in. `announcer.ts`
 also selects 35, and narrowing it would be wrong — it is the voice of the game, not of the lobby.
 
-Rot is safe by construction. A lobby module nobody adds to the list keeps the measured selection,
-which is the whole suite; and `test:map` going stale means a file it has never seen falls open the
-same way. Forgetting costs time, never coverage. Re-run `test:map` after adding a spec or a module.
+### Keeping the map honest
+
+Rot is safe by construction, in all three directions a map can rot:
+
+- **A new module.** The map has never seen the file, so no rule accounts for it and the run falls
+  open to everything.
+- **A new spec.** `affected.mjs` checks that every spec file on disk appears in the map, and runs
+  the whole suite when one does not — a spec the map has never measured has no recorded reason to
+  be selected, and would otherwise sit there silently never running.
+- **A lobby module nobody adds to the narrowing list.** It keeps the measured selection, which is
+  the whole suite.
+
+So forgetting costs time, never coverage. Still, don't rely on it: **re-run `npm run test:map`
+whenever you add a spec or a frontend module**, or the inner loop quietly degrades to the full run
+it was meant to avoid. The map is a build artefact of the suite, not a source file — regenerate it
+rather than editing it.

@@ -153,6 +153,23 @@ if (!map) {
 	process.exit(runAll());
 }
 
+// A spec the map has never seen is the ONE way staleness can narrow instead of widen. Everything
+// else fails open on its own: an unmeasured module is unknown and means "everything". But a new
+// SPEC is different — it sits on disk, gets filtered against a map entry it has no line in, and is
+// silently never selected. Someone adds a spec today, changes a module it covers next week, and it
+// does not run.
+//
+// So the map is checked against the directory rather than trusted. Nothing here is documentation
+// somebody has to remember: forgetting to re-measure costs a full run, which is exactly the cost
+// it should have.
+const unmapped = specs.filter(spec => !(spec in map));
+if (unmapped.length > 0) {
+	console.log(`[e2e] ${unmapped.length} spec(s) are newer than the coverage map:`);
+	for (const spec of unmapped) console.log(`[e2e]   ${spec}`);
+	console.log('[e2e] Running everything. `npm run test:map` teaches the map about them.');
+	process.exit(runAll());
+}
+
 const changed = changedFiles(base);
 if (changed.length === 0) {
 	console.log(`[e2e] Nothing changed against ${base}.`);
