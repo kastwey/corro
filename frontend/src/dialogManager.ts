@@ -310,21 +310,42 @@ class DialogManagerClass {
 		// Initial focus: a reading dialog starts at its title (the top of the document);
 		// any other dialog starts on the button marked `focus` — the question's expected
 		// answer — else its first enabled button, ready to operate.
+		//
+		// The delay exists because placing focus in the same turn as showModal() bounced. But a
+		// timer that focuses UNCONDITIONALLY fifty milliseconds later is a keystroke thief:
+		// showModal() has already put focus on the first tabbable element, so somebody who starts
+		// typing immediately — into any other field — has the caret yanked away mid-word and what
+		// they typed thrown out. Reported as a form that "sometimes ignores what you write".
+		//
+		// So the late pass only PLACES focus, never MOVES it: if the reader has already taken hold
+		// of something inside this dialog, they keep it.
+		//
+		// "Taken hold" is measured against where focus stood the instant the dialog opened, not
+		// against the dialog's bounds. The element is reused between dialogs, so focus left over
+		// from the previous one (a reading dialog ends on its title) is still inside it and is
+		// nobody's — bailing on that would leave an operating dialog with focus on a heading.
+		const focusAtOpen = document.activeElement;
+		const placeFocus = (target: HTMLElement | null) => {
+			if (!target) return;
+			setTimeout(() => {
+				const active = document.activeElement;
+				const takenSinceOpening = active !== focusAtOpen && active !== dialog
+					&& !!active && dialog.contains(active);
+				if (!takenSinceOpening) target.focus();
+			}, 50);
+		};
+
 		if (options.documentMode) {
-			setTimeout(() => titleEl.focus(), 50);
+			placeFocus(titleEl);
 		} else if (options.initialFocus) {
 			// A form dialog: land on its input directly (single, stable focus) so the caller
 			// never has to re-focus it and cause a bounce.
-			const input = options.initialFocus;
-			setTimeout(() => input.focus(), 50);
+			placeFocus(options.initialFocus);
 		} else {
 			const flagged = options.buttons.findIndex(b => b.focus);
-			const target = flagged >= 0
+			placeFocus(flagged >= 0
 				? (buttonsEl.children[flagged] as HTMLButtonElement)
-				: buttonsEl.querySelector('button') as HTMLButtonElement;
-			if (target) {
-				setTimeout(() => target.focus(), 50);
-			}
+				: buttonsEl.querySelector('button'));
 		}
 	}
 

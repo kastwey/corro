@@ -23,10 +23,19 @@ async function openSettings(page: import('../helpers/test').Page) {
 	await expect(page.locator('#account-name-input')).toBeFocused();
 }
 
-/** Claim a public name and ask to be listed — the two steps that put somebody in the room. */
+/**
+ * Claim a public name and ask to be listed — the two steps that put somebody in the room.
+ *
+ * The value is asserted between filling and saving on purpose. Under the heaviest load this suite
+ * runs (four shards WITH coverage instrumentation) this once saved an empty field and failed on
+ * "needs at least 3 characters", which says nothing about where the typing went. Pinning the field
+ * first means a recurrence names the culprit instead of the symptom.
+ */
 async function becomeListed(page: import('../helpers/test').Page, handle: string) {
 	await openSettings(page);
-	await page.locator('#account-handle-input').fill(handle);
+	const field = page.locator('#account-handle-input');
+	await field.fill(handle);
+	await expect(field).toHaveValue(handle);
 	await page.locator('#account-handle-save').click();
 	await expect(page.locator('#account-settings-status')).toHaveText(account.handleSaved);
 	await page.locator('#account-listed-input').check();
@@ -42,23 +51,26 @@ test('a public name is claimed, refused when taken, and the reasons are Axe-clea
 	const field = ana.locator('#account-handle-input');
 	const status = ana.locator('#account-settings-status');
 
+	/** Type a name and save it, pinning the field first — see becomeListed for why. */
+	const claim = async (handle: string) => {
+		await field.fill(handle);
+		await expect(field).toHaveValue(handle);
+		await ana.locator('#account-handle-save').click();
+	};
+
 	// The narrow alphabet is the impersonation defence: no accents, so no lookalikes.
-	await field.fill('núria');
-	await ana.locator('#account-handle-save').click();
+	await claim('núria');
 	await expect(status).toHaveText(account.handleBadCharacters);
 	await flushAxeAudit(ana);
 
-	await field.fill('ad');
-	await ana.locator('#account-handle-save').click();
+	await claim('ad');
 	await expect(status).toHaveText(account.handleTooShort);
 
-	await field.fill('admin');
-	await ana.locator('#account-handle-save').click();
+	await claim('admin');
 	await expect(status).toHaveText(account.handleReserved);
 	await flushAxeAudit(ana);
 
-	await field.fill('Kastwey');
-	await ana.locator('#account-handle-save').click();
+	await claim('Kastwey');
 	await expect(status).toHaveText(account.handleSaved);
 	await flushAxeAudit(ana);
 
@@ -66,7 +78,9 @@ test('a public name is claimed, refused when taken, and the reasons are Axe-clea
 	const berto = await newPlayerPage(browser, 'es-ES');
 	await signIn(berto, 'presence-berto');
 	await openSettings(berto);
-	await berto.locator('#account-handle-input').fill('KASTWEY');
+	const bertoField = berto.locator('#account-handle-input');
+	await bertoField.fill('KASTWEY');
+	await expect(bertoField).toHaveValue('KASTWEY');
 	await berto.locator('#account-handle-save').click();
 	await expect(berto.locator('#account-settings-status')).toHaveText(account.handleTaken);
 	await flushAxeAudit(berto);
