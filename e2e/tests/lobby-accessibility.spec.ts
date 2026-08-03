@@ -66,13 +66,13 @@ test('switching shipped games keeps the loading feedback visual-only', async ({ 
 	await waitForDefaultPackage(page);
 
 	// Keep the request pending so both the transient visual state and its accessibility semantics
-	// can be asserted. Arrowing a native select fires the same change path as selectOption().
+	// can be asserted — which means NOT waiting for the staging this test exists to watch.
 	await page.route(`**/api/packages/shipped/${TRACK_BOARD}`, async route => {
 		await new Promise(resolve => setTimeout(resolve, 400));
 		await route.continue();
 	});
 	await page.evaluate(() => { ((window as any).__announcements as string[]).length = 0; });
-	await chooseBoard(page, TRACK_BOARD);
+	await chooseBoard(page, TRACK_BOARD, { waitForStaging: false });
 
 	const loading = appI18n('es').game.loading_board as string;
 	const visualStatus = page.locator('#board-loading-status');
@@ -91,6 +91,50 @@ test('switching shipped games keeps the loading feedback visual-only', async ({ 
 	await expect(visualStatus).toBeEmpty();
 	const heard = await page.evaluate(() => (window as any).__announcements as string[]);
 	expect(heard).not.toContain(loading);
+});
+
+// Reported from a real session: choosing a game made a screen reader suddenly read the
+// player-count combo's selected text, out of nowhere. Staging a board rebuilt that <select>'s
+// whole option list every time — even when the new board offered exactly the same range — inside a
+// form whose aria-busy was flipping back to false, which is precisely when assistive technology
+// re-reads what changed underneath it. A rebuilt <select> re-reads as its selected option.
+test('choosing a game does not rewrite the controls it did not change', async ({ browser }) => {
+	const page = await newPlayerPage(browser, 'es-ES');
+	await gotoLobbyHome(page);
+	await page.locator('#go-create-btn').click();
+	await waitForDefaultPackage(page);
+
+	// Both of these seat 2–4, so the player-count choices are identical either side of the switch.
+	// (A board with a genuinely different range SHOULD rebuild it — that is not this bug.)
+	await chooseBoard(page, 'galactic-empire');
+	await expect(page.locator('#max-players option')).toHaveCount(3);
+
+	// Watch the control for ANY mutation while another board with the same range is staged.
+	await page.evaluate(() => {
+		const target = document.getElementById('max-players')!;
+		(window as any).__maxPlayersMutations = 0;
+		(window as any).__maxPlayersDetail = [];
+		(window as any).__maxPlayersWatcher = new MutationObserver(records => {
+			(window as any).__maxPlayersMutations += records.length;
+			for (const record of records) {
+				(window as any).__maxPlayersDetail.push(
+					`${record.type}:${record.attributeName ?? ''}:${(record.target as HTMLElement).nodeName}`);
+			}
+		});
+		(window as any).__maxPlayersWatcher.observe(target, {
+			childList: true, subtree: true, characterData: true, attributes: true,
+		});
+	});
+
+	await chooseBoard(page, 'galactic-race');
+	const firstToken = packageManifest('galactic-race').tokens[0].id as string;
+	await expect(page.locator(`#create-form input.token-radio[value="${firstToken}"]`)).toBeAttached();
+	// The staging is finished, so anything that was going to touch the control already has.
+	await expect(page.locator('#create-form')).not.toHaveAttribute('aria-busy', 'true');
+
+	// Not "fewer announcements": none, because nothing about this control changed.
+	expect(await page.evaluate(() => (window as any).__maxPlayersDetail))
+		.toEqual([]);
 });
 
 // The game picker is an editable combobox whose list you can also just walk — because somebody who

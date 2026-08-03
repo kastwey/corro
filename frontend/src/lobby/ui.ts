@@ -285,3 +285,44 @@ export function clearUrlParams(): void {
 export function getUrlParam(name: string): string | null {
 	return new URLSearchParams(window.location.search).get(name);
 }
+
+/** One entry of a <select>: what it submits, and what it reads as. */
+export interface SelectOption {
+	readonly value: string;
+	readonly label: string;
+}
+
+/**
+ * Fill a `<select>`, but only touch the DOM when the choices have actually CHANGED.
+ *
+ * Reported from a real session: choosing a game made a screen reader suddenly read the player-count
+ * combo's selected text, out of nowhere. Staging a board rebuilt that select's whole option list
+ * every time — including when the new board offered exactly the same range — and it does so inside
+ * a form whose `aria-busy` is flipping back to false, which is precisely when a screen reader
+ * re-reads what changed underneath it. A rebuilt `<select>` re-reads as its selected option.
+ *
+ * The list was identical before and after, so the honest fix is not to announce less: it is not to
+ * change anything. Rebuilding a control to the state it was already in is work nobody asked for,
+ * and assistive technology is right to report it.
+ *
+ * Returns whether anything was rebuilt, so a caller can decide what a genuinely new set of choices
+ * should default to without disturbing one the reader has already answered.
+ */
+export function syncSelectOptions(
+	select: HTMLSelectElement,
+	options: readonly SelectOption[],
+): boolean {
+	const current = Array.from(select.options);
+	const unchanged = current.length === options.length
+		&& current.every((option, index) =>
+			option.value === options[index].value && option.textContent === options[index].label);
+	if (unchanged) return false;
+
+	select.replaceChildren(...options.map(entry => {
+		const option = document.createElement('option');
+		option.value = entry.value;
+		option.textContent = entry.label;
+		return option;
+	}));
+	return true;
+}

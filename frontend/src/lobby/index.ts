@@ -37,7 +37,7 @@ import {
 	t, translateServerError, showLoading, showError,
 	showSection, hideSection, showView, focusFirstField, getElement, getInputValue, getSelectedRadio,
 	clearUrlParams, getUrlParam, localizeBoardName, formatGameDate, parseHubErrorCode, isTableAtRestStatus,
-	pickPackageName, lobbyViewFromState, LobbyView
+	pickPackageName, lobbyViewFromState, LobbyView, syncSelectOptions, type SelectOption
 } from './ui.js';
 
 /** How long a lobby announcement is left in the spoken region before it is wiped. */
@@ -608,21 +608,18 @@ class UnifiedLobbyUI {
 			counts.push(2);
 		}
 
-		select.innerHTML = '';
-		if (family !== 'forbidden') {
-			const none = document.createElement('option');
-			none.value = '0';
-			none.textContent = t('lobby.teamsNone');
-			select.appendChild(none);
-		}
+		const entries: SelectOption[] = family === 'forbidden'
+			? []
+			: [{ value: '0', label: t('lobby.teamsNone') }];
 		for (const n of counts) {
-			const option = document.createElement('option');
-			option.value = String(n);
-			option.textContent = t('lobby.teamsOf')
-				.replace('{{teams}}', String(n))
-				.replace('{{size}}', String(players / n));
-			select.appendChild(option);
+			entries.push({
+				value: String(n),
+				label: t('lobby.teamsOf')
+					.replace('{{teams}}', String(n))
+					.replace('{{size}}', String(players / n)),
+			});
 		}
+		syncSelectOptions(select, entries);
 		// Keep the host's pick when it survives the new player count; else back to "none".
 		select.value = counts.includes(Number(chosen)) ? chosen : (family === 'forbidden' ? '2' : '0');
 		group.classList.toggle('hidden', counts.length === 0);
@@ -665,15 +662,21 @@ class UnifiedLobbyUI {
 		// split evenly into its teams, with at least two players each. The SERVER says how many —
 		// the lobby no longer guesses which family that is.
 		const teams = pkg.requiredTeamCount ?? 0;
-		select.innerHTML = '';
+		const counts: SelectOption[] = [];
 		for (let n = min; n <= max; n++) {
 			if (teams > 0 && (n % teams !== 0 || n / teams < 2)) continue;
-			const option = document.createElement('option');
-			option.value = String(n);
-			option.textContent = t('lobby.playersOption', '{{count}} players').replace('{{count}}', String(n));
-			select.appendChild(option);
+			counts.push({
+				value: String(n),
+				label: t('lobby.playersOption', '{{count}} players').replace('{{count}}', String(n)),
+			});
 		}
-		select.value = String(max); // default to a full table
+
+		// Only rebuilt when the range genuinely differs — see syncSelectOptions. A board offering
+		// the same choices leaves this control completely alone, along with the answer the host
+		// may already have given it.
+		const rebuilt = syncSelectOptions(select, counts);
+		const stillOffered = counts.some(option => option.value === select.value);
+		if (rebuilt || !stillOffered) select.value = String(max); // a new range defaults to a full table
 	}
 
 	/** Renders the package's declared rules into the panel and hides the built-in fieldsets. */

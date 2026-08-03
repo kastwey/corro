@@ -308,11 +308,28 @@ export async function gotoLobbyHome(page: Page): Promise<void> {
  * the name it happens to have in the language under test. Typing to narrow the list is the other
  * way in, and comboBox.test.ts plus the lobby matrix cover that.
  */
-export async function chooseBoard(page: Page, boardId: string): Promise<void> {
+export async function chooseBoard(
+	page: Page,
+	boardId: string,
+	options: {
+		/**
+		 * Wait for the package to finish staging (the default). Pass false only to observe the
+		 * staging itself — a spec asserting the transient loading state would otherwise be waiting
+		 * for the very thing it means to catch in flight.
+		 */
+		waitForStaging?: boolean;
+	} = {},
+): Promise<void> {
 	const option = page.locator(`#board-listbox [data-item-id="${boardId}"]`);
 	await expect(option).toBeVisible();
 	await option.click();
 	await expect(option).toHaveAttribute('aria-selected', 'true');
+	if (options.waitForStaging === false) return;
+	// Choosing STAGES the package, which repaints the pieces, the seats and the rules from it.
+	// Returning before that lands lets a spec fill a control the repaint is about to replace — the
+	// seat it just chose vanishes and the game is created with a different one. The form says when
+	// it is done: aria-busy is set for exactly that window.
+	await expect(page.locator('#create-form')).not.toHaveAttribute('aria-busy', 'true');
 }
 
 /** Creates a game on the given shipped board and returns the invite code. */

@@ -1,7 +1,7 @@
 import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { setupDom, installFakeI18next } from './helpers/dom.js';
-import { localizeBoardName, formatGameDate, parseHubErrorCode, isTableAtRestStatus, pickPackageName } from '../src/lobby/ui.js';
+import { localizeBoardName, formatGameDate, parseHubErrorCode, isTableAtRestStatus, pickPackageName, syncSelectOptions } from '../src/lobby/ui.js';
 
 before(() => {
 	setupDom();
@@ -74,4 +74,52 @@ test('PascalCase status values never match (guards against the old casing bug)',
 	// The hub serializes GameStatus as SnakeCaseLower; comparing against the C# spelling was a
 	// real bug once, and it fails silently — everything just resumes to the wrong place.
 	assert.equal(isTableAtRestStatus('WaitingForPlayers'), false);
+});
+
+// ── syncSelectOptions ───────────────────────────────────────────────────────
+//
+// Reported from a real session: choosing a game made a screen reader read the player-count combo's
+// selected text out of nowhere. Staging a board rebuilt that <select> every time — even when the
+// new board offered the same range — inside a form whose aria-busy was flipping back to false,
+// which is exactly when assistive technology re-reads what changed underneath it.
+//
+// The fix is not to announce less. It is not to CHANGE anything: rebuilding a control to the state
+// it was already in is work nobody asked for, and a screen reader is right to report it.
+
+test('an unchanged set of choices leaves the control completely untouched', () => {
+	const select = document.createElement('select');
+	select.innerHTML = '<option value="2">2 players</option><option value="3">3 players</option>';
+	const before = Array.from(select.options);
+	select.value = '3';
+
+	const rebuilt = syncSelectOptions(select, [
+		{ value: '2', label: '2 players' },
+		{ value: '3', label: '3 players' },
+	]);
+
+	assert.equal(rebuilt, false, 'nothing changed, so nothing was rewritten');
+	// The very same nodes: a screen reader has nothing to report, because nothing happened.
+	assert.deepEqual(Array.from(select.options), before);
+	assert.equal(select.value, '3', 'and the answer the host already gave survives');
+});
+
+test('a genuinely different set of choices is rebuilt', () => {
+	const select = document.createElement('select');
+	select.innerHTML = '<option value="2">2 players</option>';
+
+	const rebuilt = syncSelectOptions(select, [
+		{ value: '2', label: '2 players' },
+		{ value: '4', label: '4 players' },
+	]);
+
+	assert.equal(rebuilt, true);
+	assert.deepEqual(Array.from(select.options).map(option => option.value), ['2', '4']);
+});
+
+test('a label that changed language is a change, even at the same values', () => {
+	const select = document.createElement('select');
+	select.innerHTML = '<option value="2">2 players</option>';
+
+	assert.equal(syncSelectOptions(select, [{ value: '2', label: '2 jugadores' }]), true);
+	assert.equal(select.options[0].textContent, '2 jugadores');
 });

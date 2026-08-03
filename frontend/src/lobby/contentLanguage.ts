@@ -4,6 +4,8 @@
  * deliberately independent from each player's interface locale, which stays personal.
  */
 
+import { syncSelectOptions } from './ui.js';
+
 const primaryLanguage = (value: string | null | undefined): string =>
 	(value ?? '').trim().split(/[-_]/, 1)[0].toLowerCase();
 
@@ -31,14 +33,14 @@ export function fillContentLanguageSelect(
 	selected: string,
 	translate: (key: string) => string,
 ): void {
-	select.replaceChildren();
-	for (const language of languages) {
-		const option = document.createElement('option');
-		option.value = language;
-		option.textContent = contentLanguageName(language, translate);
-		select.appendChild(option);
-	}
-	select.value = selected;
+	// Only rebuilt when the deck list actually differs (see syncSelectOptions): staging a board
+	// that offers the same languages must not rewrite this control, because a screen reader is
+	// right to report a rewritten one and nobody asked for the change.
+	syncSelectOptions(select, languages.map(language => ({
+		value: language,
+		label: contentLanguageName(language, translate),
+	})));
+	if (select.value !== selected) select.value = selected;
 }
 
 /** Name a supported deck language in the LISTENER's interface language, so a Spanish
