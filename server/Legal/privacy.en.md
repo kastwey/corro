@@ -58,6 +58,25 @@ When you take a seat while signed in, the table records your internal account id
 sign in after playing without an account, your browser can associate the seats whose credentials it
 already holds with that account. This is what lets those tables appear on another signed-in device.
 
+## Your public name, and being seen online
+
+An account can hold a **public name** — a handle such as `@kastwey` — that you choose yourself. It
+is optional: you do not need one to play, and nothing asks for one when you sign in. It is stored
+alongside your account, together with the date you last changed it, so a handle stays stable for
+thirty days at a time.
+
+Separately, you can ask to appear in the **list of players currently connected**. It is off unless
+you turn it on, and while it is on the server publishes, to other signed-in players only:
+
+- Your **handle**. Never your account display name, which usually comes from your sign-in provider
+  and is often your real name — that is not published by this list at all.
+- A coarse indication of what you are doing: in the lobby, at a table, or playing. It never names
+  the table or the game you are in.
+
+Turning it off removes you from the list completely: other players are not told that anybody is
+hidden, and no count includes you. A handle you stop using is not immediately given to somebody
+else, so nobody can take a name your friends know and appear as you.
+
 ## Cookies and data kept in your browser
 
 Corro itself uses these first-party cookies:

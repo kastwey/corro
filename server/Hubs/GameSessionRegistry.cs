@@ -144,6 +144,34 @@ public sealed class GameSessionRegistry
 	public bool TryRemoveLobbyConnection(string connectionId, out string gameId) => _lobbyConnections.TryRemove(connectionId, out gameId!);
 
 	/// <summary>
+	/// Where one connection is: the game it belongs to, and whether it is sitting on the BOARD or
+	/// still at the table. Answers the presence list's "is this person mid-game, or free to talk?"
+	/// without handing out the game itself — see <see cref="PresenceRegistry.Activity"/>.
+	/// </summary>
+	public bool TryLocateConnection(string connectionId, out string gameId, out bool onBoard)
+	{
+		if (_connectionGameMap.TryGetValue(connectionId, out var boardGame))
+		{
+			gameId = boardGame;
+			onBoard = true;
+			return true;
+		}
+		if (_lobbyConnections.TryGetValue(connectionId, out var tableGame))
+		{
+			gameId = tableGame;
+			onBoard = false;
+			return true;
+		}
+		gameId = string.Empty;
+		onBoard = false;
+		return false;
+	}
+
+	/// <summary>Whether a game currently has a match running, as opposed to a table waiting.</summary>
+	public bool IsMatchRunning(string gameId) =>
+		_gameServices.TryGetValue(gameId, out var service) && service.GameState?.IsGameOver == false;
+
+	/// <summary>
 	/// Records that this connection is about to be replaced by the same player's next page, so its
 	/// death is a handover rather than a departure. Leaving the waiting room for the board is a full
 	/// page navigation: the old connection dies and a new one authenticates a moment later, which

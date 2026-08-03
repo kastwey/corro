@@ -424,8 +424,137 @@ public sealed class UserAccountService
 			}
 		}
 
+		// The handle is RELEASED, not deleted: it stays untakeable for its cooldown, so nobody can
+		// pick up the name somebody's friends learned last week and wear it in front of them.
+		if (user?.Handle is { Length: > 0 } handle)
+		{
+			var normalized = PlayerHandle.Normalize(handle);
+			var claim = await _repository.GetHandleClaimAsync(normalized, ct);
+			if (claim is not null && claim.UserId == userId && claim.ReleasedAtUtc is null)
+			{
+				await _repository.ReplaceHandleClaimAsync(
+					claim with { ReleasedAtUtc = DateTime.UtcNow }, ct);
+			}
+		}
+
 		await _repository.DeleteUserAsync(userId, ct);
 		_logger.LogInformation("Erased account {UserId} and its identity links.", userId);
+	}
+
+	/// <summary>Why a handle could not be set. Each one is a different thing to tell the player.</summary>
+	public enum HandleOutcome
+	{
+		Ok,
+		Invalid,
+		Taken,
+		TooSoon,
+		NoSuchAccount,
+	}
+
+	public readonly record struct HandleResult(
+		HandleOutcome Outcome,
+		UserDocument? User = null,
+		PlayerHandle.Rejection Rejection = PlayerHandle.Rejection.None,
+		DateTime? ChangeableAtUtc = null);
+
+	/// <summary>
+	/// Claim a handle, or change to another one.
+	///
+	/// The order matters and is the same order first sign-in uses: the NAME is claimed before the
+	/// account is updated, so two players asking for "@ana" at once cannot both be told yes. The
+	/// loser finds somebody else's id in the claim that comes back and is refused.
+	/// </summary>
+	public async Task<HandleResult> SetHandleAsync(
+		string userId,
+		string requested,
+		DateTime utcNow,
+		CancellationToken ct = default)
+	{
+		var rejection = PlayerHandle.Validate(requested);
+		if (rejection != PlayerHandle.Rejection.None)
+		{
+			return new HandleResult(HandleOutcome.Invalid, Rejection: rejection);
+		}
+
+		var user = await _repository.GetUserAsync(userId, ct);
+		if (user is null) return new HandleResult(HandleOutcome.NoSuchAccount);
+
+		var normalized = PlayerHandle.Normalize(requested);
+		var current = user.Handle is { Length: > 0 } held ? PlayerHandle.Normalize(held) : null;
+
+		// Re-typing the same name, in any casing, is not a change: it only restyles what is shown,
+		// so it must not spend the thirty days somebody may need for a real one.
+		if (current == normalized)
+		{
+			var restyled = user with { Handle = requested.Trim() };
+			return new HandleResult(HandleOutcome.Ok, await _repository.UpsertUserAsync(restyled, ct));
+		}
+
+		if (!PlayerHandle.CanChange(user.HandleChangedAtUtc, utcNow))
+		{
+			return new HandleResult(
+				HandleOutcome.TooSoon,
+				ChangeableAtUtc: user.HandleChangedAtUtc!.Value + PlayerHandle.ChangeInterval);
+		}
+
+		var claim = await _repository.CreateOrGetHandleClaimAsync(
+			new HandleClaimDocument
+			{
+				Id = normalized,
+				Handle = normalized,
+				UserId = userId,
+				ClaimedAtUtc = utcNow,
+			},
+			ct);
+
+		if (claim.UserId != userId || claim.ReleasedAtUtc is not null)
+		{
+			// Somebody holds it, or held it recently. Taking it over is only allowed once a
+			// released claim has cooled down — or when it was ours to begin with.
+			if (!PlayerHandle.CanTakeOver(new HandleClaim(claim.UserId, claim.ReleasedAtUtc), userId, utcNow))
+			{
+				return new HandleResult(HandleOutcome.Taken);
+			}
+			await _repository.ReplaceHandleClaimAsync(
+				claim with { UserId = userId, ClaimedAtUtc = utcNow, ReleasedAtUtc = null }, ct);
+		}
+
+		// Only now let the old one go, so a crash between the two leaves the player holding both
+		// rather than neither.
+		if (current is not null)
+		{
+			var previous = await _repository.GetHandleClaimAsync(current, ct);
+			if (previous is not null && previous.UserId == userId)
+			{
+				await _repository.ReplaceHandleClaimAsync(previous with { ReleasedAtUtc = utcNow }, ct);
+			}
+		}
+
+		var updated = await _repository.UpsertUserAsync(
+			user with { Handle = requested.Trim(), HandleChangedAtUtc = utcNow }, ct);
+		_logger.LogInformation("Account {UserId} now holds the handle {Handle}.", userId, normalized);
+		return new HandleResult(HandleOutcome.Ok, updated);
+	}
+
+	/// <summary>Whether a handle could be claimed right now, for the field's own feedback. Never
+	/// says WHO holds it.</summary>
+	public async Task<bool> IsHandleAvailableAsync(
+		string requested, string forUserId, DateTime utcNow, CancellationToken ct = default)
+	{
+		if (PlayerHandle.Validate(requested) != PlayerHandle.Rejection.None) return false;
+		var claim = await _repository.GetHandleClaimAsync(PlayerHandle.Normalize(requested), ct);
+		return claim is null
+			|| PlayerHandle.CanTakeOver(new HandleClaim(claim.UserId, claim.ReleasedAtUtc), forUserId, utcNow);
+	}
+
+	/// <summary>Appear in the list of who is connected, or not. Only the handle is ever published
+	/// there, so this cannot expose a name imported from a provider.</summary>
+	public async Task<UserDocument?> SetListedPubliclyAsync(
+		string userId, bool listed, CancellationToken ct = default)
+	{
+		var user = await _repository.GetUserAsync(userId, ct);
+		if (user is null) return null;
+		return await _repository.UpsertUserAsync(user with { ListedPublicly = listed }, ct);
 	}
 
 	/// <summary>

@@ -45,4 +45,24 @@ public interface IUserRepository
 
 	/// <summary>Removes one identity mapping. Missing is success.</summary>
 	Task DeleteIdentityLinkAsync(string identityKey, CancellationToken ct = default);
+
+	/// <summary>The claim on a normalized handle, or null when nobody has ever held it.</summary>
+	Task<HandleClaimDocument?> GetHandleClaimAsync(string normalizedHandle, CancellationToken ct = default);
+
+	/// <summary>
+	/// Claims a handle, and is the race guard for it — exactly as
+	/// <see cref="CreateOrGetIdentityLinkAsync"/> is for first sign-in: when the handle is already
+	/// claimed the STORED claim comes back untouched, so two players asking for "@ana" at the same
+	/// moment cannot both be told yes. Callers must treat a returned claim whose <c>UserId</c>
+	/// differs from theirs as "somebody else won".
+	/// </summary>
+	Task<HandleClaimDocument> CreateOrGetHandleClaimAsync(
+		HandleClaimDocument claim, CancellationToken ct = default);
+
+	/// <summary>
+	/// Overwrites a claim this caller already owns: taking a released handle back, or marking one
+	/// as released. Never used to take somebody else's — that decision belongs to the service.
+	/// </summary>
+	Task<HandleClaimDocument> ReplaceHandleClaimAsync(
+		HandleClaimDocument claim, CancellationToken ct = default);
 }

@@ -84,6 +84,11 @@ public class AuthController : ControllerBase
 				user.UserId,
 				user.DisplayName,
 				user.Email,
+				// The public name and whether it is published. Both are this player's own settings,
+				// so they come back with their own account and nobody else's.
+				user.Handle,
+				user.ListedPublicly,
+				user.HandleChangedAtUtc,
 				// Issuer plus the address that provider reported, so the settings screen can show
 				// WHICH account each provider is linked to. Subjects stay server-side: they are the
 				// identity itself and the client has no use for them.
@@ -345,6 +350,71 @@ public class AuthController : ControllerBase
 		await _accounts.DeleteAccountAsync(userId, ct);
 		await HttpContext.SignOutAsync(AuthenticationExtensions.SessionScheme);
 		return NoContent();
+	}
+
+	public sealed record HandleRequest(string Handle);
+	public sealed record VisibilityRequest(bool Listed);
+
+	/// <summary>
+	/// Whether a handle could be claimed right now. Deliberately says only yes or no: telling a
+	/// caller WHO holds a name would turn this into a directory of everybody's handle, which is
+	/// exactly what a member-only presence list is designed not to be.
+	/// </summary>
+	[HttpGet("handle/available")]
+	public async Task<ActionResult<object>> HandleAvailable(
+		[FromQuery] string handle, CancellationToken ct)
+	{
+		var userId = SessionPrincipal.UserId(User);
+		if (userId is null) return Unauthorized();
+
+		var rejection = PlayerHandle.Validate(handle);
+		return new
+		{
+			Available = rejection == PlayerHandle.Rejection.None
+				&& await _accounts.IsHandleAvailableAsync(handle, userId, DateTime.UtcNow, ct),
+			Rejection = rejection.ToString(),
+		};
+	}
+
+	/// <summary>
+	/// Claim a handle or change to another one. POST, never GET: the session cookie is SameSite=Lax,
+	/// so a GET that changes account state is reachable from another site.
+	/// </summary>
+	[HttpPost("handle")]
+	public async Task<ActionResult<object>> SetHandle(
+		[FromBody] HandleRequest request, CancellationToken ct)
+	{
+		var userId = SessionPrincipal.UserId(User);
+		if (userId is null) return Unauthorized();
+
+		var result = await _accounts.SetHandleAsync(userId, request.Handle ?? string.Empty, DateTime.UtcNow, ct);
+		return result.Outcome switch
+		{
+			UserAccountService.HandleOutcome.Ok =>
+				Ok(new { handle = result.User!.Handle }),
+			// Each refusal is a different thing to tell somebody, so each keeps its own code
+			// rather than collapsing into "invalid".
+			UserAccountService.HandleOutcome.Invalid =>
+				BadRequest(new { code = $"HANDLE_{result.Rejection.ToString().ToUpperInvariant()}" }),
+			UserAccountService.HandleOutcome.Taken =>
+				Conflict(new { code = "HANDLE_TAKEN" }),
+			UserAccountService.HandleOutcome.TooSoon =>
+				Conflict(new { code = "HANDLE_TOO_SOON", changeableAtUtc = result.ChangeableAtUtc }),
+			_ => Unauthorized(),
+		};
+	}
+
+	/// <summary>Appear in the list of who is connected, or not. Only the handle is ever published
+	/// there, so this can never expose a name imported from a provider.</summary>
+	[HttpPatch("visibility")]
+	public async Task<ActionResult<object>> SetVisibility(
+		[FromBody] VisibilityRequest request, CancellationToken ct)
+	{
+		var userId = SessionPrincipal.UserId(User);
+		if (userId is null) return Unauthorized();
+
+		var user = await _accounts.SetListedPubliclyAsync(userId, request.Listed, ct);
+		return user is null ? Unauthorized() : Ok(new { listed = user.ListedPublicly });
 	}
 
 	/// <summary>One value the challenge stashed in the authentication properties. Items is a plain

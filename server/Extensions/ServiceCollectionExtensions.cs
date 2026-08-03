@@ -166,6 +166,9 @@ public static class ServiceCollectionExtensions
 		// The process-wide live-session registry (in-memory games, connection maps, persisters). A
 		// single injected singleton replacing GameHub's former static state.
 		services.AddSingleton<CorroServer.Hubs.GameSessionRegistry>();
+		// Who is here, by account. Separate from the registry above on purpose: that one knows
+		// about seats, this one about people (see PresenceRegistry).
+		services.AddSingleton<CorroServer.Hubs.PresenceRegistry>();
 		// Bot seats live OUTSIDE the engine (Services/Bots): the driver observes state changes
 		// and plays through the same command pipeline as a human. E2E overrides BotOptions
 		// with a near-zero action delay (last registration wins).
@@ -287,6 +290,17 @@ public static class ServiceCollectionExtensions
 
 			logger.LogInformation("Identities container: {Status}",
 				identitiesContainerResponse.StatusCode == System.Net.HttpStatusCode.Created ? "Created" : "Already exists");
+
+			// And for the same reason again: a handle's uniqueness is decided by the handle, which
+			// is not the account key. Its own partition makes the claim a point read, and lets the
+			// container's duplicate-id rejection be the guard against two players claiming one name.
+			var handlesContainerResponse = await database.CreateContainerIfNotExistsAsync(
+				id: CosmosUserRepository.HandlesContainerName,
+				partitionKeyPath: "/handle"
+			);
+
+			logger.LogInformation("Handles container: {Status}",
+				handlesContainerResponse.StatusCode == System.Net.HttpStatusCode.Created ? "Created" : "Already exists");
 
 			logger.LogInformation("Cosmos DB initialization completed successfully");
 		}

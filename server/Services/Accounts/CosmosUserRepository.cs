@@ -20,9 +20,11 @@ public class CosmosUserRepository : IUserRepository
 	internal const string DatabaseName = "CorroGame";
 	internal const string UsersContainerName = "Users";
 	internal const string IdentitiesContainerName = "Identities";
+	internal const string HandlesContainerName = "Handles";
 
 	private readonly Container _users;
 	private readonly Container _identities;
+	private readonly Container _handles;
 	private readonly ILogger<CosmosUserRepository> _logger;
 
 	public CosmosUserRepository(CosmosClient cosmosClient, ILogger<CosmosUserRepository> logger)
@@ -30,6 +32,10 @@ public class CosmosUserRepository : IUserRepository
 		var database = cosmosClient.GetDatabase(DatabaseName);
 		_users = database.GetContainer(UsersContainerName);
 		_identities = database.GetContainer(IdentitiesContainerName);
+		// Same reasoning as Identities: uniqueness is decided by the handle, which is not the user
+		// partition key, so it gets a container partitioned by itself — a point read, and a
+		// duplicate-id rejection that IS the race guard.
+		_handles = database.GetContainer(HandlesContainerName);
 		_logger = logger;
 	}
 
@@ -184,5 +190,59 @@ public class CosmosUserRepository : IUserRepository
 		{
 			// Already gone: erasure has to be safe to retry.
 		}
+	}
+
+	public async Task<HandleClaimDocument?> GetHandleClaimAsync(
+		string normalizedHandle,
+		CancellationToken ct = default)
+	{
+		try
+		{
+			var response = await _handles.ReadItemAsync<HandleClaimDocument>(
+				normalizedHandle,
+				partitionKey: new PartitionKey(normalizedHandle),
+				cancellationToken: ct);
+			return response.Resource;
+		}
+		catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+		{
+			return null;
+		}
+	}
+
+	/// <summary>
+	/// Create-if-absent on Cosmos's own duplicate-id rejection rather than a read-then-write, which
+	/// would leave a window for two players to both be told a handle was free.
+	/// </summary>
+	public async Task<HandleClaimDocument> CreateOrGetHandleClaimAsync(
+		HandleClaimDocument claim,
+		CancellationToken ct = default)
+	{
+		try
+		{
+			var response = await _handles.CreateItemAsync(
+				claim,
+				new PartitionKey(claim.Handle),
+				cancellationToken: ct);
+			return response.Resource;
+		}
+		catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.Conflict)
+		{
+			// The winner must exist: Cosmos only reports the conflict once the item is durable.
+			var existing = await GetHandleClaimAsync(claim.Handle, ct);
+			return existing ?? throw new InvalidOperationException(
+				$"Handle '{claim.Handle}' reported as taken but could not be read back.");
+		}
+	}
+
+	public async Task<HandleClaimDocument> ReplaceHandleClaimAsync(
+		HandleClaimDocument claim,
+		CancellationToken ct = default)
+	{
+		var response = await _handles.UpsertItemAsync(
+			claim,
+			new PartitionKey(claim.Handle),
+			cancellationToken: ct);
+		return response.Resource;
 	}
 }

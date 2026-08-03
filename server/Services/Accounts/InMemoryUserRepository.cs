@@ -13,6 +13,7 @@ public class InMemoryUserRepository : IUserRepository
 {
 	private readonly ConcurrentDictionary<string, UserDocument> _users = new();
 	private readonly ConcurrentDictionary<string, IdentityLinkDocument> _identities = new();
+	private readonly ConcurrentDictionary<string, HandleClaimDocument> _handles = new();
 
 	public Task<UserDocument?> GetUserAsync(string userId, CancellationToken ct = default) =>
 		Task.FromResult(_users.GetValueOrDefault(userId));
@@ -53,5 +54,22 @@ public class InMemoryUserRepository : IUserRepository
 	{
 		_identities.TryRemove(identityKey, out _);
 		return Task.CompletedTask;
+	}
+
+	public Task<HandleClaimDocument?> GetHandleClaimAsync(
+		string normalizedHandle, CancellationToken ct = default) =>
+		Task.FromResult(_handles.GetValueOrDefault(normalizedHandle));
+
+	/// <summary>Same semantics as the identity link: the first writer wins and everybody else is
+	/// handed the stored claim, which is what tells them they lost.</summary>
+	public Task<HandleClaimDocument> CreateOrGetHandleClaimAsync(
+		HandleClaimDocument claim, CancellationToken ct = default) =>
+		Task.FromResult(_handles.GetOrAdd(claim.Handle, claim));
+
+	public Task<HandleClaimDocument> ReplaceHandleClaimAsync(
+		HandleClaimDocument claim, CancellationToken ct = default)
+	{
+		_handles[claim.Handle] = claim;
+		return Task.FromResult(claim);
 	}
 }

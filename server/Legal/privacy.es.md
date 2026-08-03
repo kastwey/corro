@@ -64,6 +64,25 @@ Si inicias sesión después de haber jugado sin cuenta, el navegador puede asoci
 plazas cuyas credenciales ya conserva. Así pueden aparecer esas mesas en otro dispositivo donde
 hayas iniciado sesión.
 
+## Tu nombre público y aparecer conectado
+
+Una cuenta puede tener un **nombre público** — un identificador como `@kastwey` — que eliges tú. Es
+opcional: no hace falta para jugar y no se pide al iniciar sesión. Se guarda junto a tu cuenta, con
+la fecha en que lo cambiaste por última vez, de modo que un nombre se mantiene estable durante
+treinta días seguidos.
+
+Aparte, puedes pedir aparecer en la **lista de jugadores conectados**. Está desactivada salvo que la
+actives, y mientras esté activa el servidor publica, solo a otros jugadores con la sesión iniciada:
+
+- Tu **nombre público**. Nunca el nombre de tu cuenta, que suele venir de tu proveedor de acceso y a
+  menudo es tu nombre real: esa lista no lo publica en ningún caso.
+- Una indicación aproximada de qué estás haciendo: en el lobby, en una mesa o jugando. Nunca dice en
+  qué mesa ni en qué partida.
+
+Desactivarla te retira por completo de la lista: a los demás no se les indica que haya nadie oculto
+ni ningún recuento te incluye. Un nombre público que dejas de usar no se entrega de inmediato a otra
+persona, para que nadie pueda tomar un nombre que tus amistades conocen y hacerse pasar por ti.
+
 ## Cookies y datos guardados en el navegador
 
 Corro utiliza estas cookies propias:

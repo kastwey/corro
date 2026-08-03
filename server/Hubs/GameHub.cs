@@ -32,6 +32,7 @@ public partial class GameHub : Hub
 	private readonly GameSessionRegistry _registry;
 	private readonly ILogger<GameHub>? _logger;
 	private readonly Services.Rules.IRandomSource _random;
+	private readonly PresenceRegistry? _presence;
 	private readonly Services.Bots.BotDriver? _botDriver;
 	private readonly ILiveKitVoiceService? _voiceService;
 
@@ -62,7 +63,9 @@ public partial class GameHub : Hub
 		// Drives bot seats from outside the engine. Optional for the same slim-tests reason.
 		Services.Bots.BotDriver? botDriver = null,
 		// Optional for slim Hub tests; the running app always registers the singleton.
-		ILiveKitVoiceService? voiceService = null)
+		ILiveKitVoiceService? voiceService = null,
+		// Who is here, by account. Optional for the same slim-tests reason.
+		PresenceRegistry? presence = null)
 	{
 		_gameRepository = gameRepository;
 		_gameServiceFactory = gameServiceFactory;
@@ -74,6 +77,7 @@ public partial class GameHub : Hub
 		_random = randomSource ?? new Services.Rules.SystemRandomSource();
 		_botDriver = botDriver;
 		_voiceService = voiceService;
+		_presence = presence;
 	}
 
 	// ============================================
@@ -95,11 +99,32 @@ public partial class GameHub : Hub
 		return Task.CompletedTask;
 	}
 
+	/// <summary>
+	/// A connection arrives. The only thing recorded here is PRESENCE, and only for somebody with a
+	/// session: being here is about the account, not about any seat, so it starts the moment the
+	/// page connects rather than when they sit down at a table.
+	/// </summary>
+	public override async Task OnConnectedAsync()
+	{
+		if (SignedInUserId() is { Length: > 0 } userId)
+		{
+			_presence?.Add(userId, Context.ConnectionId);
+		}
+		await base.OnConnectedAsync();
+	}
+
 	public override async Task OnDisconnectedAsync(Exception? exception)
 	{
 		// Announced navigations (waiting room → board) are a handover, not a departure. Read once
 		// here so the record is cleared for every connection, announced or not.
 		var handedOver = _registry.TryConsumeHandoff(Context.ConnectionId);
+
+		// Presence drops this connection; the person only leaves the list with their last one, so
+		// a second tab — or a navigation from the table to the board — never blinks them out.
+		if (SignedInUserId() is { Length: > 0 } presentUserId)
+		{
+			_presence?.Remove(presentUserId, Context.ConnectionId);
+		}
 
 		// Clean up game mapping
 		var hadGame = _registry.TryRemoveGameConnection(Context.ConnectionId, out var gameId);
