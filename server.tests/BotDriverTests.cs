@@ -39,7 +39,16 @@ public class BotDriverTests
 		return svc;
 	}
 
-	private static async Task WaitUntilAsync(Func<bool> condition, string what, int timeoutMs = 5000)
+	/// <summary>
+	/// Wait for something the bot driver does on its own thread.
+	///
+	/// The deadline is generous on purpose. It is not a performance budget — the bot finishes in
+	/// about 300 ms on an idle machine — it is only the point at which "still working" becomes
+	/// "never going to happen". Five seconds looked like plenty until the pre-push hook ran this
+	/// straight after a full build and the suite failed on a machine that was merely busy, which
+	/// is a false alarm about somebody's unrelated change. A hung driver still fails, just later.
+	/// </summary>
+	private static async Task WaitUntilAsync(Func<bool> condition, string what, int timeoutMs = 30_000)
 	{
 		var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
 		while (!condition() && DateTime.UtcNow < deadline)
