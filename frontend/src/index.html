@@ -325,6 +325,12 @@
 				</svg>
 			</a>.
 		</p>
+		<!-- How busy this deployment is right now, when its host chose to say (see
+			 siteMetrics.ts). It sits with the line about what this SITE is, not inside the list
+			 of links, which is a list of ways out. Deliberately not a live region and never
+			 refreshed under the reader: it is the answer to "is anyone else here?" on arrival,
+			 not a ticker that talks over somebody trying to read the page. -->
+		<p class="app-footer__metrics" id="active-tables" hidden></p>
 		<ul class="app-footer__links">
 			<!-- Revealed only by a deployment that has said who answers for the data (see
 				 privacyNotice.ts). Empty configuration supports local development; it does not

@@ -84,6 +84,23 @@ public sealed class GameSessionRegistry
 		|| _connectionGameMap.Values.Contains(gameId)
 		|| _lobbyConnections.Values.Contains(gameId);
 
+	/// <summary>
+	/// How many tables have somebody actually AT them right now — a public liveness number, never
+	/// a per-game or per-player one (see <see cref="Services.PublicMetricsOptions"/>).
+	///
+	/// Deliberately narrower than <see cref="HasActivity"/>: that one also counts a game this
+	/// process is merely holding or still persisting, which is exactly the table nobody is sitting
+	/// at. Presence here means a live connection, from the board or from the waiting room, so a
+	/// table whose players all dropped out stops counting the moment their connections go.
+	/// </summary>
+	public int CountActiveTables()
+	{
+		var tables = new HashSet<string>(StringComparer.Ordinal);
+		foreach (var gameId in _connectionGameMap.Values) tables.Add(gameId);
+		foreach (var gameId in _lobbyConnections.Values) tables.Add(gameId);
+		return tables.Count;
+	}
+
 	public bool TryGetService(string gameId, out IGameService service) => _gameServices.TryGetValue(gameId, out service!);
 
 	/// <summary>Register a freshly created/restored game service: subscribe its events, then track it.</summary>

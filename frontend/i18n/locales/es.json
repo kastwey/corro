@@ -4,6 +4,7 @@
   },
   "footer": {
     "poweredBy": "Funciona con",
+    "activeTables": "Mesas activas: {{count}}.",
     "corroNewWindowLabel": "Corro en GitHub, se abre en una ventana nueva",
     "licenseNewWindowLabel": "Licencia AGPL-3.0, se abre en una ventana nueva",
     "privacy": "Privacidad"

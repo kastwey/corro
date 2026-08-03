@@ -36,6 +36,10 @@ public static class ServiceCollectionExtensions
 				$"{PrivacyOptions.SectionName} values exceed their maximum lengths.")
 			.ValidateOnStart();
 
+		// One boolean, nothing to validate: absent or false, the deployment simply says nothing.
+		services.AddOptions<PublicMetricsOptions>()
+			.Bind(configuration.GetSection(PublicMetricsOptions.SectionName));
+
 		services.AddOptions<SiteBrandingOptions>()
 			.Bind(configuration.GetSection(SiteBrandingOptions.SectionName))
 			.Validate(options =>

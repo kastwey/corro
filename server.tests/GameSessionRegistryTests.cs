@@ -22,6 +22,10 @@ public class GameSessionRegistryTests
 		return new GameSessionRegistry(new NoopHubContext(), repo, timer, TestFixtures.NewPackageRestorer());
 	}
 
+	/// <summary>The same registry, for a suite that only needs the connection bookkeeping and has
+	/// nothing to assert about the collaborators (see <see cref="PublicMetricsTests"/>).</summary>
+	internal static GameSessionRegistry NewStubRegistry() => NewRegistry(out _, out _);
+
 	[Fact]
 	public void ConnectionsForPlayer_returns_only_that_players_connections_in_that_game()
 	{
@@ -273,9 +277,51 @@ public class GameSessionRegistryTests
 		InviteCode = "INV",
 	};
 
+	// The public liveness number in the footer. It counts PEOPLE PRESENT, which is a narrower
+	// question than "does this process know about the game": a table everyone dropped out of is
+	// exactly the one nobody is sitting at, and advertising it would make a quiet server look busy.
+	[Fact]
+	public void CountActiveTables_counts_tables_with_somebody_connected_once_each()
+	{
+		var reg = NewRegistry(out _, out _);
+		Assert.Equal(0, reg.CountActiveTables());
+
+		// Two players at one table, plus one at another: two tables, not three connections.
+		reg.MapConnectionToGame("c1", "g1");
+		reg.MapConnectionToGame("c2", "g1");
+		reg.MapConnectionToGame("c3", "g2");
+		Assert.Equal(2, reg.CountActiveTables());
+
+		// Somebody waiting in a table's lobby is somebody at that table.
+		reg.MapLobbyConnection("c4", "g3");
+		Assert.Equal(3, reg.CountActiveTables());
+		// …and the same table reached from both maps is still one table.
+		reg.MapLobbyConnection("c5", "g1");
+		Assert.Equal(3, reg.CountActiveTables());
+
+		// They leave: the table stops counting the moment the last connection goes.
+		reg.TryRemoveGameConnection("c1", out _);
+		reg.TryRemoveGameConnection("c2", out _);
+		Assert.Equal(3, reg.CountActiveTables()); // c5 is still in g1's lobby
+		reg.TryRemoveLobbyConnection("c5", out _);
+		Assert.Equal(2, reg.CountActiveTables());
+	}
+
+	[Fact]
+	public void CountActiveTables_ignores_a_game_this_process_merely_holds()
+	{
+		var reg = NewRegistry(out _, out _);
+		reg.RegisterService("g1", new FakeService(gameOver: false));
+
+		// The service is registered and HasActivity says so — but nobody is connected, which is
+		// the whole difference between "a game exists" and "there are people playing".
+		Assert.True(reg.HasActivity("g1"));
+		Assert.Equal(0, reg.CountActiveTables());
+	}
+
 	// ── Fakes ────────────────────────────────────────────────────────────────
 
-	private sealed class RecordingTimer : IAuctionTimerService
+	internal sealed class RecordingTimer : IAuctionTimerService
 	{
 		public List<string> Stopped { get; } = new();
 		public void StartTimers(string gameId, GameSettings settings, AuctionState auction) { }
@@ -284,7 +330,7 @@ public class GameSessionRegistryTests
 		public event Func<string, Task>? OnBidTimeout { add { } remove { } }
 	}
 
-	private sealed class RecordingRepo : IGameRepository
+	internal sealed class RecordingRepo : IGameRepository
 	{
 		public List<string> Deleted { get; } = new();
 		public Dictionary<string, GameDocument> Documents { get; } = new();
@@ -363,7 +409,7 @@ public class GameSessionRegistryTests
 		public event Func<CardDrawnNotification, Task>? OnCardDrawn { add { } remove { } }
 	}
 
-	private sealed class NoopHubContext : IHubContext<GameHub>
+	internal sealed class NoopHubContext : IHubContext<GameHub>
 	{
 		private readonly NoopClients _clients = new();
 		public IHubClients Clients => _clients;

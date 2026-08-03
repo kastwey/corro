@@ -25,6 +25,7 @@ import { initAccountBar } from '../account.js';
 import { openAccountSettings } from '../accountSettings.js';
 import { initializeSiteBranding } from '../siteBranding.js';
 import { initPrivacyNotice } from '../privacyNotice.js';
+import { initializeSiteMetrics } from '../siteMetrics.js';
 import { showSecondAccountNotice } from '../secondAccountNotice.js';
 import { showMergedNotice } from '../mergedNotice.js';
 import { applyRuleSettings, readRuleSettings } from './ruleFields.js';
@@ -72,8 +73,14 @@ class UnifiedLobbyUI {
 		this.setupEventHandlers();
 		this.setupUI();
 		// Not awaited: a deployment's privacy notice is a footer link, and nothing about the lobby
-		// becoming usable should wait on it.
+		// becoming usable should wait on it. The same goes for how busy the place is — worth
+		// knowing on arrival, never worth making anybody wait for.
 		void initPrivacyNotice();
+		// i18nBinder, not the lobby's own t(): this line interpolates a count, and the lobby helper
+		// takes a fallback string as its second argument rather than variables.
+		void initializeSiteMetrics(
+			document.getElementById('active-tables'),
+			(key, vars) => i18nBinder.tSync(key, vars));
 		await this.connectToServer();
 		await this.fetchLobbyOptions();
 		this.checkExistingSession();

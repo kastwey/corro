@@ -285,6 +285,34 @@ test('compact lobby keeps brand, preferences, content and footer in one vertical
 	await expect(page.locator('.app-footer a[data-footer-link="corro"]')).toContainText('Corro');
 });
 
+// The one number a host may publish about their server: how many tables have somebody at them. It
+// answers "is anyone else here?", which is what decides whether a visitor bothers creating a table.
+test('a deployment that publishes its activity says so in the footer, quietly', async ({ browser }) => {
+	const page = await newPlayerPage(browser);
+	await gotoLobbyHome(page);
+
+	const line = page.locator('#active-tables');
+	await expect(line).toBeVisible();
+	// One flowing line with the count in it — the E2E server has nobody at a table yet.
+	await expect(line).toHaveText('Mesas activas: 0.');
+
+	// Never a live region. A footer that speaks over somebody reading the page is worse than a
+	// footer with one fact fewer, and this number changes whenever anybody anywhere sits down.
+	await expect(line).not.toHaveAttribute('aria-live', /.*/);
+	await expect(line).not.toHaveAttribute('role', /.*/);
+
+	// It lives with the line about what this SITE is, not inside the list of ways OUT of it.
+	await expect(page.locator('.app-footer__links #active-tables')).toHaveCount(0);
+	await flushAxeAudit(page);
+
+	// And it counts people, not rows: a table with somebody in it moves the number.
+	const host = await newPlayerPage(browser);
+	await createGame(host, 'Ana', 'snakes-and-ladders');
+	await page.reload();
+	await expect(page.locator('#active-tables')).toHaveText('Mesas activas: 1.');
+	await flushAxeAudit(page);
+});
+
 test('invalid and successful .corro upload states, including removal, are Axe-clean', async ({ browser }) => {
 	const page = await newPlayerPage(browser);
 	await gotoLobbyHome(page);

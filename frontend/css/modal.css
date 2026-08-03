@@ -785,6 +785,13 @@
 	margin: 0;
 }
 
+/* How busy the deployment is, when its host publishes it. Quieter than the brand line above it
+   without relying on opacity alone — a real muted colour, so it keeps its contrast. */
+.app-footer__metrics {
+	margin: 0.125rem 0 0;
+	color: var(--text-muted);
+}
+
 .app-footer__links {
 	display: flex;
 	justify-content: center;

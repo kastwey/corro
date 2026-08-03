@@ -308,6 +308,24 @@ image is used in both themes; with neither set, the lobby renders the configured
 separate from host branding: every deployment retains **Powered by Corro**, with **Corro**
 linking directly to the source repository.
 
+### Say how busy the server is
+
+`PublicMetrics__ShowActiveTables=true` (or the `PublicMetrics` section in
+`server/appsettings.json`) adds one line to the lobby footer: **Mesas activas: 27.** /
+**Active tables: 27.** It answers the question a visitor arriving at a quiet lobby actually
+has — is anyone else here? — which is what decides whether they bother creating a table.
+
+"Active" means somebody is connected to that table right now, from the board or from its
+waiting room. A table everybody dropped out of stops counting the moment their connections
+go, so the number never flatters an empty server.
+
+It is **off by default** and each host decides for themselves: a private server for one
+family gains nothing from advertising two tables, and a brand-new deployment would rather
+not greet its first visitor with a zero. A server that keeps quiet shows no line at all —
+never a zero, which would read as "empty" instead of "we don't say". Nothing identifying is
+published: one integer for the whole process, no games and no players. The line is read when
+a screen-reader user reaches the footer and is never announced over them.
+
 ### Level 0 — Just run it (no Docker, no Azure)
 
 Games live **in memory** (lost on restart) and uploaded boards go to a temp folder. Only the

@@ -4,6 +4,7 @@
   },
   "footer": {
     "poweredBy": "Powered by",
+    "activeTables": "Active tables: {{count}}.",
     "corroNewWindowLabel": "Corro on GitHub, opens in a new window",
     "licenseNewWindowLabel": "AGPL-3.0 license, opens in a new window",
     "privacy": "Privacy"

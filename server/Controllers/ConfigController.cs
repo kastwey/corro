@@ -1,3 +1,4 @@
+using CorroServer.Hubs;
 using CorroServer.Services;
 using CorroServer.Services.Voice;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +15,8 @@ public class ConfigController : ControllerBase
 {
 	private readonly SiteBrandingOptions _siteBranding;
 	private readonly PrivacyOptions _privacy;
+	private readonly PublicMetricsOptions _metrics;
+	private readonly GameSessionRegistry? _sessions;
 	private readonly IWebHostEnvironment? _environment;
 	private readonly bool _voiceAvailable;
 
@@ -24,10 +27,14 @@ public class ConfigController : ControllerBase
 		IOptions<SiteBrandingOptions> siteBranding,
 		IOptions<PrivacyOptions>? privacy = null,
 		IWebHostEnvironment? environment = null,
-		ILiveKitVoiceService? voiceService = null)
+		ILiveKitVoiceService? voiceService = null,
+		IOptions<PublicMetricsOptions>? metrics = null,
+		GameSessionRegistry? sessions = null)
 	{
 		_siteBranding = siteBranding.Value;
 		_privacy = privacy?.Value ?? new PrivacyOptions();
+		_metrics = metrics?.Value ?? new PublicMetricsOptions();
+		_sessions = sessions;
 		_environment = environment;
 		_voiceAvailable = voiceService?.IsConfigured ?? false;
 	}
@@ -102,6 +109,20 @@ public class ConfigController : ControllerBase
 	/// absent; an authenticated player receives the public URL only with a short-lived token.</summary>
 	[HttpGet("voice")]
 	public ActionResult<object> GetVoice() => new { Available = _voiceAvailable };
+
+	/// <summary>
+	/// What this deployment says about itself in public. A visitor cannot tell an empty lobby from
+	/// a dead one, and that is the question that decides whether they bother creating a table.
+	///
+	/// The count is ABSENT, not zero, when the host has not turned it on: a deployment that keeps
+	/// quiet must not be readable as one with nobody in it. Nothing here identifies anybody — one
+	/// integer over the whole process, no games, no players.
+	/// </summary>
+	[HttpGet("metrics")]
+	public ActionResult<object> GetMetrics()
+		=> _metrics.ShowActiveTables && _sessions is not null
+			? new { ActiveTables = (int?)_sessions.CountActiveTables() }
+			: new { ActiveTables = (int?)null };
 
 	/// <summary>
 	/// Get available languages
