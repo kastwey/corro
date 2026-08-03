@@ -154,18 +154,40 @@ under `server/`, the harness itself — means "run the whole suite", and it says
 narrows too far is the day an accessibility regression ships, so it is never allowed to be the
 thing that decides a change is safe.
 
-What it actually buys, measured on this suite:
+What it actually buys, measured on this suite (the full run is 160s):
 
-| changed | specs selected |
-| --- | --- |
-| `frontend/src/forbiddenBoard.ts` | 1 of 39 |
-| `frontend/src/raceBoard.ts` | 3 of 39 |
-| `frontend/src/comboBox.ts` | 38 of 39 |
-| `server/**` | all |
+| changed | specs selected | time |
+| --- | --- | --- |
+| `frontend/src/forbiddenBoard.ts` | 1 of 39 | ~13s |
+| `frontend/src/raceBoard.ts` | 3 of 39 | |
+| `frontend/src/privacyPage.ts` | 1 of 39 | |
+| `frontend/src/comboBox.ts` | 10 of 39 | ~61s |
+| `frontend/src/announcer.ts` | 35 of 39 | |
+| `server/**`, a new module, the harness | all | 160s |
 
-Family work — a board, its rules, its dialogs — is where this pays: seconds instead of minutes.
-Shared lobby plumbing is not, and that is not a defect in the map: every scenario really does
-create its game through the lobby, so a change there really can break any of them. A tool that
-claimed otherwise would be lying.
+### The one judgement call
 
-Re-run `test:map` after adding a spec or a module. A stale map costs time, never coverage.
+Everything above is measured except one rule, and it is the only one that can make the selection
+WRONG rather than merely slow.
+
+The map is honest that 38 of 39 specs exercise the lobby: every scenario creates its game through
+it. But a game spec does not TEST the lobby — it passes through it to reach a board. What it
+genuinely depends on is the handoff: that the game comes out configured the way it asked for. So a
+change to the pre-game surface ALONE selects the specs whose subject that surface is, plus one spec
+per way a game can be set up from it — seats, teams, content deck, house rules, and a plain
+create-and-join. That is the 10 above.
+
+Those representatives are not decoration. When the game picker became a combobox, the spec it broke
+was `race.spec` — "a taken colour says who holds it" — and not one lobby spec: staging repainted the
+seat list and wiped the seat the test had chosen. `race` is in the list because it is the only spec
+that picks a seat at all.
+
+The stricter version — lobby specs only — is 44s, and buys those 17 seconds with exactly that hole.
+The lists live at the top of `affected.mjs` so the trade can be argued with.
+
+Note what the rule keys on: which MODULE changed, not how many specs it drags in. `announcer.ts`
+also selects 35, and narrowing it would be wrong — it is the voice of the game, not of the lobby.
+
+Rot is safe by construction. A lobby module nobody adds to the list keeps the measured selection,
+which is the whole suite; and `test:map` going stale means a file it has never seen falls open the
+same way. Forgetting costs time, never coverage. Re-run `test:map` after adding a spec or a module.
