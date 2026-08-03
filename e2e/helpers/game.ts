@@ -300,6 +300,21 @@ export async function gotoLobbyHome(page: Page): Promise<void> {
 	await expect(page.locator('#your-games-empty, #your-games-list li').first()).toBeVisible();
 }
 
+/**
+ * Pick a shipped board in the lobby's combobox (comboBox.ts). The picker is a text field with a
+ * listbox under it, not a <select>, so there is no selectOption to call.
+ *
+ * The whole catalogue is on screen, so this takes the item directly — addressed by ID, never by
+ * the name it happens to have in the language under test. Typing to narrow the list is the other
+ * way in, and comboBox.test.ts plus the lobby matrix cover that.
+ */
+export async function chooseBoard(page: Page, boardId: string): Promise<void> {
+	const option = page.locator(`#board-listbox [data-item-id="${boardId}"]`);
+	await expect(option).toBeVisible();
+	await option.click();
+	await expect(option).toHaveAttribute('aria-selected', 'true');
+}
+
 /** Creates a game on the given shipped board and returns the invite code. */
 export async function createGame(
 	page: Page,
@@ -316,7 +331,7 @@ export async function createGame(
 ): Promise<string> {
 	await gotoLobbyHome(page);
 	await page.click('#go-create-btn');
-	await page.selectOption('#board-selector', boardId);
+	await chooseBoard(page, boardId);
 	// Staging the package re-renders the token list with the BOARD's own pieces
 	// (from its manifest); waiting for the first of them proves the package is
 	// active before submitting — a generic label could still be a built-in piece.

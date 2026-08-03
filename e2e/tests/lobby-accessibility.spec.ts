@@ -8,6 +8,7 @@ import { zipSync, strToU8 } from 'fflate';
 import { test, expect } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
 import {
+	chooseBoard,
 	appI18n,
 	createGame,
 	expectAnnouncement,
@@ -50,8 +51,11 @@ async function uploadedTrackPackage(): Promise<Buffer> {
 }
 
 async function waitForDefaultPackage(page: import('../helpers/test').Page): Promise<void> {
-	const boardId = await page.locator('#board-selector').inputValue();
-	const firstToken = packageManifest(boardId).tokens[0].id as string;
+	// The picker's field holds the game's NAME now, so the default board is read off the list's
+	// selected option, which is where the id lives.
+	const boardId = await page.locator('#board-listbox [aria-selected="true"]')
+		.getAttribute('data-item-id');
+	const firstToken = packageManifest(boardId!).tokens[0].id as string;
 	await expect(page.locator(`#create-form input.token-radio[value="${firstToken}"]`)).toBeAttached();
 }
 
@@ -68,7 +72,7 @@ test('switching shipped games keeps the loading feedback visual-only', async ({ 
 		await route.continue();
 	});
 	await page.evaluate(() => { ((window as any).__announcements as string[]).length = 0; });
-	await page.locator('#board-selector').selectOption(TRACK_BOARD);
+	await chooseBoard(page, TRACK_BOARD);
 
 	const loading = appI18n('es').game.loading_board as string;
 	const visualStatus = page.locator('#board-loading-status');
@@ -89,6 +93,71 @@ test('switching shipped games keeps the loading feedback visual-only', async ({ 
 	expect(heard).not.toContain(loading);
 });
 
+// The game picker is an editable combobox whose list you can also just walk — because somebody who
+// does not know the catalogue cannot type its name, and somebody who does should not have to
+// arrow past twenty games to reach it.
+test('the game picker filters by typing and is walked with the arrows, never with Tab', async ({ browser }) => {
+	const page = await newPlayerPage(browser, 'es-ES');
+	await gotoLobbyHome(page);
+	await page.locator('#go-create-btn').click();
+	await waitForDefaultPackage(page);
+
+	const field = page.locator('#board-selector');
+	const listbox = page.locator('#board-listbox');
+	const options = listbox.locator('[role="option"]');
+
+	// It announces itself as a combobox with a list, and the list is named.
+	await expect(field).toHaveRole('combobox');
+	await expect(field).toHaveAttribute('aria-controls', 'board-listbox');
+	await expect(field).toHaveAttribute('aria-autocomplete', 'list');
+	await expect(field).toHaveAttribute('aria-expanded', 'true');
+	await expect(listbox).toHaveAccessibleName('Selecciona el juego:');
+
+	// Alphabetical, in the reader's language.
+	const names = await options.allTextContents();
+	expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, 'es')));
+
+	// The list is not in the tab order: Tab from the field leaves the whole control.
+	await field.focus();
+	await page.keyboard.press('Tab');
+	await expect(options.first()).not.toBeFocused();
+
+	// Down enters at the top, Up from the field is a shortcut to the end.
+	await field.focus();
+	await page.keyboard.press('ArrowDown');
+	await expect(options.first()).toBeFocused();
+	await field.focus();
+	await page.keyboard.press('ArrowUp');
+	await expect(options.last()).toBeFocused();
+	await flushAxeAudit(page);
+
+	// Typing from inside the list lands in the field and narrows what is left. It REPLACES the
+	// game already chosen rather than extending its name: appending to "Carrera Galácticas" would
+	// search for something nobody asked for and find nothing.
+	await page.keyboard.press('s');
+	await expect(field).toBeFocused();
+	await expect(field).toHaveValue('s');
+	const narrowed = await options.count();
+	expect(narrowed).toBeGreaterThan(0);
+	expect(narrowed).toBeLessThan(names.length);
+
+	// The count is on screen for the eye and hidden from assistive tech, so it is never said twice.
+	const visible = page.locator('#board-results');
+	await expect(visible).toHaveText(/resultados? encontrados?/);
+	await expect(visible).toHaveAttribute('aria-hidden', 'true');
+	// …and the spoken copy arrives after the typing stops, once, through a live region.
+	await expect(page.locator('#board-results-live')).toHaveText(/resultados? encontrados?/);
+	await flushAxeAudit(page);
+
+	// A search that matches nothing is a real, reachable state: no options, and no popup to expand.
+	await field.fill('zzzzz');
+	await expect(options).toHaveCount(0);
+	await expect(field).toHaveAttribute('aria-expanded', 'false');
+	await expect(visible).toHaveText('Sin resultados');
+	await expect(page.locator('#board-results-live')).toHaveText('Sin resultados');
+	await flushAxeAudit(page);
+});
+
 // Both families whose CONTENT is language-split reach the same picker: the words a Forbidden
 // Words table guesses, and the questions a trivia table answers. It is one shared deck for the
 // whole table, deliberately separate from each player's own interface language.
@@ -100,7 +169,7 @@ for (const board of [
 		const page = await newPlayerPage(browser, 'es-ES');
 		await gotoLobbyHome(page);
 		await page.locator('#go-create-btn').click();
-		await page.locator('#board-selector').selectOption(board.id);
+		await chooseBoard(page, board.id);
 		const firstToken = packageManifest(board.id).tokens[0].id as string;
 		await expect(page.locator(`#create-form input.token-radio[value="${firstToken}"]`)).toBeAttached();
 
@@ -123,7 +192,7 @@ for (const board of [
 		await flushAxeAudit(page);
 
 		// A board whose content is NOT language-split offers no choice at all.
-		await page.locator('#board-selector').selectOption(TRACK_BOARD);
+		await chooseBoard(page, TRACK_BOARD);
 		await expect(group).toBeHidden();
 	});
 
@@ -133,7 +202,7 @@ test('Four Colours offers the scoring direction as a named, accessible radio gro
 	const page = await newPlayerPage(browser, 'es-ES');
 	await gotoLobbyHome(page);
 	await page.locator('#go-create-btn').click();
-	await page.locator('#board-selector').selectOption(SHEDDING_BOARD);
+	await chooseBoard(page, SHEDDING_BOARD);
 	const firstToken = packageManifest(SHEDDING_BOARD).tokens[0].id as string;
 	await expect(page.locator(`#create-form input.token-radio[value="${firstToken}"]`)).toBeAttached();
 
@@ -414,20 +483,20 @@ test('an unlocked hidden shipped package can be selected and used to create a ga
 	const host = await newPlayerPage(browser);
 	await gotoLobbyHome(host);
 	await host.locator('#go-create-btn').click();
-	await expect(host.locator('#board-selector option[value="hidden"]')).toHaveCount(0);
+	await expect(host.locator('#board-listbox [data-item-id="hidden"]')).toHaveCount(0);
 
 	await host.keyboard.press('Control+Shift+Alt+C');
 	const unlock = host.locator('.game-dialog.dialog-unlock');
 	await unlock.locator('#unlock-code-input').fill('e2e-hidden');
 	await unlock.locator('#unlock-code-input').press('Enter');
 	await expectAnnouncement(host, /Desbloqueado: Hidden \(prueba E2E\)/);
-	await expect(host.locator('#board-selector option[value="hidden"]')).toHaveCount(1);
+	await expect(host.locator('#board-listbox [data-item-id="hidden"]')).toHaveCount(1);
 
 	// The code is browser state, not one-shot UI state: after a fresh navigation the hidden
 	// package must still be listed because the client replays the stored unlock header.
 	await gotoLobbyHome(host);
 	await host.locator('#go-create-btn').click();
-	await expect(host.locator('#board-selector option[value="hidden"]')).toHaveCount(1);
+	await expect(host.locator('#board-listbox [data-item-id="hidden"]')).toHaveCount(1);
 
 	// Reproduce the original race: stage the hidden package slowly and submit immediately.
 	// Create must wait for this POST+i18n chain rather than using the previously staged game.
@@ -435,7 +504,7 @@ test('an unlocked hidden shipped package can be selected and used to create a ga
 		await new Promise(resolve => setTimeout(resolve, 400));
 		await route.continue();
 	});
-	await host.locator('#board-selector').selectOption('hidden');
+	await chooseBoard(host, 'hidden');
 	await host.locator('#host-name').fill('Ana');
 	await host.locator('#create-button').dispatchEvent('click');
 

@@ -26,6 +26,8 @@ import { openAccountSettings } from '../accountSettings.js';
 import { initializeSiteBranding } from '../siteBranding.js';
 import { initPrivacyNotice } from '../privacyNotice.js';
 import { wireLanguageSelector } from '../languageSelector.js';
+import { ComboBox } from '../comboBox.js';
+import { listenForShake, requestShakePermission } from '../shakeGesture.js';
 import { initializeSiteMetrics } from '../siteMetrics.js';
 import { showSecondAccountNotice } from '../secondAccountNotice.js';
 import { showMergedNotice } from '../mergedNotice.js';
@@ -35,7 +37,7 @@ import {
 	t, translateServerError, showLoading, showError,
 	showSection, hideSection, showView, focusFirstField, getElement, getInputValue, getSelectedRadio,
 	clearUrlParams, getUrlParam, localizeBoardName, formatGameDate, parseHubErrorCode, isTableAtRestStatus,
-	pickPackageName, renderBoardOptions, lobbyViewFromState, LobbyView
+	pickPackageName, lobbyViewFromState, LobbyView
 } from './ui.js';
 
 /** How long a lobby announcement is left in the spoken region before it is wiped. */
@@ -54,6 +56,8 @@ class UnifiedLobbyUI {
 	private pendingPackageStage: Promise<void> = Promise.resolve();
 	/** Pending wipe of the lobby's spoken region (see announceInLobby). */
 	private liveClearTimer: number | null = null;
+	/** The game picker. Owns the catalogue, its ordering and its filtering. */
+	private boardPicker: ComboBox | null = null;
 
 	constructor() {
 		void this.init();
@@ -176,8 +180,11 @@ class UnifiedLobbyUI {
 			this.renderAllTokenSelectors();
 			// Stage the initially-selected shipped board so the lobby has a valid package from the
 			// start (its rules + tokens fill the panel), exactly as if it had been uploaded.
-			const first = getElement<HTMLSelectElement>('board-selector')?.value || this.shippedBoards[0]?.id;
-			if (first) await this.trackPackageStage(this.selectShippedBoard(first));
+			// Nothing is chosen on a fresh lobby, so the first game in the sorted list becomes the
+			// default — and choosing it through the picker keeps the field, the list's selected
+			// mark and the staged package all saying the same thing.
+			const first = this.selectedBoardId() ?? this.boardPicker?.visibleItems[0]?.id;
+			if (first) await this.trackPackageStage(this.stageSelectedBoard(first));
 		} catch (error) {
 			console.error('Error fetching lobby options:', error);
 		}
@@ -239,6 +246,24 @@ class UnifiedLobbyUI {
 		// deliver its release. openUnlockDialog() makes the second event an idempotent no-op.
 		window.addEventListener('keydown', handleShortcut, true);
 		window.addEventListener('keyup', handleShortcut, true);
+
+		// The same door, for a phone with no Ctrl and no Alt to hold down.
+		//
+		// A shake rather than a touch gesture on purpose: VoiceOver and TalkBack swallow taps,
+		// long presses and multi-finger patterns to drive themselves, so anything built out of
+		// touches is either unreachable with a screen reader running or fights the screen reader
+		// for it. Device motion goes nowhere near that layer. It is also exactly as
+		// undiscoverable-by-accident as the chord it mirrors, which is the point of both.
+		listenForShake(() => this.openUnlockDialog());
+		// iOS hands out motion events only after the person agrees, and only asks from inside a
+		// real gesture. The first touch or key on the lobby is that gesture; it is asked once.
+		const askForMotion = () => {
+			window.removeEventListener('pointerdown', askForMotion);
+			window.removeEventListener('keydown', askForMotion);
+			void requestShakePermission();
+		};
+		window.addEventListener('pointerdown', askForMotion);
+		window.addEventListener('keydown', askForMotion);
 	}
 
 	/**
@@ -396,11 +421,6 @@ class UnifiedLobbyUI {
 			if (file) void this.trackPackageStage(this.uploadSelectedPackage(file));
 		});
 		getElement('board-upload-remove')?.addEventListener('click', () => this.clearUploadedPackage());
-		// Picking a shipped board stages it (replacing any custom upload) through the same path.
-		getElement<HTMLSelectElement>('board-selector')?.addEventListener('change', (e) => {
-			const id = (e.target as HTMLSelectElement).value;
-			if (id) void this.trackPackageStage(this.selectShippedBoard(id));
-		});
 	}
 
 	/** Record the newest package operation. Create waits until this exact chain — including any
@@ -562,8 +582,8 @@ class UnifiedLobbyUI {
 		if (input) input.value = '';
 		const uploadedName = getElement('board-uploaded-name');
 		if (uploadedName) uploadedName.textContent = '';
-		const id = getElement<HTMLSelectElement>('board-selector')?.value || this.shippedBoards[0]?.id;
-		if (id) void this.trackPackageStage(this.selectShippedBoard(id));
+		const id = this.selectedBoardId() ?? this.boardPicker?.visibleItems[0]?.id;
+		if (id) void this.trackPackageStage(this.stageSelectedBoard(id));
 		else this.setUploadedPackageActive(false);
 	}
 
@@ -1424,12 +1444,58 @@ class UnifiedLobbyUI {
 
 	// === Rendering ===
 
+	/**
+	 * Fill the game picker. The combobox sorts and filters; this only decides what is IN it and
+	 * what each game is called in the reader's language.
+	 */
 	private renderBoardSelector(): void {
-		const selector = getElement<HTMLSelectElement>('board-selector');
-		if (!selector) return;
-		// The pure helper fills the options in the active language and preserves the current
-		// selection.
-		renderBoardOptions(selector, this.shippedBoards, i18nBinder.getCurrentLanguage());
+		const picker = this.ensureBoardPicker();
+		if (!picker) return;
+		const lang = i18nBinder.getCurrentLanguage();
+		picker.setItems(this.shippedBoards.map(board => ({
+			id: board.id,
+			label: pickPackageName(board.name, lang),
+		})));
+	}
+
+	/** Built once, when the create view first needs it. */
+	private ensureBoardPicker(): ComboBox | null {
+		if (this.boardPicker) return this.boardPicker;
+		const input = getElement<HTMLInputElement>('board-selector');
+		const listbox = getElement('board-listbox');
+		if (!input || !listbox) return null;
+
+		this.boardPicker = new ComboBox({
+			input,
+			listbox,
+			visualStatus: getElement('board-results'),
+			liveStatus: getElement('board-results-live'),
+			locale: i18nBinder.getCurrentLanguage(),
+			describeResults: count => (count === 0
+				? t('lobby.boardResultsNone', 'No results')
+				: i18nBinder.tSync('lobby.boardResults', { count })),
+			// Picking a shipped board stages it (replacing any custom upload) through the same
+			// path the uploader uses.
+			onSelect: item => {
+				if (item) void this.trackPackageStage(this.selectShippedBoard(item.id));
+			},
+		});
+		return this.boardPicker;
+	}
+
+	/** The chosen game, or undefined while nothing has been chosen yet. */
+	private selectedBoardId(): string | undefined {
+		return this.boardPicker?.value ?? undefined;
+	}
+
+	/**
+	 * Choose a game in the picker and wait for the package it stages. Going through the picker
+	 * rather than staging directly is what keeps the field, the list's selected mark and the
+	 * staged package from ever disagreeing.
+	 */
+	private stageSelectedBoard(id: string): Promise<void> {
+		this.boardPicker?.setValue(id);
+		return this.pendingPackageStage;
 	}
 
 	private renderAllTokenSelectors(): void {

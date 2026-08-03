@@ -5,10 +5,10 @@
   "footer": {
     "poweredBy": "Powered by",
     "navLabel": "Footer navigation",
+    "activeTables": "{{count}} active tables",
     "activeTables_one": "{{count}} active table",
-    "activeTables_other": "{{count}} active tables",
+    "connectedPlayers": "{{count}} players connected",
     "connectedPlayers_one": "{{count}} player connected",
-    "connectedPlayers_other": "{{count}} players connected",
     "activity": "{{tables}}, {{players}}.",
     "corroNewWindowLabel": "Corro on GitHub, opens in a new window",
     "licenseNewWindowLabel": "AGPL-3.0 license, opens in a new window",
@@ -249,6 +249,10 @@
       "tokenSelection": "Select your game token"
     },
     "selectBoard": "Select game:",
+    "boardFilterHint": "Type to filter, or press Down arrow to walk the list.",
+    "boardResults": "{{count}} results found",
+    "boardResults_one": "{{count}} result found",
+    "boardResultsNone": "No results",
     "uploadBoard": "Or upload a game (.corro):",
     "uploading": "Uploading…",
     "uploadUsing": "Uploaded game: {{name}}",

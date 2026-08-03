@@ -5,10 +5,10 @@
   "footer": {
     "poweredBy": "Funciona con",
     "navLabel": "Navegación del pie",
+    "activeTables": "{{count}} mesas activas",
     "activeTables_one": "{{count}} mesa activa",
-    "activeTables_other": "{{count}} mesas activas",
+    "connectedPlayers": "{{count}} jugadores conectados",
     "connectedPlayers_one": "{{count}} jugador conectado",
-    "connectedPlayers_other": "{{count}} jugadores conectados",
     "activity": "{{tables}}, {{players}}.",
     "corroNewWindowLabel": "Corro en GitHub, se abre en una ventana nueva",
     "licenseNewWindowLabel": "Licencia AGPL-3.0, se abre en una ventana nueva",
@@ -249,6 +249,10 @@
       "tokenSelection": "Selecciona tu ficha del juego"
     },
     "selectBoard": "Selecciona el juego:",
+    "boardFilterHint": "Escribe para filtrar, o pulsa flecha abajo para recorrer la lista.",
+    "boardResults": "{{count}} resultados encontrados",
+    "boardResults_one": "{{count}} resultado encontrado",
+    "boardResultsNone": "Sin resultados",
     "uploadBoard": "O sube un juego (.corro):",
     "uploading": "Subiendo…",
     "uploadUsing": "Juego subido: {{name}}",

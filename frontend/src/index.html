@@ -69,11 +69,25 @@
 			<form id="create-form">
 				<!-- The board comes first: it conditions everything below (tokens, player count and
 					 rules are all populated from the staged package once a board is chosen). -->
-				<div class="form-group" id="board-selector-group">
+				<!-- An editable combobox, not a <select>: the catalogue is long enough that finding a
+					 game by typing beats walking it, and short enough that walking it must stay
+					 possible for somebody who does not know what is in there. The list is always on
+					 screen and is never a tab stop — Down enters it, Up jumps to its end. See
+					 comboBox.ts. -->
+				<div class="form-group combo" id="board-selector-group">
 					<label for="board-selector" data-i18n="lobby.selectBoard">Select game:</label>
-					<select id="board-selector" data-i18n-attr:aria-label="lobby.selectBoard" aria-label="Select game">
-						<!-- Board options will be generated dynamically -->
-					</select>
+					<input type="text" id="board-selector" class="combo-input" role="combobox"
+						aria-expanded="false" aria-controls="board-listbox" aria-autocomplete="list"
+						autocomplete="off" aria-describedby="board-results-hint"
+						data-i18n-attr:aria-label="lobby.selectBoard" aria-label="Select game">
+					<p id="board-results-hint" class="form-hint" data-i18n="lobby.boardFilterHint">Type to filter, or press Down arrow to walk the list.</p>
+					<ul id="board-listbox" class="combo-listbox" role="listbox"
+						data-i18n-attr:aria-label="lobby.selectBoard" aria-label="Select game"></ul>
+					<!-- The same count twice, because one element cannot be both instant and patient:
+						 this one is for the eye and is hidden from assistive tech… -->
+					<p id="board-results" class="combo-results" aria-hidden="true"></p>
+					<!-- …and this one is spoken, but only once the typing stops (comboBox.ts). -->
+					<p id="board-results-live" class="sr-only" role="status" aria-live="polite"></p>
 				</div>
 
 				<!-- Replaces the board picker while an uploaded package is active. -->

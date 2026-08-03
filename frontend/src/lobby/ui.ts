@@ -34,30 +34,6 @@ export function pickPackageName(name: Record<string, string>, lang: string): str
 }
 
 /**
- * (Re)fills a board <select> with one <option> per board, each labelled in `lang`, preserving the
- * currently-selected board when it still exists. Kept a pure function (no orchestrator, no
- * network, no globals) so "the picker localizes every board and keeps your choice" is testable
- * directly rather than through the network-coupled lobby class.
- */
-export function renderBoardOptions(
-	select: HTMLSelectElement,
-	boards: readonly { id: string; name: Record<string, string> }[],
-	lang: string,
-): void {
-	const previous = select.value;
-	select.innerHTML = '';
-	for (const board of boards) {
-		const option = document.createElement('option');
-		option.value = board.id;
-		option.textContent = pickPackageName(board.name, lang);
-		select.appendChild(option);
-	}
-	// Preserve the host's choice across the re-render; when it's gone the browser falls back to
-	// the first option on its own.
-	if (previous && boards.some(b => b.id === previous)) select.value = previous;
-}
-
-/**
  * Formats an ISO timestamp (the game's creation time) as a short localized date+time
  * for the saved-games list, so several waiting lobbies can be told apart. Returns an
  * empty string for a missing/invalid value. Uses the active i18next language.

@@ -8,6 +8,7 @@
 
 import { test, expect } from '../helpers/test';
 import {
+	chooseBoard,
 	actionButton,
 	createGame,
 	expectAnnouncement,
@@ -34,7 +35,7 @@ test('the lobby hides the property rules panel for a race board', async ({ brows
 	await expect(page.locator('#your-games-empty, #your-games-list li').first()).toBeVisible();
 	await page.click('#go-create-btn');
 
-	await page.selectOption('#board-selector', BOARD);
+	await chooseBoard(page, BOARD);
 	await expect(page.locator('.token-list:not(#join-token-list) input[value="spaceship"]')).toBeAttached();
 	await expect(page.locator('#rules-details')).toBeHidden();
 	// …and offers the board's seats (squadron colours) to pick from, plus the classic
@@ -44,7 +45,7 @@ test('the lobby hides the property rules panel for a race board', async ({ brows
 	await expect(page.locator('#teams-group')).toBeVisible();
 
 	// Switching back to a property board restores its rules panel (and drops the seats).
-	await page.selectOption('#board-selector', 'galactic-empire');
+	await chooseBoard(page, 'galactic-empire');
 	await expect(page.locator('.token-list:not(#join-token-list) input[value="ufo"]')).toBeAttached();
 	await expect(page.locator('#rules-details')).toBeVisible();
 	await expect(page.locator('#seat-fieldset')).toBeHidden();

@@ -12,6 +12,7 @@
 import { test, expect } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
 import {
+	chooseBoard,
 	createGame,
 	expectAnnouncement,
 	joinGame,
@@ -33,7 +34,7 @@ test('the lobby offers the journey deck with tokens and ITS OWN house rules (no 
 	await expect(page.locator('#your-games-empty, #your-games-list li').first()).toBeVisible();
 	await page.click('#go-create-btn');
 
-	await page.selectOption('#board-selector', BOARD);
+	await chooseBoard(page, BOARD);
 	await expect(page.locator('.token-list:not(#join-token-list) input[value="car"]')).toBeAttached();
 	// The journey rules render as the package's own panel (the built-in property fieldsets
 	// are replaced), with the official defaults pre-filled and the package's ES labels.

@@ -372,3 +372,68 @@
 .rules-details--package > .rules-fieldset { display: none; }
 .package-rules fieldset { margin-top: 0.5rem; }
 
+
+/* ---- Combobox (the game picker) ---------------------------------------- */
+/* The list is always on screen rather than a popup: this is a catalogue to browse, not a menu to
+   dismiss. It is a real element in the flow, so nothing here traps or overlays anything. */
+
+.combo {
+	position: relative;
+}
+
+.combo-input {
+	width: 100%;
+}
+
+.combo-listbox {
+	max-height: 14rem;
+	margin: 0.4rem 0 0;
+	padding: 0.25rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface-2);
+	list-style: none;
+	overflow-y: auto;
+}
+
+.combo-listbox:empty {
+	display: none;
+}
+
+.combo-option {
+	padding: 0.45rem 0.6rem;
+	border-radius: var(--radius-sm);
+	color: var(--text);
+	cursor: pointer;
+}
+
+.combo-option:hover {
+	background: var(--surface);
+}
+
+/* Focus lives on the option itself here (the list is walked, not pointed at through
+   aria-activedescendant), so it needs a real, visible focus ring. */
+.combo-option:focus,
+.combo-option:focus-visible {
+	outline: 3px solid var(--focus, #ffd24d);
+	outline-offset: -3px;
+	background: var(--surface);
+}
+
+/* The chosen game keeps a mark that is not colour alone. */
+.combo-option[aria-selected="true"] {
+	background: var(--accent-soft);
+	font-weight: 700;
+}
+
+.combo-option[aria-selected="true"]::before {
+	content: "✓";
+	margin-inline-end: 0.5em;
+	color: var(--accent);
+}
+
+.combo-results {
+	margin: 0.35rem 0 0;
+	color: var(--text-muted);
+	font-size: 0.85rem;
+}

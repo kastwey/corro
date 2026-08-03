@@ -1,7 +1,7 @@
 import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { setupDom, installFakeI18next } from './helpers/dom.js';
-import { localizeBoardName, formatGameDate, parseHubErrorCode, isTableAtRestStatus, pickPackageName, renderBoardOptions } from '../src/lobby/ui.js';
+import { localizeBoardName, formatGameDate, parseHubErrorCode, isTableAtRestStatus, pickPackageName } from '../src/lobby/ui.js';
 
 before(() => {
 	setupDom();
@@ -16,7 +16,7 @@ test('an unmapped board id falls back to its capitalized id (never the bare key)
 	assert.equal(localizeBoardName('france'), 'France');
 });
 
-// pickPackageName / renderBoardOptions — the shipped-board picker's per-locale name map and the
+// pickPackageName — the shipped-board picker's per-locale name map and the
 // language-switch re-render. Regression for bugs #1/#3: the picker stayed in the old language
 // (English) after a runtime switch because it was never re-rendered. These pure helpers make the
 // "re-localize AND keep the current choice" behaviour testable without the network-coupled lobby.
@@ -26,32 +26,6 @@ test('pickPackageName picks the active language, else en, es, any, else empty', 
 	assert.equal(pickPackageName({ es: 'Sólo ES' }, 'en'), 'Sólo ES');       // missing lang -> es
 	assert.equal(pickPackageName({ fr: 'Seulement FR' }, 'en'), 'Seulement FR'); // no en/es -> any
 	assert.equal(pickPackageName({}, 'en'), '');
-});
-
-test('renderBoardOptions fills the picker in the active language and keeps the current choice', () => {
-	const select = document.createElement('select');
-	const boards = [
-			 { id: 'galactic-empire', name: { es: 'Imperio Galáctico', en: 'Galactic Empire' } },
-		{ id: 'four-colours', name: { es: 'Cuatro Colores', en: 'Four Colours' } },
-	];
-	// Rendered in English, the host picks the second board.
-	renderBoardOptions(select, boards, 'en');
-	assert.deepEqual([...select.options].map(o => o.textContent), ['Galactic Empire', 'Four Colours']);
-	select.value = 'four-colours';
-
-	// The runtime language switch re-renders in Spanish and MUST keep the host's choice (#1/#3).
-	renderBoardOptions(select, boards, 'es');
-	assert.deepEqual([...select.options].map(o => o.textContent), ['Imperio Galáctico', 'Cuatro Colores']);
-	assert.equal(select.value, 'four-colours', 'the chosen board survives the language switch');
-});
-
-test('renderBoardOptions falls back to the first option when the previous choice is gone', () => {
-	const select = document.createElement('select');
-	renderBoardOptions(select, [{ id: 'a', name: { en: 'A' } }, { id: 'b', name: { en: 'B' } }], 'en');
-	select.value = 'b';
-	// The board list no longer contains "b": the browser defaults to the first option.
-	renderBoardOptions(select, [{ id: 'a', name: { en: 'A' } }, { id: 'c', name: { en: 'C' } }], 'en');
-	assert.equal(select.value, 'a');
 });
 
 test('an empty board id yields an empty string', () => {

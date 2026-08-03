@@ -9,6 +9,7 @@
 import { test, expect } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
 import {
+	chooseBoard,
 	actionButton,
 	createGame,
 	expectAnnouncement,
@@ -31,7 +32,7 @@ test('the lobby offers the track board with tokens only (no rules, no seats)', a
 	await expect(page.locator('#your-games-empty, #your-games-list li').first()).toBeVisible();
 	await page.click('#go-create-btn');
 
-	await page.selectOption('#board-selector', BOARD);
+	await chooseBoard(page, BOARD);
 	await expect(page.locator('.token-list:not(#join-token-list) input[value="star"]')).toBeAttached();
 	await expect(page.locator('#rules-details')).toBeHidden(); // no property house rules
 	await expect(page.locator('#seat-fieldset')).toBeHidden(); // no race seats either
