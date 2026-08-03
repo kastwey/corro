@@ -81,7 +81,15 @@
 						autocomplete="off" aria-describedby="board-results-hint"
 						data-i18n-attr:aria-label="lobby.selectBoard" aria-label="Select game">
 					<p id="board-results-hint" class="form-hint" data-i18n="lobby.boardFilterHint">Type to filter, or press Down arrow to walk the list.</p>
-					<ul id="board-listbox" class="combo-listbox" role="listbox"
+					<!-- tabindex="-1" is load-bearing, and not the same as leaving it off. This list
+						 scrolls, and Chrome makes a scroll container keyboard-focusable BY ITSELF when
+						 it has no tabbable children — which is exactly this list, whose options are
+						 all tabindex="-1" on purpose. Leaving the attribute off therefore put the
+						 whole list in the tab sequence, which is the one thing the APG combobox
+						 pattern says a popup must never be in. Stating it explicitly opts out of that
+						 heuristic while keeping the list focusable by code, which is how the arrows
+						 get into it. -->
+					<ul id="board-listbox" class="combo-listbox" role="listbox" tabindex="-1"
 						data-i18n-attr:aria-label="lobby.selectBoard" aria-label="Select game"></ul>
 					<!-- The same count twice, because one element cannot be both instant and patient:
 						 this one is for the eye and is hidden from assistive tech… -->

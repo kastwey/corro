@@ -161,15 +161,29 @@ test('the game picker filters by typing and is walked with the arrows, never wit
 	const names = await options.allTextContents();
 	expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, 'es')));
 
-	// The list is not in the tab order: Tab from the field leaves the whole control.
+	// The list is not in the tab order — the APG's one hard rule for a combobox popup. Asserted by
+	// naming where focus MUST land, not by ruling out the first option: the original version of
+	// this check only excluded the option, and missed the list itself sitting in the tab sequence.
+	//
+	// It got there on its own. This list scrolls, and Chrome makes a scroll container
+	// keyboard-focusable when it has no tabbable children — which is exactly a listbox whose
+	// options are all tabindex="-1". The explicit tabindex="-1" on the list opts out of that.
 	await field.focus();
 	await page.keyboard.press('Tab');
-	await expect(options.first()).not.toBeFocused();
+	await expect(page.locator('#board-upload')).toBeFocused();
 
-	// Down enters at the top, Up from the field is a shortcut to the end.
+	// …and from inside the list, Tab leaves the whole control rather than walking the options.
 	await field.focus();
 	await page.keyboard.press('ArrowDown');
 	await expect(options.first()).toBeFocused();
+	await page.keyboard.press('Tab');
+	await expect(page.locator('#board-upload')).toBeFocused();
+
+	// Down enters at the game already chosen (the APG's listbox rule), Up is the shortcut to the end.
+	const chosen = listbox.locator('[aria-selected="true"]');
+	await field.focus();
+	await page.keyboard.press('ArrowDown');
+	await expect(chosen).toBeFocused();
 	await field.focus();
 	await page.keyboard.press('ArrowUp');
 	await expect(options.last()).toBeFocused();

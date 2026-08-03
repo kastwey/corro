@@ -145,11 +145,18 @@ export class ComboBox {
 		if (event.altKey || event.ctrlKey || event.metaKey) return;
 		switch (event.key) {
 			case 'ArrowDown':
+				// Into the list where you already are. The APG's listbox pattern is explicit that a
+				// listbox receiving focus lands on the SELECTED option when there is one, and it is
+				// the answer to "what happens if I go back in?" that nobody has to be told: coming
+				// back to the top of a catalogue you have already chosen from is a small loss of
+				// place every single time. With nothing chosen — or with it filtered out of view —
+				// the top is the only sensible start.
 				event.preventDefault();
-				this.focusOption(0);
+				this.focusOption(Math.max(0, this.selectedIndex()));
 				break;
 			case 'ArrowUp':
-				// Up from the field is a shortcut to the END of the list, not a dead key.
+				// Up keeps its own job: the APG's combobox pattern sends it to the last element of
+				// the popup, which is also the shortcut to the end of a long list.
 				event.preventDefault();
 				this.focusOption(this.visible.length - 1);
 				break;
@@ -257,6 +264,11 @@ export class ComboBox {
 		if (options.length === 0) return;
 		const clamped = Math.max(0, Math.min(index, options.length - 1));
 		options[clamped]?.focus();
+	}
+
+	/** Where the chosen item sits in what is currently ON OFFER, or -1 when it is not among it. */
+	private selectedIndex(): number {
+		return this.visible.findIndex(item => item.id === this.selectedId);
 	}
 
 	private optionElements(): HTMLElement[] {

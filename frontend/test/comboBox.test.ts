@@ -116,6 +116,37 @@ test('Down enters the list at the top; Up jumps straight to its end', () => {
 	assert.equal(document.activeElement, h.options()[3], 'Up from the field is a shortcut to the end');
 });
 
+// The APG's listbox pattern: a listbox receiving focus lands on the SELECTED option when there is
+// one. Coming back to the top of a catalogue you have already chosen from is a small loss of place
+// every single time you go back in.
+test('Down goes back to the game already chosen, not to the top of the list', () => {
+	const h = harness();
+	h.combo.setValue('sushi');            // third alphabetically
+	h.input.focus();
+
+	h.press('ArrowDown');
+
+	assert.equal(document.activeElement, h.options()[2]);
+	assert.equal(h.options()[2].textContent, 'Sushi Go');
+
+	// Up keeps its own job — the end of the list — which is also what the APG's combobox says.
+	h.input.focus();
+	h.press('ArrowUp');
+	assert.equal(document.activeElement, h.options()[3]);
+});
+
+test('a chosen game filtered out of view does not drag Down away from the top', () => {
+	const h = harness();
+	h.combo.setValue('uno');
+	h.type('s');                          // "Uno" is not among these
+
+	h.input.focus();
+	h.press('ArrowDown');
+
+	assert.equal(document.activeElement, h.options()[0], 'the top is the only sensible start');
+	assert.deepEqual(h.labels(), ['España moderna', 'Sushi Go']);
+});
+
 test('the list is a loop hanging off the field, not a wall at either end', () => {
 	const h = harness();
 	h.input.focus();
