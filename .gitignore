@@ -518,6 +518,13 @@ autom4te.cache/
 *.tar.gz
 tarballs/
 test-results/
+# Playwright output. Sharded runs suffix both folders with the shard number, so the whole
+# family has to be ignored, not just the single-run names.
+test-results-*/
+playwright-report/
+playwright-report-*/
+# Measured per-file E2E durations, used to balance the shards. Machine-specific by nature.
+e2e/.durations/
 
 # Mac bundle stuff
 *.dmg

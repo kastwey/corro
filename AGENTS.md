@@ -40,6 +40,10 @@ E2E (Playwright, real browsers + real server with scripted dice — see `e2e/REA
 cd e2e && npm test   # run from e2e/, NEVER from the repo root
 ```
 
+`npm test` shards the suite across several servers, one per port, each running its slice
+serially with its own scripted-dice queue — the determinism is unchanged, the wall clock is
+not. `npm test 1` is the classic single-server run when a failure needs to be pinned down.
+
 Always finish a change by running the frontend tests (incl. translation parity)
 **and** `dotnet test`; run the E2E suite when the change touches a flow it covers
 (lobby, trades, purchases, announcements).

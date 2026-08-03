@@ -66,13 +66,17 @@ jobs:
       - run: npx playwright install --with-deps chromium
         working-directory: e2e
       # The Playwright webServer starts the game server itself (dotnet run, E2E env).
+      # `npm test` picks its own shard count from the runner's cores and starts one server per
+      # shard; a small runner resolves to a single shard and behaves exactly as it always did.
       - run: npm test
         working-directory: e2e
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: playwright-report
-          path: e2e/playwright-report/
+          # Glob, because a sharded run writes playwright-report-1, -2, … instead. Naming the
+          # unsuffixed folder alone would silently upload nothing on a bigger runner.
+          path: e2e/playwright-report*/
           retention-days: 7
 
   deploy-production:
@@ -225,8 +229,9 @@ jobs:
           test -f "$publish_dir/CorroServer.dll"
           test -f "$publish_dir/wwwroot/index.html"
           test -f "$publish_dir/wwwroot/board.html"
-          # The privacy notice. Absent, a deployment that HAS filled in its details still answers
-          # "no notice" — and sign-in is gated on the same flag, so the site quietly loses accounts.
+          # Both localized page shells and both controller-filled notice templates must ship.
+          test -f "$publish_dir/wwwroot/privacy/index.html"
+          test -f "$publish_dir/wwwroot/es/privacy/index.html"
           test -f "$publish_dir/Legal/privacy.en.md"
           test -f "$publish_dir/Legal/privacy.es.md"
 

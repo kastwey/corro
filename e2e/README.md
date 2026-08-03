@@ -18,7 +18,13 @@ Playwright's `webServer` launches the server with `ASPNETCORE_ENVIRONMENT=E2E`
 - **In-memory persistence** (never Cosmos) and `reducedMotion` (tokens snap, no races
   against animations).
 
-Hence `workers: 1`: the dice queue lives in the server process and is shared.
+Hence `workers: 1`: the dice queue lives in the server process and is shared by every game
+in it, so two tests rolling at once would eat each other's script.
+
+That is a property of ONE server, not of the suite — which is why `npm test` runs several
+servers instead (see [Running](#running)). Each shard gets its own port, its own dice queue
+and its own in-memory persistence, and stays exactly as serial and as deterministic inside
+itself as a single-server run.
 
 ## Automatic Axe accessibility audit
 
@@ -40,7 +46,10 @@ state, selector, offending HTML, impact and Axe help URL. All specs MUST import
 cd e2e
 npm install                      # first time
 npx playwright install chromium  # first time
-npm test                         # starts the E2E server by itself
+npm test                         # sharded: several servers at once (the default)
+npm test 1                       # one server, one worker — the classic serial run
+npm test 6                       # more shards, if the machine can take it
+npm run test:serial              # same as `npm test 1`, without the runner
 npm run test:headed              # with a visible browser
 npm run report                   # HTML report of the last run
 ```
@@ -48,6 +57,30 @@ npm run report                   # HTML report of the last run
 Always run from `e2e/` (from the repo root, Playwright would pick up the frontend's
 unit tests). The command rebuilds the frontend into wwwroot before starting, so it
 always exercises the current code.
+
+`npm test` goes through `run-sharded.mjs`: it builds **once**, then starts one server per
+shard on its own port and gives each a slice of the spec files. Anything after the shard
+count is passed to every shard (`npm test 4 --grep trade`); naming files yourself
+(`npm test 4 tests/race.spec.ts`) hands the split back to Playwright.
+
+Each run records how long every file took (`.durations/`, gitignored) and the next one packs
+the slices by TIME rather than by file count — the wall clock is the slowest shard, and these
+files are nowhere near equal.
+
+**How many shards.** The default leaves a core per shard spare, because this workload is
+CPU-bound: measured on a 16-core machine, the suite went 6.3 min serial → 3.6 at four shards
+→ 2.6 at four shards once balanced. Six was slightly faster still and is NOT the default: at
+that level the machine saturates and tests start losing races they win every time on their
+own. A flaky accessibility gate is worth less than a slow one. Deadlines widen automatically
+with the shard count for the same reason (`playwright.config.ts`).
+
+The cost is Chromium, not the servers: profiled during a run, the .NET servers used 2.6% of
+the machine and the browsers 18%+ (undercounted — a renderer process per context, created and
+destroyed per test). Roughly a quarter of the time is the Axe audit itself, and it is not
+waste: instrumenting it showed 0–2 of every 2–37 scans per page repeat a DOM state. It is
+doing exactly the work the accessibility gate asks for.
+
+A shard is also the natural unit for CI: N parallel jobs, each `npm test 1 --shard=i/N`.
 
 ## Visual-review screenshots
 
