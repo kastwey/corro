@@ -50,3 +50,14 @@ test('clicking flips the theme and the action label', () => {
 	assert.equal(btn.getAttribute('aria-label'), 'Switch to light theme');
 });
 
+test('a pre-translated page can supply labels without initializing runtime i18n', () => {
+	const mount = document.createElement('div');
+	document.body.appendChild(mount);
+	initThemeToggle(mount, { toLight: 'Claro', toDark: 'Oscuro' });
+	const btn = document.getElementById('theme-toggle') as HTMLButtonElement;
+
+	assert.equal(btn.getAttribute('aria-label'), 'Oscuro');
+	btn.click();
+	assert.equal(btn.getAttribute('aria-label'), 'Claro');
+});
+

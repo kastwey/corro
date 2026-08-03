@@ -18,6 +18,7 @@ import { familyHasBots } from './familyTraits.js';
 import { winningSide } from './endScreen.js';
 import { applyHouseRuleValues, readHouseRuleValues, renderHouseRules } from './houseRules.js';
 import { RovingToolbar, type ToolbarItem } from './rovingToolbar.js';
+import { RovingToolbarList } from './accessibleList.js';
 import type { GameInfo, GameState, PackageUploadResponse } from './models.js';
 
 export interface TableViewDeps {
@@ -72,6 +73,8 @@ export class TableView {
 	private surfaceIntro: HTMLElement | null = null;
 	private heading: HTMLElement | null = null;
 	private players: HTMLUListElement | null = null;
+	/** The roster's keyboard model, built once the list element is known. */
+	private playerNav: RovingToolbarList | null = null;
 	private code: HTMLElement | null = null;
 	private inviteUrl: HTMLElement | null = null;
 	private rejoinMount: HTMLElement | null = null;
@@ -274,6 +277,15 @@ export class TableView {
 			: this.deps.t('table.lastMatchNoWinner');
 	}
 
+	/**
+	 * Who is here, as the SAME widget the match itself uses for its roster: one tab stop for the
+	 * whole list, Up/Down between people, Right into a person's actions, Shift+F10 for the menu.
+	 *
+	 * The host's buttons used to be plain tab stops on the row, so walking past a table of eight
+	 * people meant sixteen presses on the way to anything else. Each row is now a single focus
+	 * stop whose label reads the whole row in one sentence, and its actions live behind the arrow
+	 * key — exactly the bargain the players panel already makes in game.
+	 */
 	private renderPlayers(table: GameInfo): void {
 		if (!this.players || !this.deps) return;
 		const t = this.deps.t;
@@ -281,47 +293,92 @@ export class TableView {
 		this.players.replaceChildren();
 		for (const player of table.players ?? []) {
 			const tokenKey = convertTokenToSnakeCase(player.token as unknown as string);
+			// getTokenName resolves a PACKAGE key and falls back to a readable name; the fallback
+			// has to be honoured or an unresolved key is printed as itself, which is what a table
+			// showed before its package's words had arrived.
+			const tokenName = getTokenName(tokenKey, (key, fallback) => {
+				const translated = t(key);
+				return translated === key ? fallback ?? key : translated;
+			});
+			const hostText = player.isHost ? ` ${t('lobby.playerHost')}` : '';
+			const botText = player.isBot ? ` ${t('lobby.playerBot')}` : '';
+
 			const item = document.createElement('li');
 			item.className = 'player-item';
+			item.dataset.playerId = player.id;
+			item.tabIndex = -1;
+			// The row speaks as ONE line, so the label is written as one rather than left to be
+			// assembled out of the visible parts a screen reader would otherwise glue together.
+			item.setAttribute('aria-label', [player.name, tokenName, hostText.trim(), botText.trim()]
+				.filter(Boolean).join(', ') + '.');
 			// Same identity the waiting room builds, commas and all: the parts are laid out with a
 			// CSS gap, and without a real separator a screen reader reads them glued together.
 			item.appendChild(createPlayerIdentity({
 				tokenKey,
 				playerName: player.name,
-				// getTokenName resolves a PACKAGE key and falls back to a readable name; the
-				// fallback has to be honoured or an unresolved key is printed as itself, which is
-				// what a table showed before its package's words had arrived.
-				tokenName: getTokenName(tokenKey, (key, fallback) => {
-					const translated = t(key);
-					return translated === key ? fallback ?? key : translated;
-				}),
+				tokenName,
 				statusText: '',
-				hostText: player.isHost ? ` ${t('lobby.playerHost')}` : '',
-				botText: player.isBot ? ` ${t('lobby.playerBot')}` : '',
+				hostText,
+				botText,
 			}));
+
+			const actions = document.createElement('div');
+			actions.className = 'player-item__actions';
 			// A bot is the host's to send away again; a person is not.
 			if (host && player.isBot && this.deps.removeBot) {
-				const remove = document.createElement('button');
-				remove.type = 'button';
-				remove.className = 'secondary-button player-item__remove-bot';
-				remove.textContent = t('lobby.removeBot');
-				remove.setAttribute('aria-label', t('lobby.removeBotOf').replace('{{name}}', player.name));
-				remove.addEventListener('click', () => void this.deps?.removeBot?.(player.id));
-				item.appendChild(remove);
+				actions.appendChild(this.rowAction(
+					'player-item__remove-bot',
+					t('lobby.removeBot'),
+					t('lobby.removeBotOf').replace('{{name}}', player.name),
+					() => void this.deps?.removeBot?.(player.id)));
 			}
 			// The sceptre can be handed over on purpose, not only by leaving — and only to another
 			// person: a bot cannot host a table.
 			if (host && !player.isBot && !player.isHost && this.deps.makeHost) {
-				const promote = document.createElement('button');
-				promote.type = 'button';
-				promote.className = 'secondary-button player-item__make-host';
-				promote.textContent = t('table.makeHost');
-				promote.setAttribute('aria-label', t('table.makeHostOf').replace('{{name}}', player.name));
-				promote.addEventListener('click', () => void this.deps?.makeHost?.(player.id));
-				item.appendChild(promote);
+				actions.appendChild(this.rowAction(
+					'player-item__make-host',
+					t('table.makeHost'),
+					t('table.makeHostOf').replace('{{name}}', player.name),
+					() => void this.deps?.makeHost?.(player.id)));
 			}
+			if (actions.childElementCount > 0) item.appendChild(actions);
 			this.players.appendChild(item);
 		}
+		this.ensurePlayerNav();
+		this.playerNav?.refreshRovingTabindex();
+	}
+
+	private rowAction(
+		className: string,
+		label: string,
+		accessibleName: string,
+		onActivate: () => void,
+	): HTMLButtonElement {
+		const button = document.createElement('button');
+		button.type = 'button';
+		button.className = `secondary-button ${className}`;
+		button.tabIndex = -1; // the row is the tab stop; Right arrow comes in here
+		button.textContent = label;
+		button.setAttribute('aria-label', accessibleName);
+		button.addEventListener('click', onActivate);
+		return button;
+	}
+
+	private ensurePlayerNav(): void {
+		if (this.playerNav || !this.players) return;
+		this.playerNav = new RovingToolbarList({
+			list: this.players,
+			itemSelector: '.player-item',
+			toolbarButtonSelector: '.player-item__actions button',
+			menuLabel: () => this.deps?.t('table.playerMenuLabel') ?? '',
+			menuClass: 'player-context-menu',
+			menuItemClass: 'player-context-menu-item',
+			// Inside the table's own section, not on <body>: a menu left at the top level is
+			// visible content belonging to no landmark, which is a real Axe violation and, more to
+			// the point, content a reader browsing by landmark would never find. The menu is
+			// position:fixed, so where it hangs changes nothing about where it appears.
+			menuHost: () => this.players?.closest('#table-view') ?? null,
+		});
 	}
 
 	/**

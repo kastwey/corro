@@ -1,4 +1,4 @@
-// localizePages.js — emit one pre-translated copy of the lobby per language.
+// localizePages.js — emit pre-translated public pages in every supported language.
 //
 // The lobby shipped English text with `data-i18n` keys and let the browser swap all 81 strings
 // once the locale files had been fetched. A Spanish player therefore read an English page and
@@ -27,6 +27,10 @@ const { JSDOM } = require('jsdom');
 /** The default language, served at `/` and advertised as hreflang's x-default. */
 const DEFAULT_LOCALE = 'en';
 const LOCALES = ['en', 'es'];
+const LOCALIZED_PAGES = [
+	{ source: 'index.html', route: '' },
+	{ source: 'privacy.html', route: 'privacy' },
+];
 
 /** Flattens the nested locale JSON into the dotted keys the markup references. */
 function flatten(node, prefix = '') {
@@ -50,8 +54,9 @@ function loadLocale(localesDir, locale) {
  * The path a locale is served from. The default language keeps the bare root so `/` is a real
  * page rather than a redirect, which is what x-default should point at.
  */
-function localePath(locale) {
-	return locale === DEFAULT_LOCALE ? '/' : `/${locale}/`;
+function localePath(locale, route = '') {
+	const localeRoot = locale === DEFAULT_LOCALE ? '/' : `/${locale}/`;
+	return route ? `${localeRoot}${route}/` : localeRoot;
 }
 
 /**
@@ -100,19 +105,19 @@ function translateDocument(document, strings) {
 }
 
 /** Cross-links every language version so a search engine can tell them apart. */
-function addHreflang(document) {
+function addHreflang(document, route = '') {
 	const head = document.head;
 	for (const locale of LOCALES) {
 		const link = document.createElement('link');
 		link.setAttribute('rel', 'alternate');
 		link.setAttribute('hreflang', locale);
-		link.setAttribute('href', localePath(locale));
+		link.setAttribute('href', localePath(locale, route));
 		head.appendChild(link);
 	}
 	const fallback = document.createElement('link');
 	fallback.setAttribute('rel', 'alternate');
 	fallback.setAttribute('hreflang', 'x-default');
-	fallback.setAttribute('href', localePath(DEFAULT_LOCALE));
+	fallback.setAttribute('href', localePath(DEFAULT_LOCALE, route));
 	head.appendChild(fallback);
 }
 
@@ -128,7 +133,8 @@ function addHreflang(document) {
  *
  * `location.replace` leaves no history entry, so Back does not bounce the player straight in again.
  */
-function addPreferredLanguageRedirect(document) {
+function addPreferredLanguageRedirect(document, route = '') {
+	const suffix = route ? `/${route}/` : '/';
 	const script = document.createElement('script');
 	script.textContent = [
 		'(function () {',
@@ -136,12 +142,35 @@ function addPreferredLanguageRedirect(document) {
 		"    var m = document.cookie.match(/(?:^|;\\s*)corro_language=([^;]*)/);",
 		'    var lang = m ? decodeURIComponent(m[1]) : (navigator.language || "").slice(0, 2);',
 		`    if (lang && lang !== '${DEFAULT_LOCALE}' && ${JSON.stringify(LOCALES)}.indexOf(lang) !== -1) {`,
-		'      location.replace("/" + lang + "/" + location.search + location.hash);',
+		`      location.replace("/" + lang + ${JSON.stringify(suffix)} + location.search + location.hash);`,
 		'    }',
 		'  } catch (e) { /* stay on the default page */ }',
 		'})();',
 	].join('\n');
 	document.head.insertBefore(script, document.head.firstChild);
+}
+
+/** Page-local navigation shares the same locale routes as hreflang. */
+function localizePageLinks(document, locale, route) {
+	document.querySelectorAll('[data-locale-link]').forEach(link => {
+		const targetLocale = link.getAttribute('data-locale-link');
+		if (!LOCALES.includes(targetLocale)) return;
+		link.setAttribute('href', localePath(targetLocale, route));
+		if (targetLocale === locale) link.setAttribute('aria-current', 'page');
+		else link.removeAttribute('aria-current');
+	});
+
+	document.querySelectorAll('[data-locale-home]').forEach(link => {
+		link.setAttribute('href', localePath(locale));
+	});
+}
+
+function localizedDestination(distDir, locale, route) {
+	const parts = [];
+	if (locale !== DEFAULT_LOCALE) parts.push(locale);
+	if (route) parts.push(route);
+	parts.push('index.html');
+	return path.join(distDir, ...parts);
 }
 
 /** Search engines must not index a private game session. */
@@ -159,37 +188,39 @@ function addNoIndex(document) {
  */
 function localizePages({ srcDir, distDir, localesDir }) {
 	const written = [];
-	const source = fs.readFileSync(path.join(srcDir, 'index.html'), 'utf-8');
 
-	for (const locale of LOCALES) {
-		const dom = new JSDOM(source);
-		const { document } = dom.window;
-		const strings = loadLocale(localesDir, locale);
+	for (const page of LOCALIZED_PAGES) {
+		const sourcePath = path.join(srcDir, page.source);
+		if (!fs.existsSync(sourcePath)) continue;
+		const source = fs.readFileSync(sourcePath, 'utf-8');
 
-		document.documentElement.setAttribute('lang', locale);
-		const missing = translateDocument(document, strings);
-		if (missing.length > 0) {
-			throw new Error(
-				`index.html references keys missing from ${locale}.json: ${[...new Set(missing)].join(', ')}`);
-		}
-		addHreflang(document);
+		for (const locale of LOCALES) {
+			const dom = new JSDOM(source);
+			const { document } = dom.window;
+			const strings = loadLocale(localesDir, locale);
 
-		let destination;
-		if (locale === DEFAULT_LOCALE) {
-			destination = path.join(distDir, 'index.html');
-			addPreferredLanguageRedirect(document);
-		} else {
-			destination = path.join(distDir, locale, 'index.html');
-			// Served from a subdirectory, so every relative asset, script and link — including the
-			// navigation to the shared board page — still resolves from the site root.
-			const base = document.createElement('base');
-			base.setAttribute('href', '/');
-			document.head.insertBefore(base, document.head.firstChild);
+			document.documentElement.setAttribute('lang', locale);
+			const missing = translateDocument(document, strings);
+			if (missing.length > 0) {
+				throw new Error(
+					`${page.source} references keys missing from ${locale}.json: ${[...new Set(missing)].join(', ')}`);
+			}
+			localizePageLinks(document, locale, page.route);
+			addHreflang(document, page.route);
+			if (locale === DEFAULT_LOCALE) addPreferredLanguageRedirect(document, page.route);
+
+			const destination = localizedDestination(distDir, locale, page.route);
 			fs.mkdirSync(path.dirname(destination), { recursive: true });
-		}
+			if (path.dirname(destination) !== distDir) {
+				// Every nested route resolves scripts, styles and shared navigation from the site root.
+				const base = document.createElement('base');
+				base.setAttribute('href', '/');
+				document.head.insertBefore(base, document.head.firstChild);
+			}
 
-		fs.writeFileSync(destination, dom.serialize(), 'utf-8');
-		written.push(path.relative(distDir, destination).replace(/\\/g, '/'));
+			fs.writeFileSync(destination, dom.serialize(), 'utf-8');
+			written.push(path.relative(distDir, destination).replace(/\\/g, '/'));
+		}
 	}
 
 	// The board keeps its single URL (its links and the E2E suite address it directly) and its

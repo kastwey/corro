@@ -15,10 +15,11 @@ public static class ServiceCollectionExtensions
 {
 	public static IServiceCollection AddCorroServices(this IServiceCollection services, IConfiguration configuration)
 	{
-		// Who answers for the personal data this deployment holds. Empty is valid and is what a
-		// fresh clone has: a server nobody can sign in to owes no privacy notice. What is NOT
-		// valid is half of it — a name with no way to reach it is worse than silence, because it
-		// looks like an answer.
+		// Who answers for the personal data this deployment holds. Empty is valid so a fresh clone
+		// and local development can start, but it means "no built-in notice", not "no personal
+		// data": account-less tables still hold names, credentials, game records and chat. What is
+		// NOT valid is half of the identity — a name with no way to reach it is worse than silence,
+		// because it looks like an answer.
 		services.AddOptions<PrivacyOptions>()
 			.Bind(configuration.GetSection(PrivacyOptions.SectionName))
 			.Validate(options =>

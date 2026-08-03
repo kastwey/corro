@@ -4,10 +4,9 @@ using Xunit;
 namespace CorroServer.Tests;
 
 /// <summary>
-/// Who answers for the personal data a deployment holds. Corro stores an email address the moment
-/// somebody signs in, which makes whoever runs the server a data controller with an obligation to
-/// say so by name — a fact about that person, never about the software, so it cannot ship and every
-/// host fills in their own.
+/// Who answers for the personal data a deployment holds. Tables already contain names, credentials,
+/// game records and chat; signing in adds profile and provider data. Whoever runs the server is the
+/// controller and must supply their own identity rather than inheriting one from the software.
 ///
 /// The rule these pin is that a notice is either whole or absent. A half-filled one is the worst
 /// outcome: it looks like an answer and reaches nobody.
@@ -17,7 +16,8 @@ public class PrivacyOptionsTests
 	[Fact]
 	public void A_deployment_that_has_said_nothing_is_valid_and_simply_has_no_notice()
 	{
-		// What a fresh clone is. A server nobody can sign in to collects nothing and owes nothing.
+		// What a fresh clone and local development use. This is a supported runtime state, not a
+		// statement that an account-less public deployment processes no personal data.
 		Assert.False(new PrivacyOptions().IsConfigured);
 	}
 

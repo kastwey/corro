@@ -33,7 +33,10 @@ function mount(): void {
 				<span id="table-last-match-line"></span>
 				<button type="button" id="table-standings">See the standings</button>
 			</p>
-			<ul id="table-players"></ul>
+			<h3 id="table-players-heading">Who is here</h3>
+			<div class="table-view__players-surface" role="application" aria-labelledby="table-players-heading">
+				<ul id="table-players" role="list"></ul>
+			</div>
 			<button type="button" id="table-add-bot" hidden>Add a bot</button>
 			<details id="table-rules" hidden>
 				<summary>Rules</summary>
@@ -186,6 +189,50 @@ test('the host may send a bot away from the roster; nobody may send a person awa
 	assert.equal(buttons.length, 1, 'only the bot row carries the control');
 	(buttons[0] as HTMLButtonElement).click();
 	assert.deepEqual(removed, ['bot']);
+});
+
+// The roster is the SAME widget the match uses (playerPanel.ts). It used to be a plain list with
+// the host's buttons in the tab order: eight people meant sixteen presses to walk past the table.
+test('the roster is one tab stop, and a person\'s actions live behind the arrow key', () => {
+	const view = newView({ isHost: () => true, makeHost: async () => {}, removeBot: async () => {} });
+
+	view.setTable(table({
+		players: [
+			{ id: 'a', name: 'Ana', token: 'disc', isHost: true },
+			{ id: 'b', name: 'Berto', token: 'star' },
+			{ id: 'bot', name: 'Crupier', token: 'moon', isBot: true },
+		],
+	}));
+
+	const list = document.getElementById('table-players') as HTMLElement;
+	const rows = Array.from(list.querySelectorAll<HTMLElement>('.player-item'));
+	assert.deepEqual(rows.map(row => row.tabIndex), [0, -1, -1], 'exactly one tab stop for the list');
+	// Every action is off the tab order: the row is the way in.
+	assert.deepEqual(
+		Array.from(list.querySelectorAll<HTMLElement>('.player-item__actions button')).map(b => b.tabIndex),
+		[-1, -1]);
+	// A row reads as one line rather than as its parts glued together.
+	assert.match(rows[0].getAttribute('aria-label') ?? '', /^Ana, .*lobby\.playerHost\.$/);
+
+	const press = (from: HTMLElement, key: string, shiftKey = false) => from.dispatchEvent(
+		new (globalThis as any).window.KeyboardEvent('keydown', { key, shiftKey, bubbles: true }));
+
+	rows[0].focus();
+	press(rows[0], 'ArrowDown');
+	assert.equal(document.activeElement, rows[1]);
+	press(rows[1], 'ArrowRight');
+	assert.equal(document.activeElement, rows[1].querySelector('.player-item__make-host'));
+	// …and Escape backs out to the person, without leaving the list.
+	press(document.activeElement as HTMLElement, 'Escape');
+	assert.equal(document.activeElement, rows[1]);
+
+	// Shift+F10 mirrors the row's actions in a menu, for anyone who never learns the arrow.
+	press(rows[1], 'F10', true);
+	const menu = document.querySelector('.player-context-menu');
+	assert.ok(menu, 'the actions are also reachable as a menu');
+	assert.deepEqual(
+		Array.from(menu!.querySelectorAll('[role="menuitem"]')).map(item => item.textContent),
+		['table.makeHostOf']);
 });
 
 test('a guest is never offered the bot controls', () => {

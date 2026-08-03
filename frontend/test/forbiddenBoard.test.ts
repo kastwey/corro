@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ForbiddenBoard, protectReadOnlyTextArea } from '../src/forbiddenBoard.js';
 import {
-	forbiddenOtherRoleLines,
+	forbiddenCastLines,
 	forbiddenRivalStatus,
 	forbiddenRole,
 	forbiddenStatusText,
@@ -203,20 +203,16 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 	assert.equal(cardLabel.textContent, 'Words');
 	assert.equal(root.querySelector('#forbidden-card-hint'), null);
 	assert.equal(card.hasAttribute('aria-describedby'), false);
-	// The turn card now says MY duty only; who else does what is the list below it.
+	// The turn card says MY duty; the three jobs the turn has are the list below it.
 	assert.equal(roleDetail.textContent,
 		'You are the clue-giver: describe the target without saying it or using its forbidden words.');
 	assert.deepEqual(
 		[...root.querySelectorAll('.forbidden-role-list li')].map(item => item.textContent),
-		[
-			'Berto guesses for the Red team.',
-			'Cora monitors the target and the forbidden words for the blue team.',
-			'Dani supports the blue team this turn.',
-		]);
-	// The headline section: who is playing, loud and on its own.
+		['You give the clues.', 'Berto guesses.', 'Cora monitors.']);
+	// The headline section: who is playing, and nothing else. No turn count, no cycle number.
 	assert.equal(root.querySelector('#forbidden-now-title')!.textContent, 'Who is playing');
 	assert.equal(root.querySelector('.forbidden-now__line')!.textContent,
-		'Turn 1 of cycle 1: your Red team is about to play, and you give the clues.');
+		'Your Red team is about to play.');
 	assert.equal(card.rows, 7);
 	assert.equal(card.value,
 		'Target word: lighthouse.\nForbidden words:\ntower,\ncoast,\nbeam,\nship,\nsea.');
@@ -258,38 +254,60 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 	assert.equal(commands.start, 1);
 	assert.equal(document.activeElement, card, 'starting from the protected card keeps its reading position');
 	assert.deepEqual(
-		board.helpShortcuts().find(shortcut => shortcut.descKey === 'game.help_cmd_forbidden_start'),
-		{ keys: 'enter', descKey: 'game.help_cmd_forbidden_start' },
+		board.helpShortcuts().find(shortcut => shortcut.descKey === 'game.help_cmd_forbidden_enter'),
+		{ keys: 'enter', descKey: 'game.help_cmd_forbidden_enter' },
 	);
 
 	state.forbidden!.turn.phase = 'active';
 	state.forbidden!.turn.startedAt = new Date(Date.now() - 5_000).toISOString();
 	board.update(state);
-	card.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
-	assert.equal(commands.start, 1, 'Enter cannot restart an active clock');
 	assert.equal(start.hidden, true);
 	assert.equal(correct.hidden, false);
 	assert.equal(pass.hidden, false);
 	assert.equal(violation.hidden, true);
+	// Enter is the ONE key of this surface: it starts the clock while there is a clock to start,
+	// and from then on it banks each word as it is guessed. No hunting for a button between cards.
+	card.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+	assert.equal(commands.start, 1, 'Enter cannot restart an active clock');
+	assert.deepEqual(commands.correct, [1], 'and now marks the word guessed instead');
+	assert.equal(document.activeElement, card, 'which never moves the reading position off the words');
+	// A shake is the same action, for a phone with no keyboard and a hand already holding it.
+	board.handleShake();
+	assert.deepEqual(commands.correct, [1, 1]);
 	card.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'v', bubbles: true, cancelable: true }));
 	assert.deepEqual(commands.violation, [], 'V cannot report a violation for the clue-giver');
 	correct.click();
 	pass.click();
-	assert.deepEqual(commands.correct, [1]);
+	assert.deepEqual(commands.correct, [1, 1, 1]);
 	assert.deepEqual(commands.pass, [1]);
+	// Reported live: pressing "correct" left the clue-giver standing on a button while the next
+	// word — the only thing they need — sat behind them. The words ARE the board here.
+	assert.equal(document.activeElement, card, 'acting comes back to the words');
 
 	board.handleTimerTick(42);
+	const timerPanel = root.querySelector<HTMLElement>('.forbidden-timer')!;
 	const progress = root.querySelector<HTMLProgressElement>('.forbidden-timer__progress')!;
 	assert.equal(progress.value, 42);
-	assert.equal(progress.getAttribute('aria-label'), '42 seconds remaining');
+	// NVDA sonifies a progress bar, and this one moves every second and runs BACKWARDS: it beeped
+	// its way down the whole turn. Nothing in the panel is the only copy of anything.
+	assert.equal(timerPanel.getAttribute('aria-hidden'), 'true');
+	assert.equal(progress.hasAttribute('aria-label'), false);
 	card.focus();
 	const activeTimerKey = new window.KeyboardEvent('keydown', {
 		key: 'r', bubbles: true, cancelable: true,
 	});
 	card.dispatchEvent(activeTimerKey);
 	assert.equal(activeTimerKey.defaultPrevented, true);
-	assert.equal(announced.at(-1), '42 seconds remaining');
+	// The number first: a listener who only wanted the seconds does not sit through a preamble.
+	assert.equal(announced.at(-1), '42 seconds remaining.');
 	assert.equal(document.activeElement, card, 'the timer query keeps the private-card reading position');
+
+	// Escape is how you leave anything else and land where you came from; here that is the words.
+	correct.focus();
+	const escape = new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+	correct.dispatchEvent(escape);
+	assert.equal(escape.defaultPrevented, true);
+	assert.equal(document.activeElement, card);
 
 	state.forbidden!.turn.passesUsed = 3;
 	board.update(state);
@@ -304,17 +322,14 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 	myId = 'p3';
 	board.update(state);
 	assert.equal(cardPanel.hidden, true);
-	// The player with no assignment finally has a line of their own, and still sees the cast.
+	// The player with no assignment has a line of their own, and still hears the cast — but is
+	// never named as "supporting", a job that does not exist and that pushed the three real ones
+	// further down a sentence somebody listens to on every turn.
 	assert.equal(roleDetail.textContent, 'You support your team this turn, with no action of your own.');
 	assert.deepEqual(
 		[...root.querySelectorAll('.forbidden-role-list li')].map(item => item.textContent),
-		[
-			'Ada gives the clues for the Red team.',
-			'Berto guesses for the Red team.',
-			'Cora monitors the target and the forbidden words for the blue team.',
-		]);
-	assert.equal(root.querySelector('.forbidden-now__line')!.textContent,
-		'Turn 1 of cycle 1: the Red team is playing, and Ada gives the clues.');
+		['Ada gives the clues.', 'Berto guesses.', 'Cora monitors.']);
+	assert.equal(root.querySelector('.forbidden-now__line')!.textContent, 'The Red team is playing.');
 	assert.equal(document.activeElement, root.querySelector('.forbidden-shell'));
 
 	myId = 'p2';
@@ -338,6 +353,13 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 	assert.equal(leakedToDocument, 0, 'family-local V never reaches the global bank-inventory binding');
 	assert.equal(document.activeElement, card);
 	assert.deepEqual(commands.violation, [1]);
+	// The monitor's phone: a shake is routed to the only thing a monitor can do.
+	board.handleShake();
+	assert.deepEqual(commands.violation, [1, 1]);
+	// Enter is NOT: reporting costs the rivals a point, so it stays a key pressed on purpose.
+	card.focus();
+	card.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+	assert.deepEqual(commands.violation, [1, 1]);
 	assert.deepEqual(
 		board.helpShortcuts().find(shortcut => shortcut.descKey === 'game.help_cmd_forbidden_violation'),
 		{ keys: 'v', descKey: 'game.help_cmd_forbidden_violation' },
@@ -348,6 +370,21 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 	assert.equal(cardPanel.hidden, true);
 	assert.equal(roleDetail.textContent, 'You guess the target word this turn, out loud.');
 	assert.equal(root.querySelectorAll('.forbidden-controls button:not([hidden])').length, 0);
+	// A guesser holds no action at all, so a shake — like Enter — has nothing to fire.
+	const before = commands.correct.length + commands.violation.length;
+	board.handleShake();
+	assert.equal(commands.correct.length + commands.violation.length, before);
+
+	// A table plays match after match: the next one builds a new surface over the same element,
+	// and this board's shake listener is still on the window. It must go quiet, or a shake in the
+	// second match would also fire the first board's detached — but still wired — buttons.
+	myId = 'p0';
+	state.forbidden!.turn.phase = 'active';
+	board.update(state);
+	root.replaceChildren();
+	const beforeStale = commands.correct.length;
+	board.handleShake();
+	assert.equal(commands.correct.length, beforeStale, 'a board that lost the surface acts no more');
 
 	root.remove();
 });
@@ -420,27 +457,33 @@ test('status shortcuts and pure role helpers produce flowing team sentences', ()
 	assert.equal(forbiddenRole(state.forbidden!.turn, 'p1'), 'guesser');
 	assert.equal(forbiddenRole(state.forbidden!.turn, 'p2'), 'monitor');
 	assert.equal(forbiddenRole(state.forbidden!.turn, 'p3'), 'spectator');
-	// T speaks exactly what the turn card shows: the headline, my duty, then everyone else.
+	// T answers "whose turn is this?" — the team, then the three people the turn runs through.
+	// It used to also read my duty in full, which made a key pressed several times per turn into
+	// a paragraph, and it counted the turn and the cycle at a player who had asked neither.
 	assert.equal(
 		forbiddenTurnContextText(state, 'p0', translate),
-		'Turn 1 of cycle 1: your Red team is about to play, and you give the clues. '
-		+ 'You are the clue-giver: describe the target without saying it or using its forbidden words. '
-		+ 'Berto guesses for the Red team. '
-		+ 'Cora monitors the target and the forbidden words for the blue team. '
-		+ 'Dani supports the blue team this turn.',
+		'Your Red team is about to play. You give the clues. Berto guesses. Cora monitors.',
 	);
 	assert.equal(
 		forbiddenTurnContextText(state, 'p3', translate),
-		'Turn 1 of cycle 1: the Red team is about to play, and Ada gives the clues. '
-		+ 'You support your team this turn, with no action of your own. '
-		+ 'Ada gives the clues for the Red team. '
-		+ 'Berto guesses for the Red team. '
-		+ 'Cora monitors the target and the forbidden words for the blue team.',
-		'an unassigned player hears every role without being assigned a fictitious one',
+		'The Red team is about to play. Ada gives the clues. Berto guesses. Cora monitors.',
+		'a player with no assignment hears the cast, and is never named as doing nothing',
 	);
+	// A tie-breaker is the ONE time a second rotation is worth saying — and it is named as sudden
+	// death, not as "cycle 2", which was bookkeeping nobody had asked to hear.
+	state.forbidden!.cycle = 2;
+	assert.equal(
+		forbiddenTurnContextText(state, 'p3', translate),
+		'The Red team is about to play. Sudden death, round 2. '
+		+ 'Ada gives the clues. Berto guesses. Cora monitors.',
+	);
+	assert.match(forbiddenStatusText(state, 'p0', translate)!, /Sudden death, round 2\./);
+	state.forbidden!.cycle = 1;
+	assert.doesNotMatch(forbiddenStatusText(state, 'p0', translate)!, /round|cycle/i,
+		'an ordinary match never mentions rounds or cycles at all');
 	assert.deepEqual(
-		forbiddenOtherRoleLines(state, 'p0', translate).length, 3,
-		'the clue-giver hears the other three, never themselves');
+		forbiddenCastLines(state, 'p0', translate).length, 3,
+		'the three jobs the turn has, no more and no fewer');
 	assert.equal(
 		formatForbiddenCard('faro', ['costa', 'luz', 'torre'], 'en', translate),
 		'Target word: faro.\nForbidden words:\ncosta,\nluz,\ntorre.',

@@ -26,23 +26,23 @@ export function forbiddenRoleLabel(role: ForbiddenRole, t: T): string {
 }
 
 /**
- * The headline of the turn: which team is up, whose voice carries it, and where we are in the
- * match. It is the answer to "who is playing?" at a glance, so it deliberately leaves out the
- * seconds (the timer panel owns those) and every duty (the turn card owns those).
+ * The headline of the turn: which team is up. Nothing else — not the seconds (the timer owns
+ * those), not the duties (the cast below owns those), and not the turn or cycle NUMBER, which
+ * was counting bookkeeping at a player who only wanted to know whose turn it was.
+ *
+ * The cycle survives in one place only: a tie-breaker, where a second rotation is the whole
+ * reason the match is still going, and is named as sudden death rather than as "cycle 2".
  */
 export function forbiddenNowPlayingText(gs: GameState, playerId: string, t: T): string | null {
 	const state = gs.forbidden;
 	const turn = state?.turn;
 	if (!state || !turn) return null;
-	const mine = turn.clueGiverId === playerId;
-	const vars = {
-		turn: turn.turnNumber,
-		cycle: state.cycle,
-		team: teamDisplayName(turn.teamIndex, t),
-		clueGiver: gs.players.find(player => player.id === turn.clueGiverId)?.name ?? turn.clueGiverId,
-	};
+	const mine = state.teams.find(team => team.teamIndex === turn.teamIndex)?.memberIds.includes(playerId);
 	const key = turn.phase === 'active' ? 'game.forbidden_now_active' : 'game.forbidden_now_preparing';
-	return t(mine ? `${key}_self` : key, vars);
+	const headline = t(mine ? `${key}_self` : key, { team: teamDisplayName(turn.teamIndex, t) });
+	return state.cycle > 1
+		? `${headline} ${t('game.forbidden_sudden_death', { cycle: state.cycle })}`
+		: headline;
 }
 
 /** What THIS player must do while the turn runs — their own duty, nobody else's. */
@@ -59,46 +59,47 @@ export function forbiddenDutyText(gs: GameState, playerId: string, t: T): string
 }
 
 /**
- * Everyone ELSE at the table this turn, one flowing sentence each, in the order the turn runs
- * through them: the clue-giver, the guesser, the monitor, then the players supporting from
- * their seats — who hold no assignment and were, until now, invisible to a player who cannot
- * see the table. Each line names the team it belongs to, since the monitor comes from the rival one.
+ * The three people the turn actually runs through, in the order it runs through them: who gives
+ * the clues, who guesses, who monitors. Three short sentences, naming the player — or saying
+ * "you" when it is me — and nothing else.
+ *
+ * There used to be a fourth kind of line, one per player with no assignment, saying they were
+ * supporting their team. It named a role that does not exist: a player holding no job hears
+ * their own name read back at them for doing nothing, and every extra name pushes the three that
+ * MATTER further down a sentence somebody has to listen to on every turn.
  */
-export function forbiddenOtherRoleLines(gs: GameState, playerId: string, t: T): string[] {
-	const state = gs.forbidden;
-	const turn = state?.turn;
-	if (!state || !turn) return [];
-
-	const roleOf = (id: string): ForbiddenRole => forbiddenRole(turn, id);
-	const order: Record<ForbiddenRole, number> = {
-		'clue-giver': 0, guesser: 1, monitor: 2, spectator: 3,
+export function forbiddenCastLines(gs: GameState, playerId: string, t: T): string[] {
+	const turn = gs.forbidden?.turn;
+	if (!turn) return [];
+	const cast: [ForbiddenRole, string | null][] = [
+		['clue-giver', turn.clueGiverId],
+		['guesser', turn.guesserId],
+		['monitor', turn.monitorId],
+	];
+	const key: Record<string, string> = {
+		'clue-giver': 'game.forbidden_cast_clue_giver',
+		guesser: 'game.forbidden_cast_guesser',
+		monitor: 'game.forbidden_cast_monitor',
 	};
-	const key: Record<ForbiddenRole, string> = {
-		'clue-giver': 'game.forbidden_role_item_clue_giver',
-		guesser: 'game.forbidden_role_item_guesser',
-		monitor: 'game.forbidden_role_item_monitor',
-		spectator: 'game.forbidden_role_item_supporter',
-	};
-
-	return state.teams
-		.flatMap(team => team.memberIds.map(id => ({ id, teamIndex: team.teamIndex })))
-		.filter(member => member.id !== playerId)
-		.sort((a, b) => order[roleOf(a.id)] - order[roleOf(b.id)])
-		.map(member => t(key[roleOf(member.id)], {
-			player: gs.players.find(player => player.id === member.id)?.name ?? member.id,
-			team: teamDisplayName(member.teamIndex, t),
+	return cast
+		.filter((entry): entry is [ForbiddenRole, string] => !!entry[1])
+		.map(([role, id]) => t(id === playerId ? `${key[role]}_self` : key[role], {
+			player: gs.players.find(player => player.id === id)?.name ?? id,
 		}));
 }
 
 /**
- * The complete turn context the T shortcut speaks: exactly what the turn card shows — the
- * headline, my own duty, and everyone else's — so hearing it and reading it can never diverge.
+ * The complete turn context the T shortcut speaks — the headline and the cast, exactly what the
+ * turn card shows, so hearing it and reading it can never diverge.
+ *
+ * It used to also carry my own duty in full ("describe the target without saying it or using its
+ * forbidden words"), which made a key pressed several times per turn into a paragraph. The duty
+ * stays where it can be read at leisure, on the turn card; T answers "whose turn is this?".
  */
 export function forbiddenTurnContextText(gs: GameState, playerId: string, t: T): string | null {
 	const now = forbiddenNowPlayingText(gs, playerId, t);
-	const duty = forbiddenDutyText(gs, playerId, t);
-	if (!now || !duty) return null;
-	return [now, duty, ...forbiddenOtherRoleLines(gs, playerId, t)].join(' ');
+	if (!now) return null;
+	return [now, ...forbiddenCastLines(gs, playerId, t)].join(' ');
 }
 
 /** One flowing status sentence for the player panel and S shortcut. */
@@ -106,12 +107,14 @@ export function forbiddenStatusText(gs: GameState, playerId: string, t: T): stri
 	const state = gs.forbidden;
 	const team = forbiddenTeamFor(gs, playerId);
 	if (!state || !team) return null;
-	return t('game.forbidden_status_self', {
+	const status = t('game.forbidden_status_self', {
 		team: teamDisplayName(team.teamIndex, t),
 		score: team.score,
-		cycle: state.cycle,
 		role: forbiddenRoleLabel(forbiddenRole(state.turn, playerId), t),
 	});
+	return state.cycle > 1
+		? `${status} ${t('game.forbidden_sudden_death', { cycle: state.cycle })}`
+		: status;
 }
 
 /** Rival status for Shift+S. */

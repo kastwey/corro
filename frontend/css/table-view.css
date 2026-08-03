@@ -85,6 +85,19 @@
 	border-bottom: none;
 }
 
+/* Each person is one focus stop, so the row itself has to SHOW where the keyboard is. */
+.table-view .player-item:focus,
+.table-view .player-item:focus-visible {
+	outline: 3px solid var(--focus, #ffd24d);
+	outline-offset: 2px;
+}
+
+.table-view .player-item__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+}
+
 .table-view .player-info {
 	display: inline-flex;
 	align-items: center;

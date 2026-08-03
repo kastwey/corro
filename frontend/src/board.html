@@ -23,6 +23,7 @@
   <link rel="stylesheet" href="css/theme.css" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="css/modal.css" />
+	<link rel="stylesheet" href="css/document.css" />
   <link rel="stylesheet" href="css/trade.css" />
   <link rel="stylesheet" href="css/turn-indicator.css" />
   <link rel="stylesheet" href="css/player-panel.css" />
@@ -96,8 +97,15 @@
 		<button type="button" id="table-standings" class="secondary-button" data-i18n="table.viewStandings">See the standings</button>
 	  </p>
 
-	  <h3 class="table-view__players-heading" data-i18n="table.playersHeading">Who is here</h3>
-	  <ul id="table-players" class="table-view__players player-list"></ul>
+	  <h3 id="table-players-heading" class="table-view__players-heading" data-i18n="table.playersHeading">Who is here</h3>
+	  <!-- The same roster widget the match uses (playerPanel.ts): each person is ONE tab stop whose
+		   label reads the whole row, Right arrow enters their actions, Shift+F10 mirrors those in a
+		   menu. The host's per-person buttons used to sit in the tab order, so a table of eight
+		   people cost sixteen presses to walk past. role="application" is what tells a screen
+		   reader the arrows mean something here; it is on a WRAPPER so the list semantics survive. -->
+	  <div class="table-view__players-surface" role="application" aria-labelledby="table-players-heading">
+		<ul id="table-players" class="table-view__players player-list" role="list"></ul>
+	  </div>
 	  <!-- Bot seats (families with a bot brain): the host fills empty chairs. -->
 	  <button type="button" id="table-add-bot" class="secondary-button" data-i18n="lobby.addBot" hidden>Add a bot</button>
 

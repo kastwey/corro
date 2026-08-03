@@ -3,18 +3,20 @@ namespace CorroServer.Services;
 /// <summary>
 /// Who answers for the personal data this deployment holds.
 ///
-/// This is NOT branding. Corro stores an email address the moment somebody signs in, and under the
-/// GDPR that makes whoever runs the deployment a data controller with a legal obligation to say so
-/// — by name, with a way to be reached. That is a fact about the person running the server, not
-/// about the software, so it cannot be shipped: every host fills in their own.
+/// This is NOT branding. Even without accounts, Corro processes chosen player names, seat
+/// credentials, game records, chat and technical connection data. Signing in adds profile and
+/// provider data. Under the GDPR that makes whoever runs the deployment a data controller with a
+/// legal obligation to identify themselves and provide a way to be reached. That identity belongs
+/// to the host, not to the software, so every host fills in their own.
 ///
-/// The policy TEXT is not here. It lives as markdown beside the app (see wwwroot/legal), because
+/// The policy TEXT is not here. It lives as markdown beside the app (see server/Legal), because
 /// what Corro does with data is the same wherever it runs; only the identity below changes. The
 /// text is rendered with the controller's details substituted in.
 ///
-/// Left empty — the default, and what a fresh clone does — the deployment simply offers no account
-/// UI at all, which the accounts feature already treats as a fully supported configuration rather
-/// than a degraded one. A server that asks for no personal data owes no notice about it.
+/// Left empty — the default for a fresh clone and local development — the endpoint reports that no
+/// notice is configured and the footer hides its link. That is a supported runtime state, not a
+/// claim that the deployment processes no personal data. A public host should configure this even
+/// when external sign-in is disabled.
 /// </summary>
 public sealed class PrivacyOptions
 {
@@ -49,9 +51,7 @@ public sealed class PrivacyOptions
 	public string? PolicyUrl { get; init; }
 
 	/// <summary>
-	/// Whether this deployment has said who it is. Sign-in should not be offered without it: asking
-	/// for an address while refusing to say who receives it is the thing the obligation exists to
-	/// prevent.
+	/// Whether this deployment has supplied enough identity details to serve its built-in notice.
 	/// </summary>
 	public bool IsConfigured =>
 		!string.IsNullOrWhiteSpace(ControllerName)

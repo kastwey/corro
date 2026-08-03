@@ -2,15 +2,16 @@ import { resetCardBoard, registerStatusKeys, CARD_STATUS_SHORTCUTS } from './car
 import { teamDisplayName } from './enginePalette.js';
 import { buildForbiddenRulesLines } from './rulesSummaries.js';
 import {
+	forbiddenCastLines,
 	forbiddenDutyText,
 	forbiddenNowPlayingText,
-	forbiddenOtherRoleLines,
 	forbiddenRivalStatus,
 	forbiddenRole,
 	forbiddenStatusText,
 	forbiddenTurnContextText,
 	formatForbiddenCard,
 } from './forbiddenRules.js';
+import { listenForShake, requestShakePermission } from './shakeGesture.js';
 import type { GameState } from './models.js';
 import type { HelpShortcut } from './shortcuts.js';
 
@@ -30,6 +31,8 @@ export interface ForbiddenBoardDeps {
 		pass: (cardSequence: number) => void;
 		violation: (cardSequence: number) => void;
 	};
+	/** Where device-motion events come from. Defaults to `window`; tests supply their own. */
+	motionTarget?: Pick<EventTarget, 'addEventListener' | 'removeEventListener'> | null;
 }
 
 const TIMER_SOUND_EVENT = 'forbidden.tick';
@@ -171,8 +174,12 @@ export class ForbiddenBoard {
 					<div>
 						<h3 id="forbidden-turn-title"></h3>
 					</div>
-					<div class="forbidden-timer" role="timer" aria-live="off" hidden>
-						<span class="forbidden-timer__value" aria-hidden="true"></span>
+					<!-- Entirely aria-hidden, on purpose. NVDA sonifies a progress bar, and this one
+					     moves every second and runs BACKWARDS, so it beeped its way down the whole
+					     turn over the top of the game. Nothing here is the only copy of anything:
+					     the clock is heard as the ticking loop, and R says the seconds on demand. -->
+					<div class="forbidden-timer" aria-hidden="true" hidden>
+						<span class="forbidden-timer__value"></span>
 						<progress class="forbidden-timer__progress"></progress>
 					</div>
 				</div>
@@ -213,32 +220,49 @@ export class ForbiddenBoard {
 		this.violationButton = this.required('.forbidden-violation');
 		this.passHint = this.required('#forbidden-pass-hint');
 
-		this.startButton.addEventListener('click', deps.commands.start);
+		this.startButton.addEventListener('click', () => {
+			deps.commands.start();
+			this.returnToCard();
+		});
 		this.correctButton.addEventListener('click', () => {
 			const sequence = this.deps.getGameState()?.forbidden?.turn.cardSequence;
 			if (sequence !== undefined) deps.commands.correct(sequence);
+			this.returnToCard();
 		});
 		this.passButton.addEventListener('click', () => this.activate(this.passButton, this.passHint, () => {
 			const sequence = this.deps.getGameState()?.forbidden?.turn.cardSequence;
 			if (sequence !== undefined) deps.commands.pass(sequence);
+			this.returnToCard();
 		}));
 		this.violationButton.addEventListener('click', () => {
 			const sequence = this.deps.getGameState()?.forbidden?.turn.cardSequence;
 			if (sequence !== undefined) deps.commands.violation(sequence);
+			this.returnToCard();
 		});
 		this.cardText.addEventListener('keydown', event => {
 			if (event.key !== 'Enter' || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey
-				|| event.repeat || this.startButton.hidden
-				|| this.startButton.getAttribute('aria-disabled') === 'true') return;
-			// The protected field cannot accept a newline. While the clue-giver's start action is
-			// visible, Enter activates that same button without moving focus away from the card.
+				|| event.repeat) return;
+			// The protected field cannot accept a newline, so Enter is free — and the card is the
+			// board as far as this family is concerned. Whichever of the two things the clue-giver
+			// can do from here is what Enter does: get the clock going, or bank the word they have
+			// just heard guessed. One key, no hunting for a button between every card.
+			const action = this.primaryCardAction();
+			if (!action) return;
 			event.preventDefault();
 			event.stopPropagation();
-			this.startButton.click();
+			action.click();
 		});
 		this.element.addEventListener('keydown', event => {
 			if (event.ctrlKey || event.altKey || event.metaKey || event.shiftKey || event.repeat) return;
 			const key = event.key.toLowerCase();
+			// The card is this family's board: Escape from anywhere on the surface comes back to it,
+			// the way Escape leaves a menu and lands where the menu was opened from.
+			if (event.key === 'Escape' && visible(this.cardPanel) && document.activeElement !== this.cardText) {
+				event.preventDefault();
+				event.stopPropagation();
+				this.cardText.focus();
+				return;
+			}
 			if (key === 'r') {
 				const turn = this.deps.getGameState()?.forbidden?.turn;
 				if (!turn) return;
@@ -268,6 +292,61 @@ export class ForbiddenBoard {
 			mine: (gs, id) => forbiddenStatusText(gs, id, deps.tSync),
 			rivals: (gs, id) => forbiddenRivalStatus(gs, id, deps.tSync),
 		});
+
+		// On a phone there is no keyboard and no comfortable way to find a button while holding the
+		// device, listening and talking. A shake is the same single action the surface already
+		// offers — whichever one is mine right now — and never the only way to reach it.
+		listenForShake(() => this.handleShake(), { target: deps.motionTarget });
+		// iOS only hands out motion events after the person agrees, and only asks from inside a real
+		// gesture. The first touch or key on the surface is that gesture; it is asked once.
+		const askForMotion = () => {
+			element.removeEventListener('pointerdown', askForMotion);
+			element.removeEventListener('keydown', askForMotion);
+			void requestShakePermission();
+		};
+		element.addEventListener('pointerdown', askForMotion);
+		element.addEventListener('keydown', askForMotion);
+	}
+
+	/** The first of these controls that is on offer AND available, or null. */
+	private offered(...buttons: HTMLButtonElement[]): HTMLButtonElement | null {
+		const candidate = buttons.find(button => visible(button));
+		if (!candidate || candidate.getAttribute('aria-disabled') === 'true') return null;
+		return candidate;
+	}
+
+	/**
+	 * What Enter does from the private card: get the clock going, then bank each word as it is
+	 * guessed. The monitor's report is deliberately NOT here — it costs their rivals a point, and
+	 * a key that big should be pressed on purpose (V), not by an Enter aimed at something else.
+	 */
+	private primaryCardAction(): HTMLButtonElement | null {
+		return this.offered(this.startButton, this.correctButton);
+	}
+
+	/**
+	 * A shake, on a phone: the clue-giver starts the clock and then banks each word as it is
+	 * guessed; the monitor reports the slip. A shake is a whole-arm movement nobody makes by
+	 * accident, so unlike Enter it does carry the monitor's action — the one role whose hands are
+	 * otherwise free and whose button is hardest to find while listening. Public so the routing
+	 * can be tested without an accelerometer.
+	 */
+	handleShake(): void {
+		// A table plays match after match, and each one builds a new surface over the same element
+		// while this listener is on `window`. Without this, a shake in the second match would also
+		// fire the FIRST board's buttons — detached, still holding their handlers, still able to
+		// send a real command. A board that no longer owns the surface does nothing.
+		if (!this.element.contains(this.shell)) return;
+		this.offered(this.startButton, this.correctButton, this.violationButton)?.click();
+	}
+
+	/**
+	 * Back to the card after acting. The words ARE the board here: a clue-giver who tabbed to
+	 * "correct" and pressed it was left standing on a button while the next word — the only thing
+	 * they need — sat behind them.
+	 */
+	private returnToCard(): void {
+		if (visible(this.cardPanel)) this.cardText.focus();
 	}
 
 	update(gs: GameState): void {
@@ -372,7 +451,8 @@ export class ForbiddenBoard {
 	helpShortcuts(): HelpShortcut[] {
 		return [
 			...CARD_STATUS_SHORTCUTS,
-			{ keys: 'enter', descKey: 'game.help_cmd_forbidden_start' },
+			{ keys: 'enter', descKey: 'game.help_cmd_forbidden_enter' },
+			{ keys: 'escape', descKey: 'game.help_cmd_forbidden_card' },
 			{ keys: 'r', descKey: 'game.help_cmd_forbidden_timer' },
 			{ keys: 'v', descKey: 'game.help_cmd_forbidden_violation' },
 			{ keys: 'tab', descKey: 'game.help_cmd_forbidden_controls' },
@@ -404,11 +484,10 @@ export class ForbiddenBoard {
 		this.cardLabel.textContent = this.t('forbidden_card_label');
 	}
 
-	/** Everyone else's assignment, one row each — including the players with no assignment at
-	 *  all, who had no line on this surface until now. */
+	/** The three assignments this turn actually has, one row each, in the order they happen. */
 	private renderRoles(gs: GameState, myId: string): void {
 		this.roleList.innerHTML = '';
-		for (const line of forbiddenOtherRoleLines(gs, myId, this.deps.tSync)) {
+		for (const line of forbiddenCastLines(gs, myId, this.deps.tSync)) {
 			const item = document.createElement('li');
 			item.className = 'forbidden-role-item';
 			item.textContent = line;
@@ -463,7 +542,6 @@ export class ForbiddenBoard {
 		this.secondsRemaining = Math.max(0, seconds);
 		this.timerValue.textContent = this.t('forbidden_timer_value', { seconds: this.secondsRemaining });
 		this.timerProgress.value = this.secondsRemaining;
-		this.timerProgress.setAttribute('aria-label', this.t('forbidden_timer_label', { seconds: this.secondsRemaining }));
 		this.timerPanel.dataset.urgent = String(this.secondsRemaining <= 10);
 	}
 

@@ -11,6 +11,11 @@ const t = (key: string, vars?: Record<string, any>) => tSync(`game.${key}`, vars
 const STORAGE_KEY = 'corro-theme';
 type Theme = 'light' | 'dark';
 
+export interface ThemeToggleLabels {
+	toLight: string;
+	toDark: string;
+}
+
 const SUN_ICON =
 	'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
 	'stroke-linecap="round" aria-hidden="true" focusable="false">' +
@@ -44,7 +49,7 @@ export function applyTheme(theme: Theme): void {
 	document.documentElement.setAttribute('data-theme', theme);
 }
 
-export function initThemeToggle(mount: HTMLElement): void {
+export function initThemeToggle(mount: HTMLElement, labels?: ThemeToggleLabels): void {
 	const btn = document.createElement('button');
 	btn.type = 'button';
 	btn.id = 'theme-toggle';
@@ -54,7 +59,9 @@ export function initThemeToggle(mount: HTMLElement): void {
 		const isDark = currentTheme() === 'dark';
 		btn.innerHTML = isDark ? SUN_ICON : MOON_ICON;
 		btn.setAttribute('aria-pressed', String(isDark));
-		const label = isDark ? t('theme_to_light') : t('theme_to_dark');
+		const label = isDark
+			? labels?.toLight ?? t('theme_to_light')
+			: labels?.toDark ?? t('theme_to_dark');
 		btn.setAttribute('aria-label', label);
 		btn.title = label;
 	};

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title data-i18n="privacyPage.browserTitle">Privacy notice — All Welcome</title>
+	<link rel="stylesheet" href="css/theme.css">
+	<link rel="stylesheet" href="css/document.css">
+	<link rel="stylesheet" href="css/privacy.css">
+</head>
+<body class="privacy-page">
+	<main id="privacy-main" class="privacy-page__main" aria-labelledby="privacy-heading" aria-busy="true"
+		data-i18n-attr:data-contents-label="privacyPage.contentsLabel" data-contents-label="Contents">
+		<div class="privacy-page__toolbar">
+			<a class="privacy-page__back" data-locale-home href="/" data-i18n="privacyPage.backToLobby">Back to All Welcome</a>
+			<div class="privacy-page__preferences">
+				<ul class="privacy-page__languages" data-i18n-attr:aria-label="privacyPage.languagesLabel"
+					aria-label="Privacy notice language">
+					<li><a data-locale-link="en" href="/privacy/" hreflang="en"
+						data-i18n="language.english">English</a></li>
+					<li><a data-locale-link="es" href="/es/privacy/" hreflang="es"
+						data-i18n="language.spanish">Spanish</a></li>
+				</ul>
+				<span id="privacy-theme-toggle"
+					data-i18n-attr:data-theme-to-light="game.theme_to_light"
+					data-i18n-attr:data-theme-to-dark="game.theme_to_dark"
+					data-theme-to-light="Switch to light theme"
+					data-theme-to-dark="Switch to dark theme"></span>
+			</div>
+		</div>
+
+		<div class="privacy-page__title-block">
+			<p class="privacy-page__eyebrow" data-i18n="privacyPage.eyebrow">Your data, explained plainly</p>
+			<h1 id="privacy-heading" tabindex="-1" data-i18n="privacyPage.title">Privacy notice</h1>
+			<p class="privacy-page__intro" data-i18n="privacyPage.intro">How this Corro service handles game, account and connection data.</p>
+		</div>
+
+		<p id="privacy-loading" class="privacy-page__loading" role="status"
+			data-i18n="privacyPage.loading">Loading the privacy notice…</p>
+
+		<div id="privacy-document" class="board-help privacy-page__document" hidden></div>
+
+		<div id="privacy-unavailable" class="privacy-page__message privacy-page__message--error" role="alert" hidden>
+			<h2 data-i18n="privacyPage.unavailableTitle">The notice could not be loaded</h2>
+			<p data-i18n="privacyPage.unavailableBody">Return to Corro and try again later, or contact the service operator.</p>
+		</div>
+
+		<div id="privacy-external" class="privacy-page__message" role="status" hidden>
+			<h2 data-i18n="privacyPage.externalTitle">This service publishes its own notice</h2>
+			<p data-i18n="privacyPage.externalBody">Use the following link to read the privacy notice provided by its operator.</p>
+			<p><a id="privacy-external-link" href="/" data-i18n="privacyPage.externalLink">Read the privacy notice</a></p>
+		</div>
+	</main>
+
+	<script type="module" src="privacyPageEntry.js"></script>
+</body>
+</html>

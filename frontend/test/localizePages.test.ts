@@ -12,7 +12,11 @@ const { localizePages, flatten, localePath, DEFAULT_LOCALE, LOCALES } =
 const root = join(import.meta.dirname, '..');
 
 /** Builds the pages into a throwaway directory from real sources, unless overridden. */
-function build(overrides: { indexHtml?: string; locales?: Record<string, unknown> } = {}) {
+function build(overrides: {
+	indexHtml?: string;
+	privacyHtml?: string | null;
+	locales?: Record<string, unknown>;
+} = {}) {
 	const dir = mkdtempSync(join(tmpdir(), 'corro-localize-'));
 	const srcDir = join(dir, 'src');
 	const distDir = join(dir, 'dist');
@@ -21,6 +25,12 @@ function build(overrides: { indexHtml?: string; locales?: Record<string, unknown
 
 	writeFileSync(join(srcDir, 'index.html'),
 		overrides.indexHtml ?? readFileSync(join(root, 'src/index.html'), 'utf-8'));
+	// A focused index override should not unexpectedly require every key referenced by the other
+	// public page. Baseline builds include the real privacy page; tests can also override it.
+	const privacyHtml = overrides.privacyHtml === null || (overrides.indexHtml && overrides.privacyHtml === undefined)
+		? null
+		: overrides.privacyHtml ?? readFileSync(join(root, 'src/privacy.html'), 'utf-8');
+	if (privacyHtml !== null) writeFileSync(join(srcDir, 'privacy.html'), privacyHtml);
 	for (const locale of LOCALES) {
 		writeFileSync(join(localesDir, `${locale}.json`), JSON.stringify(
 			overrides.locales?.[locale] ?? JSON.parse(readFileSync(join(root, `i18n/locales/${locale}.json`), 'utf-8'))));
@@ -38,6 +48,8 @@ test('the default language is served at the root and Spanish from its own path',
 
 	assert.match(out.read('index.html'), /<html lang="en"/);
 	assert.match(out.read('es/index.html'), /<html lang="es"/);
+	assert.match(out.read('privacy/index.html'), /<html lang="en"/);
+	assert.match(out.read('es/privacy/index.html'), /<html lang="es"/);
 });
 
 test('the Spanish page carries Spanish copy, not the English fallback it was built from', () => {
@@ -91,6 +103,16 @@ test('every language version cross-links the others, including an x-default', ()
 		assert.match(html, new RegExp(`hreflang="x-default" href="${localePath(DEFAULT_LOCALE)}"`),
 			`${file} declares no x-default`);
 	}
+
+	for (const file of ['privacy/index.html', 'es/privacy/index.html']) {
+		const html = out.read(file);
+		for (const locale of LOCALES) {
+			assert.match(html, new RegExp(`hreflang="${locale}" href="${localePath(locale, 'privacy')}"`),
+				`${file} does not point at the ${locale} privacy page`);
+		}
+		assert.match(html,
+			new RegExp(`hreflang="x-default" href="${localePath(DEFAULT_LOCALE, 'privacy')}"`));
+	}
 });
 
 test('only the default page redirects, and only on the saved cookie', () => {
@@ -101,6 +123,9 @@ test('only the default page redirects, and only on the saved cookie', () => {
 	assert.match(out.read('index.html'), /location\.replace/);
 	// The Spanish page must NOT redirect: two pages bouncing at each other is an infinite loop.
 	assert.doesNotMatch(out.read('es/index.html'), /location\.replace/);
+	assert.match(out.read('privacy/index.html'), /corro_language/);
+	assert.match(out.read('privacy/index.html'), /\/privacy\//);
+	assert.doesNotMatch(out.read('es/privacy/index.html'), /location\.replace/);
 });
 
 test('the subdirectory page resolves its assets and its board link from the site root', () => {
@@ -109,6 +134,21 @@ test('the subdirectory page resolves its assets and its board link from the site
 
 	assert.match(out.read('es/index.html'), /<base href="\/">/);
 	assert.doesNotMatch(out.read('index.html'), /<base href/);
+	assert.match(out.read('privacy/index.html'), /<base href="\/">/);
+	assert.match(out.read('es/privacy/index.html'), /<base href="\/">/);
+});
+
+test('the privacy page is translated and keeps language and lobby links on canonical routes', () => {
+	const out = build();
+	const english = out.read('privacy/index.html');
+	const spanish = out.read('es/privacy/index.html');
+
+	assert.match(english, /Privacy notice/);
+	assert.match(spanish, /Aviso de privacidad/);
+	assert.match(english, /data-locale-link="en"[^>]*href="\/privacy\/"[^>]*aria-current="page"/);
+	assert.match(spanish, /data-locale-link="es"[^>]*href="\/es\/privacy\/"[^>]*aria-current="page"/);
+	assert.match(english, /data-locale-home[^>]*href="\/"/);
+	assert.match(spanish, /data-locale-home[^>]*href="\/es\/"/);
 });
 
 test('a key missing from one language fails the build instead of shipping half a page', () => {

@@ -11,7 +11,7 @@ El anfitrión crea dos equipos iguales. Los turnos se alternan entre ellos.
 - El **supervisor** del equipo contrario también ve la carta privada y señala cuando el portavoz dice el objetivo o cualquier palabra de la lista.
 - Los demás jugadores apoyan a su equipo y esperan su próxima función.
 
-Las funciones rotan siguiendo el orden del equipo. Cada persona es portavoz una vez en cada ciclo completo.
+Las funciones rotan siguiendo el orden del equipo. Cada persona es portavoz una vez en cada rotación completa.
 
 ## Empezar un turno
 
@@ -30,19 +30,24 @@ El portavoz describe el objetivo en voz alta. El adivinante responde en voz alta
 - **Objetivo o palabra prohibida** solo está disponible para el supervisor. Resta un punto y reparte otra carta.
 - Cuando se agota el tiempo, Corro cierra el turno automáticamente y rota las funciones.
 
-La puntuación puede bajar de cero. Cuando todos han sido portavoces una vez, gana el equipo con más puntos. Un empate añade otro ciclo completo, de modo que ambos equipos siempre tienen el mismo número de turnos.
+La puntuación puede bajar de cero. Cuando todos han sido portavoces una vez, gana el equipo con más puntos. Un empate añade otra rotación completa —una ronda de muerte súbita—, de modo que ambos equipos siempre tienen el mismo número de turnos.
 
 ## Cómo jugar con lector de pantalla
 
-El foco entra en la mesa de funciones. Usa **Tab** y **Shift+Tab** para moverte entre la carta privada y las acciones disponibles para tu función. Los controles que no pueden actuar siguen siendo enfocables y explican qué falta.
+El foco entra en la mesa de funciones. La carta privada es el tablero de esta familia: **Intro** hace desde ahí lo único que te toca hacer, **Escape** vuelve siempre a ella y, tras cada acción, el foco regresa a las palabras.
 
-- Pulsa **S** en la superficie del juego para oír tu equipo, puntuación, ciclo y función.
+- Pulsa **Intro** en la carta privada para iniciar el temporizador; una vez en marcha, **Intro** marca la palabra como adivinada y reparte la siguiente.
+- Pulsa **Escape** desde cualquier punto de la superficie para volver a las palabras.
+- Pulsa **S** en la superficie del juego para oír tu equipo, puntuación y función.
 - Pulsa **Shift+S** para oír la puntuación del equipo contrario.
 - Pulsa **R** para oír cuántos segundos quedan en el temporizador. Antes de iniciar un turno, confirma que el temporizador no está en marcha.
 - Como supervisor, pulsa **V** desde la carta privada o la mesa de funciones cuando el portavoz diga el objetivo o cualquier palabra prohibida de la lista.
-- Un reloj audible suena mientras el turno está activo y respeta los ajustes habituales de silencio y volumen. La cuenta atrás no anuncia cada segundo por encima de la conversación; usa **R** cuando necesites saber el tiempo restante exacto.
+- **Tab** y **Shift+Tab** siguen moviéndote entre la carta privada y las acciones de tu función. Los controles que no pueden actuar siguen siendo enfocables y explican qué falta.
+- Un reloj audible suena mientras el turno está activo y respeta los ajustes habituales de silencio y volumen. La cuenta atrás no anuncia cada segundo por encima de la conversación, y la barra de progreso visual queda oculta para las ayudas técnicas para que no vaya pitando durante toda la partida; usa **R** cuando necesites saber el tiempo restante exacto.
 - **Ctrl+F6** y **Ctrl+Shift+F6** recorren los paneles del juego, jugadores y conexión.
 - **Ctrl+Shift+R** abre el chat de texto. El chat de voz tiene sus propios controles y sigue siendo opcional.
+
+En el móvil, **agitar el teléfono** hace la acción que te toque en ese momento: inicia el temporizador si eres el portavoz y aún no está en marcha, marca la palabra como adivinada mientras corre el tiempo y, si eres el supervisor, señala el objetivo o la palabra prohibida. Señalar es lo único que **Intro** no hace a propósito: le quita un punto al otro equipo, así que sigue siendo una tecla que se pulsa queriendo. Agitar nunca es la única forma de hacer algo: los botones y las teclas siguen ahí. La primera vez que toques la superficie, el navegador puede pedirte permiso para leer el movimiento del dispositivo.
 
 ## Capas de ayuda
 

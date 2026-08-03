@@ -152,10 +152,10 @@ test('shared Spanish cards, per-player UI and authoritative role actions', async
 	// "Who is playing" is its own section, and it is the same fact for everyone at the table.
 	await expect(ana.locator('.forbidden-now h3')).toHaveText('Who is playing');
 	await expect(berto.locator('.forbidden-now h3')).toHaveText('Quién juega');
-	await expect(ana.locator('.forbidden-now__line')).toHaveText(
-		'Turn 1 of cycle 1: your Red team is about to play, and you give the clues.');
-	await expect(david.locator('.forbidden-now__line')).toHaveText(
-		'Turno 1 del ciclo 1: va a jugar el Equipo Rojo y Ana da las pistas.');
+	// Reported live: this line used to open with "Turn 1 of cycle 1", counting bookkeeping at a
+	// player who had asked one thing — whose turn is it.
+	await expect(ana.locator('.forbidden-now__line')).toHaveText('Your Red team is about to play.');
+	await expect(david.locator('.forbidden-now__line')).toHaveText('El Equipo Rojo va a jugar.');
 	// Three named sibling regions, no nesting and no skipped level.
 	await expect(ana.locator('.forbidden-shell > section')).toHaveCount(3);
 	await expect(ana.locator('.forbidden-shell h4')).toHaveCount(0);
@@ -166,8 +166,7 @@ test('shared Spanish cards, per-player UI and authoritative role actions', async
 			.map(h => getComputedStyle(h).fontSize));
 	expect(new Set(headingSizes).size, `section headings differ in size: ${headingSizes}`).toBe(1);
 
-	// The turn card now says MY duty, and lists everyone else — including the players holding
-	// no assignment at all, who had no line on this surface before.
+	// The turn card says MY duty, and lists the three jobs the turn actually has.
 	await expect(ana.locator('.forbidden-role-detail')).toHaveText(
 		'You are the clue-giver: describe the target without saying it or using its forbidden words.');
 	await expect(berto.locator('.forbidden-role-detail')).toHaveText(
@@ -176,22 +175,26 @@ test('shared Spanish cards, per-player UI and authoritative role actions', async
 		'Eres el supervisor: pulsa V si Ana dice el objetivo o cualquiera de las palabras prohibidas.');
 	await expect(david.locator('.forbidden-role-detail')).toHaveText(
 		'Este turno apoyas a tu equipo, sin ninguna acción propia.');
+	// Three lines, one per job, and nobody is named for holding no job at all — David used to get
+	// a line saying he was "supporting", which pushed the three that matter further down.
 	await expect(ana.locator('.forbidden-role-list li')).toHaveText([
-		'Berto guesses for the Red team.',
-		'Carla monitors the target and the forbidden words for the blue team.',
-		'David supports the blue team this turn.',
+		'You give the clues.',
+		'Berto guesses.',
+		'Carla monitors.',
 	]);
 	await expect(david.locator('.forbidden-role-list li')).toHaveText([
-		'Ana da las pistas por el Equipo Rojo.',
-		'Berto adivina por el Equipo Rojo.',
-		'Carla supervisa el objetivo y las palabras prohibidas por el Equipo azul.',
+		'Ana da las pistas.',
+		'Berto adivina.',
+		'Carla supervisa.',
 	]);
 
+	// T is short now: the team, then the three people the turn runs through. It used to read the
+	// whole duty paragraph and every spectator's name, several times a turn.
 	for (const [page, focus, announcement] of [
-		[ana, anaCard, /your Red team is about to play.*You are the clue-giver.*David supports/],
-		[berto, berto.locator('.forbidden-shell'), /va a jugar el Equipo Rojo.*adivinas la palabra objetivo.*Ana da las pistas/],
-		[carla, carlaCard, /va a jugar el Equipo Rojo.*Eres el supervisor.*Berto adivina/],
-		[david, david.locator('.forbidden-shell'), /va a jugar el Equipo Rojo.*apoyas a tu equipo.*Carla supervisa/],
+		[ana, anaCard, /^Your Red team is about to play\. You give the clues\. Berto guesses\. Carla monitors\.$/],
+		[berto, berto.locator('.forbidden-shell'), /^Tu Equipo Rojo va a jugar\. Ana da las pistas\. Tú adivinas\. Carla supervisa\.$/],
+		[carla, carlaCard, /^El Equipo Rojo va a jugar\. Ana da las pistas\. Berto adivina\. Tú supervisas\.$/],
+		[david, david.locator('.forbidden-shell'), /^El Equipo Rojo va a jugar\. Ana da las pistas\. Berto adivina\. Carla supervisa\.$/],
 	] as const) {
 		await page.evaluate(() => { ((window as any).__announcements as string[]).length = 0; });
 		await focus.focus();
@@ -202,7 +205,7 @@ test('shared Spanish cards, per-player UI and authoritative role actions', async
 	await ana.evaluate(() => { ((window as any).__announcements as string[]).length = 0; });
 	await anaCard.focus();
 	await ana.keyboard.press('s');
-	await expectAnnouncement(ana, /Red team: 0 points, cycle 1; your role is clue-giver/);
+	await expectAnnouncement(ana, /^Red team: 0 points; your role is clue-giver\.$/);
 	await expect(anaCard).toBeFocused();
 
 	const originalCard = await anaCard.inputValue();
@@ -236,13 +239,19 @@ test('shared Spanish cards, per-player UI and authoritative role actions', async
 	await expect.poll(async () => ana.locator('.forbidden-timer__progress').evaluate(
 		el => (el as HTMLProgressElement).value,
 	), { timeout: 5_000 }).toBeLessThan(60);
+	// Reported live: NVDA sonifies a progress bar, and this one moves every second and runs
+	// BACKWARDS, so it beeped its way down the whole turn over the top of the conversation. The
+	// clock is heard as the ticking loop and read on demand with R; the bar is for the sighted.
+	await expect(ana.locator('.forbidden-timer')).toHaveAttribute('aria-hidden', 'true');
+	await expect(ana.locator('.forbidden-timer__progress')).not.toHaveAttribute('aria-label', /.*/);
 	await expectAnnouncement(berto, /Ana inicia el turno/);
 
 	// R is a family-local, read-only timer query for every role. It works both from the
 	// protected private card and from the role surface without moving focus or mutating state.
 	for (const [page, focus, announcement] of [
-		[ana, anaCard, /\d+ seconds remaining/],
-		[berto, berto.locator('.forbidden-shell'), /Quedan \d+ segundos/],
+		// The number FIRST: a listener who only wanted the seconds sits through no preamble.
+		[ana, anaCard, /^\d+ seconds remaining\.$/],
+		[berto, berto.locator('.forbidden-shell'), /^\d+ segundos restantes\.$/],
 	] as const) {
 		await page.evaluate(() => { ((window as any).__announcements as string[]).length = 0; });
 		await focus.focus();
@@ -260,24 +269,42 @@ test('shared Spanish cards, per-player UI and authoritative role actions', async
 	await expect(anaCard).toHaveValue(beforeUnauthorizedViolation);
 	await expect(ana.locator('.forbidden-score').first()).toContainText('0');
 
+	// Reported live: pressing "correct" left the clue-giver standing on a button while the next
+	// word — the only thing they need — sat behind them. The words ARE the board here, so acting
+	// comes straight back to them however the action was taken.
+	await ana.locator('.forbidden-correct').focus();
 	await ana.locator('.forbidden-correct').click();
 	await expectAnnouncement(berto, /Berto acierta faro/);
 	await expect(anaCard).not.toHaveValue(originalCard);
+	await expect(anaCard).toBeFocused();
 	await expect(ana.locator('.forbidden-score').first()).toContainText('1');
 	await flushAxeAudit(ana);
+
+	// …and Enter from the words does the same thing, so a clue-giver never leaves the card at all.
+	const beforeEnterCorrect = await anaCard.inputValue();
+	await ana.keyboard.press('Enter');
+	await expect(anaCard).not.toHaveValue(beforeEnterCorrect);
+	await expect(anaCard).toBeFocused();
+	await expect(ana.locator('.forbidden-score').first()).toContainText('2');
+
+	// Escape is how you leave anything else and land where you came from; here that is the words.
+	await ana.locator('.forbidden-pass').focus();
+	await ana.keyboard.press('Escape');
+	await expect(anaCard).toBeFocused();
 
 	await carlaCard.focus();
 	await carla.keyboard.press('v');
 	await expect(carlaCard).toBeFocused();
 	await expectAnnouncement(david, /Carla señala.*objetivo o una palabra prohibida/);
-	await expect(ana.locator('.forbidden-score').first()).toContainText('0');
+	// Two banked words less one reported slip.
+	await expect(ana.locator('.forbidden-score').first()).toContainText('1');
 	await flushAxeAudit(carla);
 
 	const beforePass = await anaCard.inputValue();
 	await ana.locator('.forbidden-pass').click();
 	await expectAnnouncement(berto, /Ana pasa/);
 	await expect(anaCard).not.toHaveValue(beforePass);
-	await expect(ana.locator('.forbidden-score').first()).toContainText('0');
+	await expect(ana.locator('.forbidden-score').first()).toContainText('1');
 
 	// Reach a narrow, dark rendering of the live monitor state and verify it neither clips
 	// horizontally nor loses its role control. Automatic teardown audits the final state too.
@@ -348,5 +375,6 @@ test('the host can deal the whole room into the teams in one move', async ({ bro
 
 	// And the deal is a real arrangement the game can start from.
 	await startGame(ana, [ana, berto, carla, david]);
-	await expect(ana.locator('.forbidden-now__line')).toContainText('Turno 1 del ciclo 1');
+	// A random deal may or may not put Ana on the team that opens, so only the team is asserted.
+	await expect(ana.locator('.forbidden-now__line')).toContainText('Equipo Rojo va a jugar.');
 });

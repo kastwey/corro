@@ -1,0 +1,207 @@
+/* privacy.css — Standalone privacy notice page. */
+
+/* This page loads theme.css and document.css but NOT global.css, which is where the rest of the
+   app gets its border-box reset. Without it every padded box here is its width PLUS its padding:
+   the main column came out at 360 + 2 × 20 px on a phone and the whole document scrolled
+   sideways, which is exactly what a long policy text must never do. */
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+body.privacy-page {
+	min-height: 100vh;
+	padding: clamp(1rem, 4vw, 3rem);
+}
+
+.privacy-page__main {
+	width: min(100%, 860px);
+	margin: 0 auto;
+	padding: clamp(1.25rem, 4vw, 3.25rem);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	background: var(--surface);
+	box-shadow: var(--shadow-md);
+}
+
+.privacy-page__toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding-bottom: 1.25rem;
+	border-bottom: 1px solid var(--border);
+}
+
+.privacy-page__back {
+	color: var(--text-muted);
+	font-weight: 700;
+	text-decoration-thickness: 0.1em;
+	text-underline-offset: 0.2em;
+}
+
+.privacy-page__back::before {
+	content: "←";
+	margin-inline-end: 0.45em;
+}
+
+.privacy-page__preferences {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.privacy-page__languages {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+	margin: 0;
+	padding: 0.25rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface-2);
+	list-style: none;
+}
+
+.privacy-page__languages a {
+	display: block;
+	padding: 0.45rem 0.7rem;
+	border-radius: var(--radius-sm);
+	color: var(--text-muted);
+	font-size: 0.9rem;
+	font-weight: 700;
+	text-decoration: none;
+}
+
+.privacy-page__languages a:hover {
+	color: var(--text);
+	background: var(--surface-3);
+}
+
+.privacy-page__languages a[aria-current="page"] {
+	color: var(--text);
+	background: var(--surface);
+	box-shadow: var(--shadow-sm);
+}
+
+.privacy-page__title-block {
+	max-width: 46rem;
+	margin: clamp(2.25rem, 7vw, 4.5rem) 0 2.25rem;
+}
+
+.privacy-page__eyebrow {
+	margin: 0 0 0.65rem;
+	color: var(--accent);
+	font-size: 0.78rem;
+	font-weight: 850;
+	letter-spacing: 0.09em;
+	text-transform: uppercase;
+}
+
+.privacy-page h1 {
+	margin: 0;
+	font-size: clamp(2.25rem, 8vw, 4.4rem);
+	font-weight: 850;
+	line-height: 1;
+	letter-spacing: -0.045em;
+	background: var(--accent-grad);
+	background-clip: text;
+	-webkit-background-clip: text;
+	color: transparent;
+}
+
+.privacy-page__intro {
+	max-width: 42rem;
+	margin: 1.1rem 0 0;
+	color: var(--text-muted);
+	font-size: clamp(1rem, 2.4vw, 1.15rem);
+	line-height: 1.55;
+}
+
+.privacy-page__loading {
+	margin: 2rem 0;
+	padding: 1rem 1.1rem;
+	border-inline-start: 4px solid var(--accent);
+	border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+	background: var(--accent-soft);
+	color: var(--text);
+}
+
+.privacy-page__document {
+	color: var(--text);
+	line-height: 1.65;
+}
+
+.privacy-page__document a {
+	color: var(--accent);
+	text-decoration-thickness: 0.1em;
+	text-underline-offset: 0.18em;
+}
+
+.privacy-page__document > p:first-child {
+	color: var(--text-muted);
+	font-size: 0.92rem;
+}
+
+.privacy-page__document h2 {
+	padding-bottom: 0.45rem;
+	border-bottom: 1px solid var(--border);
+	font-size: clamp(1.25rem, 3vw, 1.55rem);
+}
+
+.privacy-page__message {
+	margin: 2rem 0 0;
+	padding: 1.25rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface-2);
+}
+
+.privacy-page__message--error {
+	border-color: var(--danger);
+	background: var(--danger-soft);
+}
+
+.privacy-page__message h2 {
+	margin: 0 0 0.6rem;
+	font-size: 1.25rem;
+}
+
+.privacy-page__message p {
+	margin: 0.5rem 0 0;
+	line-height: 1.55;
+}
+
+.privacy-page__message a {
+	color: var(--accent);
+	font-weight: 750;
+	text-underline-offset: 0.2em;
+}
+
+.privacy-page [hidden] {
+	display: none !important;
+}
+
+@media (max-width: 620px) {
+	body.privacy-page {
+		padding: 0;
+	}
+
+	.privacy-page__main {
+		min-height: 100vh;
+		border: 0;
+		border-radius: 0;
+		box-shadow: none;
+	}
+
+	.privacy-page__toolbar {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+
+	.privacy-page__preferences {
+		width: 100%;
+		justify-content: space-between;
+	}
+}

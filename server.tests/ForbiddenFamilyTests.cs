@@ -26,10 +26,41 @@ public class ForbiddenFamilyTests
 		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
 
 		Assert.Equal("forbidden", definition.Manifest.GameType);
-		Assert.Equal(24, definition.ForbiddenWords!["en"].Count);
-		Assert.Equal("lighthouse", definition.ForbiddenWords["en"][0].Target);
+		Assert.Equal("lighthouse", definition.ForbiddenWords!["en"][0].Target);
 		Assert.Equal("faro", definition.ForbiddenWords["es"][0].Target);
 		Assert.Equal(60, definition.Manifest.ForbiddenRules!.TurnSeconds);
+
+		// A party deck is judged by how long it takes to come round again: a turn burns through
+		// several cards, and a table plays a whole evening. Five hundred is the floor, not a
+		// milestone — the number is asserted so shrinking the deck has to be a decision.
+		Assert.True(definition.ForbiddenWords["en"].Count >= 500,
+			$"the English deck has only {definition.ForbiddenWords["en"].Count} cards.");
+
+		// The two locales are ONE deck written twice. A card missing on one side means a table
+		// that switches its shared word language silently loses words.
+		var english = definition.ForbiddenWords["en"].Select(word => word.Id).ToList();
+		var spanish = definition.ForbiddenWords["es"].Select(word => word.Id).ToList();
+		Assert.Equal(english, spanish);
+	}
+
+	// The failure this guards against was reported from a real game: "submarino" banned "océano"
+	// but not "mar", and "cascada" never banned "catarata", so the clue-giver's most natural word
+	// was legal in one language and a violation in the other. A synonym gap cannot be detected
+	// automatically, but the SHAPE of a thin card can: every card carries a full hand of traps.
+	[Fact]
+	public async Task Every_shipped_card_bans_a_full_hand_of_words_in_both_languages()
+	{
+		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+
+		foreach (var locale in new[] { "en", "es" })
+		{
+			foreach (var card in definition.ForbiddenWords![locale])
+			{
+				Assert.True(card.Forbidden.Count >= 5,
+					$"card '{card.Id}' ({locale}) bans only {card.Forbidden.Count} words.");
+				Assert.All(card.Forbidden, word => Assert.False(string.IsNullOrWhiteSpace(word)));
+			}
+		}
 	}
 
 	[Fact]

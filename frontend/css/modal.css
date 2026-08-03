@@ -576,43 +576,6 @@
 	overflow-y: auto;
 }
 
-/* The board guide (rendered Markdown). Kept readable with comfortable spacing; inherits the
-   dialog's scroll area so long guides scroll within the modal. */
-.board-help {
-	font-size: 0.97rem;
-	line-height: 1.5;
-}
-.board-help h1, .board-help h2, .board-help h3, .board-help h4 {
-	margin: 1em 0 0.4em;
-	line-height: 1.25;
-	scroll-margin-top: 0.5rem;
-}
-.board-help h1 { font-size: 1.4rem; }
-.board-help h2 { font-size: 1.2rem; }
-.board-help h3 { font-size: 1.05rem; }
-.board-help > :first-child { margin-top: 0; }
-.board-help p { margin: 0.6em 0; }
-.board-help ul, .board-help ol { margin: 0.6em 0; padding-left: 1.5em; }
-.board-help li { margin: 0.2em 0; }
-.board-help__contents {
-	margin: 0.9rem 0 1.1rem;
-	padding: 0.75rem 1rem;
-	border: 1px solid var(--border);
-	border-radius: 8px;
-	background: var(--surface-2);
-}
-.board-help__contents h2 { margin-top: 0; }
-.board-help__contents ul { margin-bottom: 0; }
-.board-help hr { border: none; border-top: 1px solid var(--border-color, #ccc); margin: 1em 0; }
-.board-help code {
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-	font-size: 0.9em;
-	padding: 0.1em 0.35em;
-	border-radius: 4px;
-	background: var(--surface-2, rgba(127, 127, 127, 0.15));
-}
-.board-help a { color: var(--link-color, #2563eb); }
-
 .help-shortcuts {
 	width: 100%;
 	border-collapse: collapse;
@@ -841,20 +804,6 @@
 .app-footer__external-link {
 	display: inline-flex;
 	align-items: center;
-}
-
-/* The privacy notice opens in a dialog rather than a page, so it is a BUTTON — the element for
-   "this does something here" — dressed to sit beside the links around it. Its focus ring is the
-   browser's own; nothing here removes it. */
-.app-footer__link-button {
-	padding: 0;
-	border: 0;
-	background: none;
-	color: inherit;
-	font: inherit;
-	text-decoration: underline;
-	text-underline-offset: 0.15em;
-	cursor: pointer;
 }
 
 .app-footer__external-icon {

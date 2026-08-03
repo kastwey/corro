@@ -41,8 +41,9 @@ public class ConfigController : ControllerBase
 	///
 	/// The TEXT ships with the app because what Corro does with data is the same wherever it runs;
 	/// the identity does not, because it is a fact about whoever is running this server. A
-	/// deployment that has said nothing gets `configured: false` and the client offers no notice
-	/// and — more to the point — no sign-in either.
+	/// deployment that has said nothing gets `configured: false` and the client offers no notice.
+	/// That state exists for local development; a public deployment still processes table and
+	/// connection data even when external sign-in is disabled.
 	/// </summary>
 	[HttpGet("privacy")]
 	public async Task<ActionResult<object>> GetPrivacy([FromQuery] string language = "en")

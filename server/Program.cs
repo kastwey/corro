@@ -28,14 +28,6 @@ internal class Program
 
 		var app = builder.Build();
 
-		// Populates User from the session cookie. Required even though no endpoint carries
-		// [Authorize]: the account endpoints read the principal directly, and every one of them
-		// treats "anonymous" as a normal outcome rather than a failure.
-		app.UseAuthentication();
-
-		// Use controllers for the REST API
-		app.MapControllers();
-
 		// Which files the static middleware serves. Prod/E2E: the app's own web root (the packaged
 		// wwwroot, which ships in the publish artifact — Azure serves from there). Dev: frontend/dist
 		// directly, so a `npm run build` (or the `npm run watch` tsc loop) shows on the next browser
@@ -62,6 +54,29 @@ internal class Program
 		app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = webRootFiles });
 		app.UseStaticFiles(new StaticFileOptions { FileProvider = webRootFiles });
 
+		// UseRouting is called HERE, on purpose, and this is load-bearing.
+		//
+		// Nobody used to call it, so ASP.NET inserted it automatically at the very START of the
+		// pipeline — before the two lines above. An endpoint was therefore already chosen by the
+		// time the static middleware ran, and StaticFileMiddleware deliberately stands down when
+		// that has happened. The result: UseDefaultFiles could never serve a directory's
+		// index.html, and every directory request fell through to a fallback instead. `/es/` was
+		// noticed and worked around with a per-locale fallback; `/privacy/` and `/es/privacy/`
+		// then hit the same trap and quietly served the LOBBY, which is what a real public page
+		// under its own directory will always do here.
+		//
+		// Placed after the static files and before authentication, this is also simply the
+		// canonical ASP.NET order: static files, routing, authentication, endpoints.
+		app.UseRouting();
+
+		// Populates User from the session cookie. Required even though no endpoint carries
+		// [Authorize]: the account endpoints read the principal directly, and every one of them
+		// treats "anonymous" as a normal outcome rather than a failure.
+		app.UseAuthentication();
+
+		// Use controllers for the REST API
+		app.MapControllers();
+
 		app.MapHub<GameHub>("/gamehub");
 
 		// Test-only script controls (enqueue dice / reset). The check mirrors AddE2ETestMode:
@@ -83,6 +98,9 @@ internal class Program
 			.Where(entry => entry.IsDirectory)
 			.Select(entry => entry.Name)
 			.Where(name => webRootFiles.GetFileInfo($"{name}/index.html").Exists)
+			// Public pages such as /privacy/ also have an index.html. A locale directory is the
+			// one whose locale resource exists, not merely any directory with a default document.
+			.Where(name => webRootFiles.GetFileInfo($"i18n/locales/{name}.json").Exists)
 			.OrderBy(name => name, StringComparer.Ordinal))
 		{
 			app.MapFallbackToFile($"/{locale}/{{*path:nonfile}}", $"{locale}/index.html",

@@ -220,9 +220,11 @@ starts a genuinely new account.
 
 ## Saying who you are (every host fills this in)
 
-Storing an email address makes whoever runs the deployment a **data controller**, and naming
-themselves is a legal obligation rather than a nicety. That is a fact about the person running the
-server, not about Corro, so it cannot ship with the code — **you fill in your own**:
+Running a public deployment makes the host a **data controller** even when accounts are disabled:
+tables contain chosen player names, seat credentials, game records and chat, and the hosting layer
+processes technical connection data. Signing in adds profile, email and provider identifiers.
+Naming the controller is a legal obligation rather than a nicety, and it is a fact about the host,
+not about Corro, so it cannot ship with the code — **you fill in your own**:
 
 ```jsonc
 // server/appsettings.json — or, better, your deployment's own configuration
@@ -244,16 +246,19 @@ server, not about Corro, so it cannot ship with the code — **you fill in your 
 The section is validated as **all or nothing** at startup: either all three are set or none are. A
 half-filled notice is the worst outcome — it looks like an answer and reaches nobody.
 
-**Leaving it empty is a supported configuration**, and it is what a fresh clone has: the footer
-shows no privacy link and, since no provider is configured either, nothing asks for an address. A
-server that collects nothing owes no notice about it.
+**Leaving it empty is a supported runtime configuration** so a fresh clone and local development can
+start without production identity details. The footer then shows no privacy link. It is not suitable
+for a public deployment: disabling external sign-in removes the account data, but it does not stop
+the table and connection processing described above.
 
 ### The notice itself
 
-The TEXT ships with the app, in [`server/Legal/privacy.en.md`](../server/Legal/privacy.en.md)
-and its Spanish twin, because what Corro does with data is the same wherever it runs. Only the
-identity changes, and it is substituted into the `{{controller}}`, `{{jurisdiction}}` and
-`{{contact}}` placeholders when the notice is served.
+The baseline text ships with the app, in
+[`server/Legal/privacy.en.md`](../server/Legal/privacy.en.md) and its Spanish twin. The controller's
+identity is substituted into the `{{controller}}`, `{{jurisdiction}}` and `{{contact}}` placeholders
+when the notice is served. The text describes Corro's own data flows and names configurable defaults;
+a host whose infrastructure, retention periods or legal basis differs must adapt it or point
+`PolicyUrl` at a deployment-specific policy.
 
 It lives in `server/Legal/` rather than under `wwwroot` for two reasons, and both are traps worth
 naming. `wwwroot` is **generated** — the frontend build wipes it and re-mirrors it from
@@ -261,14 +266,16 @@ naming. `wwwroot` is **generated** — the frontend build wipes it and re-mirror
 file is a **template**: served as a static asset it would show a reader `{{controller}}` instead of
 your name. It travels in the publish artifact the same way the board packages do, and CI asserts
 both languages are in there, because a missing notice makes a configured deployment report having
-none — which also switches sign-in off.
+none and hides the footer link.
 
 If you change what your deployment stores — another provider, an analytics script, anything — edit
 that markdown. The notice is a description of reality and stops being worth anything the moment it
 stops matching.
 
-It is rendered into the same reading dialog as the board guide (`documentMode`), so a screen
-reader meets it in browse mode as an ordinary document rather than a widget.
+The footer exposes a real link to a dedicated localized page (`/privacy/` or `/es/privacy/`). The
+page renders the Markdown as an ordinary document with one `main`, a contents list and normal browser
+history; it is not a modal interaction. A host that sets `PolicyUrl` gets a direct link to that page
+instead.
 
 ## Testing
 

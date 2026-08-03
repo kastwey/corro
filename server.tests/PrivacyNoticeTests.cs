@@ -14,9 +14,9 @@ namespace CorroServer.Tests;
 /// reader. The controller answers "no notice" for four different reasons — nobody configured one,
 /// the host points elsewhere, the language is unknown, the text is missing — and only the first two
 /// are supposed to happen. The third and fourth would leave a deployment that has filled in its
-/// details silently offering no notice and, since sign-in is gated on the same flag, no way in.
+/// details silently offering no notice to the people whose data it processes.
 ///
-/// This is why these read the REAL markdown out of server/wwwroot rather than a fixture: the files
+/// This is why these read the REAL markdown out of server/Legal rather than a fixture: the files
 /// are the deliverable, and a test that ships its own copy of them would pass with the folder empty.
 /// </summary>
 public class PrivacyNoticeTests
@@ -78,6 +78,32 @@ public class PrivacyNoticeTests
 		Assert.DoesNotContain("{{", markdown);
 	}
 
+	[Theory]
+	[InlineData("en")]
+	[InlineData("es")]
+	public async Task The_notice_names_every_cookie_Corro_sets(string language)
+	{
+		// The original notice said there were two and omitted the year-long language cookie entirely.
+		var markdown = (string)Field(await NoticeAsync(language), "markdown")!;
+
+		Assert.Contains("corro_language", markdown);
+		Assert.Contains("corro.session", markdown);
+		Assert.Contains("corro.external", markdown);
+	}
+
+	[Theory]
+	[InlineData("en", "Erasing an account does **not** erase shared table records.")]
+	[InlineData("es", "Borrar una cuenta **no** elimina los registros compartidos de las mesas.")]
+	public async Task Account_erasure_does_not_promise_to_erase_shared_table_history(
+		string language,
+		string disclosure)
+	{
+		// Deleting the account document leaves names, actions and chat in the shared game document.
+		var markdown = (string)Field(await NoticeAsync(language), "markdown")!;
+
+		Assert.Contains(disclosure, markdown);
+	}
+
 	[Fact]
 	public async Task An_unknown_language_still_gets_a_notice_rather_than_none()
 	{
@@ -113,7 +139,7 @@ public class PrivacyNoticeTests
 
 		Assert.True(File.Exists(shipped),
 			$"{shipped} is missing: the notice is not being copied to the output, so a deployed "
-			+ "server would report having no privacy notice and refuse to offer sign-in.");
+			+ "server would report having no privacy notice and hide the footer link.");
 	}
 
 	[Fact]

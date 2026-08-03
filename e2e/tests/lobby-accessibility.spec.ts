@@ -126,6 +126,7 @@ for (const board of [
 		await page.locator('#board-selector').selectOption(TRACK_BOARD);
 		await expect(group).toBeHidden();
 	});
+
 }
 
 test('Four Colours offers the scoring direction as a named, accessible radio group', async ({ browser }) => {

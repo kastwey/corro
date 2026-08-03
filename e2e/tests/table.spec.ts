@@ -145,6 +145,45 @@ test('leaving a table passes the sceptre on, and the table hears both', async ({
 	await expect(berto.locator('#table-delete')).toBeVisible();
 });
 
+// Reported live: every host button on the roster was its own tab stop, so a table of eight people
+// cost sixteen presses to walk past. The roster is now the SAME widget the match uses for its
+// players panel: one tab stop, arrows between people, Right into a person's actions.
+test('the roster is one tab stop, with a person\'s actions behind the arrow key', async ({ browser }) => {
+	const ana = await newPlayerPage(browser);
+	const berto = await newPlayerPage(browser);
+	const code = await createGame(ana, 'Ana', TRACK_BOARD);
+	await joinGame(berto, code, 'Berto');
+	await expect(ana.locator('#table-players li')).toHaveCount(2);
+
+	const tabIndexes = () => ana.evaluate(() => ({
+		rows: [...document.querySelectorAll<HTMLElement>('#table-players .player-item')].map(r => r.tabIndex),
+		actions: [...document.querySelectorAll<HTMLElement>('#table-players .player-item__actions button')]
+			.map(b => b.tabIndex),
+	}));
+	expect(await tabIndexes()).toEqual({ rows: [0, -1], actions: [-1] });
+
+	// Arriving at a person reads that person, as one line — not the row glued to its buttons.
+	const rows = ana.locator('#table-players .player-item');
+	await expect(rows.first()).toHaveAccessibleName(/^Ana, .+, .*anfitrión.*\.$/);
+
+	await rows.first().focus();
+	await ana.keyboard.press('ArrowDown');
+	await expect(rows.nth(1)).toBeFocused();
+	await ana.keyboard.press('ArrowRight');
+	await expect(ana.locator('#table-players .player-item__make-host')).toBeFocused();
+	await ana.keyboard.press('Escape');
+	await expect(rows.nth(1)).toBeFocused();
+	await flushAxeAudit(ana);
+
+	// Shift+F10 mirrors the same action as a menu, for anyone who never learns the arrow.
+	await ana.keyboard.press('Shift+F10');
+	const menu = ana.getByRole('menu', { name: appI18n('es').table.playerMenuLabel as string });
+	await expect(menu.getByRole('menuitem')).toHaveCount(1);
+	await flushAxeAudit(ana);
+	await ana.keyboard.press('Escape');
+	await expect(rows.nth(1)).toBeFocused();
+});
+
 test('the host can hand the sceptre over without leaving', async ({ browser }) => {
 	const ana = await newPlayerPage(browser);
 	const berto = await newPlayerPage(browser);
