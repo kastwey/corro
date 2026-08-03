@@ -111,18 +111,23 @@ public class ConfigController : ControllerBase
 	public ActionResult<object> GetVoice() => new { Available = _voiceAvailable };
 
 	/// <summary>
-	/// What this deployment says about itself in public. A visitor cannot tell an empty lobby from
-	/// a dead one, and that is the question that decides whether they bother creating a table.
+	/// What this deployment says about itself in public: how many tables have somebody at them and
+	/// how many people are connected. A visitor cannot tell an empty lobby from a dead one, and
+	/// that is the question that decides whether they bother creating a table.
 	///
-	/// The count is ABSENT, not zero, when the host has not turned it on: a deployment that keeps
-	/// quiet must not be readable as one with nobody in it. Nothing here identifies anybody — one
-	/// integer over the whole process, no games, no players.
+	/// The counts are ABSENT, not zero, when the host has not turned them on: a deployment that
+	/// keeps quiet must not be readable as one with nobody in it. Nothing here identifies anybody —
+	/// two integers over the whole process, no games, no names, no seats.
 	/// </summary>
 	[HttpGet("metrics")]
 	public ActionResult<object> GetMetrics()
-		=> _metrics.ShowActiveTables && _sessions is not null
-			? new { ActiveTables = (int?)_sessions.CountActiveTables() }
-			: new { ActiveTables = (int?)null };
+		=> _metrics.ShowActivity && _sessions is not null
+			? new
+			{
+				ActiveTables = (int?)_sessions.CountActiveTables(),
+				ConnectedPlayers = (int?)_sessions.CountConnectedPlayers(),
+			}
+			: new { ActiveTables = (int?)null, ConnectedPlayers = (int?)null };
 
 	/// <summary>
 	/// Get available languages

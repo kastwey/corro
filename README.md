@@ -310,21 +310,24 @@ linking directly to the source repository.
 
 ### Say how busy the server is
 
-`PublicMetrics__ShowActiveTables=true` (or the `PublicMetrics` section in
-`server/appsettings.json`) adds one line to the lobby footer: **Mesas activas: 27.** /
-**Active tables: 27.** It answers the question a visitor arriving at a quiet lobby actually
-has — is anyone else here? — which is what decides whether they bother creating a table.
+`PublicMetrics__ShowActivity=true` (or the `PublicMetrics` section in
+`server/appsettings.json`) adds one line to the lobby footer:
+**7 mesas activas, 12 jugadores conectados.** / **7 active tables, 12 players connected.**
+It answers the question a visitor arriving at a quiet lobby actually has — is anyone else
+here? — which is what decides whether they bother creating a table.
 
-"Active" means somebody is connected to that table right now, from the board or from its
-waiting room. A table everybody dropped out of stops counting the moment their connections
-go, so the number never flatters an empty server.
+Both numbers mean people present, right now. A table counts when somebody is connected to
+it, from the board or from its waiting room, and stops counting the moment the last of them
+goes. Players are counted by person, not by browser tab, so somebody with the board open
+twice is one player. Neither number ever flatters an empty server.
 
-It is **off by default** and each host decides for themselves: a private server for one
-family gains nothing from advertising two tables, and a brand-new deployment would rather
-not greet its first visitor with a zero. A server that keeps quiet shows no line at all —
-never a zero, which would read as "empty" instead of "we don't say". Nothing identifying is
-published: one integer for the whole process, no games and no players. The line is read when
-a screen-reader user reaches the footer and is never announced over them.
+One switch, because it is one sentence and one decision. It is **off by default** and each
+host decides for themselves: a private server for one family gains nothing from advertising
+two tables, and a brand-new deployment would rather not greet its first visitor with zeros.
+A server that keeps quiet shows no line at all — never a zero, which would read as "empty"
+instead of "we don't say". Nothing identifying is published: two integers for the whole
+process, no games, no names and no seats. The line is read when a screen-reader user reaches
+the footer and is never announced over them.
 
 ### Level 0 — Just run it (no Docker, no Azure)
 

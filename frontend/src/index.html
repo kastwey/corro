@@ -32,7 +32,11 @@
 				 provider, so an account-less deployment shows no account UI at all. -->
 			<div id="account-bar" class="account-bar" hidden></div>
 
-			<!-- Language and theme are preferences, not page navigation. -->
+			<!-- Language and theme are preferences, not page navigation. This markup is repeated
+				 VERBATIM on the privacy page, and languageSelector.ts gives both the same behaviour:
+				 one control to learn, not one per page. It is written out rather than built at
+				 runtime because every page ships pre-translated (localizePages.js), and a control
+				 assembled by a script would arrive late and in the wrong language. -->
 			<div class="language-selector">
 				<label for="language-selector" data-i18n="language.selectLabel">Select language</label>
 				<div class="language-controls">
@@ -326,11 +330,16 @@
 			</a>.
 		</p>
 		<!-- How busy this deployment is right now, when its host chose to say (see
-			 siteMetrics.ts). It sits with the line about what this SITE is, not inside the list
-			 of links, which is a list of ways out. Deliberately not a live region and never
-			 refreshed under the reader: it is the answer to "is anyone else here?" on arrival,
-			 not a ticker that talks over somebody trying to read the page. -->
-		<p class="app-footer__metrics" id="active-tables" hidden></p>
+			 siteMetrics.ts): tables with somebody at them and people connected, as ONE line,
+			 because that is how it is heard. It sits with the line about what this SITE is, not
+			 inside the list of links, which is a list of ways out. Deliberately not a live region
+			 and never refreshed under the reader: it is the answer to "is anyone else here?" on
+			 arrival, not a ticker that talks over somebody trying to read the page. -->
+		<p class="app-footer__metrics" id="site-activity" hidden></p>
+		<!-- A named navigation region: these are the ways OUT of the page, and a screen-reader user
+			 jumping by landmark should find them by name rather than by hunting the end of the
+			 document. Inside <footer> (contentinfo), which is where a nav of this kind belongs. -->
+		<nav class="app-footer__nav" aria-label="Footer navigation" data-i18n-attr:aria-label="footer.navLabel">
 		<ul class="app-footer__links">
 			<!-- Revealed only by a deployment that has said who answers for the data (see
 				 privacyNotice.ts). Empty configuration supports local development; it does not
@@ -353,6 +362,7 @@
 				</a>
 			</li>
 		</ul>
+		</nav>
 	</footer>
 </body>
 </html>

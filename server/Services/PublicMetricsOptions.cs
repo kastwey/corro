@@ -19,9 +19,13 @@ public sealed class PublicMetricsOptions
 	public const string SectionName = "PublicMetrics";
 
 	/// <summary>
-	/// Show how many tables currently have somebody in them. "In them" means a live connection,
-	/// so a table whose players all dropped out stops counting the moment they do — it is a
-	/// measure of people present, not of rows sitting in a database.
+	/// Show how busy this deployment is: how many tables have somebody at them, and how many
+	/// people are connected. Both or neither, because they are one sentence and one decision — a
+	/// host either publishes their activity or they do not, and the three other combinations are
+	/// settings nobody asked for.
+	///
+	/// "Present" means a live connection throughout: a table whose players all dropped out stops
+	/// counting the moment they do, and so do they. It measures people, not rows in a database.
 	/// </summary>
-	public bool ShowActiveTables { get; init; }
+	public bool ShowActivity { get; init; }
 }

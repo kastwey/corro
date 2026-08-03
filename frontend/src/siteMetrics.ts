@@ -15,40 +15,61 @@
 
 /** The shape the server's `/api/config/metrics` answers with. */
 export interface SiteMetrics {
-	/** Tables with somebody connected, or null when this deployment does not publish the number. */
+	/** Tables with somebody at them, or null when this deployment does not publish its activity. */
 	readonly activeTables: number | null;
+	/** People connected, counted by player rather than by browser tab. Null with the above. */
+	readonly connectedPlayers: number | null;
+}
+
+/** A count is believed only if it is a whole, non-negative number. */
+function count(value: unknown): number | null {
+	return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null;
 }
 
 /**
  * Read a metrics payload defensively. Anything that is not a non-negative whole number — a string,
  * a float, a negative, a missing field, a body that is not an object at all — means "no number",
  * which is the same safe outcome as a deployment that never turned the setting on.
+ *
+ * The two counts travel together and are dropped together: half a sentence ("7 mesas activas, "
+ * with nothing after the comma) is worse than no sentence.
  */
 export function parseSiteMetrics(payload: unknown): SiteMetrics {
-	const value = (payload as { activeTables?: unknown } | null)?.activeTables;
-	const usable = typeof value === 'number' && Number.isInteger(value) && value >= 0;
-	return { activeTables: usable ? value as number : null };
+	const body = payload as { activeTables?: unknown; connectedPlayers?: unknown } | null;
+	const activeTables = count(body?.activeTables);
+	const connectedPlayers = count(body?.connectedPlayers);
+	return activeTables === null || connectedPlayers === null
+		? { activeTables: null, connectedPlayers: null }
+		: { activeTables, connectedPlayers };
 }
 
 /**
  * Fill the footer's line, or leave it hidden. Returns whether anything was shown, which is what
  * the tests asserting the quiet case actually care about.
  *
+ * The two facts are composed into ONE line — "7 mesas activas, 12 jugadores conectados." — because
+ * that is how it is heard: a screen reader reads the paragraph, not the parts. Each half is its own
+ * key so both can carry a real singular ("1 mesa activa", never "1 mesas activas"), which the
+ * translation layer picks from `count`.
+ *
  * `translate` is passed in rather than imported so this stays a pure-ish function over the DOM:
- * the count is interpolated into the host's own words, in the reader's own language.
+ * the counts are interpolated into the host's own words, in the reader's own language.
  */
-export function renderActiveTables(
+export function renderActivity(
 	element: HTMLElement | null,
 	metrics: SiteMetrics,
 	translate: (key: string, vars?: Record<string, unknown>) => string,
 ): boolean {
 	if (!element) return false;
-	if (metrics.activeTables === null) {
+	if (metrics.activeTables === null || metrics.connectedPlayers === null) {
 		element.hidden = true;
 		element.textContent = '';
 		return false;
 	}
-	element.textContent = translate('footer.activeTables', { count: metrics.activeTables });
+	element.textContent = translate('footer.activity', {
+		tables: translate('footer.activeTables', { count: metrics.activeTables }),
+		players: translate('footer.connectedPlayers', { count: metrics.connectedPlayers }),
+	});
 	element.hidden = false;
 	return true;
 }
@@ -63,13 +84,13 @@ export async function initializeSiteMetrics(
 	translate: (key: string, vars?: Record<string, unknown>) => string,
 	fetchImpl: typeof fetch = fetch,
 ): Promise<SiteMetrics> {
-	let metrics: SiteMetrics = { activeTables: null };
+	let metrics: SiteMetrics = { activeTables: null, connectedPlayers: null };
 	try {
 		const response = await fetchImpl('/api/config/metrics');
 		if (response.ok) metrics = parseSiteMetrics(await response.json());
 	} catch {
 		// Nothing to report and nothing to say about it: the lobby works either way.
 	}
-	renderActiveTables(element, metrics, translate);
+	renderActivity(element, metrics, translate);
 	return metrics;
 }

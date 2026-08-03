@@ -101,6 +101,25 @@ public sealed class GameSessionRegistry
 		return tables.Count;
 	}
 
+	/// <summary>
+	/// How many people are connected across the whole process — the companion to
+	/// <see cref="CountActiveTables"/> in the public liveness line.
+	///
+	/// Counted by PLAYER, not by connection: somebody with the board open in two tabs is one
+	/// person, and a count that said otherwise would quietly inflate every number the footer
+	/// shows. Player ids are unique per seat, so two seats at two tables are two players even if
+	/// the same human holds both — this measures who is at a table, not who is at a keyboard.
+	///
+	/// The map empties on disconnect (see GameHub.OnDisconnectedAsync), so the number comes back
+	/// down; a liveness figure that only ever grew would be worse than none at all.
+	/// </summary>
+	public int CountConnectedPlayers()
+	{
+		var players = new HashSet<string>(StringComparer.Ordinal);
+		foreach (var playerId in _authenticatedConnections.Values) players.Add(playerId);
+		return players.Count;
+	}
+
 	public bool TryGetService(string gameId, out IGameService service) => _gameServices.TryGetValue(gameId, out service!);
 
 	/// <summary>Register a freshly created/restored game service: subscribe its events, then track it.</summary>

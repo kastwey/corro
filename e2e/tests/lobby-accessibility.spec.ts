@@ -285,31 +285,47 @@ test('compact lobby keeps brand, preferences, content and footer in one vertical
 	await expect(page.locator('.app-footer a[data-footer-link="corro"]')).toContainText('Corro');
 });
 
-// The one number a host may publish about their server: how many tables have somebody at them. It
-// answers "is anyone else here?", which is what decides whether a visitor bothers creating a table.
+// What a host may publish about their server: how many tables have somebody at them and how many
+// people are connected. It answers "is anyone else here?", which is what decides whether a visitor
+// bothers creating a table at all.
 test('a deployment that publishes its activity says so in the footer, quietly', async ({ browser }) => {
 	const page = await newPlayerPage(browser);
 	await gotoLobbyHome(page);
 
-	const line = page.locator('#active-tables');
+	const line = page.locator('#site-activity');
 	await expect(line).toBeVisible();
-	// One flowing line with the count in it — the E2E server has nobody at a table yet.
-	await expect(line).toHaveText('Mesas activas: 0.');
+	// One flowing line carrying both facts — nobody is at a table on this server yet.
+	await expect(line).toHaveText('0 mesas activas, 0 jugadores conectados.');
 
 	// Never a live region. A footer that speaks over somebody reading the page is worse than a
-	// footer with one fact fewer, and this number changes whenever anybody anywhere sits down.
+	// footer with one fact fewer, and these numbers move whenever anybody anywhere sits down.
 	await expect(line).not.toHaveAttribute('aria-live', /.*/);
 	await expect(line).not.toHaveAttribute('role', /.*/);
 
-	// It lives with the line about what this SITE is, not inside the list of ways OUT of it.
-	await expect(page.locator('.app-footer__links #active-tables')).toHaveCount(0);
+	// It lives with the line about what this SITE is, not inside the navigation of ways OUT of it.
+	await expect(page.locator('.app-footer__nav #site-activity')).toHaveCount(0);
+
+	// Those ways out ARE navigation, and a named landmark: somebody jumping by region should find
+	// them by name instead of hunting the end of the document.
+	const footerNav = page.getByRole('navigation', { name: 'Navegación del pie' });
+	await expect(footerNav).toBeVisible();
+	await expect(footerNav.getByRole('link')).not.toHaveCount(0);
 	await flushAxeAudit(page);
 
-	// And it counts people, not rows: a table with somebody in it moves the number.
+	// It counts people, not rows — and says "1 mesa activa", never "1 mesas activas".
 	const host = await newPlayerPage(browser);
-	await createGame(host, 'Ana', 'snakes-and-ladders');
+	const code = await createGame(host, 'Ana', 'snakes-and-ladders');
 	await page.reload();
-	await expect(page.locator('#active-tables')).toHaveText('Mesas activas: 1.');
+	await expect(page.locator('#site-activity'))
+		.toHaveText('1 mesa activa, 1 jugador conectado.');
+	await flushAxeAudit(page);
+
+	// A second person at the SAME table is another player, not another table.
+	const guest = await newPlayerPage(browser);
+	await joinGame(guest, code, 'Berto');
+	await page.reload();
+	await expect(page.locator('#site-activity'))
+		.toHaveText('1 mesa activa, 2 jugadores conectados.');
 	await flushAxeAudit(page);
 });
 

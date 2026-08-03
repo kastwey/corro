@@ -84,7 +84,7 @@ export default defineConfig({
 			// The public liveness line is off by default, so a suite that never turns it on would
 			// only ever audit the footer WITHOUT it. Turned on here, every lobby state in every
 			// scenario carries it through Axe.
-			PublicMetrics__ShowActiveTables: 'true',
+			PublicMetrics__ShowActivity: 'true',
 			// Additional shipped-package root read only in E2E mode. It never enters the
 			// server's production Packages directory or publish artifact.
 			E2E__PackagesRoot: path.resolve(__dirname, 'fixtures', 'packages'),

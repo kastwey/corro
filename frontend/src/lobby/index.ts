@@ -25,6 +25,7 @@ import { initAccountBar } from '../account.js';
 import { openAccountSettings } from '../accountSettings.js';
 import { initializeSiteBranding } from '../siteBranding.js';
 import { initPrivacyNotice } from '../privacyNotice.js';
+import { wireLanguageSelector } from '../languageSelector.js';
 import { initializeSiteMetrics } from '../siteMetrics.js';
 import { showSecondAccountNotice } from '../secondAccountNotice.js';
 import { showMergedNotice } from '../mergedNotice.js';
@@ -79,19 +80,13 @@ class UnifiedLobbyUI {
 		// i18nBinder, not the lobby's own t(): this line interpolates a count, and the lobby helper
 		// takes a fallback string as its second argument rather than variables.
 		void initializeSiteMetrics(
-			document.getElementById('active-tables'),
+			document.getElementById('site-activity'),
 			(key, vars) => i18nBinder.tSync(key, vars));
 		await this.connectToServer();
 		await this.fetchLobbyOptions();
 		this.checkExistingSession();
 	}
 
-	private setupThemeToggle(): void {
-		const mount = document.getElementById('theme-toggle-mount');
-		if (mount) {
-			initThemeToggle(mount);
-		}
-	}
 
 	/**
 	 * Renders the optional account control. Deliberately NOT awaited by init(): signing in is never
@@ -360,32 +355,25 @@ class UnifiedLobbyUI {
 
 	// === Form Setup ===
 
+	/**
+	 * The shared control (languageSelector.ts), told where the LOBBY lives in each language. The
+	 * query string and hash travel along so an invite link survives the switch; everything else —
+	 * the markup, the label, remembering the choice — belongs to the control, and the privacy page
+	 * gets exactly the same one.
+	 */
 	private setupLanguageSelector(): void {
-		const selector = getElement<HTMLSelectElement>('language-selector');
-		const applyBtn = getElement<HTMLButtonElement>('language-apply-btn');
-		if (!selector || !applyBtn) return;
-
-		const getCurrentLang = () => (window as any).i18next?.language || 'en';
-		selector.value = getCurrentLang();
-
-		applyBtn.addEventListener('click', () => {
-			const language = selector.value;
-			// Each language has its own pre-translated lobby, so applying one is navigation, not a
-			// DOM pass: the player lands on the page that was BUILT in that language (URL, <html lang>
-			// and text all agreeing) instead of a Spanish-looking English page. The choice is saved
-			// first because the root page redirects by cookie — a stale one would send a player who
-			// just asked for English straight back to Spanish. The query string and hash travel along
-			// so an invite link survives the switch.
-			// Already on that language's page: there is nothing to translate and nowhere to go, but
-			// the CHOICE still has to be recorded — someone who arrived on /es/ from a shared link
-			// and pressed Apply has just told us where to send them from the root next time.
-			if (isLobbyPathFor(window.location.pathname, language)) {
-				i18nBinder.rememberLanguage(language);
-				return;
-			}
-			i18nBinder.rememberLanguage(language);
-			window.location.assign(`${lobbyPathFor(language)}${window.location.search}${window.location.hash}`);
+		// The lobby's own routes; the rest of the behaviour is the shared control's. The query
+		// string and hash travel along so an invite link survives the switch.
+		wireLanguageSelector({
+			pathFor: lobbyPathFor,
+			isCurrent: isLobbyPathFor,
+			preserveLocation: true,
 		});
+	}
+
+	private setupThemeToggle(): void {
+		const mount = document.getElementById('theme-toggle-mount');
+		if (mount) initThemeToggle(mount);
 	}
 
 	private setupCreateGameForm(): void {

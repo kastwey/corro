@@ -138,17 +138,18 @@ test('the subdirectory page resolves its assets and its board link from the site
 	assert.match(out.read('es/privacy/index.html'), /<base href="\/">/);
 });
 
-test('the privacy page is translated and keeps language and lobby links on canonical routes', () => {
+test('the privacy page is translated and keeps its lobby link on the canonical route', () => {
 	const out = build();
 	const english = out.read('privacy/index.html');
 	const spanish = out.read('es/privacy/index.html');
 
 	assert.match(english, /Privacy notice/);
 	assert.match(spanish, /Aviso de privacidad/);
-	assert.match(english, /data-locale-link="en"[^>]*href="\/privacy\/"[^>]*aria-current="page"/);
-	assert.match(spanish, /data-locale-link="es"[^>]*href="\/es\/privacy\/"[^>]*aria-current="page"/);
+	// Switching language is the shared control now (languageSelector.ts), which knows its own
+	// routes — the build only has to point "back to the lobby" at the right lobby.
 	assert.match(english, /data-locale-home[^>]*href="\/"/);
 	assert.match(spanish, /data-locale-home[^>]*href="\/es\/"/);
+	assert.doesNotMatch(english, /data-locale-link/, 'the per-locale links are gone');
 });
 
 test('a key missing from one language fails the build instead of shipping half a page', () => {

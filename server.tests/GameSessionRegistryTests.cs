@@ -307,6 +307,29 @@ public class GameSessionRegistryTests
 		Assert.Equal(2, reg.CountActiveTables());
 	}
 
+	// The companion number. Counted by PLAYER: somebody with the board open in two tabs is one
+	// person, and a count that said otherwise would inflate every figure the footer shows.
+	[Fact]
+	public void CountConnectedPlayers_counts_people_not_connections()
+	{
+		var reg = NewRegistry(out _, out _);
+		Assert.Equal(0, reg.CountConnectedPlayers());
+
+		reg.AuthenticateConnection("c1", "a"); reg.MapConnectionToGame("c1", "g1");
+		reg.AuthenticateConnection("c2", "a"); reg.MapConnectionToGame("c2", "g1"); // a's second tab
+		reg.AuthenticateConnection("c3", "b"); reg.MapConnectionToGame("c3", "g1");
+		reg.AuthenticateConnection("c4", "c"); reg.MapConnectionToGame("c4", "g2"); // another table
+		Assert.Equal(3, reg.CountConnectedPlayers());
+
+		// One of a's two tabs closes: a is still here.
+		reg.ForgetGameConnection("c1");
+		Assert.Equal(3, reg.CountConnectedPlayers());
+		// The other one goes, and so does a. A liveness number that only ever grew would be
+		// worse than none at all.
+		reg.ForgetGameConnection("c2");
+		Assert.Equal(2, reg.CountConnectedPlayers());
+	}
+
 	[Fact]
 	public void CountActiveTables_ignores_a_game_this_process_merely_holds()
 	{

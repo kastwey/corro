@@ -4,7 +4,12 @@
   },
   "footer": {
     "poweredBy": "Powered by",
-    "activeTables": "Active tables: {{count}}.",
+    "navLabel": "Footer navigation",
+    "activeTables_one": "{{count}} active table",
+    "activeTables_other": "{{count}} active tables",
+    "connectedPlayers_one": "{{count}} player connected",
+    "connectedPlayers_other": "{{count}} players connected",
+    "activity": "{{tables}}, {{players}}.",
     "corroNewWindowLabel": "Corro on GitHub, opens in a new window",
     "licenseNewWindowLabel": "AGPL-3.0 license, opens in a new window",
     "privacy": "Privacy"
@@ -12,7 +17,6 @@
   "privacyPage": {
     "browserTitle": "Privacy notice — All Welcome",
     "backToLobby": "Back to All Welcome",
-    "languagesLabel": "Privacy notice language",
     "eyebrow": "Your data, explained plainly",
     "title": "Privacy notice",
     "intro": "How this Corro service handles game, account and connection data.",

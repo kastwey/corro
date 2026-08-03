@@ -1,7 +1,7 @@
 // privacyPage.ts — load the deployment's notice into its own ordinary document page.
 
 import { renderMarkdown } from './boardHelp.js';
-import { i18nBinder } from './i18nBinder.js';
+import { wireLanguageSelector } from './languageSelector.js';
 import { loadPrivacyNotice, type PrivacyNotice } from './privacyNotice.js';
 import { applyTheme, currentTheme, initThemeToggle } from './themeToggle.js';
 
@@ -17,13 +17,14 @@ function pageLanguage(): 'en' | 'es' {
 	return document.documentElement.lang === 'es' ? 'es' : 'en';
 }
 
-function rememberLanguageFromLinks(): void {
-	document.querySelectorAll<HTMLAnchorElement>('[data-locale-link]').forEach(link => {
-		link.addEventListener('click', () => {
-			const language = link.dataset.localeLink;
-			if (language === 'en' || language === 'es') i18nBinder.rememberLanguage(language);
-		});
-	});
+/** Where this page lives in each language. Everything else about the control is shared. */
+function privacyPathFor(language: string): string {
+	return language === 'es' ? '/es/privacy/' : '/privacy/';
+}
+
+function initializeLanguageSelector(): void {
+	// preserveLocation is off: a document page has no invite code to carry across.
+	wireLanguageSelector({ pathFor: privacyPathFor });
 }
 
 function initializeThemeToggle(): void {
@@ -50,7 +51,7 @@ export async function initPrivacyPage(
 		return { configured: false };
 	}
 
-	rememberLanguageFromLinks();
+	initializeLanguageSelector();
 	initializeThemeToggle();
 
 	const language = pageLanguage();

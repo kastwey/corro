@@ -52,39 +52,6 @@ body.privacy-page {
 	gap: 0.75rem;
 }
 
-.privacy-page__languages {
-	display: flex;
-	align-items: center;
-	gap: 0.25rem;
-	margin: 0;
-	padding: 0.25rem;
-	border: 1px solid var(--border);
-	border-radius: var(--radius);
-	background: var(--surface-2);
-	list-style: none;
-}
-
-.privacy-page__languages a {
-	display: block;
-	padding: 0.45rem 0.7rem;
-	border-radius: var(--radius-sm);
-	color: var(--text-muted);
-	font-size: 0.9rem;
-	font-weight: 700;
-	text-decoration: none;
-}
-
-.privacy-page__languages a:hover {
-	color: var(--text);
-	background: var(--surface-3);
-}
-
-.privacy-page__languages a[aria-current="page"] {
-	color: var(--text);
-	background: var(--surface);
-	box-shadow: var(--shadow-sm);
-}
-
 .privacy-page__title-block {
 	max-width: 46rem;
 	margin: clamp(2.25rem, 7vw, 4.5rem) 0 2.25rem;

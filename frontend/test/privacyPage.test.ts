@@ -14,8 +14,13 @@ beforeEach(() => {
 	try { localStorage.clear(); } catch { /* unavailable storage is a supported browser state */ }
 	document.body.innerHTML = `
 		<main id="privacy-main" aria-busy="true" data-contents-label="Contents">
-			<a data-locale-link="en" href="/privacy/">English</a>
-			<a data-locale-link="es" href="/es/privacy/">Spanish</a>
+			<div class="language-selector">
+			<label for="language-selector">Select language</label>
+			<div class="language-controls">
+				<select id="language-selector"><option value="en">English</option><option value="es">Spanish</option></select>
+				<button type="button" id="language-apply-btn">Apply</button>
+			</div>
+		</div>
 			<span id="privacy-theme-toggle"
 				data-theme-to-light="Use light" data-theme-to-dark="Use dark"></span>
 			<p id="privacy-loading">Loading</p>

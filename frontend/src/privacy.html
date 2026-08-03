@@ -6,6 +6,7 @@
 	<title data-i18n="privacyPage.browserTitle">Privacy notice — All Welcome</title>
 	<link rel="stylesheet" href="css/theme.css">
 	<link rel="stylesheet" href="css/document.css">
+	<link rel="stylesheet" href="css/language-selector.css">
 	<link rel="stylesheet" href="css/privacy.css">
 </head>
 <body class="privacy-page">
@@ -14,13 +15,21 @@
 		<div class="privacy-page__toolbar">
 			<a class="privacy-page__back" data-locale-home href="/" data-i18n="privacyPage.backToLobby">Back to All Welcome</a>
 			<div class="privacy-page__preferences">
-				<ul class="privacy-page__languages" data-i18n-attr:aria-label="privacyPage.languagesLabel"
-					aria-label="Privacy notice language">
-					<li><a data-locale-link="en" href="/privacy/" hreflang="en"
-						data-i18n="language.english">English</a></li>
-					<li><a data-locale-link="es" href="/es/privacy/" hreflang="es"
-						data-i18n="language.spanish">Spanish</a></li>
-				</ul>
+				<!-- The SAME control the lobby has, markup and all, given the same behaviour by
+					 languageSelector.ts — which knows this page's languages live at /privacy/ and
+					 /es/privacy/. It used to be a little row of links: the same job in a different
+					 shape, one more thing to learn for no reason, with no name for what those links
+					 were until you read them. -->
+				<div class="language-selector">
+					<label for="language-selector" data-i18n="language.selectLabel">Select language</label>
+					<div class="language-controls">
+						<select id="language-selector" data-i18n-attr:aria-label="language.selectLabel" aria-label="Select language">
+							<option value="en" data-i18n="language.english">English</option>
+							<option value="es" data-i18n="language.spanish">Spanish</option>
+						</select>
+						<button type="button" id="language-apply-btn" class="language-apply-btn" data-i18n="language.applyButton">Apply</button>
+					</div>
+				</div>
 				<span id="privacy-theme-toggle"
 					data-i18n-attr:data-theme-to-light="game.theme_to_light"
 					data-i18n-attr:data-theme-to-dark="game.theme_to_dark"

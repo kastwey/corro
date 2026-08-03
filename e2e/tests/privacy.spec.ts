@@ -46,7 +46,10 @@ test('privacy is a real link to an Axe-clean localized document page', async ({ 
 	await expect(page.locator('#privacy-document')).toContainText('privacy@e2e.invalid');
 	await expect(page.locator('#privacy-document dialog')).toHaveCount(0);
 	await expect(page.locator('.board-help__contents')).toContainText('Contenido');
-	await expect(page.locator('[data-locale-link="es"]')).toHaveAttribute('aria-current', 'page');
+	// The SAME control the lobby has, not a row of links: a combobox that reports its own value,
+	// already showing the language this page was built in.
+	await expect(page.locator('#language-selector')).toHaveValue('es');
+	await expect(page.locator('#language-selector')).toHaveAccessibleName('Seleccionar idioma');
 	await expect(page.locator('[data-locale-home]')).toHaveAttribute('href', '/es/');
 	await flushAxeAudit(page);
 
@@ -64,11 +67,13 @@ test('privacy is a real link to an Axe-clean localized document page', async ({ 
 	expect(extent.scroll).toBeLessThanOrEqual(extent.client);
 	await flushAxeAudit(page);
 
-	// Language links navigate to another real document URL and remember that choice for the lobby.
-	await page.locator('[data-locale-link="en"]').click();
+	// Applying a language navigates to another real document URL — the page BUILT in it — and
+	// remembers the choice for the lobby, exactly as the same control does there.
+	await page.locator('#language-selector').selectOption('en');
+	await page.locator('#language-apply-btn').click();
 	await expect(page).toHaveURL(`${E2E_BASE_URL}/privacy/`);
 	await expect(page.locator('h1')).toHaveText('Privacy notice');
-	await expect(page.locator('[data-locale-link="en"]')).toHaveAttribute('aria-current', 'page');
+	await expect(page.locator('#language-selector')).toHaveValue('en');
 	await expect(page.locator('[data-locale-home]')).toHaveAttribute('href', '/');
 	await expect(page.locator('#privacy-document')).toContainText('E2E Corro Operator');
 });

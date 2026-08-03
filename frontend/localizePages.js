@@ -150,16 +150,13 @@ function addPreferredLanguageRedirect(document, route = '') {
 	document.head.insertBefore(script, document.head.firstChild);
 }
 
-/** Page-local navigation shares the same locale routes as hreflang. */
+/**
+ * Page-local navigation shares the same locale routes as hreflang. Only "back to the lobby" needs
+ * it now: switching language is a control (languageSelector.ts) that knows its own routes, not a
+ * row of per-locale links the build has to rewrite and mark with aria-current.
+ */
 function localizePageLinks(document, locale, route) {
-	document.querySelectorAll('[data-locale-link]').forEach(link => {
-		const targetLocale = link.getAttribute('data-locale-link');
-		if (!LOCALES.includes(targetLocale)) return;
-		link.setAttribute('href', localePath(targetLocale, route));
-		if (targetLocale === locale) link.setAttribute('aria-current', 'page');
-		else link.removeAttribute('aria-current');
-	});
-
+	void route;
 	document.querySelectorAll('[data-locale-home]').forEach(link => {
 		link.setAttribute('href', localePath(locale));
 	});
