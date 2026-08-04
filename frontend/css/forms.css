@@ -11,7 +11,12 @@ label {
 	font-weight: 500;
 }
 
-input, select {
+/* Everything you TYPE IN. Checkboxes and radios are deliberately excluded: they are not fields
+   with a value you fill, and stretching one to the full width of its container tears the box away
+   from the words next to it — which is exactly how "show me in the list of connected players" came
+   to render as a stray square floating above its own label, looking like decoration. Two rules
+   downstream used to patch that per-surface; the fix belongs here, once. */
+input:not([type="checkbox"]):not([type="radio"]), select {
 	width: 100%;
 	padding: 0.75rem;
 	border: 2px solid var(--border-strong);

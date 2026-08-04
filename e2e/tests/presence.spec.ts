@@ -7,7 +7,7 @@
 
 import { test, expect } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
-import { appI18n, createGame, gotoLobbyHome, newPlayerPage } from '../helpers/game';
+import { appI18n, chooseBoard, createGame, gotoLobbyHome, newPlayerPage } from '../helpers/game';
 
 const account = appI18n('es').account.settings as Record<string, string>;
 const online = appI18n('es').lobby.online as Record<string, string>;
@@ -181,4 +181,39 @@ test('you appear in the room yourself, marked, with nothing to do about it', asy
 	// Nobody asks themselves to be friends.
 	await expect(mine.getByRole('button')).toHaveCount(0);
 	await flushAxeAudit(ana);
+});
+
+// A checkbox is not a text field, and a stylesheet that forgets the difference does not fail Axe:
+// the control keeps its name, its role and its place in the tab order. It just stops LOOKING like
+// the option it belongs to. This one was stretched to the full width of the dialog by the blanket
+// `input { width: 100% }` rule, so it rendered as a stray square floating on its own line above its
+// label — reachable, and unrecognisable. Measured rather than eyeballed, because a screenshot test
+// would fail for a hundred reasons that do not matter and this one does.
+test('the visibility checkbox looks like a checkbox, beside the words it decides', async ({ browser }) => {
+	const ana = await newPlayerPage(browser, 'es-ES');
+	await signIn(ana, 'presence-checkbox');
+	await openSettings(ana);
+
+	const box = ana.locator('#account-listed-input');
+	const size = await box.boundingBox();
+	expect(size, 'the checkbox has no box at all').not.toBeNull();
+	expect(size!.width, 'a checkbox stretched into a strip is not a checkbox').toBeLessThan(40);
+
+	// On the SAME line as its label, not stacked above it: they are one thing to read.
+	const label = ana.locator('.account-settings-listed label');
+	const labelBox = (await label.boundingBox())!;
+	const boxCentre = size!.y + size!.height / 2;
+	expect(boxCentre).toBeGreaterThan(labelBox.y);
+	expect(boxCentre).toBeLessThan(labelBox.y + labelBox.height);
+	// And it comes first, where a checkbox belongs.
+	expect(size!.x).toBeLessThan(labelBox.x + 40);
+
+	// Every other checkbox and radio in the app relies on the same rule, so one of each is pinned
+	// here too — the fix was made once, in forms.css, and this is what says so.
+	await ana.getByRole('button', { name: 'Cerrar', exact: true }).click();
+	await gotoLobbyHome(ana);
+	await ana.locator('#go-create-btn').click();
+	await chooseBoard(ana, 'four-colours');
+	const radio = ana.locator('.rule-choice__option input[type="radio"]').first();
+	expect((await radio.boundingBox())!.width).toBeLessThan(40);
 });

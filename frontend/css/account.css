@@ -121,6 +121,23 @@
 	color: var(--text-muted);
 }
 
+/* The box and the words it refers to are ONE line, and the box comes first — a checkbox that sits
+   on its own line above its label reads as decoration, and somebody tabbing lands on a square with
+   nothing beside it to say what it would do. */
+.account-settings-listed label {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5rem;
+	margin-bottom: 0;
+	font-weight: 400;
+	cursor: pointer;
+}
+
+.account-settings-listed input[type="checkbox"] {
+	flex: 0 0 auto;
+	margin-top: 0.2rem;
+}
+
 .account-settings h3 {
 	margin: 20px 0 8px;
 	font-size: 16px;
