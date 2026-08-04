@@ -521,3 +521,72 @@
 	flex: 1 1 auto;
 	min-width: 0;
 }
+
+/* ---- Messages in the lobby ---------------------------------------------- */
+/* A permanent panel, not a dialog: a message arriving must not steal focus or open anything, and
+   somebody who wants to write should not have to remember a chord first. */
+
+.lobby-chat {
+	margin: 1rem 0;
+	padding: 0.75rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface-2);
+}
+
+.lobby-chat h3 {
+	margin: 0 0 0.25rem;
+	font-size: 1rem;
+}
+
+/* The log scrolls once a conversation is long; its rows are the focus stops, so it needs no
+   tabindex of its own (see the roving list). */
+.lobby-chat__log {
+	margin: 0.5rem 0;
+	padding: 0.25rem;
+	max-height: 12rem;
+	overflow-y: auto;
+	list-style: none;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--surface);
+}
+
+.lobby-chat__line {
+	padding: 0.35rem 0.5rem;
+	border-radius: var(--radius-sm);
+	color: var(--text);
+}
+
+.lobby-chat__line + .lobby-chat__line {
+	border-top: 1px solid var(--border);
+}
+
+.lobby-chat__line:focus,
+.lobby-chat__line:focus-visible {
+	outline: 3px solid var(--focus, #ffd24d);
+	outline-offset: -3px;
+	background: var(--surface-2);
+}
+
+.lobby-chat__suggestions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+	margin: 0.35rem 0;
+}
+
+.lobby-chat__suggestion {
+	padding: 0.3rem 0.6rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--surface);
+	color: var(--text);
+	cursor: pointer;
+}
+
+.lobby-chat__suggestion:focus,
+.lobby-chat__suggestion:focus-visible {
+	outline: 3px solid var(--focus, #ffd24d);
+	outline-offset: 1px;
+}

@@ -98,7 +98,15 @@
       "visibilityEveryone": "Everyone",
       "visibilitySavedNobody": "Nobody can see you connected now.",
       "visibilitySavedFriends": "Only your friends can see you connected now.",
-      "visibilitySavedEveryone": "Everyone can see you connected now."
+      "visibilitySavedEveryone": "Everyone can see you connected now.",
+      "messagesLegend": "Who can send you messages?",
+      "messagesHint": "Private messages are delivered only while you are connected; nothing is stored on the server.",
+      "messagesNobody": "Nobody, not even your friends",
+      "messagesFriends": "Only your friends",
+      "messagesAnyone": "Anyone",
+      "messagesSavedNobody": "Nobody can write to you now.",
+      "messagesSavedFriends": "Only your friends can write to you now.",
+      "messagesSavedAnyone": "Anyone can write to you now."
     },
     "secondAccount": {
       "heading": "This created a second account",
@@ -312,6 +320,24 @@
       "resultRemoved": "You and {{handle}} are no longer friends.",
       "resultNobody": "Nobody is listed under that name.",
       "resultFailed": "That could not be done. Try again in a moment."
+    },
+    "chat": {
+      "heading": "Messages",
+      "hint": "Write to somebody by naming them with @. There is no general channel here.",
+      "logLabel": "Messages received and sent",
+      "inputLabel": "Your message",
+      "send": "Send",
+      "menuLabel": "What you can do with this message",
+      "matches": "{{count}} players found. Press Down arrow to walk them.",
+      "matches_one": "1 player found. Press Down arrow to reach them.",
+      "line": "{{from}} says: {{text}}",
+      "lineToGroup": "{{from}}, also to {{others}}, says: {{text}}",
+      "lineMine": "You, to {{to}}: {{text}}",
+      "noRecipient": "There is no general channel here. Name somebody with @ and their public name to write to them.",
+      "noOneToReplyTo": "Nobody has written to you yet, so there is nobody to reply to.",
+      "nothingToSay": "The message is empty.",
+      "sent": "Sent to {{to}}.",
+      "unreachable": "{{handles}} did not receive it: they may be away, or not accept messages from you."
     },
     "selectBoard": "Select game:",
     "boardFilterHint": "Type to filter, or press Down arrow to walk the list.",

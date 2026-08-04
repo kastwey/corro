@@ -605,6 +605,18 @@ public sealed class UserAccountService
 		return saved.UnlockCodes;
 	}
 
+	/// <summary>
+	/// Who may send this player a private message. Kept apart from visibility because being
+	/// findable and being interruptible are different questions.
+	/// </summary>
+	public async Task<UserDocument?> SetMessagePolicyAsync(
+		string userId, MessagePolicy policy, CancellationToken ct = default)
+	{
+		var user = await _repository.GetUserAsync(userId, ct);
+		if (user is null) return null;
+		return await _repository.UpsertUserAsync(user with { MessagePolicy = policy }, ct);
+	}
+
 	/// <summary>Far above any real use; a bound rather than a limit anybody will meet.</summary>
 	public const int MaxUnlockCodes = 100;
 

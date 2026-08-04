@@ -98,7 +98,15 @@
       "visibilityEveryone": "Todo el mundo",
       "visibilitySavedNobody": "Ahora no te ve nadie conectado.",
       "visibilitySavedFriends": "Ahora solo te ven conectado tus amigos.",
-      "visibilitySavedEveryone": "Ahora te ve conectado todo el mundo."
+      "visibilitySavedEveryone": "Ahora te ve conectado todo el mundo.",
+      "messagesLegend": "¿Quién puede enviarte mensajes?",
+      "messagesHint": "Los mensajes privados se entregan solo mientras estás conectado; no se guarda nada en el servidor.",
+      "messagesNobody": "Nadie, ni siquiera tus amigos",
+      "messagesFriends": "Solo tus amigos",
+      "messagesAnyone": "Cualquiera",
+      "messagesSavedNobody": "Ahora no puede escribirte nadie.",
+      "messagesSavedFriends": "Ahora solo pueden escribirte tus amigos.",
+      "messagesSavedAnyone": "Ahora puede escribirte cualquiera."
     },
     "secondAccount": {
       "heading": "Esto ha creado una segunda cuenta",
@@ -312,6 +320,24 @@
       "resultRemoved": "{{handle}} y tú ya no sois amigos.",
       "resultNobody": "No hay nadie con ese nombre en la lista.",
       "resultFailed": "No se ha podido hacer. Inténtalo dentro de un momento."
+    },
+    "chat": {
+      "heading": "Mensajes",
+      "hint": "Escribe a alguien nombrándolo con @. Aquí no hay chat general.",
+      "logLabel": "Mensajes recibidos y enviados",
+      "inputLabel": "Tu mensaje",
+      "send": "Enviar",
+      "menuLabel": "Qué puedes hacer con este mensaje",
+      "matches": "{{count}} usuarios encontrados. Pulsa flecha abajo para recorrerlos.",
+      "matches_one": "1 usuario encontrado. Pulsa flecha abajo para llegar a él.",
+      "line": "{{from}} dice: {{text}}",
+      "lineToGroup": "{{from}}, también a {{others}}, dice: {{text}}",
+      "lineMine": "Tú, a {{to}}: {{text}}",
+      "noRecipient": "Aquí no hay chat general. Puedes escribirle a alguien mencionando su nombre público con arroba (@).",
+      "noOneToReplyTo": "Todavía no te ha escrito nadie, así que no hay a quién responder.",
+      "nothingToSay": "El mensaje está vacío.",
+      "sent": "Enviado a {{to}}.",
+      "unreachable": "{{handles}} no lo ha recibido: puede estar ausente o no aceptar mensajes tuyos."
     },
     "selectBoard": "Selecciona el juego:",
     "boardFilterHint": "Escribe para filtrar, o pulsa flecha abajo para recorrer la lista.",

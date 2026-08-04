@@ -63,6 +63,22 @@
 					 cannot glance at a badge has to hear that there is something to answer. -->
 				<button type="button" id="go-friends-btn" class="home-action-btn secondary-button" data-i18n="lobby.home.friendsButton" hidden>Friends</button>
 			</div>
+			<!-- Writing to people. Permanent rather than a dialog: a message arriving must not steal
+				 focus or open anything, and somebody who wants to write should not have to remember
+				 a chord first. Revealed only for a signed-in player, like the other two ways in. -->
+			<section class="lobby-chat" id="lobby-chat" aria-labelledby="lobby-chat-heading" hidden>
+				<h3 id="lobby-chat-heading" data-i18n="lobby.chat.heading">Messages</h3>
+				<p class="form-hint" data-i18n="lobby.chat.hint">Write to somebody by naming them with @. There is no general channel here.</p>
+				<ul id="lobby-chat-log" class="lobby-chat__log" role="list" data-i18n-attr:aria-label="lobby.chat.logLabel" aria-label="Messages received and sent"></ul>
+				<label for="lobby-chat-input" data-i18n="lobby.chat.inputLabel">Your message</label>
+				<textarea id="lobby-chat-input" rows="2" maxlength="1000"></textarea>
+				<!-- The matching names. Its count is SAID (see lobby-chat-status), because a list
+					 that silently appears is a list somebody listening never learns about. -->
+				<div id="lobby-chat-suggestions" class="lobby-chat__suggestions" hidden></div>
+				<button type="button" id="lobby-chat-send" class="secondary-button" data-i18n="lobby.chat.send">Send</button>
+				<p id="lobby-chat-status" class="form-hint" role="status" aria-live="polite"></p>
+			</section>
+
 			<ul id="your-games-list" class="saved-game-list"></ul>
 			<p id="your-games-empty" class="your-games-empty hidden" data-i18n="lobby.savedGames.empty">You don't have any games yet. Create a new one or join with a code.</p>
 		</section>

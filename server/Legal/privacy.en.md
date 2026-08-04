@@ -121,6 +121,23 @@ You can end a friendship at any time, from either side; it erases the record, an
 ask again afterwards. Deleting your account erases every one of these records, including from the
 lists of people who were friends with you.
 
+## Private messages
+
+You can write to other players from the lobby by naming them with "@" and their public name. Who
+may write to YOU is your own choice, in the same three steps: nobody, only your friends (the
+starting choice), or anyone.
+
+**Nothing is stored on the server.** A message is handed to whatever connections the recipient has
+open and then forgotten: there is no mailbox, no history, and no record that two people ever wrote
+to each other. Somebody who is not connected does not receive it, and you are told so at once. What
+you have said and been told this session is kept by your own browser, in the tab, and goes when the
+tab closes.
+
+Every reason a message fails — no such name, not connected, their settings refuse you — is reported
+to the sender with the SAME words, so this cannot be used to learn who exists, who is around, or who
+has quietly shut somebody out. And nothing about an undelivered message is ever shown to the person
+it was addressed to.
+
 ## Cookies and data kept in your browser
 
 Corro itself uses these first-party cookies:

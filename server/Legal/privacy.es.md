@@ -129,6 +129,22 @@ Puedes deshacer una amistad cuando quieras, desde cualquiera de los dos lados; e
 registro, y después cualquiera de los dos puede volver a pedirla. Borrar tu cuenta elimina todos
 estos registros, incluidos los que están en las listas de quienes eran amigos tuyos.
 
+## Mensajes privados
+
+Desde el lobby puedes escribir a otros jugadores nombrándolos con "@" y su nombre público. Quién
+puede escribirte a TI lo eliges tú, en los mismos tres pasos: nadie, solo tus amigos (la opción de
+partida) o cualquiera.
+
+**No se guarda nada en el servidor.** El mensaje se entrega a las conexiones que tenga abiertas el
+destinatario y se olvida: no hay buzón, ni historial, ni registro de que dos personas se hayan
+escrito. Quien no está conectado no lo recibe, y se te dice al momento. Lo dicho y recibido en esta
+sesión lo guarda tu propio navegador, en la pestaña, y desaparece al cerrarla.
+
+Todas las razones por las que un mensaje no llega —nombre inexistente, no conectado, sus ajustes te
+lo impiden— se comunican al remitente con las MISMAS palabras, para que esto no sirva para averiguar
+quién existe, quién anda por aquí ni quién ha cerrado la puerta a alguien. Y de un mensaje no
+entregado nunca se informa a la persona a la que iba dirigido.
+
 ## Cookies y datos guardados en el navegador
 
 Corro utiliza estas cookies propias:

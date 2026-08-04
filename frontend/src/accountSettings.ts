@@ -16,7 +16,8 @@ import { tSync } from './i18nBinder.js';
 import {
 	AccountSession, MAX_DISPLAY_NAME_LENGTH,
 	deleteAccount, fetchProviders, fetchSession, linkPath, providerName,
-	renameAccount, saveHandle, saveVisibility, unlinkProvider, type PresenceVisibility,
+	renameAccount, saveHandle, saveVisibility, saveMessagePolicy, unlinkProvider,
+	type PresenceVisibility, type MessagePolicy,
 } from './account.js';
 
 /** What a provider redirect reported about the link the player just attempted. */
@@ -258,6 +259,65 @@ export async function openAccountSettings(options: AccountSettingsOptions = {}):
 	}
 
 	content.appendChild(listedGroup);
+
+	// ── who can write to you ─────────────────────────────────────────────────
+	//
+	// The same three-way shape as the question above, and a separate question on purpose: being
+	// findable and being interruptible are not the same thing.
+
+	const messagesGroup = document.createElement('fieldset');
+	messagesGroup.className = 'form-group account-settings-listed';
+
+	const messagesLegend = document.createElement('legend');
+	messagesLegend.textContent = tSync('account.settings.messagesLegend');
+
+	const messagesHint = document.createElement('p');
+	messagesHint.className = 'account-settings-hint';
+	messagesHint.id = 'account-messages-hint';
+	messagesHint.textContent = tSync('account.settings.messagesHint');
+
+	messagesGroup.append(messagesLegend, messagesHint);
+
+	const currentPolicy = session.user?.messagePolicy ?? 'Friends';
+	const policies: MessagePolicy[] = ['Nobody', 'Friends', 'Anyone'];
+	const policyInputs = new Map<MessagePolicy, HTMLInputElement>();
+
+	for (const choice of policies) {
+		const row = document.createElement('div');
+		row.className = 'account-settings-choice';
+
+		const input = document.createElement('input');
+		input.type = 'radio';
+		input.name = 'account-message-policy';
+		input.id = `account-messages-${choice.toLowerCase()}`;
+		input.value = choice;
+		input.checked = choice === currentPolicy;
+		input.setAttribute('aria-describedby', messagesHint.id);
+
+		const label = document.createElement('label');
+		label.htmlFor = input.id;
+		label.textContent = tSync(`account.settings.messages${choice}`);
+
+		input.addEventListener('change', async () => {
+			if (!input.checked) return;
+			const saved = await saveMessagePolicy(fetchImpl, choice);
+			if (!saved) {
+				const held = session.user?.messagePolicy ?? 'Friends';
+				policyInputs.get(held)?.click();
+				setStatus(tSync('account.settings.listedFailed'));
+				return;
+			}
+			session = await fetchSession(fetchImpl);
+			setStatus(tSync(`account.settings.messagesSaved${choice}`));
+			options.onChanged?.();
+		});
+
+		policyInputs.set(choice, input);
+		row.append(input, label);
+		messagesGroup.appendChild(row);
+	}
+
+	content.appendChild(messagesGroup);
 
 	// ── ways to sign in ──────────────────────────────────────────────────────
 

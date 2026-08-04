@@ -56,6 +56,8 @@ export type ServerGameState = GameState;
 
 export interface GameClientEvents {
 	'connected': void;
+	/** A private message reaching this player. Unknown shape on purpose: the panel validates it. */
+	'directMessage': unknown;
 	'disconnected': void;
 	'connectionError': Error;
 	'reconnecting': void;
@@ -192,6 +194,11 @@ export class UnifiedGameClient {
 		});
 
 		// Lobby events
+		// A private message reaching this player. Handed on as an event; the panel decides what to
+		// do with it, and deliberately does not speak over whatever they are doing.
+		this.connection.on('DirectMessage', (data: unknown) => {
+			this.emit('directMessage', data);
+		});
 		this.connection.on('GameCreated', (data: CreateGameResponse) => {
 			this.emit('gameCreated', data);
 		});
@@ -437,6 +444,26 @@ export class UnifiedGameClient {
 	 * which is the proof; the server takes only the ones that check out and that nobody else owns,
 	 * and answers with how many. Signed out, the answer is 0.
 	 */
+	/**
+	 * Sends a private message to players by public name, and reports who it actually reached.
+	 * Nothing is stored: somebody who is not connected simply does not receive it, and that is
+	 * reported with every other reason it might not have arrived.
+	 */
+	async sendDirectMessage(
+		handles: string[], text: string,
+	): Promise<{ delivered: string[]; unreachable: string[] }> {
+		if (!this.connection) return { delivered: [], unreachable: handles };
+		try {
+			const result = await this.connection.invoke('SendDirectMessage', { handles, text });
+			return {
+				delivered: Array.isArray(result?.delivered) ? result.delivered : [],
+				unreachable: Array.isArray(result?.unreachable) ? result.unreachable : handles,
+			};
+		} catch {
+			return { delivered: [], unreachable: handles };
+		}
+	}
+
 	async adoptSeats(seats: { gameId: string; playerId: string; playerSecretId: string }[]): Promise<number> {
 		if (!this.isConnected || !this.connection || seats.length === 0) {
 			return 0;

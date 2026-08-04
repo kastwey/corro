@@ -89,6 +89,7 @@ public class AuthController : ControllerBase
 				// so they come back with their own account and nobody else's.
 				user.Handle,
 				Visibility = user.EffectiveVisibility.ToString(),
+				MessagePolicy = user.EffectiveMessagePolicy.ToString(),
 				user.HandleChangedAtUtc,
 				// The hidden boards this account carries. Sent with the session so the very first
 				// board request from a fresh device already asks for the right ones.
@@ -357,6 +358,9 @@ public class AuthController : ControllerBase
 	}
 
 	public sealed record HandleRequest(string Handle);
+	/// <summary>Who may write to this player, by name: Nobody, Friends or Anyone.</summary>
+	public sealed record MessagePolicyRequest(string? Policy);
+
 	/// <summary>Codes typed on some device, in whatever shape they were typed.</summary>
 	public sealed record UnlockCodesRequest(IReadOnlyList<string>? Codes);
 
@@ -410,6 +414,30 @@ public class AuthController : ControllerBase
 				Conflict(new { code = "HANDLE_TOO_SOON", changeableAtUtc = result.ChangeableAtUtc }),
 			_ => Unauthorized(),
 		};
+	}
+
+	/// <summary>
+	/// Who may send this player a private message. An unrecognised value is refused rather than
+	/// resolved to a default, for the same reason visibility refuses one: there is no safer
+	/// mistake to make on somebody's behalf.
+	/// </summary>
+	[HttpPatch("message-policy")]
+	public async Task<ActionResult<object>> SetMessagePolicy(
+		[FromBody] MessagePolicyRequest request, CancellationToken ct)
+	{
+		var userId = SessionPrincipal.UserId(User);
+		if (userId is null) return Unauthorized();
+
+		if (!Enum.TryParse<MessagePolicy>(request?.Policy, ignoreCase: true, out var policy)
+			|| !Enum.IsDefined(policy))
+		{
+			return BadRequest(new { code = "UNKNOWN_MESSAGE_POLICY" });
+		}
+
+		var user = await _accounts.SetMessagePolicyAsync(userId, policy, ct);
+		return user is null
+			? Unauthorized()
+			: Ok(new { policy = user.EffectiveMessagePolicy.ToString() });
 	}
 
 	/// <summary>

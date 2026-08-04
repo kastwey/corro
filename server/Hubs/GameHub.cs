@@ -34,6 +34,7 @@ public partial class GameHub : Hub
 	private readonly Services.Rules.IRandomSource _random;
 	private readonly PresenceRegistry? _presence;
 	private readonly Services.Accounts.IUserRepository? _users;
+	private readonly Services.Accounts.FriendshipService? _friendships;
 	private readonly Services.Bots.BotDriver? _botDriver;
 	private readonly ILiveKitVoiceService? _voiceService;
 
@@ -81,7 +82,10 @@ public partial class GameHub : Hub
 		PresenceRegistry? presence = null,
 		// Read once per seat taken, to record the public name a table shows. Optional for the same
 		// slim-tests reason.
-		Services.Accounts.IUserRepository? users = null)
+		Services.Accounts.IUserRepository? users = null,
+		// Whether two people are friends, which is what a message policy of "only friends" means.
+		// Optional for the same slim-tests reason.
+		Services.Accounts.FriendshipService? friendships = null)
 	{
 		_gameRepository = gameRepository;
 		_gameServiceFactory = gameServiceFactory;
@@ -95,6 +99,7 @@ public partial class GameHub : Hub
 		_voiceService = voiceService;
 		_presence = presence;
 		_users = users;
+		_friendships = friendships;
 	}
 
 	// ============================================

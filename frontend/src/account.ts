@@ -40,6 +40,22 @@ export function asVisibility(value: unknown): PresenceVisibility {
 		: 'Nobody';
 }
 
+/**
+ * Who may send a player a private message. Separate from PresenceVisibility because being findable
+ * and being interruptible are different questions — somebody may be glad to be seen and still want
+ * messages only from people they accepted.
+ */
+export type MessagePolicy = 'Nobody' | 'Friends' | 'Anyone';
+
+const MESSAGE_POLICIES: readonly MessagePolicy[] = ['Nobody', 'Friends', 'Anyone'];
+
+/** A policy the server sent, or the default the checkbox this replaces always meant. */
+export function asMessagePolicy(value: unknown): MessagePolicy {
+	return MESSAGE_POLICIES.includes(value as MessagePolicy)
+		? value as MessagePolicy
+		: 'Friends';
+}
+
 export interface AccountUser {
 	userId: string;
 	/** Null when the provider supplied no name; the caller renders a localized placeholder. */
@@ -53,6 +69,8 @@ export interface AccountUser {
 	visibility: PresenceVisibility;
 	/** Unlock codes this account carries from device to device. */
 	unlockCodes: string[];
+	/** Who may send this player a private message. */
+	messagePolicy: MessagePolicy;
 	identities: LinkedIdentityView[];
 }
 
@@ -87,6 +105,7 @@ export function parseSession(raw: unknown): AccountSession {
 			email: typeof user.email === 'string' && user.email ? user.email : null,
 			handle: typeof user.handle === 'string' && user.handle ? user.handle : null,
 			visibility: asVisibility(user.visibility),
+			messagePolicy: asMessagePolicy(user.messagePolicy),
 			unlockCodes: Array.isArray(user.unlockCodes)
 				? user.unlockCodes.filter((code: unknown): code is string => typeof code === 'string')
 				: [],
@@ -305,6 +324,22 @@ export async function adoptUnlockCodes(
 			: [];
 	} catch {
 		return [];
+	}
+}
+
+/** Who may write to this player. True when the server stored the choice. */
+export async function saveMessagePolicy(
+	fetchImpl: typeof fetch, policy: MessagePolicy,
+): Promise<boolean> {
+	try {
+		const response = await fetchImpl('/api/auth/message-policy', {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ policy }),
+		});
+		return response.ok;
+	} catch {
+		return false;
 	}
 }
 

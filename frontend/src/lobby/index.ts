@@ -29,7 +29,8 @@ import { initializeSiteBranding } from '../siteBranding.js';
 import { initPrivacyNotice } from '../privacyNotice.js';
 import { wireLanguageSelector } from '../languageSelector.js';
 import { ComboBox } from '../comboBox.js';
-import { OnlineList } from '../onlinePlayers.js';
+import { OnlineList, parseOnlinePlayers } from '../onlinePlayers.js';
+import { LobbyChat } from '../lobbyChat.js';
 import { FriendsList } from '../friendsList.js';
 import { fetchFriends, type FriendEntry } from '../friends.js';
 import { listenForShake, requestShakePermission } from '../shakeGesture.js';
@@ -68,6 +69,9 @@ class UnifiedLobbyUI {
 	private friendsList: FriendsList | null = null;
 	/** Whether this page has a session, so unlock codes know if there is an account to reach. */
 	private signedIn = false;
+	private lobbyChat: LobbyChat | null = null;
+	/** Public names the @ autocomplete offers, refreshed when the lobby is opened. */
+	private chatCandidates: string[] = [];
 
 	constructor() {
 		void this.init();
@@ -176,6 +180,11 @@ class UnifiedLobbyUI {
 			if (online) online.hidden = !session.signedIn;
 			const friends = getElement('go-friends-btn');
 			if (friends) friends.hidden = !session.signedIn;
+			// Writing to people needs an account on both ends, so the panel is only offered to
+			// somebody who has one.
+			const chat = getElement('lobby-chat');
+			if (chat) chat.hidden = !session.signedIn;
+			if (session.signedIn) this.startLobbyChat(session);
 			this.useAccountName(session.user?.displayName ?? null);
 			void this.carryUnlockCodes(session);
 			// Read once on arrival so somebody who has been asked hears it from the home page,
@@ -894,6 +903,59 @@ class UnifiedLobbyUI {
 		} catch (error) {
 			console.error('Error re-reading the boards this account unlocks:', error);
 		}
+	}
+
+	/**
+	 * The lobby's message panel. Its candidates for the @ autocomplete are the people this reader
+	 * may actually write to: whoever is visible in the room, plus their friends — a friend who
+	 * hides from the room is still somebody they can reach.
+	 */
+	private startLobbyChat(session: AccountSession): void {
+		const log = getElement('lobby-chat-log');
+		const input = getElement<HTMLTextAreaElement>('lobby-chat-input');
+		const send = getElement<HTMLButtonElement>('lobby-chat-send');
+		const suggestions = getElement('lobby-chat-suggestions');
+		if (!log || !input || !send || !suggestions || this.lobbyChat) return;
+
+		this.lobbyChat = new LobbyChat({
+			log, input, send, suggestions,
+			status: getElement('lobby-chat-status'),
+			t: (key, vars) => i18nBinder.tSync(key, vars),
+			me: () => session.user?.handle ?? null,
+			candidates: () => this.chatCandidates,
+			deliver: (handles, text) => gameClient.sendDirectMessage(handles, text),
+		});
+
+		gameClient.on('directMessage', (data: unknown) => this.receiveDirectMessage(data));
+		void this.refreshChatCandidates();
+	}
+
+	/** A message that arrived: added to the panel's log, never spoken over anything. */
+	private receiveDirectMessage(data: unknown): void {
+		const message = data as { from?: unknown; to?: unknown; text?: unknown } | null;
+		if (typeof message?.from !== 'string' || typeof message.text !== 'string') return;
+		this.lobbyChat?.receive({
+			from: message.from,
+			to: Array.isArray(message.to)
+				? message.to.filter((h: unknown): h is string => typeof h === 'string')
+				: [],
+			text: message.text,
+			mine: false,
+		});
+	}
+
+	/** Who the @ autocomplete offers: the room this reader can see, plus their friends. */
+	private async refreshChatCandidates(): Promise<void> {
+		const [room, friends] = await Promise.all([
+			fetch('/api/presence/online')
+				.then(r => r.ok ? r.json() : null)
+				.catch(() => null),
+			fetchFriends(fetch),
+		]);
+		const names = new Set<string>();
+		for (const player of parseOnlinePlayers(room)) names.add(player.handle);
+		for (const friend of friends) names.add(friend.handle);
+		this.chatCandidates = [...names].sort((a, b) => a.localeCompare(b));
 	}
 
 	private setupHomeNavigation(): void {

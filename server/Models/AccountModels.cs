@@ -75,6 +75,25 @@ public record UserDocument
 	public PresenceVisibility EffectiveVisibility =>
 		Visibility ?? (ListedPublicly ? PresenceVisibility.Everyone : PresenceVisibility.Nobody);
 
+	/// <summary>
+	/// Who may send this player a private message. NULL on an account written before there were
+	/// private messages at all; read it through <see cref="EffectiveMessagePolicy"/>.
+	///
+	/// Separate from <see cref="Visibility"/> on purpose. Being findable and being interruptible
+	/// are different questions: somebody may be glad to be seen in the room and still want messages
+	/// only from people they have accepted.
+	/// </summary>
+	[JsonPropertyName("messagePolicy")]
+	public MessagePolicy? MessagePolicy { get; init; }
+
+	/// <summary>
+	/// What this account's message policy means today. Absent — which every account written before
+	/// this feature is — reads as <see cref="Models.MessagePolicy.Friends"/>: the same answer
+	/// somebody would have got from the checkbox this replaces, which was unticked by default.
+	/// </summary>
+	[JsonIgnore]
+	public MessagePolicy EffectiveMessagePolicy => MessagePolicy ?? Models.MessagePolicy.Friends;
+
 	/// <summary>Contact address, for display only. Deliberately NOT an identity key: providers
 	/// hand out unverified and reassignable addresses, so matching accounts on it would be an
 	/// account-takeover vector. See <see cref="LinkedIdentity"/>.</summary>
@@ -205,6 +224,24 @@ public enum PresenceVisibility
 
 	/// <summary>Every signed-in player.</summary>
 	Everyone,
+}
+
+/// <summary>
+/// Who may send a player a private message. Ordered from least to most open, and each option means
+/// exactly what it says — <see cref="Nobody"/> refuses friends too.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum MessagePolicy
+{
+	/// <summary>Nobody at all, friends included.</summary>
+	Nobody,
+
+	/// <summary>Only accepted friends. The default, and what the unticked checkbox this replaces
+	/// always meant.</summary>
+	Friends,
+
+	/// <summary>Anybody who can see them.</summary>
+	Anyone,
 }
 
 /// <summary>Where a friendship stands. There is no "nobody asked" value: that is the absence of
