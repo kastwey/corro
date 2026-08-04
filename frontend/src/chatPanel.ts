@@ -20,6 +20,11 @@
 
 import { makeDialogDraggable } from './dialogDrag.js';
 import { nextRovingIndex } from './accessibleList.js';
+// Aliased: this class has its own completeMention (the whole interaction), and the import is just
+// the text edit inside it. Two identical names at different scopes is a trap for the next reader.
+import {
+	completeMention as replaceMentionText, mentionAtCaret, TABLE_NAME_SHAPE,
+} from './mentions.js';
 import { soundEvents } from './soundEvents.js';
 import type { ChatMessageDto, Player } from './models.js';
 
@@ -416,18 +421,19 @@ export class ChatPanel {
 	private refreshMentions(): void {
 		const input = this.input!;
 		const caret = input.selectionStart ?? input.value.length;
-		const before = input.value.slice(0, caret);
-		const match = /@([\p{L}\p{N}_-]*)$/u.exec(before);
-		if (!match) { this.closeMentions(); return; }
+		// The same reader the lobby's message box uses, told that a name here is a TABLE name —
+		// free text somebody typed to sit down, accents and all — rather than a public name.
+		const typed = mentionAtCaret(input.value, caret, TABLE_NAME_SHAPE);
+		if (typed === null) { this.closeMentions(); return; }
 
-		const token = match[1].toLocaleLowerCase();
+		const token = typed.toLocaleLowerCase();
 		const me = this.deps!.getMyPlayerId();
 		this.mentionOptions = this.deps!.getPlayers()
 			.filter(p => p.id !== me)
 			.filter(p => p.name.toLocaleLowerCase().startsWith(token));
 		if (this.mentionOptions.length === 0) { this.closeMentions(); return; }
 
-		this.mentionStart = caret - match[0].length;
+		this.mentionStart = caret - typed.length - 1;
 		this.mentionActive = 0;
 		this.renderMentions();
 		// Typing (from either place) lands focus on the list, per spec: the reader hears
@@ -515,11 +521,12 @@ export class ChatPanel {
 		const input = this.input!;
 		const player = this.mentionOptions[this.mentionActive];
 		if (!player || this.mentionStart < 0) { this.closeMentions(); return; }
-		const caret = input.selectionStart ?? input.value.length;
-		const inserted = `@${player.name} `;
-		input.value = input.value.slice(0, this.mentionStart) + inserted + input.value.slice(caret);
-		const pos = this.mentionStart + inserted.length;
-		input.setSelectionRange(pos, pos);
+		// Shared with the lobby's message box: replacing what was typed and placing the caret after
+		// it is the same job in both places, and was written twice before this.
+		const { text, caret } = replaceMentionText(
+			input.value, input.selectionStart ?? input.value.length, player.name);
+		input.value = text;
+		input.setSelectionRange(caret, caret);
 		this.closeMentions();
 		input.focus();
 	}

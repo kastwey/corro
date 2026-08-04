@@ -6,6 +6,8 @@ import {
 	findMentions,
 	mentionAtCaret,
 	resolveRecipients,
+	HANDLE_SHAPE,
+	TABLE_NAME_SHAPE,
 } from '../src/mentions.js';
 
 /**
@@ -109,4 +111,46 @@ test('choosing a name replaces what was typed and leaves the caret ready for the
 	const mid = completeMention('@an y luego', 3, 'ana');
 	assert.equal(mid.text, '@ana  y luego');
 	assert.equal(mid.caret, '@ana '.length);
+});
+
+// ── one reader, two shapes of name ────────────────────────────────────────────────────────────
+//
+// The lobby and the in-game chat both read an "@" under the caret, and both used to do it with
+// their own regex. The MECHANICS are the same job; what a name may look like is not, and that is
+// the only part that should ever have differed:
+//
+//  * a public name is ASCII and starts with a letter, so no two can be made to look alike;
+//  * a table name is whatever somebody typed to sit down, so "@José" has to work or the feature is
+//    useless to half the people using it.
+
+test('a table name may carry accents and other scripts; a public name may not', () => {
+	assert.equal(mentionAtCaret('hola @Jos', 9, TABLE_NAME_SHAPE), 'Jos');
+	assert.equal(mentionAtCaret('hola @José', 10, TABLE_NAME_SHAPE), 'José');
+	assert.equal(mentionAtCaret('hola @Ана', 9, TABLE_NAME_SHAPE), 'Ана');
+	// The same text read as a public name stops at the character that cannot be one.
+	assert.equal(mentionAtCaret('hola @José', 10, HANDLE_SHAPE), null);
+});
+
+test('a table name may start with a digit or a dash; a public name starts with a letter', () => {
+	assert.deepEqual(
+		findMentions('@2fast y @-x', TABLE_NAME_SHAPE).map(m => m.handle),
+		['2fast', '-x']);
+	assert.deepEqual(findMentions('@2fast y @-x', HANDLE_SHAPE).map(m => m.handle), []);
+});
+
+test('an address is not a mention under either shape', () => {
+	assert.equal(mentionAtCaret('jose@exa', 8, TABLE_NAME_SHAPE), null);
+	assert.equal(mentionAtCaret('jose@exa', 8, HANDLE_SHAPE), null);
+});
+
+test('public names are what the lobby reads unless told otherwise', () => {
+	// The default shape is the strict one, so a caller that forgets cannot accidentally accept a
+	// name the server would refuse.
+	assert.equal(mentionAtCaret('@José', 5), null);
+	assert.equal(mentionAtCaret('@jose', 5), 'jose');
+});
+
+// Replacing the typed name is shape-independent: it is a text edit, not a judgement about names.
+test('completing works the same whatever the name looks like', () => {
+	assert.deepEqual(completeMention('hola @Jos', 9, 'José'), { text: 'hola @José ', caret: 11 });
 });

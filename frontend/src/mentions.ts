@@ -14,8 +14,33 @@
 //
 // Pure: no DOM, no network. What the panel does with the result is its own business.
 
-/** The characters a public name may contain, mirroring PlayerHandle on the server. */
-const HANDLE = /^[a-zA-Z][a-zA-Z0-9_]*$/;
+/**
+ * What a name may look like, so the two places that read "@" can share the mechanics without
+ * sharing the shape of a name.
+ *
+ * They genuinely differ. In the lobby a mention is a PUBLIC NAME, which the server restricts to
+ * ASCII so that no two of them can look alike. At a table it is the name somebody typed when they
+ * sat down — free text, accents and all — and "@José" has to work there or the feature is useless
+ * to half the people using it.
+ */
+export interface NameShape {
+	/** Characters that may appear inside a name, as a single-character test. */
+	readonly char: RegExp;
+	/** The whole name, once read. */
+	readonly whole: RegExp;
+}
+
+/** Public names: ASCII, starting with a letter, exactly as PlayerHandle allows on the server. */
+export const HANDLE_SHAPE: NameShape = {
+	char: /[A-Za-z0-9_]/,
+	whole: /^[a-zA-Z][a-zA-Z0-9_]*$/,
+};
+
+/** Table names: whatever somebody typed to sit down, so letters of any script. */
+export const TABLE_NAME_SHAPE: NameShape = {
+	char: /[\p{L}\p{N}_-]/u,
+	whole: /^[\p{L}\p{N}_-]+$/u,
+};
 
 /** A mention, and where it sits in the text so a caller can replace it. */
 export interface Mention {
@@ -39,17 +64,17 @@ export interface AddressedMessage {
  * Every "@name" in the text. A mention must start at a word boundary so an email address does not
  * become one, and the name itself has to be a name the server could hold.
  */
-export function findMentions(text: string): Mention[] {
+export function findMentions(text: string, shape: NameShape = HANDLE_SHAPE): Mention[] {
 	const found: Mention[] = [];
 	for (let i = 0; i < text.length; i++) {
 		if (text[i] !== '@') continue;
-		// Preceded by a word character means it is part of something else — an address, usually.
-		if (i > 0 && /[A-Za-z0-9_]/.test(text[i - 1])) continue;
+		// Preceded by a name character means it is part of something else — an address, usually.
+		if (i > 0 && shape.char.test(text[i - 1])) continue;
 
 		let end = i + 1;
-		while (end < text.length && /[A-Za-z0-9_]/.test(text[end])) end++;
+		while (end < text.length && shape.char.test(text[end])) end++;
 		const handle = text.slice(i + 1, end);
-		if (handle.length === 0 || !HANDLE.test(handle)) continue;
+		if (handle.length === 0 || !shape.whole.test(handle)) continue;
 
 		found.push({ handle, start: i, end });
 		i = end - 1;
@@ -107,15 +132,18 @@ function tidy(text: string): string {
  * The name being typed at the caret, for the autocomplete to offer against — or null when the caret
  * is not inside one. Empty after a bare "@", which is what makes the list open on the character.
  */
-export function mentionAtCaret(text: string, caret: number): string | null {
+export function mentionAtCaret(
+	text: string, caret: number, shape: NameShape = HANDLE_SHAPE,
+): string | null {
 	const before = text.slice(0, caret);
 	const at = before.lastIndexOf('@');
 	if (at < 0) return null;
-	if (at > 0 && /[A-Za-z0-9_]/.test(before[at - 1])) return null;
+	if (at > 0 && shape.char.test(before[at - 1])) return null;
 
 	const typed = before.slice(at + 1);
-	// Anything that cannot be part of a name means the mention ended before the caret.
-	return /^[A-Za-z0-9_]*$/.test(typed) ? typed : null;
+	// Anything that cannot be part of a name means the mention ended before the caret. An empty
+	// one counts: that is what opens the list on the "@" itself.
+	return typed.length === 0 || shape.whole.test(typed) ? typed : null;
 }
 
 /** Replace the mention the caret sits in with a chosen name, and say where the caret goes next. */

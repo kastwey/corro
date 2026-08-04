@@ -310,6 +310,13 @@ test('exploding: draw the bomb, defuse and tuck it, then explode into a win', as
 	await tuckOnTop(berto);
 
 	// ── Ana draws the bomb again — her defuse is spent, so she explodes and Berto wins. ──
+	//
+	// Wait for ANA'S client to know the turn came back to her before pressing. Berto's tuck ends
+	// his turn, but the state reaching him and the state reaching her are two separate deliveries:
+	// pressing Space on a page that still believes it is Berto's turn is refused, and the
+	// explosion never happens. Rare on an idle machine, reliable under four parallel shards, and
+	// the whole test then fails fifteen seconds later on an announcement that was never coming.
+	await expect(ana.locator('#turn-indicator .turn-indicator__name')).toHaveText('Ana');
 	await ana.locator('#board').focus();
 	await ana.keyboard.press(' ');
 	await expectAnnouncement(berto, /Estalla el gris.*Ana queda sepultad/i);
