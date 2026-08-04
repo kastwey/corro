@@ -37,6 +37,15 @@ public sealed class InMemoryGameRepository : IGameRepository
 			.Take(maxCount)
 			.ToList());
 
+	public Task<IReadOnlyList<GameDocument>> GetTablesInvitingUserAsync(
+		string userId, int maxCount, CancellationToken ct = default) =>
+		Task.FromResult<IReadOnlyList<GameDocument>>(_games.Values
+			.Where(g => g.Invitations.Any(i => i.UserId == userId)
+				|| g.JoinRequests.Any(r => r.UserId == userId))
+			.OrderByDescending(g => g.LastUpdated)
+			.Take(maxCount)
+			.ToList());
+
 	public async Task<int> ReassignSeatsAsync(string fromUserId, string toUserId, CancellationToken ct = default)
 	{
 		var moved = 0;

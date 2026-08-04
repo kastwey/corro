@@ -355,6 +355,11 @@ public class GameSessionRegistryTests
 
 	internal sealed class RecordingRepo : IGameRepository
 	{
+	/// <summary>Nothing invites anybody in this stub; the tests that care use their own.</summary>
+	public Task<IReadOnlyList<GameDocument>> GetTablesInvitingUserAsync(
+		string userId, int maxCount, CancellationToken ct = default) =>
+		Task.FromResult<IReadOnlyList<GameDocument>>(Array.Empty<GameDocument>());
+
 		public List<string> Deleted { get; } = new();
 		public Dictionary<string, GameDocument> Documents { get; } = new();
 		public Task<bool> DeleteGameAsync(string gameId)

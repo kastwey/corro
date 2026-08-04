@@ -141,6 +141,15 @@ public interface IGameRepository
 {
 	Task<GameDocument?> LoadGameAsync(string gameId);
 	Task<bool> DeleteGameAsync(string gameId);
+
+	/// <summary>
+	/// Tables that have asked this account to join, or that this account has asked to be let into.
+	/// A cross-partition read of the same shape as <c>GetGamesForUserAsync</c>, and for the same
+	/// reason: it runs when somebody opens the lobby, and keeping ONE source of truth beats a
+	/// per-account index that could still list a table after it stopped existing.
+	/// </summary>
+	Task<IReadOnlyList<GameDocument>> GetTablesInvitingUserAsync(
+		string userId, int maxCount, CancellationToken ct = default);
 	/// <summary>Oldest games whose last activity (or creation for legacy documents) precedes a cutoff.</summary>
 	IAsyncEnumerable<GameDocument> GetGamesLastUpdatedBeforeAsync(
 		DateTime cutoffUtc,

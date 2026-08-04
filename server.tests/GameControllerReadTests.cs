@@ -48,6 +48,11 @@ public class GameControllerReadTests
 
 	private sealed class FakeRepository(GameDocument? game) : IGameRepository
 	{
+	/// <summary>Nothing invites anybody in this stub; the tests that care use their own.</summary>
+	public Task<IReadOnlyList<GameDocument>> GetTablesInvitingUserAsync(
+		string userId, int maxCount, CancellationToken ct = default) =>
+		Task.FromResult<IReadOnlyList<GameDocument>>(Array.Empty<GameDocument>());
+
 		public Task<GameDocument?> LoadGameAsync(string gameId) => Task.FromResult(game);
 		public Task<GameDocument?> GetByInviteCodeAsync(string inviteCode) => Task.FromResult(game);
 		public Task<GameDocument?> GetByRejoinCodeAsync(string rejoinCode) => Task.FromResult<GameDocument?>(null);

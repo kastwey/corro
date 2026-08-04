@@ -179,6 +179,11 @@ public class GameRetentionCleanupTests
 
 	private sealed class FakeRepository : IGameRepository
 	{
+	/// <summary>Nothing invites anybody in this stub; the tests that care use their own.</summary>
+	public Task<IReadOnlyList<GameDocument>> GetTablesInvitingUserAsync(
+		string userId, int maxCount, CancellationToken ct = default) =>
+		Task.FromResult<IReadOnlyList<GameDocument>>(Array.Empty<GameDocument>());
+
 		private readonly Dictionary<string, GameDocument> _games;
 		public HashSet<string> ThrowOnDelete { get; } = new();
 		public IReadOnlyList<GameDocument>? CandidateSnapshot { get; init; }

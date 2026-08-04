@@ -252,6 +252,11 @@ public class TableSeatTests
 	/// </summary>
 	private sealed class YieldingRepository : IGameRepository
 	{
+	/// <summary>Nothing invites anybody in this stub; the tests that care use their own.</summary>
+	public Task<IReadOnlyList<GameDocument>> GetTablesInvitingUserAsync(
+		string userId, int maxCount, CancellationToken ct = default) =>
+		Task.FromResult<IReadOnlyList<GameDocument>>(Array.Empty<GameDocument>());
+
 		private readonly InMemoryGameRepository _inner = new();
 
 		public async Task<GameDocument?> LoadGameAsync(string gameId)

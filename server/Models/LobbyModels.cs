@@ -249,3 +249,48 @@ public record SavedGamePlayerInfo
 	public bool IsHost { get; init; }
 	public bool Connected { get; init; }
 }
+
+/// <summary>
+/// Somebody asked to this table. Addressed by ACCOUNT, and carrying the public names of both ends
+/// so the invitation can be shown and answered without a lookup — the same denormalization a chat
+/// message makes for its author.
+/// </summary>
+public record TableInvitation
+{
+	/// <summary>
+	/// The account invited. STORED — it is what the invitation is addressed to, and what finds it
+	/// again for somebody who was away — and stripped on the way to a client by
+	/// <c>GameDocument.Sanitized</c>, exactly like a seat's secret. The handle is what is shown.
+	/// </summary>
+	[JsonPropertyName("userId")]
+	public string? UserId { get; init; }
+
+	/// <summary>Their public name, which is how they are named to themselves and to the table.</summary>
+	[JsonPropertyName("handle")]
+	public required string Handle { get; init; }
+
+	/// <summary>Who asked them, by public name.</summary>
+	[JsonPropertyName("invitedBy")]
+	public required string InvitedBy { get; init; }
+
+	[JsonPropertyName("invitedAtUtc")]
+	public DateTime InvitedAtUtc { get; init; }
+}
+
+/// <summary>
+/// Somebody asking to be let into this table. The other direction of the same conversation, kept
+/// apart from <see cref="TableInvitation"/> because a different person answers it: an invitation is
+/// answered by the person invited, a request by the table's host.
+/// </summary>
+public record TableJoinRequest
+{
+	/// <summary>Stored, and stripped on the way out — see <see cref="TableInvitation.UserId"/>.</summary>
+	[JsonPropertyName("userId")]
+	public string? UserId { get; init; }
+
+	[JsonPropertyName("handle")]
+	public required string Handle { get; init; }
+
+	[JsonPropertyName("requestedAtUtc")]
+	public DateTime RequestedAtUtc { get; init; }
+}

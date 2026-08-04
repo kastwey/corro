@@ -24,6 +24,23 @@ public record GameDocument
 	[JsonPropertyName("maxPlayers")]
 	public int MaxPlayers { get; init; } = 8;
 
+	/// <summary>
+	/// People asked to this table, and people asking to be let in. Both live HERE rather than in a
+	/// store of their own, because both are facts about this table: they survive a reload, they
+	/// reach somebody who was away when they were made, and they expire without anybody sweeping up
+	/// — a table that fills, starts or is deleted takes them with it.
+	/// </summary>
+	[JsonPropertyName("invitations")]
+	public List<TableInvitation> Invitations { get; init; } = new();
+
+	[JsonPropertyName("joinRequests")]
+	public List<TableJoinRequest> JoinRequests { get; init; } = new();
+
+	/// <summary>Whether somebody else could still sit down: waiting, and not yet full. Bots hold
+	/// seats like anybody else, so they count.</summary>
+	[JsonIgnore]
+	public bool HasRoom => Status == GameStatus.WaitingForPlayers && Players.Count < MaxPlayers;
+
 	[JsonPropertyName("board")]
 	public string Board { get; init; } = string.Empty;
 
@@ -145,6 +162,11 @@ public record GameDocument
 			HasAccount = p.UserId is { Length: > 0 },
 			UserId = null,
 		}).ToList(),
+		// The same rule as a seat: who was invited is stored, and the ACCOUNT behind them is not
+		// sent anywhere. The public names are what a table shows and what the invited player
+		// answers with.
+		Invitations = Invitations.Select(i => i with { UserId = null }).ToList(),
+		JoinRequests = JoinRequests.Select(r => r with { UserId = null }).ToList(),
 		GameState = GameState is null ? null
 			: Services.Corro.Families.GameFamilies.For(GameState.GameType).ProjectFor(GameState, null),
 		// A finished match is projected exactly like a live one. Nothing in the end screen needs a

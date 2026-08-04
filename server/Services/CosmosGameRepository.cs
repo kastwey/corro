@@ -170,6 +170,39 @@ public class CosmosGameRepository : IGameRepository
 	/// Runs once, when two accounts turn out to be one person. A player with hundreds of tables is
 	/// the worst case and it is still one pass.
 	/// </summary>
+	public async Task<IReadOnlyList<GameDocument>> GetTablesInvitingUserAsync(
+		string userId,
+		int maxCount,
+		CancellationToken ct = default)
+	{
+		try
+		{
+			// One query for both directions: a table that asked this player, and a table this
+			// player asked to be let into. They are answered by different people but they are
+			// found the same way, and two queries would double a cross-partition read for nothing.
+			var query = new QueryDefinition(
+				"SELECT VALUE c FROM c WHERE "
+				+ "EXISTS(SELECT VALUE i FROM i IN c.invitations WHERE i.userId = @userId) "
+				+ "OR EXISTS(SELECT VALUE r FROM r IN c.joinRequests WHERE r.userId = @userId) "
+				+ "ORDER BY c.lastUpdated DESC OFFSET 0 LIMIT @limit")
+				.WithParameter("@userId", userId)
+				.WithParameter("@limit", maxCount);
+
+			var games = new List<GameDocument>();
+			var iterator = _container.GetItemQueryIterator<GameDocument>(query);
+			while (iterator.HasMoreResults && games.Count < maxCount)
+			{
+				foreach (var game in await iterator.ReadNextAsync(ct)) games.Add(game);
+			}
+			return games;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Error listing the tables inviting a user");
+			throw;
+		}
+	}
+
 	public async Task<int> ReassignSeatsAsync(string fromUserId, string toUserId, CancellationToken ct = default)
 	{
 		var moved = 0;

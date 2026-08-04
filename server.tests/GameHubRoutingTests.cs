@@ -1033,6 +1033,11 @@ public class GameHubRoutingTests
 
 	private sealed class FakeRepository : IGameRepository
 	{
+	/// <summary>Nothing invites anybody in this stub; the tests that care use their own.</summary>
+	public Task<IReadOnlyList<GameDocument>> GetTablesInvitingUserAsync(
+		string userId, int maxCount, CancellationToken ct = default) =>
+		Task.FromResult<IReadOnlyList<GameDocument>>(Array.Empty<GameDocument>());
+
 		public Task<GameDocument?> LoadGameAsync(string gameId) => Task.FromResult<GameDocument?>(null);
 		public Task<bool> DeleteGameAsync(string gameId) => Task.FromResult(true);
 		public async IAsyncEnumerable<GameDocument> GetGamesLastUpdatedBeforeAsync(DateTime cutoffUtc, int maxCount, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
@@ -1066,6 +1071,11 @@ public class GameHubRoutingTests
 	/// <summary>Repository that records the document passed to <c>CreateGameAsync</c>.</summary>
 	private sealed class CapturingRepository : IGameRepository
 	{
+	/// <summary>Nothing invites anybody in this stub; the tests that care use their own.</summary>
+	public Task<IReadOnlyList<GameDocument>> GetTablesInvitingUserAsync(
+		string userId, int maxCount, CancellationToken ct = default) =>
+		Task.FromResult<IReadOnlyList<GameDocument>>(Array.Empty<GameDocument>());
+
 		public GameDocument? Created { get; private set; }
 		public void Seed(GameDocument game) => Created = game;
 		public Task<GameDocument?> LoadGameAsync(string gameId)
