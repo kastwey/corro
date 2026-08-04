@@ -335,6 +335,17 @@ export async function chooseBoard(
 }
 
 /** Creates a game on the given shipped board and returns the invite code. */
+/**
+ * Type a player's name, unless the form has stopped asking for one. Creating or joining while
+ * signed in uses the account's own name, so the field is hidden and filled already — and a test
+ * that insisted on typing into it would be testing the form of a signed-out player while pretending
+ * to be a signed-in one.
+ */
+async function fillNameIfAsked(page: Page, selector: string, name: string): Promise<void> {
+	const field = page.locator(selector);
+	if (await field.isVisible()) await field.fill(name);
+}
+
 export async function createGame(
 	page: Page,
 	hostName: string,
@@ -361,7 +372,9 @@ export async function createGame(
 	if (opts.maxPlayers) await page.selectOption('#max-players', String(opts.maxPlayers));
 	if (opts.teamCount) await page.selectOption('#team-count', String(opts.teamCount));
 	if (opts.contentLanguage) await page.selectOption('#content-language', opts.contentLanguage);
-	await page.fill('#host-name', hostName);
+	// A signed-in player is not asked for a name at all: the account already has one, and the form
+	// says which. So the field is only filled when the form is actually asking.
+	await fillNameIfAsked(page, '#host-name', hostName);
 	// The real control is an invisible radio absolutely positioned inside the label (the
 	// label is the visual), so its own geometry is useless to Playwright's hit testing.
 	// Dispatch the click as an event: same app-visible behaviour (checked + change), no geometry.
@@ -435,7 +448,7 @@ export async function openJoinForm(page: Page, code: string, playerName: string)
 	await page.fill('#lobby-code-input', code);
 	await page.click('#validate-code-button');
 	await expect(page.locator('#join-step2')).toBeVisible();
-	await page.fill('#player-name-step2', playerName);
+	await fillNameIfAsked(page, '#player-name-step2', playerName);
 }
 
 /** Joins an existing game by invite code (second browser context). */

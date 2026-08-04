@@ -71,17 +71,32 @@ opcional: no hace falta para jugar y no se pide al iniciar sesión. Se guarda ju
 la fecha en que lo cambiaste por última vez, de modo que un nombre se mantiene estable durante
 treinta días seguidos.
 
-Aparte, puedes pedir aparecer en la **lista de jugadores conectados**. Está desactivada salvo que la
-actives, y mientras esté activa el servidor publica, solo a otros jugadores con la sesión iniciada:
+Aparte, tú eliges quién puede verte en la **lista de jugadores conectados**: **nadie**, **solo tus
+amigos** (la opción de partida, que no te muestra a nadie hasta que aceptas a alguien) o **todo el
+mundo**. "Nadie" significa nadie, tus amigos incluidos.
+
+Mientras alguien pueda verte, el servidor le publica:
 
 - Tu **nombre público**. Nunca el nombre de tu cuenta, que suele venir de tu proveedor de acceso y a
   menudo es tu nombre real: esa lista no lo publica en ningún caso.
 - Una indicación aproximada de qué estás haciendo: en el lobby, en una mesa o jugando. Nunca dice en
   qué mesa ni en qué partida.
 
-Desactivarla te retira por completo de la lista: a los demás no se les indica que haya nadie oculto
-ni ningún recuento te incluye. Un nombre público que dejas de usar no se entrega de inmediato a otra
-persona, para que nadie pueda tomar un nombre que tus amistades conocen y hacerse pasar por ti.
+De quienes están conectados y no puedes ver se te da un **recuento**, un número y nada más: ni
+nombre, ni actividad, ni forma de distinguir a uno de otro. Ten en cuenta lo que un número todavía
+deja entrever: en un momento tranquilo, "1 jugador al que no puedes ver" reduce mucho las
+posibilidades. Se publica igualmente porque una sala que dice que no hay nadie estando llena parece
+estropeada, y este sitio ya muestra en el pie el número de jugadores conectados. Si prefieres no
+aparecer ni en el recuento, la única forma es no estar conectado.
+
+Sentarse a una mesa es aparte de todo esto. En una mesa, todos ven el **nombre público** de quien lo
+tenga, diga lo que diga el ajuste anterior: ese ajuste decide quién te encuentra entre desconocidos,
+y las personas con las que estás jugando no lo son. El nombre de tu cuenta tampoco se muestra allí.
+Si prefieres que no te reconozcan en una mesa, no pongas nombre público: jugar nunca lo ha
+requerido.
+
+Un nombre público que dejas de usar no se entrega de inmediato a otra persona, para que nadie pueda
+tomar un nombre que tus amistades conocen y hacerse pasar por ti.
 
 ## Solicitudes de amistad
 

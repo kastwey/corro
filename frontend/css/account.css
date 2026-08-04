@@ -121,21 +121,39 @@
 	color: var(--text-muted);
 }
 
-/* The box and the words it refers to are ONE line, and the box comes first — a checkbox that sits
-   on its own line above its label reads as decoration, and somebody tabbing lands on a square with
-   nothing beside it to say what it would do. */
-.account-settings-listed label {
+/* The control and the words it refers to are ONE line, and the control comes first — a box that
+   sits on its own line above its label reads as decoration, and somebody tabbing lands on a square
+   with nothing beside it to say what it would do. */
+.account-settings-choice {
 	display: flex;
 	align-items: flex-start;
 	gap: 0.5rem;
+	margin: 6px 0;
+}
+
+.account-settings-choice label {
 	margin-bottom: 0;
 	font-weight: 400;
 	cursor: pointer;
 }
 
-.account-settings-listed input[type="checkbox"] {
+.account-settings-choice input {
 	flex: 0 0 auto;
 	margin-top: 0.2rem;
+}
+
+/* A fieldset carries a browser default border and padding that would box this section off from
+   every other group in the dialog. The legend is what names it; it needs no frame. */
+.account-settings-listed {
+	border: 0;
+	padding: 0;
+	margin: 0 0 16px;
+	min-inline-size: 0;
+}
+
+.account-settings-listed legend {
+	padding: 0;
+	font-weight: 600;
 }
 
 .account-settings h3 {

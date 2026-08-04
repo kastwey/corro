@@ -66,10 +66,6 @@
       "handleBadCharacters": "Usa solo letras, números y guion bajo, empezando por una letra.",
       "handleFailed": "No se pudo guardar tu nombre público.",
       "signedOut": "Has cerrado sesión.",
-      "listedLabel": "Mostrarme en la lista de jugadores conectados",
-      "listedHint": "Solo tu nombre público y si estás en el lobby, en una mesa o jugando. Nunca el nombre de tu cuenta, ni en qué partida.",
-      "listedOn": "Ahora apareces en la lista de jugadores conectados.",
-      "listedOff": "Ya no apareces en la lista de jugadores conectados.",
       "listedFailed": "No se pudo guardar esa elección.",
       "nameTooLong": "Ese nombre es demasiado largo: puede tener {{max}} caracteres como máximo.",
       "methodsHeading": "Formas de iniciar sesión",
@@ -94,7 +90,15 @@
       "erase": "Borrar mi cuenta",
       "eraseConfirm": "¿Borrar tu cuenta definitivamente?",
       "eraseCancel": "Conservar mi cuenta",
-      "eraseConfirmButton": "Sí, bórrala"
+      "eraseConfirmButton": "Sí, bórrala",
+      "visibilityLegend": "¿Quién puede ver que estás conectado?",
+      "visibilityHint": "Solo se muestra tu nombre público, y si estás en el lobby, en una mesa o jugando. Nunca el nombre de tu cuenta, ni en qué partida.",
+      "visibilityNobody": "Nadie, ni siquiera tus amigos",
+      "visibilityFriends": "Solo tus amigos",
+      "visibilityEveryone": "Todo el mundo",
+      "visibilitySavedNobody": "Ahora no te ve nadie conectado.",
+      "visibilitySavedFriends": "Ahora solo te ven conectado tus amigos.",
+      "visibilitySavedEveryone": "Ahora te ve conectado todo el mundo."
     },
     "secondAccount": {
       "heading": "Esto ha creado una segunda cuenta",
@@ -279,7 +283,13 @@
       "activityInLobby": "en el lobby",
       "activityAtTable": "en una mesa",
       "activityPlaying": "jugando",
-      "actionsFor": "Acciones para {{handle}}"
+      "actionsFor": "Acciones para {{handle}}",
+      "anonymous": "{{count}} jugadores a los que no puedes ver.",
+      "anonymous_one": "1 jugador al que no puedes ver.",
+      "youNobody": "Aquí no te ve nadie. Puedes cambiarlo en tu cuenta.",
+      "youFriends": "Aquí solo te ven tus amigos.",
+      "youEveryone": "Aquí te ve todo el mundo.",
+      "youNoHandle": "Todavía no apareces aquí: elige un nombre público en tu cuenta."
     },
     "friends": {
       "heading": "Amigos",
@@ -373,7 +383,8 @@
       "codeTitle": "Tu código para volver a entrar",
       "copy": "Copiar tu código de entrada",
       "hint": "Apúntalo en un lugar seguro: si pierdes los datos del navegador o cambias de dispositivo, escríbelo como código de partida y recuperarás tu asiento."
-    }
+    },
+    "playingAs": "Jugarás como {{name}}. Puedes cambiarlo en tu cuenta."
   },
   "game": {
     "surface_intro": {
@@ -1838,7 +1849,13 @@
     "rulesFailed": "No se han podido guardar las reglas.",
     "start_failed": "No se ha podido empezar la partida.",
     "copied": "Copiado.",
-    "copy_failed": "No se ha podido copiar."
+    "copy_failed": "No se ha podido copiar.",
+    "askToBeFriends": "Pedir amistad",
+    "askToBeFriendsOf": "Pedir amistad a {{name}}",
+    "befriend_sent": "Se envió tu solicitud.",
+    "befriend_nobody": "No se le puede pedir: todavía no tiene nombre público.",
+    "befriend_failed": "No se pudo enviar la solicitud. Inténtalo dentro de un momento.",
+    "playerHandle": "({{handle}})"
   },
   "common": {
     "ok": "Aceptar",

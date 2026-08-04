@@ -39,6 +39,18 @@ export interface LobbyPlayer {
   isBot?: boolean;
   /** Team mode: the team (0-based) the host placed this player in; null = pool. */
   teamIndex?: number | null;
+  /**
+   * Whether this seat is held by a signed-in account — never WHICH, so nothing here can be used
+   * to recognise the same person at another table. It is what lets the roster offer "ask them to
+   * be friends" only where the request could actually be accepted.
+   */
+  hasAccount?: boolean;
+  /**
+   * The public name of the account holding this seat, when there is one. Shown to everybody at the
+   * table: it is a name chosen to be public, and the people you dealt into a game are not the
+   * strangers the presence setting is about.
+   */
+  handle?: string | null;
   joinedAt: string;
 }
 

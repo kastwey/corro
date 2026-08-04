@@ -64,6 +64,16 @@ export interface TableViewDeps {
 	copy?: (text: string, buttonId: string) => Promise<boolean>;
 	/** This player's re-entry code for THIS table, or null when they have none saved. */
 	rejoinCode?: () => string | null;
+	/**
+	 * Ask somebody at this table to be friends, addressed by their SEAT. Absent when the local
+	 * player is not signed in, which is when there would be nothing to ask with.
+	 *
+	 * It exists beside the list of who is online because that list is opt-in: somebody who keeps
+	 * to themselves there would otherwise be unreachable by the very people they play with.
+	 */
+	askToBeFriends?: (playerId: string) => Promise<void>;
+	/** This player's own seat, so the roster never offers to befriend them to themselves. */
+	selfPlayerId?: () => string | null;
 }
 
 export class TableView {
@@ -302,6 +312,12 @@ export class TableView {
 			});
 			const hostText = player.isHost ? ` ${t('lobby.playerHost')}` : '';
 			const botText = player.isBot ? ` ${t('lobby.playerBot')}` : '';
+			// The public name of whoever holds this seat, shown to everybody at the table. It is a
+			// name chosen to be public, and the people they dealt into a game are not the strangers
+			// their presence setting is about. The account display name is still never shown.
+			const handleText = player.handle
+				? ` ${t('table.playerHandle', { handle: player.handle })}`
+				: '';
 
 			const item = document.createElement('li');
 			item.className = 'player-item';
@@ -309,13 +325,14 @@ export class TableView {
 			item.tabIndex = -1;
 			// The row speaks as ONE line, so the label is written as one rather than left to be
 			// assembled out of the visible parts a screen reader would otherwise glue together.
-			item.setAttribute('aria-label', [player.name, tokenName, hostText.trim(), botText.trim()]
-				.filter(Boolean).join(', ') + '.');
+			item.setAttribute('aria-label',
+				[player.name, handleText.trim(), tokenName, hostText.trim(), botText.trim()]
+					.filter(Boolean).join(', ') + '.');
 			// Same identity the waiting room builds, commas and all: the parts are laid out with a
 			// CSS gap, and without a real separator a screen reader reads them glued together.
 			item.appendChild(createPlayerIdentity({
 				tokenKey,
-				playerName: player.name,
+				playerName: player.name + handleText,
 				tokenName,
 				statusText: '',
 				hostText,
@@ -340,6 +357,17 @@ export class TableView {
 					t('table.makeHost'),
 					t('table.makeHostOf').replace('{{name}}', player.name),
 					() => void this.deps?.makeHost?.(player.id)));
+			}
+			// Anybody signed in, other than yourself. A bot has no account, so the check that a seat
+			// holds one covers it — but it is named here too, because "ask the robot to be friends"
+			// is the kind of thing that should be impossible for a stated reason.
+			if (this.deps.askToBeFriends && !player.isBot && player.hasAccount
+				&& player.id !== this.deps.selfPlayerId?.()) {
+				actions.appendChild(this.rowAction(
+					'player-item__befriend',
+					t('table.askToBeFriends'),
+					t('table.askToBeFriendsOf').replace('{{name}}', player.name),
+					() => void this.deps?.askToBeFriends?.(player.id)));
 			}
 			if (actions.childElementCount > 0) item.appendChild(actions);
 			this.players.appendChild(item);

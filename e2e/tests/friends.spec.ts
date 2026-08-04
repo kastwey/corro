@@ -10,7 +10,9 @@
 
 import { test, expect } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
-import { appI18n, gotoLobbyHome, newPlayerPage } from '../helpers/game';
+import {
+	appI18n, createGame, expectAnnouncement, gotoLobbyHome, joinGame, newPlayerPage,
+} from '../helpers/game';
 import type { Page } from '../helpers/test';
 
 const account = appI18n('es').account.settings as Record<string, string>;
@@ -35,10 +37,17 @@ async function listedPlayer(
 	await expect(field).toHaveValue(handle);
 	await page.locator('#account-handle-save').click();
 	await expect(page.locator('#account-settings-status')).toHaveText(account.handleSaved);
-	await page.locator('#account-listed-input').check();
-	await expect(page.locator('#account-settings-status')).toHaveText(account.listedOn);
+	await page.locator('#account-visibility-everyone').check();
+	await expect(page.locator('#account-settings-status'))
+		.toHaveText(account.visibilitySavedEveryone);
 	await page.getByRole('button', { name: 'Cerrar', exact: true }).click();
 	return page;
+}
+
+/** Open the account dialog, landing where it puts focus. */
+async function openSettings(page: Page) {
+	await page.getByRole('button', { name: appI18n('es').account.manage as string }).click();
+	await expect(page.locator('.account-settings')).toBeVisible();
 }
 
 /** Open the list of who is connected, freshly read. */
@@ -186,4 +195,51 @@ test('signed out, neither way in is offered at all', async ({ browser }) => {
 	await expect(stranger.locator('#go-online-btn')).toBeHidden();
 	await expect(stranger.locator('#go-friends-btn')).toBeHidden();
 	await flushAxeAudit(stranger);
+});
+
+// The list of who is online is opt-in, so without this route a player who keeps to themselves there
+// could never be asked by the very people they actually play with — which is the case it exists for.
+test('somebody at your table can be asked, however they hide from the room', async ({ browser }) => {
+	const table = appI18n('es').table as Record<string, string>;
+
+	const ana = await listedPlayer(browser, 'friends-host', 'hostana');
+	// Berto hides from everyone. He is still sitting right there.
+	const berto = await listedPlayer(browser, 'friends-guest', 'guestberto');
+	await openSettings(berto);
+	await berto.locator('#account-visibility-nobody').check();
+	await expect(berto.locator('#account-settings-status'))
+		.toHaveText(account.visibilitySavedNobody);
+	await berto.getByRole('button', { name: 'Cerrar', exact: true }).click();
+
+	// Neither of them is asked for a name: signed in, the table uses the account's own. So the
+	// seats are named by the E2E provider's display names, not by anything typed here.
+	const code = await createGame(ana, 'Ana', 'snakes-and-ladders');
+	await joinGame(berto, code, 'Berto');
+	const bertoSeat = 'E2E friends-guest';
+
+	// Creating the table already put Ana on it, so this is the roster she is looking at. He can be
+	// asked from the seat he is sitting in, by the NAME at the table — never by the public name he
+	// keeps to himself.
+	await expect(ana.locator('#table-view')).toBeVisible();
+	const bertoRow = ana.locator('.player-item', { hasText: bertoSeat });
+	await expect(bertoRow).toBeVisible();
+	// His PUBLIC name is here, even though he hides from the room: a handle is chosen to be public,
+	// and the people he is playing with are not the strangers that setting is about.
+	await expect(bertoRow).toContainText('guestberto');
+	await bertoRow
+		.getByRole('button', { name: table.askToBeFriendsOf.replace('{{name}}', bertoSeat) })
+		.click();
+	await expectAnnouncement(ana, new RegExp(table.befriend_sent));
+	await flushAxeAudit(ana);
+
+	// And it arrives as an ordinary request, answerable from his friends list.
+	const waiting = await openFriends(berto);
+	await expect(waiting).toHaveAttribute('aria-label', `hostana. ${friends.stateReceived}`);
+
+	// Nobody is offered the chance to befriend themselves.
+	const anaSeat = 'E2E friends-host';
+	const anaRow = ana.locator('.player-item', { hasText: anaSeat });
+	await expect(anaRow.getByRole('button', {
+		name: table.askToBeFriendsOf.replace('{{name}}', anaSeat),
+	})).toHaveCount(0);
 });

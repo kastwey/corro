@@ -66,10 +66,6 @@
       "handleBadCharacters": "Use only letters, digits and underscore, starting with a letter.",
       "handleFailed": "Your public name could not be saved.",
       "signedOut": "You are signed out.",
-      "listedLabel": "Show me in the list of connected players",
-      "listedHint": "Only your public name and whether you are in the lobby, at a table or playing. Never your account name, and never which game.",
-      "listedOn": "You now appear in the list of connected players.",
-      "listedOff": "You no longer appear in the list of connected players.",
       "listedFailed": "That choice could not be saved.",
       "nameTooLong": "That name is too long: it can have at most {{max}} characters.",
       "methodsHeading": "Ways to sign in",
@@ -94,7 +90,15 @@
       "erase": "Erase my account",
       "eraseConfirm": "Erase your account for good?",
       "eraseCancel": "Keep my account",
-      "eraseConfirmButton": "Yes, erase it"
+      "eraseConfirmButton": "Yes, erase it",
+      "visibilityLegend": "Who can see that you are connected?",
+      "visibilityHint": "Only your public name is ever shown, plus whether you are in the lobby, at a table or playing. Never your account name, and never which game.",
+      "visibilityNobody": "Nobody, not even your friends",
+      "visibilityFriends": "Only your friends",
+      "visibilityEveryone": "Everyone",
+      "visibilitySavedNobody": "Nobody can see you connected now.",
+      "visibilitySavedFriends": "Only your friends can see you connected now.",
+      "visibilitySavedEveryone": "Everyone can see you connected now."
     },
     "secondAccount": {
       "heading": "This created a second account",
@@ -279,7 +283,13 @@
       "activityInLobby": "in the lobby",
       "activityAtTable": "at a table",
       "activityPlaying": "playing",
-      "actionsFor": "Actions for {{handle}}"
+      "actionsFor": "Actions for {{handle}}",
+      "anonymous": "{{count}} players you cannot see.",
+      "anonymous_one": "1 player you cannot see.",
+      "youNobody": "Nobody can see you here. You can change that in your account.",
+      "youFriends": "Only your friends can see you here.",
+      "youEveryone": "Everyone can see you here.",
+      "youNoHandle": "You do not appear here yet: choose a public name in your account."
     },
     "friends": {
       "heading": "Friends",
@@ -373,7 +383,8 @@
       "codeTitle": "Your re-entry code",
       "copy": "Copy your re-entry code",
       "hint": "Note it somewhere safe: if you lose your browser data or switch devices, type it as the game code and you will get your seat back."
-    }
+    },
+    "playingAs": "You will play as {{name}}. You can change it in your account."
   },
   "game": {
     "surface_intro": {
@@ -1838,7 +1849,13 @@
     "rulesFailed": "The rules could not be saved.",
     "start_failed": "The match could not be started.",
     "copied": "Copied.",
-    "copy_failed": "It could not be copied."
+    "copy_failed": "It could not be copied.",
+    "askToBeFriends": "Ask to be friends",
+    "askToBeFriendsOf": "Ask {{name}} to be friends",
+    "befriend_sent": "Your request was sent.",
+    "befriend_nobody": "That player cannot be asked: they have no public name yet.",
+    "befriend_failed": "The request could not be sent. Try again in a moment.",
+    "playerHandle": "({{handle}})"
   },
   "common": {
     "ok": "OK",

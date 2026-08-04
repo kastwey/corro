@@ -191,18 +191,70 @@ public class PlayerHandleTests
 	}
 
 	// The list publishes the HANDLE and never the display name, which is seeded from the provider
-	// and is usually somebody's real name. Appearing at all is the player's own decision.
+	// and is usually somebody's real name. Who may see it at all is the player's own decision, in
+	// three steps rather than a yes/no.
 	[Fact]
-	public async Task Being_listed_is_off_until_the_player_turns_it_on()
+	public async Task Visibility_is_chosen_by_the_player_and_each_option_is_kept_exactly()
 	{
 		var service = NewService(out var repository);
-		var created = await NewAccountAsync(repository, "u1");
-		Assert.False(created.ListedPublicly);
+		await NewAccountAsync(repository, "u1");
 
-		var listed = await service.SetListedPubliclyAsync("u1", true);
-		Assert.True(listed!.ListedPublicly);
+		foreach (var choice in new[]
+		{
+			PresenceVisibility.Everyone, PresenceVisibility.Friends, PresenceVisibility.Nobody,
+		})
+		{
+			var saved = await service.SetVisibilityAsync("u1", choice);
+			Assert.Equal(choice, saved!.EffectiveVisibility);
+			// Written back through storage, not just returned.
+			Assert.Equal(choice, (await repository.GetUserAsync("u1"))!.EffectiveVisibility);
+		}
+	}
 
-		var hidden = await service.SetListedPubliclyAsync("u1", false);
-		Assert.False(hidden!.ListedPublicly);
+	// Written on CREATION, not inferred from a null. The difference is invisible in the model — both
+	// read as a default — but only one of them survives the account being written back, and only one
+	// tells a rollback what this player actually chose. It was designed, documented, and missing from
+	// the code until an end-to-end test asked a real server what a new account says.
+	[Fact]
+	public async Task A_new_account_starts_at_only_friends_which_shows_it_to_nobody_yet()
+	{
+		var service = NewService(out var repository);
+		var created = await service.SignInAsync(
+			new ExternalIdentity("google", "brand-new", "New", "new@example.com"), Now);
+
+		Assert.Equal(PresenceVisibility.Friends, created.EffectiveVisibility);
+		// Explicitly stored, not merely the fallback for a missing value.
+		Assert.Equal(PresenceVisibility.Friends, created.Visibility);
+		Assert.Equal(PresenceVisibility.Friends, (await repository.GetUserAsync(created.UserId))!.Visibility);
+	}
+
+	// An account written before the choice had three answers is read from the old boolean rather
+	// than defaulted. Promoting a "no" to "only friends" would publish somebody who had said no —
+	// to a smaller audience, but still without being asked.
+	[Fact]
+	public async Task An_account_from_before_the_three_way_choice_keeps_the_answer_it_gave()
+	{
+		var hidden = new UserDocument
+		{
+			Id = "old-no", UserId = "old-no", ListedPublicly = false,
+			CreatedAtUtc = Now, LastSignInUtc = Now,
+		};
+		var shown = hidden with { Id = "old-yes", UserId = "old-yes", ListedPublicly = true };
+
+		Assert.Equal(PresenceVisibility.Nobody, hidden.EffectiveVisibility);
+		Assert.Equal(PresenceVisibility.Everyone, shown.EffectiveVisibility);
+	}
+
+	// A rollback to a build that only understands "listed or not" must not publish anybody: only
+	// "everyone" is listed, so both of the quieter answers read as "no" to the older code.
+	[Fact]
+	public async Task The_old_boolean_is_kept_in_step_so_a_rollback_cannot_publish_somebody()
+	{
+		var service = NewService(out var repository);
+		await NewAccountAsync(repository, "u1");
+
+		Assert.True((await service.SetVisibilityAsync("u1", PresenceVisibility.Everyone))!.ListedPublicly);
+		Assert.False((await service.SetVisibilityAsync("u1", PresenceVisibility.Friends))!.ListedPublicly);
+		Assert.False((await service.SetVisibilityAsync("u1", PresenceVisibility.Nobody))!.ListedPublicly);
 	}
 }

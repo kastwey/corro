@@ -43,14 +43,37 @@ public record UserDocument
 	public DateTime? HandleChangedAtUtc { get; init; }
 
 	/// <summary>
-	/// Whether this player appears in the list of who is connected.
+	/// The ANSWER TO A YES/NO QUESTION this setting used to be: "appear in the list of who is
+	/// connected". Kept only so accounts written before <see cref="Visibility"/> existed still mean
+	/// what their owner chose — see <see cref="EffectiveVisibility"/>. Nothing writes it any more.
+	/// </summary>
+	[JsonPropertyName("listedPublicly")]
+	public bool ListedPublicly { get; init; }
+
+	/// <summary>
+	/// Who may see this player in the list of who is connected. NULL on an account written before
+	/// the choice had three answers; read it through <see cref="EffectiveVisibility"/>.
 	///
 	/// Only the HANDLE is ever published there — never <see cref="DisplayName"/>, which is seeded
 	/// from the provider profile and is usually somebody's real name. A handle is chosen to be
 	/// public; a name imported from Google was not.
 	/// </summary>
-	[JsonPropertyName("listedPublicly")]
-	public bool ListedPublicly { get; init; }
+	[JsonPropertyName("visibility")]
+	public PresenceVisibility? Visibility { get; init; }
+
+	/// <summary>
+	/// What this account's visibility means today, whenever it was written.
+	///
+	/// An account that predates the three-way choice is read from the old boolean rather than
+	/// defaulted: "no" becomes <see cref="PresenceVisibility.Nobody"/> and "yes" becomes
+	/// <see cref="PresenceVisibility.Everyone"/>. Quietly promoting a "no" to "only friends" would
+	/// publish somebody who had said no — to a smaller audience, but still without being asked.
+	/// New accounts start at <see cref="PresenceVisibility.Friends"/>, which shows them to nobody
+	/// until they accept someone.
+	/// </summary>
+	[JsonIgnore]
+	public PresenceVisibility EffectiveVisibility =>
+		Visibility ?? (ListedPublicly ? PresenceVisibility.Everyone : PresenceVisibility.Nobody);
 
 	/// <summary>Contact address, for display only. Deliberately NOT an identity key: providers
 	/// hand out unverified and reassignable addresses, so matching accounts on it would be an
@@ -149,6 +172,26 @@ public record HandleClaimDocument
 	/// it is actually in use.</summary>
 	[JsonPropertyName("releasedAtUtc")]
 	public DateTime? ReleasedAtUtc { get; init; }
+}
+
+/// <summary>
+/// Who may see that a player is connected. Ordered from least to most visible, and each option
+/// means exactly what it says — in particular <see cref="Nobody"/> hides them from their friends
+/// too, because an option that quietly did not apply to some people would be worse than not
+/// offering it.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum PresenceVisibility
+{
+	/// <summary>Nobody at all, friends included.</summary>
+	Nobody,
+
+	/// <summary>Only accepted friends. The default for a new account, which means nobody until
+	/// they accept somebody — the setting becomes useful exactly as they build a list.</summary>
+	Friends,
+
+	/// <summary>Every signed-in player.</summary>
+	Everyone,
 }
 
 /// <summary>Where a friendship stands. There is no "nobody asked" value: that is the absence of

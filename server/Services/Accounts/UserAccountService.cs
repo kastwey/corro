@@ -137,6 +137,10 @@ public sealed class UserAccountService
 			UserId = intendedUserId,
 			DisplayName = Clean(identity.DisplayName),
 			Email = Clean(identity.Email),
+			// Only friends, from the start. It shows them to NOBODY until they accept somebody, so
+			// the safe default and the useful one are the same choice — and the moment they make a
+			// friend it does what they would expect, without asking them again.
+			Visibility = PresenceVisibility.Friends,
 			Identities = { NewIdentity(identity, utcNow) },
 			CreatedAtUtc = utcNow,
 			LastSignInUtc = utcNow,
@@ -555,14 +559,24 @@ public sealed class UserAccountService
 			|| PlayerHandle.CanTakeOver(new HandleClaim(claim.UserId, claim.ReleasedAtUtc), forUserId, utcNow);
 	}
 
-	/// <summary>Appear in the list of who is connected, or not. Only the handle is ever published
-	/// there, so this cannot expose a name imported from a provider.</summary>
-	public async Task<UserDocument?> SetListedPubliclyAsync(
-		string userId, bool listed, CancellationToken ct = default)
+	/// <summary>
+	/// Who may see this player in the list of who is connected. Only the handle is ever published
+	/// there, so nothing here can expose a name imported from a provider.
+	///
+	/// The old boolean is written alongside so that a rollback to a build that only understands
+	/// "listed or not" reads the closest true answer rather than silently publishing somebody:
+	/// only <see cref="PresenceVisibility.Everyone"/> is "listed".
+	/// </summary>
+	public async Task<UserDocument?> SetVisibilityAsync(
+		string userId, PresenceVisibility visibility, CancellationToken ct = default)
 	{
 		var user = await _repository.GetUserAsync(userId, ct);
 		if (user is null) return null;
-		return await _repository.UpsertUserAsync(user with { ListedPublicly = listed }, ct);
+		return await _repository.UpsertUserAsync(user with
+		{
+			Visibility = visibility,
+			ListedPublicly = visibility == PresenceVisibility.Everyone,
+		}, ct);
 	}
 
 	/// <summary>

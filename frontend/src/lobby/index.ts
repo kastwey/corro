@@ -172,6 +172,7 @@ class UnifiedLobbyUI {
 			if (online) online.hidden = !session.signedIn;
 			const friends = getElement('go-friends-btn');
 			if (friends) friends.hidden = !session.signedIn;
+			this.useAccountName(session.user?.displayName ?? null);
 			// Read once on arrival so somebody who has been asked hears it from the home page,
 			// rather than having to open a list to discover there was anything to open it for.
 			if (session.signedIn) {
@@ -758,6 +759,7 @@ class UnifiedLobbyUI {
 			empty: getElement('online-empty'),
 			error: getElement('online-error'),
 			status: getElement('online-status'),
+			standing: getElement('online-standing'),
 			t: (key, vars) => i18nBinder.tSync(key, vars),
 		});
 		await this.onlineList.refresh();
@@ -793,6 +795,36 @@ class UnifiedLobbyUI {
 		button.textContent = waiting > 0
 			? i18nBinder.tSync('lobby.home.friendsButtonWaiting', { count: waiting })
 			: i18nBinder.tSync('lobby.home.friendsButton');
+	}
+
+	/**
+	 * Somebody signed in has already told us their name, so the create and join forms stop asking
+	 * for it. The field is filled and hidden rather than removed, so every read, validation and
+	 * submit path stays exactly as it was — and `required` comes off with it, or the browser would
+	 * refuse to submit a form containing a required field nobody can reach.
+	 *
+	 * A line takes its place saying which name will be used. Silently deciding how the rest of the
+	 * table will see somebody is worse than asking them.
+	 */
+	private useAccountName(name: string | null): void {
+		const known = !!name && name.trim().length > 0;
+		for (const [groupId, inputId, noticeId] of [
+			['host-name-group', 'host-name', 'host-name-known'],
+			['player-name-group', 'player-name-step2', 'player-name-known'],
+		] as const) {
+			const group = getElement(groupId);
+			const input = getElement<HTMLInputElement>(inputId);
+			const notice = getElement(noticeId);
+			if (!group || !input || !notice) continue;
+
+			group.hidden = known;
+			input.required = !known;
+			if (known) input.value = name!.trim();
+			notice.hidden = !known;
+			notice.textContent = known
+				? i18nBinder.tSync('lobby.playingAs', { name: name!.trim() })
+				: '';
+		}
 	}
 
 	private setupHomeNavigation(): void {

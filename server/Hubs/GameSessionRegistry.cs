@@ -251,6 +251,11 @@ public sealed class GameSessionRegistry
 	/// <summary>Seed/refresh the cached document for a game (its non-state fields feed the persister).</summary>
 	public void CacheDocument(string gameId, GameDocument document) => _persistedDocuments[gameId] = document;
 
+	/// <summary>The cached document for a live game, which is fresher than the stored one — the
+	/// persister writes through it. False for a table this process is not hosting.</summary>
+	public bool TryGetDocument(string gameId, out GameDocument document) =>
+		_persistedDocuments.TryGetValue(gameId, out document!);
+
 	/// <summary>
 	/// Appends a chat message to the game's document THROUGH the persistence cache — the same
 	/// document instance the per-command persister reuses — so chat writes carry the freshest

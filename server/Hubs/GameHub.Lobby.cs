@@ -138,7 +138,8 @@ public partial class GameHub
 						RejoinCode = hostRejoinCode,
 						// Read from the caller's own session, never from the request: a client that
 						// could name its account could name somebody else's.
-						UserId = SignedInUserId()
+						UserId = SignedInUserId(),
+						Handle = await HandleOfCallerAsync()
 					}
 				}
 			};
@@ -593,7 +594,8 @@ public partial class GameHub
 				IsReady = false,
 				PlayerSecretId = playerSecretId,
 				RejoinCode = playerRejoinCode,
-				UserId = SignedInUserId()
+				UserId = SignedInUserId(),
+				Handle = await HandleOfCallerAsync()
 			};
 
 			var updatedPlayers = game.Players.ToList();

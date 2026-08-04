@@ -23,6 +23,12 @@ const translate = (key: string, vars?: Record<string, unknown>) => {
 		case 'lobby.online.activityPlaying': return 'jugando';
 		case 'lobby.online.failed': return 'No se pudo cargar la lista de jugadores.';
 		case 'lobby.online.actionsFor': return `Acciones para ${vars?.handle}`;
+		case 'lobby.online.anonymous': return `${vars?.count} jugadores a los que no puedes ver.`;
+		case 'lobby.online.anonymous_one': return '1 jugador al que no puedes ver.';
+		case 'lobby.online.youNobody': return 'Aquí no te ve nadie.';
+		case 'lobby.online.youFriends': return 'Aquí solo te ven tus amigos.';
+		case 'lobby.online.youEveryone': return 'Aquí te ve todo el mundo.';
+		case 'lobby.online.youNoHandle': return 'Todavía no apareces aquí.';
 		case 'lobby.friends.stateFriends': return 'Tu amigo.';
 		case 'lobby.friends.stateSent': return 'Le pediste amistad.';
 		case 'lobby.friends.stateReceived': return 'Te ha pedido amistad.';
@@ -46,6 +52,7 @@ function harness() {
 			<p id="online-empty" hidden></p>
 			<p id="online-error" role="status" aria-live="polite"></p>
 			<p id="online-status" role="status" aria-live="polite"></p>
+			<p id="online-standing"></p>
 		</div>`;
 	const list = document.getElementById('online-list') as HTMLElement;
 	const calls: Array<{ url: string; method: string; body?: string }> = [];
@@ -55,6 +62,7 @@ function harness() {
 		empty: document.getElementById('online-empty') as HTMLElement,
 		error: document.getElementById('online-error') as HTMLElement,
 		status: document.getElementById('online-status') as HTMLElement,
+		standing: document.getElementById('online-standing') as HTMLElement,
 		rows: () => Array.from(list.querySelectorAll<HTMLElement>('.online-player')),
 		lineOf: (row: HTMLElement) => row.querySelector('.online-player__line')?.textContent,
 		buttonsOf: (row: HTMLElement) =>
@@ -64,6 +72,7 @@ function harness() {
 			empty: document.getElementById('online-empty'),
 			error: document.getElementById('online-error'),
 			status: document.getElementById('online-status'),
+			standing: document.getElementById('online-standing'),
 			t: translate,
 			fetchImpl,
 		}),
@@ -243,9 +252,9 @@ test('a server that will not answer says so once, and never blames the reader', 
 	const h = harness();
 	const broken = (async () => { throw new Error('offline'); }) as unknown as typeof fetch;
 
-	const players = await h.build(broken).refresh();
+	const room = await h.build(broken).refresh();
 
-	assert.deepEqual(players, []);
+	assert.deepEqual(room.players, []);
 	assert.equal(h.error.textContent, 'No se pudo cargar la lista de jugadores.');
 });
 
@@ -255,8 +264,10 @@ test('a refused list is the same quiet outcome as an empty one', async () => {
 		ok: false, json: async () => ({}),
 	}) as unknown as Response) as unknown as typeof fetch;
 
-	assert.deepEqual(await h.build(unauthorized).refresh(), []);
+	assert.deepEqual((await h.build(unauthorized).refresh()).players, []);
 	assert.equal(h.empty.hidden, false);
+	// And the quietest standing, rather than telling somebody everyone can see them.
+	assert.equal(h.standing.textContent, 'Todavía no apareces aquí.');
 });
 
 // People arriving and leaving is a stream of changes nobody asked to be read. The list is a page
@@ -290,4 +301,73 @@ test('a refreshed list keeps the row the keyboard is standing on', async () => {
 	// the top of a list somebody was reading.
 	assert.equal(h.rows()[1], before);
 	assert.equal(document.activeElement, before);
+});
+
+// The room reporting nobody while it is full reads as a broken feature. A number and nothing else:
+// no names, no activity, nothing that tells one hidden player from another.
+test('people you cannot see are counted, as one last row with nothing to do', async () => {
+	const h = harness();
+	await h.build(answering({
+		players: [{ handle: 'ana', activity: 'InLobby', relationship: 'None' }],
+		anonymous: 3,
+		visibility: 'Everyone',
+		hasHandle: true,
+	})).refresh();
+
+	assert.deepEqual(h.rows().map(h.lineOf), [
+		'ana, en el lobby.',
+		'3 jugadores a los que no puedes ver.',
+	]);
+	// It is not a person, so it offers nothing.
+	assert.deepEqual(h.buttonsOf(h.rows()[1]), []);
+	// And it says nothing that could tell one of them from another.
+	assert.equal(/ana|lobby|mesa|jugando/.test(h.lineOf(h.rows()[1])!), false);
+});
+
+test('nobody hidden means no row at all, not a zero', async () => {
+	const h = harness();
+	await h.build(answering({
+		players: [{ handle: 'ana', activity: 'InLobby', relationship: 'None' }],
+		anonymous: 0, visibility: 'Everyone', hasHandle: true,
+	})).refresh();
+
+	assert.equal(h.rows().length, 1);
+});
+
+test('a count that is missing or nonsense is no count', async () => {
+	for (const anonymous of [undefined, -2, 'lots', null, NaN]) {
+		const h = harness();
+		await h.build(answering({ players: [], anonymous, visibility: 'Nobody', hasHandle: true }))
+			.refresh();
+		assert.equal(h.rows().length, 0, String(anonymous));
+	}
+});
+
+// Somebody who cannot glance at anything should not have to infer their own visibility from their
+// absence — which is exactly what the old checkbox left them doing.
+test('the view says who can see YOU, and having no public name comes first', async () => {
+	const cases: Array<[unknown, boolean, string]> = [
+		['Everyone', true, 'Aquí te ve todo el mundo.'],
+		['Friends', true, 'Aquí solo te ven tus amigos.'],
+		['Nobody', true, 'Aquí no te ve nadie.'],
+		// No public name: no setting can make up for it, so it is what gets said.
+		['Everyone', false, 'Todavía no apareces aquí.'],
+		// An answer this client does not know is treated as the quietest one.
+		['Whenever', true, 'Aquí no te ve nadie.'],
+	];
+	for (const [visibility, hasHandle, expected] of cases) {
+		const h = harness();
+		await h.build(answering({ players: [], anonymous: 0, visibility, hasHandle })).refresh();
+		assert.equal(h.standing.textContent, expected, `${visibility} / ${hasHandle}`);
+	}
+});
+
+// It is a fact about the page, not news: it must not interrupt anybody.
+test('the standing line never speaks on its own', async () => {
+	const h = harness();
+	await h.build(answering({ players: [], anonymous: 0, visibility: 'Nobody', hasHandle: true }))
+		.refresh();
+
+	assert.equal(h.standing.hasAttribute('aria-live'), false);
+	assert.equal(h.standing.hasAttribute('role'), false);
 });

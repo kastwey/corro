@@ -96,6 +96,41 @@ public class FriendshipService
 	{
 		var target = await ListedAccountByHandleAsync(targetHandle, ct);
 		if (target is null) return RequestOutcome.NoSuchPlayer;
+		return await RequestBetweenAsync(fromUserId, target, utcNow, ct);
+	}
+
+	/// <summary>
+	/// Asks somebody sharing a table, addressed by ACCOUNT rather than by name — the caller never
+	/// learns their handle, and does not need to.
+	///
+	/// Visibility is deliberately not consulted. It governs who finds you in a list of strangers;
+	/// somebody you are sitting at a table with has already found you, and refusing here would mean
+	/// a player who keeps to themselves online could never be asked by the people they actually
+	/// play with, which is the case this exists for. Their answer is still entirely theirs.
+	///
+	/// A public name is still required, because a friendship with nobody to name is one that could
+	/// never appear on either list.
+	/// </summary>
+	public async Task<RequestOutcome> RequestFromTableAsync(
+		string fromUserId,
+		string targetUserId,
+		DateTime utcNow,
+		CancellationToken ct = default)
+	{
+		if (targetUserId == fromUserId) return RequestOutcome.Self;
+		var target = await _repository.GetUserAsync(targetUserId, ct);
+		if (target?.Handle is not { Length: > 0 }) return RequestOutcome.NoSuchPlayer;
+		return await RequestBetweenAsync(fromUserId, target, utcNow, ct);
+	}
+
+	/// <summary>The request itself, once the two accounts are known. Both routes in end here, so
+	/// the refusal rules cannot differ between them.</summary>
+	private async Task<RequestOutcome> RequestBetweenAsync(
+		string fromUserId,
+		UserDocument target,
+		DateTime utcNow,
+		CancellationToken ct)
+	{
 		if (target.UserId == fromUserId) return RequestOutcome.Self;
 
 		var (low, high) = FriendshipKey.Order(fromUserId, target.UserId);
@@ -322,10 +357,15 @@ public class FriendshipService
 			: null;
 	}
 
-	/// <summary>The same, but only if they agreed to be found. The gate on a FIRST approach.</summary>
+	/// <summary>
+	/// The same, but only if they agreed to be found by strangers. The gate on a FIRST approach by
+	/// name: somebody who hides from everyone, or shows only to friends they have not accepted yet,
+	/// cannot be reached this way. Sharing a table is the other route, and it does not go through
+	/// a handle at all.
+	/// </summary>
 	private async Task<UserDocument?> ListedAccountByHandleAsync(string handle, CancellationToken ct)
 	{
 		var user = await AccountByHandleAsync(handle, ct);
-		return user?.ListedPublicly == true ? user : null;
+		return user?.EffectiveVisibility == PresenceVisibility.Everyone ? user : null;
 	}
 }

@@ -47,6 +47,30 @@ public record LobbyPlayer
 	/// never takes from the client.
 	/// </summary>
 	public string? UserId { get; init; }
+
+	/// <summary>
+	/// Whether this seat is held by a signed-in account — WITHOUT saying which. It is what
+	/// <see cref="UserId"/> is replaced by on the way to a client (see
+	/// <c>GameDocument.Sanitized</c>), so the table can offer "ask them to be friends" for a seat
+	/// that could accept one, and nobody at the table learns an id that would let them recognise
+	/// the same person across every other table they ever sit at.
+	/// </summary>
+	public bool HasAccount { get; init; }
+
+	/// <summary>
+	/// The public name of the account holding this seat, or null when there is none.
+	///
+	/// Shown to everybody at the table, and deliberately NOT filtered by that player's presence
+	/// setting: that setting decides who finds them in a list of strangers, and the people they
+	/// dealt into a game are not strangers. A handle is a name chosen to be public; the account
+	/// display name, which usually comes from a provider and is often a real name, still is not
+	/// published anywhere by this.
+	///
+	/// Denormalized when the seat is taken, exactly as a chat message keeps its author's name: it
+	/// spares a lookup on every broadcast, and a handle can only change once every thirty days, so
+	/// a table outliving one is not a case worth a per-render query.
+	/// </summary>
+	public string? Handle { get; init; }
 }
 
 // DTOs for the unified API.

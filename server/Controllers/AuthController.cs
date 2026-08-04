@@ -1,4 +1,5 @@
 using CorroServer.Extensions;
+using CorroServer.Models;
 using CorroServer.Services.Accounts;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
@@ -87,7 +88,7 @@ public class AuthController : ControllerBase
 				// The public name and whether it is published. Both are this player's own settings,
 				// so they come back with their own account and nobody else's.
 				user.Handle,
-				user.ListedPublicly,
+				Visibility = user.EffectiveVisibility.ToString(),
 				user.HandleChangedAtUtc,
 				// Issuer plus the address that provider reported, so the settings screen can show
 				// WHICH account each provider is linked to. Subjects stay server-side: they are the
@@ -353,7 +354,8 @@ public class AuthController : ControllerBase
 	}
 
 	public sealed record HandleRequest(string Handle);
-	public sealed record VisibilityRequest(bool Listed);
+	/// <summary>The chosen audience, by name: Nobody, Friends or Everyone.</summary>
+	public sealed record VisibilityRequest(string? Visibility);
 
 	/// <summary>
 	/// Whether a handle could be claimed right now. Deliberately says only yes or no: telling a
@@ -404,8 +406,14 @@ public class AuthController : ControllerBase
 		};
 	}
 
-	/// <summary>Appear in the list of who is connected, or not. Only the handle is ever published
-	/// there, so this can never expose a name imported from a provider.</summary>
+	/// <summary>
+	/// Who may see this player in the list of who is connected. Only the handle is ever published
+	/// there, so nothing here can expose a name imported from a provider.
+	///
+	/// An unrecognised value is refused rather than resolved to a default: guessing would either
+	/// publish somebody who asked to be hidden or hide somebody who asked to be seen, and there is
+	/// no way to pick the safer mistake.
+	/// </summary>
 	[HttpPatch("visibility")]
 	public async Task<ActionResult<object>> SetVisibility(
 		[FromBody] VisibilityRequest request, CancellationToken ct)
@@ -413,8 +421,16 @@ public class AuthController : ControllerBase
 		var userId = SessionPrincipal.UserId(User);
 		if (userId is null) return Unauthorized();
 
-		var user = await _accounts.SetListedPubliclyAsync(userId, request.Listed, ct);
-		return user is null ? Unauthorized() : Ok(new { listed = user.ListedPublicly });
+		if (!Enum.TryParse<PresenceVisibility>(request?.Visibility, ignoreCase: true, out var visibility)
+			|| !Enum.IsDefined(visibility))
+		{
+			return BadRequest(new { code = "UNKNOWN_VISIBILITY" });
+		}
+
+		var user = await _accounts.SetVisibilityAsync(userId, visibility, ct);
+		return user is null
+			? Unauthorized()
+			: Ok(new { visibility = user.EffectiveVisibility.ToString() });
 	}
 
 	/// <summary>One value the challenge stashed in the authentication properties. Items is a plain

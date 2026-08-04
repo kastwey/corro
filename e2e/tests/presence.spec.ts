@@ -38,8 +38,9 @@ async function becomeListed(page: import('../helpers/test').Page, handle: string
 	await expect(field).toHaveValue(handle);
 	await page.locator('#account-handle-save').click();
 	await expect(page.locator('#account-settings-status')).toHaveText(account.handleSaved);
-	await page.locator('#account-listed-input').check();
-	await expect(page.locator('#account-settings-status')).toHaveText(account.listedOn);
+	await page.locator('#account-visibility-everyone').check();
+	await expect(page.locator('#account-settings-status'))
+		.toHaveText(account.visibilitySavedEveryone);
 	await page.getByRole('button', { name: 'Cerrar', exact: true }).click();
 }
 
@@ -126,16 +127,21 @@ test('the list is members-only, opt-in, and never names an account', async ({ br
 
 	// Opting out removes the person completely.
 	await openSettings(ana);
-	await ana.locator('#account-listed-input').uncheck();
-	await expect(ana.locator('#account-settings-status')).toHaveText(account.listedOff);
+	await ana.locator('#account-visibility-nobody').check();
+	await expect(ana.locator('#account-settings-status'))
+		.toHaveText(account.visibilitySavedNobody);
 	await ana.getByRole('button', { name: 'Cerrar', exact: true }).click();
 
 	// gotoLobbyHome rather than reload(): the lobby's own startup settles the view last, so a
 	// click that lands before it finishes is undone by it.
 	await gotoLobbyHome(berto);
 	await berto.locator('#go-online-btn').click();
+	// Her NAME is gone completely. What remains is a number, which is all anybody hidden ever
+	// becomes — and the room still says it is empty of people, because it is.
+	await expect(berto.locator('#online-list')).not.toContainText('anaonline');
 	await expect(berto.locator('#online-empty')).toBeVisible();
-	await expect(berto.locator('#online-list .online-player')).toHaveCount(0);
+	await expect(berto.locator('#online-list .online-player')).toHaveText(
+		appI18n('es').lobby.online.anonymous_one as string);
 	await flushAxeAudit(berto);
 });
 
@@ -183,29 +189,30 @@ test('you appear in the room yourself, marked, with nothing to do about it', asy
 	await flushAxeAudit(ana);
 });
 
-// A checkbox is not a text field, and a stylesheet that forgets the difference does not fail Axe:
+// A checkbox or radio is not a text field, and a stylesheet that forgets the difference does not
+// fail Axe:
 // the control keeps its name, its role and its place in the tab order. It just stops LOOKING like
 // the option it belongs to. This one was stretched to the full width of the dialog by the blanket
 // `input { width: 100% }` rule, so it rendered as a stray square floating on its own line above its
 // label — reachable, and unrecognisable. Measured rather than eyeballed, because a screenshot test
 // would fail for a hundred reasons that do not matter and this one does.
-test('the visibility checkbox looks like a checkbox, beside the words it decides', async ({ browser }) => {
+test('the visibility choices look like radios, beside the words they decide', async ({ browser }) => {
 	const ana = await newPlayerPage(browser, 'es-ES');
 	await signIn(ana, 'presence-checkbox');
 	await openSettings(ana);
 
-	const box = ana.locator('#account-listed-input');
+	const box = ana.locator('#account-visibility-friends');
 	const size = await box.boundingBox();
-	expect(size, 'the checkbox has no box at all').not.toBeNull();
-	expect(size!.width, 'a checkbox stretched into a strip is not a checkbox').toBeLessThan(40);
+	expect(size, 'the control has no box at all').not.toBeNull();
+	expect(size!.width, 'a radio stretched into a strip is not a radio').toBeLessThan(40);
 
 	// On the SAME line as its label, not stacked above it: they are one thing to read.
-	const label = ana.locator('.account-settings-listed label');
+	const label = ana.locator('label[for="account-visibility-friends"]');
 	const labelBox = (await label.boundingBox())!;
 	const boxCentre = size!.y + size!.height / 2;
 	expect(boxCentre).toBeGreaterThan(labelBox.y);
 	expect(boxCentre).toBeLessThan(labelBox.y + labelBox.height);
-	// And it comes first, where a checkbox belongs.
+	// And it comes first, where the box belongs.
 	expect(size!.x).toBeLessThan(labelBox.x + 40);
 
 	// Every other checkbox and radio in the app relies on the same rule, so one of each is pinned
@@ -216,4 +223,72 @@ test('the visibility checkbox looks like a checkbox, beside the words it decides
 	await chooseBoard(ana, 'four-colours');
 	const radio = ana.locator('.rule-choice__option input[type="radio"]').first();
 	expect((await radio.boundingBox())!.width).toBeLessThan(40);
+});
+
+// The question has three answers, so it is a radio group in a real fieldset — that is what makes a
+// screen reader read the QUESTION before each option, instead of three bare words with no idea what
+// they answer.
+test('who can see you is one question with three answers, and each is kept exactly', async ({ browser }) => {
+	const ana = await newPlayerPage(browser, 'es-ES');
+	await signIn(ana, 'presence-radio');
+	await openSettings(ana);
+
+	const group = ana.getByRole('group', { name: account.visibilityLegend });
+	await expect(group).toBeVisible();
+	await expect(group.getByRole('radio')).toHaveCount(3);
+	// A new account starts at "only friends", which shows them to nobody until they accept anyone.
+	await expect(ana.locator('#account-visibility-friends')).toBeChecked();
+	await flushAxeAudit(ana);
+
+	// Each choice is stored, said back, and still there when the dialog is reopened.
+	for (const [id, said] of [
+		['account-visibility-everyone', account.visibilitySavedEveryone],
+		['account-visibility-nobody', account.visibilitySavedNobody],
+	] as const) {
+		await ana.locator(`#${id}`).check();
+		await expect(ana.locator('#account-settings-status')).toHaveText(said);
+		await ana.getByRole('button', { name: 'Cerrar', exact: true }).click();
+		await openSettings(ana);
+		await expect(ana.locator(`#${id}`)).toBeChecked();
+	}
+});
+
+// "Only friends" is the setting that needs two people to test, and the one most likely to be got
+// wrong: it has to mean the reader's OWN friends, not anybody's.
+test('only friends means only friends, and everybody else is a number', async ({ browser }) => {
+	const quiet = await newPlayerPage(browser, 'es-ES');
+	await signIn(quiet, 'presence-quiet');
+	await becomeListed(quiet, 'quietone');
+	// Visible to everyone for a moment, so the stranger below can ask to be friends at all.
+
+	const stranger = await newPlayerPage(browser, 'es-ES');
+	await signIn(stranger, 'presence-stranger');
+	await becomeListed(stranger, 'strangerone');
+
+	// The quiet player narrows to friends only. The stranger is not one.
+	await openSettings(quiet);
+	await quiet.locator('#account-visibility-friends').check();
+	await expect(quiet.locator('#account-settings-status'))
+		.toHaveText(account.visibilitySavedFriends);
+	await quiet.getByRole('button', { name: 'Cerrar', exact: true }).click();
+
+	await gotoLobbyHome(stranger);
+	await stranger.locator('#go-online-btn').click();
+	const rows = stranger.locator('#online-list .online-player');
+	// Their own row, and a count for the player they may not see. Never the name.
+	await expect(rows.filter({ hasText: 'quietone' })).toHaveCount(0);
+	await expect(stranger.locator('#online-list')).not.toContainText('quietone');
+	await expect(rows.last()).toHaveAttribute(
+		'aria-label', appI18n('es').lobby.online.anonymous_one as string);
+	// The count row is not a person: there is nothing to do to it.
+	await expect(rows.last().getByRole('button')).toHaveCount(0);
+	await flushAxeAudit(stranger);
+
+	// And the view says who can see the READER, so nobody has to infer it from their own absence.
+	await expect(stranger.locator('#online-standing'))
+		.toHaveText(appI18n('es').lobby.online.youEveryone as string);
+	await gotoLobbyHome(quiet);
+	await quiet.locator('#go-online-btn').click();
+	await expect(quiet.locator('#online-standing'))
+		.toHaveText(appI18n('es').lobby.online.youFriends as string);
 });

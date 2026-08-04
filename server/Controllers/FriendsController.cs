@@ -1,3 +1,5 @@
+using CorroServer.Hubs;
+using CorroServer.Services;
 using CorroServer.Services.Accounts;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,10 +25,17 @@ namespace CorroServer.Controllers;
 public class FriendsController : ControllerBase
 {
 	private readonly FriendshipService _friendships;
+	private readonly IGameRepository _games;
+	private readonly GameSessionRegistry _sessions;
 
-	public FriendsController(FriendshipService friendships)
+	public FriendsController(
+		FriendshipService friendships,
+		IGameRepository games,
+		GameSessionRegistry sessions)
 	{
 		_friendships = friendships;
+		_games = games;
+		_sessions = sessions;
 	}
 
 	/// <summary>One entry in the player's own list.</summary>
@@ -75,6 +84,56 @@ public class FriendsController : ControllerBase
 				=> BadRequest(new { code = "SELF" }),
 			// Sent, AcceptedTheirs and Unchanged all leave the asker in a state their own list can
 			// describe, so the client re-reads rather than being told a story here.
+			_ => Ok(new { outcome = outcome.ToString() }),
+		};
+	}
+
+	/// <summary>Somebody at the same table, named by their SEAT rather than by a name.</summary>
+	public sealed record TableRequest(string GameId, string PlayerId);
+
+	/// <summary>
+	/// Asks somebody sitting at the same table. The route exists because the list of who is online
+	/// is opt-in: a player who keeps to themselves there would otherwise be unreachable by the very
+	/// people they actually play with.
+	///
+	/// The target is a SEAT, not a name. The caller never learns their handle or their account, and
+	/// the caller must hold a seat at that table themselves — otherwise anybody with a game code
+	/// could walk a table's seats to find out which of them are signed in.
+	/// </summary>
+	[HttpPost("requests/table")]
+	public async Task<IActionResult> RequestFromTable(
+		[FromBody] TableRequest request, CancellationToken ct)
+	{
+		if (SessionPrincipal.UserId(User) is not { Length: > 0 } userId) return Unauthorized();
+		if (request is null) return BadRequest(new { code = "NO_SUCH_SEAT" });
+
+		// The live table first: a game in progress lives in the session registry and its document
+		// may be older than the seat arrangement.
+		var game = _sessions.TryGetDocument(request.GameId, out var live)
+			? live
+			: await _games.LoadGameAsync(request.GameId);
+		if (game is null) return NotFound(new { code = "NO_SUCH_SEAT" });
+
+		// Sitting here is the whole authorisation. Note it is the ACCOUNT that must hold a seat:
+		// somebody who joined before signing in has no account on their seat and cannot ask this
+		// way, which is the safe direction to be wrong in.
+		if (!game.Players.Any(p => p.UserId == userId)) return Forbid();
+
+		var target = game.Players.FirstOrDefault(p => p.Id == request.PlayerId);
+		if (target?.UserId is not { Length: > 0 } targetUserId)
+		{
+			// No such seat, a bot, or somebody playing without an account: one answer for all
+			// three, because the caller has no business telling them apart.
+			return NotFound(new { code = "NO_SUCH_SEAT" });
+		}
+
+		var outcome = await _friendships.RequestFromTableAsync(
+			userId, targetUserId, DateTime.UtcNow, ct);
+
+		return outcome switch
+		{
+			FriendshipService.RequestOutcome.NoSuchPlayer => NotFound(new { code = "NO_SUCH_SEAT" }),
+			FriendshipService.RequestOutcome.Self => BadRequest(new { code = "SELF" }),
 			_ => Ok(new { outcome = outcome.ToString() }),
 		};
 	}

@@ -65,17 +65,32 @@ is optional: you do not need one to play, and nothing asks for one when you sign
 alongside your account, together with the date you last changed it, so a handle stays stable for
 thirty days at a time.
 
-Separately, you can ask to appear in the **list of players currently connected**. It is off unless
-you turn it on, and while it is on the server publishes, to other signed-in players only:
+Separately, you choose who may see you in the **list of players currently connected**:
+**nobody**, **only your friends** (the starting choice, which shows you to nobody until you accept
+someone), or **everyone**. "Nobody" means nobody, your friends included.
+
+While somebody can see you, the server publishes to them:
 
 - Your **handle**. Never your account display name, which usually comes from your sign-in provider
   and is often your real name — that is not published by this list at all.
 - A coarse indication of what you are doing: in the lobby, at a table, or playing. It never names
   the table or the game you are in.
 
-Turning it off removes you from the list completely: other players are not told that anybody is
-hidden, and no count includes you. A handle you stop using is not immediately given to somebody
-else, so nobody can take a name your friends know and appear as you.
+Anybody connected who you cannot see is **counted** for you, as a number and nothing else: no name,
+no activity, no way to tell one of them from another. Be aware of what a count can still imply — in
+a quiet moment, "1 player you cannot see" narrows the field. It is published anyway because a room
+that reports nobody while it is full reads as broken, and this site already shows the number of
+players connected in its footer. If you would rather not be counted at all, the only way is not to
+be connected.
+
+Sitting at a table is separate from all of this. Everybody at a table sees the **public name** of
+anybody there who has one, whatever their setting above says: that setting decides who finds you
+among strangers, and the people you dealt into a game are not strangers. Your account display name
+is still not shown there either. If you would rather not be recognised at a table, do not set a
+public name — playing has never required one.
+
+A handle you stop using is not immediately given to somebody else, so nobody can take a name your
+friends know and appear as you.
 
 ## Friend requests
 

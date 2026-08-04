@@ -21,6 +21,25 @@ export interface LinkedIdentityView {
 	email: string | null;
 }
 
+/**
+ * Who may see a player in the list of who is connected. Ordered from least to most visible, and
+ * each option means exactly what it says: 'Nobody' hides them from their friends too.
+ */
+export type PresenceVisibility = 'Nobody' | 'Friends' | 'Everyone';
+
+const VISIBILITIES: readonly PresenceVisibility[] = ['Nobody', 'Friends', 'Everyone'];
+
+/**
+ * A visibility the server sent, or the quietest one for anything unrecognised. Guessing wrong in
+ * this direction hides somebody who wanted to be seen, which they can fix; the other way round
+ * publishes somebody who did not, which they cannot.
+ */
+export function asVisibility(value: unknown): PresenceVisibility {
+	return VISIBILITIES.includes(value as PresenceVisibility)
+		? value as PresenceVisibility
+		: 'Nobody';
+}
+
 export interface AccountUser {
 	userId: string;
 	/** Null when the provider supplied no name; the caller renders a localized placeholder. */
@@ -30,7 +49,8 @@ export interface AccountUser {
 	 *  the list of who is connected — never the display name above. */
 	handle: string | null;
 	/** Whether they asked to appear in that list. Off unless they turned it on. */
-	listedPublicly: boolean;
+	/** Who may see this player in the list of who is connected. */
+	visibility: PresenceVisibility;
 	identities: LinkedIdentityView[];
 }
 
@@ -64,7 +84,7 @@ export function parseSession(raw: unknown): AccountSession {
 			displayName: typeof user.displayName === 'string' && user.displayName ? user.displayName : null,
 			email: typeof user.email === 'string' && user.email ? user.email : null,
 			handle: typeof user.handle === 'string' && user.handle ? user.handle : null,
-			listedPublicly: user.listedPublicly === true,
+			visibility: asVisibility(user.visibility),
 			identities: Array.isArray(user.identities)
 				? user.identities
 					.filter((i: any) => i && typeof i.issuer === 'string' && i.issuer)
@@ -256,13 +276,15 @@ function formatDate(iso?: string): string {
 		});
 }
 
-/** Appear in the list of who is connected, or not. True when the server stored the choice. */
-export async function saveVisibility(fetchImpl: typeof fetch, listed: boolean): Promise<boolean> {
+/** Who may see this player connected. True when the server stored the choice. */
+export async function saveVisibility(
+	fetchImpl: typeof fetch, visibility: PresenceVisibility,
+): Promise<boolean> {
 	try {
 		const response = await fetchImpl('/api/auth/visibility', {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ listed }),
+			body: JSON.stringify({ visibility }),
 		});
 		return response.ok;
 	} catch {

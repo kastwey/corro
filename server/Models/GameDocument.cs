@@ -133,7 +133,18 @@ public record GameDocument
 	/// </summary>
 	public GameDocument Sanitized() => this with
 	{
-		Players = Players.Select(p => p with { PlayerSecretId = "", RejoinCode = null }).ToList(),
+		// The account id goes no further than the server. It was being sent to every client at the
+		// table and used by none of them: an opaque string, but a STABLE one, so it would let
+		// anybody keep a note of it and recognise the same person at every other table for as long
+		// as the account exists. What a table actually needs is whether a seat could accept a
+		// friend request, which is a boolean.
+		Players = Players.Select(p => p with
+		{
+			PlayerSecretId = "",
+			RejoinCode = null,
+			HasAccount = p.UserId is { Length: > 0 },
+			UserId = null,
+		}).ToList(),
 		GameState = GameState is null ? null
 			: Services.Corro.Families.GameFamilies.For(GameState.GameType).ProjectFor(GameState, null),
 		// A finished match is projected exactly like a live one. Nothing in the end screen needs a

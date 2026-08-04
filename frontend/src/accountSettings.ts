@@ -16,7 +16,7 @@ import { tSync } from './i18nBinder.js';
 import {
 	AccountSession, MAX_DISPLAY_NAME_LENGTH,
 	deleteAccount, fetchProviders, fetchSession, linkPath, providerName,
-	renameAccount, saveHandle, saveVisibility, unlinkProvider,
+	renameAccount, saveHandle, saveVisibility, unlinkProvider, type PresenceVisibility,
 } from './account.js';
 
 /** What a provider redirect reported about the link the player just attempted. */
@@ -197,43 +197,66 @@ export async function openAccountSettings(options: AccountSettingsOptions = {}):
 	handleGroup.append(handleLabel, handleInput, handleHint, handleSave);
 	content.appendChild(handleGroup);
 
-	const listedGroup = document.createElement('div');
+	// ── who can see you connected ────────────────────────────────────────────
+	//
+	// A radio group rather than a checkbox, because the question has three answers and a checkbox
+	// can only offer two. It is a real <fieldset>/<legend>: that is what makes a screen reader read
+	// the question before each option, instead of three bare words with no idea what they answer.
+
+	const listedGroup = document.createElement('fieldset');
 	listedGroup.className = 'form-group account-settings-listed';
 
-	const listedLabel = document.createElement('label');
-	listedLabel.htmlFor = 'account-listed-input';
-
-	const listedInput = document.createElement('input');
-	listedInput.type = 'checkbox';
-	listedInput.id = 'account-listed-input';
-	listedInput.checked = session.user?.listedPublicly ?? false;
-
-	const listedText = document.createElement('span');
-	listedText.textContent = tSync('account.settings.listedLabel');
+	const listedLegend = document.createElement('legend');
+	listedLegend.textContent = tSync('account.settings.visibilityLegend');
 
 	const listedHint = document.createElement('p');
 	listedHint.className = 'account-settings-hint';
 	listedHint.id = 'account-listed-hint';
-	listedHint.textContent = tSync('account.settings.listedHint');
-	listedInput.setAttribute('aria-describedby', listedHint.id);
+	listedHint.textContent = tSync('account.settings.visibilityHint');
 
-	listedInput.addEventListener('change', async () => {
-		const saved = await saveVisibility(fetchImpl, listedInput.checked);
-		if (!saved) {
-			// Put the control back to what the server still holds rather than leaving it showing a
-			// choice that was never stored.
-			listedInput.checked = !listedInput.checked;
-			setStatus(tSync('account.settings.listedFailed'));
-			return;
-		}
-		setStatus(tSync(listedInput.checked
-			? 'account.settings.listedOn'
-			: 'account.settings.listedOff'));
-		options.onChanged?.();
-	});
+	listedGroup.append(listedLegend, listedHint);
 
-	listedLabel.append(listedInput, listedText);
-	listedGroup.append(listedLabel, listedHint);
+	const current = session.user?.visibility ?? 'Nobody';
+	const choices: PresenceVisibility[] = ['Nobody', 'Friends', 'Everyone'];
+	const inputs = new Map<PresenceVisibility, HTMLInputElement>();
+
+	for (const choice of choices) {
+		const row = document.createElement('div');
+		row.className = 'account-settings-choice';
+
+		const input = document.createElement('input');
+		input.type = 'radio';
+		input.name = 'account-visibility';
+		input.id = `account-visibility-${choice.toLowerCase()}`;
+		input.value = choice;
+		input.checked = choice === current;
+		input.setAttribute('aria-describedby', listedHint.id);
+
+		const label = document.createElement('label');
+		label.htmlFor = input.id;
+		label.textContent = tSync(`account.settings.visibility${choice}`);
+
+		input.addEventListener('change', async () => {
+			if (!input.checked) return;
+			const saved = await saveVisibility(fetchImpl, choice);
+			if (!saved) {
+				// Put the group back to what the server still holds rather than leaving it showing
+				// an answer that was never stored.
+				const held = session.user?.visibility ?? 'Nobody';
+				inputs.get(held)?.click();
+				setStatus(tSync('account.settings.listedFailed'));
+				return;
+			}
+			session = await fetchSession(fetchImpl);
+			setStatus(tSync(`account.settings.visibilitySaved${choice}`));
+			options.onChanged?.();
+		});
+
+		inputs.set(choice, input);
+		row.append(input, label);
+		listedGroup.appendChild(row);
+	}
+
 	content.appendChild(listedGroup);
 
 	// ── ways to sign in ──────────────────────────────────────────────────────

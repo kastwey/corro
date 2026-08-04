@@ -23,6 +23,12 @@ export interface RosterRow {
 	/** Names the row's toolbar ("Actions for kastwey"). */
 	actionsLabel: string;
 	actions: ToolbarAction[];
+	/**
+	 * Whether this row is a PERSON. False for a summary row like "3 players you cannot see": a room
+	 * whose only row is a count of people you cannot see is still an empty room, and saying so is
+	 * the difference between "nobody is about" and "nobody is about that you can see".
+	 */
+	isPerson?: boolean;
 }
 
 export interface FriendRosterDeps {
@@ -65,7 +71,9 @@ export class FriendRoster {
 			rescueFocus: () => this.deps.list.querySelector<HTMLElement>(`.${this.deps.rowClass}`),
 		});
 
-		if (this.deps.empty) this.deps.empty.hidden = rows.length > 0;
+		if (this.deps.empty) {
+			this.deps.empty.hidden = rows.some(row => row.isPerson !== false);
+		}
 		this.ensureNav();
 		this.nav?.refreshRovingTabindex();
 	}

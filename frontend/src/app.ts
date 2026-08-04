@@ -1,6 +1,7 @@
 // app.ts — frontend (server mode only)
 
 import { createAnnouncer } from './announcer.js';
+import { requestFriendAtTable } from './friends.js';
 import type { AnnounceFn } from './announcer.js';
 import {
 	announceHistoryPrev,
@@ -522,6 +523,19 @@ async function initBoard() {
 		// Read at render time, not captured: the code is minted on the first authenticated join,
 		// so the session may gain one after this page started.
 		rejoinCode: () => GameSessionStore.getGame(gameId)?.rejoinCode ?? null,
+		// Asking somebody at this table, by seat. The list of who is online is opt-in, so without
+		// this a player who keeps to themselves there could never be asked by the people they
+		// actually play with. The outcome is spoken through the game's own announcer rather than a
+		// second live region.
+		selfPlayerId: () => playerSession.playerId,
+		askToBeFriends: async (playerId: string) => {
+			const result = await requestFriendAtTable(fetch, gameId, playerId);
+			// tSync, not the local t: that one prefixes `game.` for the board's own strings, and
+			// these belong to the table.
+			announce(
+				createAnnouncement('_raw', { text: tSync(`table.befriend_${result}`) }),
+				{ instant: true });
+		},
 	});
 
 	// Team boards arrange themselves at the table too — the host places everyone before there is

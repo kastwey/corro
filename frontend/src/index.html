@@ -121,10 +121,14 @@
 						data-i18n="lobby.uploadRemove">Remove uploaded game</button>
 				</div>
 
-				<div class="form-group">
+				<div class="form-group" id="host-name-group">
 					<label for="host-name" data-i18n="lobby.playerName">Your name:</label>
 					<input type="text" id="host-name" required maxlength="20" data-i18n-attr-placeholder="lobby.playerNamePlaceholder" placeholder="Enter your name">
 				</div>
+				<!-- Replaces the field above for somebody signed in: the account already has a name,
+					 so asking again is a question with a known answer. Says WHICH name, because a
+					 form that silently decides how others will see you is worse than one that asks. -->
+				<p class="form-hint" id="host-name-known" hidden></p>
 
 				<fieldset class="token-fieldset">
 					<legend data-i18n="lobby.selectToken">Choose your piece:</legend>
@@ -270,6 +274,8 @@
 			<div class="online-surface" role="application" aria-labelledby="online-heading">
 				<ul id="online-list" class="online-list" role="list"></ul>
 			</div>
+			<!-- Who can see YOU here. Not a live region: it is a fact about the page, not news. -->
+			<p id="online-standing" class="form-hint"></p>
 			<p id="online-empty" class="your-games-empty" data-i18n="lobby.online.empty" hidden>Nobody is listed right now.</p>
 			<p id="online-error" class="form-hint" role="status" aria-live="polite"></p>
 			<!-- The reader's OWN action is theirs to hear; the room changing around them is not. -->
@@ -326,10 +332,11 @@
 					</ul>
 
 					<form id="join-step2-form">
-						<div class="form-group">
+						<div class="form-group" id="player-name-group">
 							<label for="player-name-step2" data-i18n="lobby.playerName">Your name:</label>
 							<input type="text" id="player-name-step2" required maxlength="20" data-i18n-attr-placeholder="lobby.playerNamePlaceholder" placeholder="Enter your name">
 						</div>
+						<p class="form-hint" id="player-name-known" hidden></p>
 
 						<fieldset class="token-fieldset">
 							<legend data-i18n="lobby.selectToken">Choose your piece:</legend>

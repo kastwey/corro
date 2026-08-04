@@ -26,8 +26,12 @@ public class FriendshipServiceTests
 			Friendships = new FriendshipService(Repository);
 		}
 
-		/// <summary>An account with a claimed handle, listed unless asked otherwise.</summary>
-		public async Task<UserDocument> PlayerAsync(string userId, string handle, bool listed = true)
+		/// <summary>An account with a claimed handle, findable by strangers unless asked otherwise.</summary>
+		public async Task<UserDocument> PlayerAsync(
+			string userId,
+			string handle,
+			bool listed = true,
+			PresenceVisibility? visibility = null)
 		{
 			var normalized = PlayerHandle.Normalize(handle);
 			await Repository.CreateOrGetHandleClaimAsync(new HandleClaimDocument
@@ -42,7 +46,8 @@ public class FriendshipServiceTests
 				Id = userId,
 				UserId = userId,
 				Handle = handle,
-				ListedPublicly = listed,
+				Visibility = visibility
+					?? (listed ? PresenceVisibility.Everyone : PresenceVisibility.Nobody),
 				CreatedAtUtc = Now,
 				LastSignInUtc = Now,
 			});
@@ -401,5 +406,78 @@ public class FriendshipServiceTests
 		Assert.Null(await world.PairAsync("u-ana", "u-cora"));
 		Assert.Empty(await world.Friendships.ListAsync("u-berto"));
 		Assert.Empty(await world.Friendships.ListAsync("u-cora"));
+	}
+
+	// ── Being asked by name, and being asked at a table ───────────────────────────────────────
+
+	// Visibility governs who can find you among strangers. "Only friends" therefore hides you from
+	// exactly the people who would need to ask, which is why the table route below exists.
+	[Fact]
+	public async Task Only_somebody_visible_to_everyone_can_be_asked_by_name()
+	{
+		var world = new World();
+		await world.PlayerAsync("u-ana", "ana");
+		await world.PlayerAsync("u-quiet", "quiet", visibility: PresenceVisibility.Friends);
+		await world.PlayerAsync("u-hidden", "hidden", visibility: PresenceVisibility.Nobody);
+
+		Assert.Equal(FriendshipService.RequestOutcome.NoSuchPlayer,
+			await world.Friendships.RequestAsync("u-ana", "quiet", Now));
+		Assert.Equal(FriendshipService.RequestOutcome.NoSuchPlayer,
+			await world.Friendships.RequestAsync("u-ana", "hidden", Now));
+	}
+
+	// The case this route exists for: somebody who keeps to themselves online would otherwise be
+	// unreachable by the very people they actually play with.
+	[Fact]
+	public async Task Somebody_at_your_table_can_be_asked_however_they_hide_online()
+	{
+		var world = new World();
+		await world.PlayerAsync("u-ana", "ana");
+		await world.PlayerAsync("u-hidden", "hidden", visibility: PresenceVisibility.Nobody);
+
+		var outcome = await world.Friendships.RequestFromTableAsync("u-ana", "u-hidden", Now);
+
+		Assert.Equal(FriendshipService.RequestOutcome.Sent, outcome);
+		Assert.Equal(FriendshipState.Pending, (await world.PairAsync("u-ana", "u-hidden"))!.State);
+	}
+
+	// Both routes end in the same place, so a refusal cannot be worked around by changing route.
+	[Fact]
+	public async Task A_refusal_holds_against_the_table_route_too()
+	{
+		var world = new World();
+		await world.PlayerAsync("u-ana", "ana");
+		await world.PlayerAsync("u-berto", "berto");
+		await world.Friendships.RequestAsync("u-ana", "berto", Now);
+		await world.Friendships.RespondAsync("u-berto", "ana", accept: false, Now);
+
+		Assert.Equal(FriendshipService.RequestOutcome.Sent,
+			await world.Friendships.RequestFromTableAsync("u-ana", "u-berto", Now.AddDays(1)));
+		Assert.Equal(FriendshipState.Declined, (await world.PairAsync("u-ana", "u-berto"))!.State);
+	}
+
+	// A friendship nobody could name is one that would never appear on either list.
+	[Fact]
+	public async Task Somebody_with_no_public_name_cannot_be_asked_from_a_table()
+	{
+		var world = new World();
+		await world.PlayerAsync("u-ana", "ana");
+		await world.Repository.UpsertUserAsync(new UserDocument
+		{
+			Id = "u-nameless", UserId = "u-nameless", CreatedAtUtc = Now, LastSignInUtc = Now,
+		});
+
+		Assert.Equal(FriendshipService.RequestOutcome.NoSuchPlayer,
+			await world.Friendships.RequestFromTableAsync("u-ana", "u-nameless", Now));
+	}
+
+	[Fact]
+	public async Task Nobody_asks_themselves_from_a_table_either()
+	{
+		var world = new World();
+		await world.PlayerAsync("u-ana", "ana");
+
+		Assert.Equal(FriendshipService.RequestOutcome.Self,
+			await world.Friendships.RequestFromTableAsync("u-ana", "u-ana", Now));
 	}
 }

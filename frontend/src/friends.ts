@@ -133,6 +133,30 @@ export async function removeFriend(
 	}
 }
 
+/**
+ * Asks somebody sitting at the same table, addressed by their SEAT. The caller never learns their
+ * public name and does not need to — the server resolves the seat and answers.
+ *
+ * Separate from requestFriend because the routes differ in what they are allowed to reach:
+ * this one works whatever the other player's visibility says, since sharing a table has already
+ * introduced them. What the other player decides is unchanged.
+ */
+export async function requestFriendAtTable(
+	fetchImpl: typeof fetch, gameId: string, playerId: string,
+): Promise<FriendResult> {
+	try {
+		const response = await fetchImpl('/api/friends/requests/table', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ gameId, playerId }),
+		});
+		if (response.status === 404) return 'nobody';
+		return response.ok ? 'sent' : 'failed';
+	} catch {
+		return 'failed';
+	}
+}
+
 /** Everything this player is part of. A refused list is the same quiet outcome as an empty one. */
 export async function fetchFriends(fetchImpl: typeof fetch): Promise<FriendEntry[]> {
 	try {

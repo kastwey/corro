@@ -33,6 +33,7 @@ public partial class GameHub : Hub
 	private readonly ILogger<GameHub>? _logger;
 	private readonly Services.Rules.IRandomSource _random;
 	private readonly PresenceRegistry? _presence;
+	private readonly Services.Accounts.IUserRepository? _users;
 	private readonly Services.Bots.BotDriver? _botDriver;
 	private readonly ILiveKitVoiceService? _voiceService;
 
@@ -47,6 +48,18 @@ public partial class GameHub : Hub
 	/// </summary>
 	private string? SignedInUserId()
 		=> Services.Accounts.SessionPrincipal.UserId(Context.User);
+
+	/// <summary>
+	/// The caller's public name, for the seat they are about to take. Null for anybody playing
+	/// without an account or who has not chosen one — which is the ordinary case and always will
+	/// be, since nothing about sitting down requires either.
+	/// </summary>
+	private async Task<string?> HandleOfCallerAsync()
+	{
+		if (_users is null || SignedInUserId() is not { Length: > 0 } userId) return null;
+		var user = await _users.GetUserAsync(userId);
+		return user?.Handle is { Length: > 0 } handle ? handle : null;
+	}
 
 	public GameHub(
 		IGameRepository gameRepository,
@@ -65,7 +78,10 @@ public partial class GameHub : Hub
 		// Optional for slim Hub tests; the running app always registers the singleton.
 		ILiveKitVoiceService? voiceService = null,
 		// Who is here, by account. Optional for the same slim-tests reason.
-		PresenceRegistry? presence = null)
+		PresenceRegistry? presence = null,
+		// Read once per seat taken, to record the public name a table shows. Optional for the same
+		// slim-tests reason.
+		Services.Accounts.IUserRepository? users = null)
 	{
 		_gameRepository = gameRepository;
 		_gameServiceFactory = gameServiceFactory;
@@ -78,6 +94,7 @@ public partial class GameHub : Hub
 		_botDriver = botDriver;
 		_voiceService = voiceService;
 		_presence = presence;
+		_users = users;
 	}
 
 	// ============================================
