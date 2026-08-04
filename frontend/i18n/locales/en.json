@@ -126,7 +126,9 @@
       "tables": "{{count}} table(s) came across.",
       "noTables": "There were no tables to bring across.",
       "dismiss": "Good"
-    }
+    },
+    "menuLabel": "Your account",
+    "settingsMenu": "Account settings"
   },
   "lobby": {
     "backToHome": "Back to home",
@@ -136,7 +138,8 @@
       "onlineButton": "Who is online",
       "friendsButton": "Friends",
       "friendsButtonWaiting": "Friends, {{count}} waiting",
-      "friendsButtonWaiting_one": "Friends, 1 waiting"
+      "friendsButtonWaiting_one": "Friends, 1 waiting",
+      "settingsButton": "Settings"
     },
     "createGame": "Create a new table",
     "joinGame": "Join a table",
@@ -331,6 +334,24 @@
       "actionJoin": "Ask {{handle}} to let you into their table",
       "joinAsked": "Asked. If they say yes, you will be taken there.",
       "joinFailed": "That could not be asked right now."
+    },
+    "settings": {
+      "heading": "Settings",
+      "tabsLabel": "Settings sections",
+      "tabProfile": "Profile",
+      "tabNotices": "Lobby notices",
+      "arrivalsLegend": "Tell me when somebody arrives in the lobby?",
+      "arrivalsHint": "Said once, quietly, while you are in the lobby. Never during a game.",
+      "arrivalsNobody": "Nobody",
+      "arrivalsFriends": "Only my friends",
+      "arrivalsEveryone": "Everybody",
+      "arrivalsSavedNobody": "Arrivals will not be announced.",
+      "arrivalsSavedFriends": "Only your friends' arrivals will be announced.",
+      "arrivalsSavedEveryone": "Every arrival will be announced.",
+      "arrived": "{{handle}} has arrived in the lobby.",
+      "arrivedFriend": "{{handle}} has arrived in the lobby, and is on your friends list.",
+      "left": "{{handle}} has left the lobby.",
+      "leftFriend": "{{handle}} has left the lobby, and is on your friends list."
     },
     "chat": {
       "heading": "Messages",

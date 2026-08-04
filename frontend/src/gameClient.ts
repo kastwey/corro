@@ -62,6 +62,10 @@ export interface GameClientEvents {
 	'tableInvitation': unknown;
 	/** A table this player knocked on has let them in. */
 	'joinRequestAccepted': unknown;
+	/** Somebody visible to this player arrived in, or left, the room. */
+	'presenceChanged': unknown;
+	/** The head count changed. Everybody gets it; it is the number the footer already publishes. */
+	'presenceCount': unknown;
 	'disconnected': void;
 	'connectionError': Error;
 	'reconnecting': void;
@@ -210,6 +214,12 @@ export class UnifiedGameClient {
 		});
 		this.connection.on('JoinRequestAccepted', (data: unknown) => {
 			this.emit('joinRequestAccepted', data);
+		});
+		this.connection.on('PresenceChanged', (data: unknown) => {
+			this.emit('presenceChanged', data);
+		});
+		this.connection.on('PresenceCount', (data: unknown) => {
+			this.emit('presenceCount', data);
 		});
 		this.connection.on('GameCreated', (data: CreateGameResponse) => {
 			this.emit('gameCreated', data);

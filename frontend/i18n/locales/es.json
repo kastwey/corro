@@ -126,7 +126,9 @@
       "tables": "Se han traído {{count}} mesa(s).",
       "noTables": "No había mesas que traer.",
       "dismiss": "Bien"
-    }
+    },
+    "menuLabel": "Tu cuenta",
+    "settingsMenu": "Ajustes de cuenta"
   },
   "lobby": {
     "backToHome": "Volver al inicio",
@@ -136,7 +138,8 @@
       "onlineButton": "Quién está conectado",
       "friendsButton": "Amigos",
       "friendsButtonWaiting": "Amigos, {{count}} esperando",
-      "friendsButtonWaiting_one": "Amigos, 1 esperando"
+      "friendsButtonWaiting_one": "Amigos, 1 esperando",
+      "settingsButton": "Ajustes"
     },
     "createGame": "Crear una mesa nueva",
     "joinGame": "Unirse a una mesa",
@@ -331,6 +334,24 @@
       "actionJoin": "Pedir a {{handle}} que te deje entrar en su mesa",
       "joinAsked": "Pedido. Si dicen que sí, te llevamos allí.",
       "joinFailed": "Ahora mismo no se ha podido pedir."
+    },
+    "settings": {
+      "heading": "Ajustes",
+      "tabsLabel": "Secciones de ajustes",
+      "tabProfile": "Perfil",
+      "tabNotices": "Avisos del lobby",
+      "arrivalsLegend": "¿Te aviso cuando alguien entra en el lobby?",
+      "arrivalsHint": "Se dice una vez, sin interrumpir, mientras estás en el lobby. Nunca durante una partida.",
+      "arrivalsNobody": "Nadie",
+      "arrivalsFriends": "Solo mis amigos",
+      "arrivalsEveryone": "Todo el mundo",
+      "arrivalsSavedNobody": "No se anunciará quién entra.",
+      "arrivalsSavedFriends": "Solo se anunciará la entrada de tus amigos.",
+      "arrivalsSavedEveryone": "Se anunciará cada entrada.",
+      "arrived": "{{handle}} ha entrado en el lobby.",
+      "arrivedFriend": "Ha entrado en el lobby {{handle}}, que está en tu lista de amigos.",
+      "left": "{{handle}} ha salido del lobby.",
+      "leftFriend": "Ha salido del lobby {{handle}}, que está en tu lista de amigos."
     },
     "chat": {
       "heading": "Mensajes",

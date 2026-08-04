@@ -24,7 +24,10 @@ import { LatestOnly } from './latestOnly.js';
 import { tokenIconHtml, setPackageTokens } from '../tokenIcons.js';
 import { initThemeToggle } from '../themeToggle.js';
 import { adoptUnlockCodes, initAccountBar, type AccountSession } from '../account.js';
-import { openAccountSettings } from '../accountSettings.js';
+import { renderAccountSettings, type LinkReturn } from '../accountSettings.js';
+import {
+	arrivalText, lobbyArrivalsSetting, setLobbyArrivalsSetting, shouldAnnounceArrival,
+} from '../lobbyNotices.js';
 import { initializeSiteBranding } from '../siteBranding.js';
 import { initPrivacyNotice } from '../privacyNotice.js';
 import { wireLanguageSelector } from '../languageSelector.js';
@@ -39,7 +42,7 @@ import {
 import { FriendsList } from '../friendsList.js';
 import { fetchFriends, type FriendEntry } from '../friends.js';
 import { listenForShake, requestShakePermission } from '../shakeGesture.js';
-import { initializeSiteMetrics } from '../siteMetrics.js';
+import { initializeSiteMetrics, renderActivity } from '../siteMetrics.js';
 import { showSecondAccountNotice } from '../secondAccountNotice.js';
 import { showMergedNotice } from '../mergedNotice.js';
 import { applyRuleSettings, readRuleSettings } from './ruleFields.js';
@@ -77,6 +80,8 @@ class UnifiedLobbyUI {
 	private lobbyChat: LobbyChat | null = null;
 	private invitesRoster: FriendRoster | null = null;
 	private friendsTabs: Tabs | null = null;
+	private settingsTabs: Tabs | null = null;
+	private noticesWired = false;
 	/** Public names the @ autocomplete offers, refreshed when the lobby is opened. */
 	private chatCandidates: string[] = [];
 
@@ -164,15 +169,10 @@ class UnifiedLobbyUI {
 		// Come back to the lobby exactly where the player left it (a game link keeps working).
 		const returnUrl = () => window.location.pathname + window.location.search;
 
+		// Settings are a SCREEN now, not a dialog: a place you go to change several things and read
+		// what happened, rather than a question with an answer.
 		const openSettings = (linkOutcome: typeof linkReturn = null) => {
-			void openAccountSettings({
-				returnUrl: returnUrl(),
-				linkReturn: linkOutcome,
-				returnFocusTo: 'account-manage-btn',
-				// Rebuild the bar so a rename or a removed provider shows immediately.
-				onChanged: () => this.setupAccountBar(),
-				onSignedOut: () => this.setupAccountBar(),
-			});
+			void this.showSettingsView(linkOutcome);
 		};
 
 		void initAccountBar(mount, {
@@ -206,6 +206,11 @@ class UnifiedLobbyUI {
 				// never again meant a slow connection showed an empty list and left it that way,
 				// which is indistinguishable from having been invited to nothing.
 				gameClient.on('connected', () => void this.refreshInvitations());
+				// Somebody arriving or leaving, and the head count that goes with it. Both are
+				// corrected in place; whether the ARRIVAL is said out loud is this device's own
+				// choice (see lobbyNotices), because it is a preference about speech here.
+				gameClient.on('presenceChanged', (data: unknown) => this.onPresenceChanged(data));
+				gameClient.on('presenceCount', (data: unknown) => this.onPresenceCount(data));
 				void this.refreshInvitations();
 			}
 			this.useAccountName(session.user?.displayName ?? null);
@@ -1107,6 +1112,88 @@ class UnifiedLobbyUI {
 			{ handle });
 	}
 
+	/**
+	 * Everything about this player, in one place with tabs. The profile tab is the account settings
+	 * that used to be a dialog; the notices tab is what the lobby is allowed to say out loud.
+	 */
+	private async showSettingsView(linkReturn: LinkReturn | null = null): Promise<void> {
+		showView('view-settings');
+		window.history.pushState({ view: 'view-settings' }, '');
+
+		const tablist = getElement('settings-tabs');
+		if (tablist) this.settingsTabs ??= new Tabs({ tablist });
+		// Opening the settings always lands on the profile, whatever tab was last looked at. A
+		// screen that reopens where you left it is right for a place you live in; this is one you
+		// visit to change a thing, and "my account" is what "settings" means to somebody arriving.
+		this.settingsTabs?.select('settings-tab-profile', { silent: true });
+		this.wireLobbyNotices();
+
+		const profile = getElement('settings-panel-profile');
+		if (!profile) return;
+		await renderAccountSettings(profile, {
+			returnUrl: window.location.pathname + window.location.search,
+			linkReturn,
+			// Rebuild the bar so a rename or a removed provider shows immediately.
+			onChanged: () => this.setupAccountBar(),
+			onSignedOut: () => { this.setupAccountBar(); this.showHome(); },
+		});
+	}
+
+	/**
+	 * Whether the lobby says who arrives. Kept in the browser rather than on the account: it is a
+	 * preference about THIS device's speech, and somebody using a screen reader here and not there
+	 * would otherwise have to choose once for both.
+	 */
+	private wireLobbyNotices(): void {
+		if (this.noticesWired) return;
+		this.noticesWired = true;
+		for (const choice of ['nobody', 'friends', 'everyone'] as const) {
+			const input = getElement<HTMLInputElement>(`settings-arrivals-${choice}`);
+			if (!input) continue;
+			input.checked = lobbyArrivalsSetting() === choice;
+			input.addEventListener('change', () => {
+				if (!input.checked) return;
+				setLobbyArrivalsSetting(choice);
+				const status = getElement('settings-notices-status');
+				if (status) {
+					status.textContent = i18nBinder.tSync(
+						`lobby.settings.arrivalsSaved${choice[0].toUpperCase()}${choice.slice(1)}`);
+				}
+			});
+		}
+	}
+
+	/** Somebody arrived or left. Said once, quietly, and only if this device asked to hear it. */
+	private onPresenceChanged(data: unknown): void {
+		const event = data as { handle?: unknown; isFriend?: unknown; arriving?: unknown } | null;
+		if (typeof event?.handle !== 'string' || event.handle.length === 0) return;
+
+		const isFriend = event.isFriend === true;
+		if (!shouldAnnounceArrival(lobbyArrivalsSetting(), isFriend)) return;
+
+		this.announceInLobby(arrivalText(
+			event.handle, isFriend, event.arriving !== false,
+			(key, vars) => i18nBinder.tSync(key, vars)));
+
+		// The room list, if they happen to be looking at it, is simply re-read: it is a page, and
+		// a row appearing under somebody's fingers would be worse than a stale one.
+		if (getElement('view-online')?.hidden === false) void this.onlineList?.refresh();
+	}
+
+	/** The head count changed. Corrected in place; nobody is interrupted to hear a number. */
+	private onPresenceCount(data: unknown): void {
+		const count = data as { players?: unknown; tables?: unknown } | null;
+		const players = Number(count?.players);
+		const tables = Number(count?.tables);
+		if (!Number.isFinite(players) || !Number.isFinite(tables)) return;
+		renderActivity(
+			getElement('site-activity'),
+			// Only ever a correction: a deployment that publishes nothing has no element to write
+			// to, so renderActivity leaves it alone.
+			{ activeTables: tables, connectedPlayers: players },
+			(key, vars) => i18nBinder.tSync(key, vars));
+	}
+
 	private setupHomeNavigation(): void {
 		getElement('go-create-btn')?.addEventListener('click', () => this.showCreateView());
 		getElement('go-join-btn')?.addEventListener('click', () => this.showJoinView());
@@ -1114,6 +1201,7 @@ class UnifiedLobbyUI {
 		getElement('online-back-btn')?.addEventListener('click', () => window.history.back());
 		getElement('go-friends-btn')?.addEventListener('click', () => void this.showFriendsView());
 		getElement('friends-back-btn')?.addEventListener('click', () => window.history.back());
+		getElement('settings-back-btn')?.addEventListener('click', () => window.history.back());
 		// The in-page "Back" buttons unwind history so the on-screen button and the browser's
 		// Back button traverse the same stack (create/join → home) — never off the site.
 		getElement('create-back-btn')?.addEventListener('click', () => window.history.back());

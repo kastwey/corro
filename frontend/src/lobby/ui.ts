@@ -132,7 +132,8 @@ export function hideSection(sectionId: string): void {
  * the waiting room from showing the games list behind it.
  */
 export const LOBBY_VIEWS = ['view-home', 'view-create', 'view-join', 'view-online',
-	'view-friends', 'view-waiting'] as const;
+	'view-friends',
+	'view-settings', 'view-waiting'] as const;
 export type LobbyView = typeof LOBBY_VIEWS[number];
 
 /**

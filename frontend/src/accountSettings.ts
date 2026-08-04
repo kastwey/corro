@@ -11,12 +11,11 @@
 // Erasing is confirmed INLINE rather than in a second dialog: the manager keeps one modal slot, so
 // a confirm would replace this dialog instead of sitting over it.
 
-import { dialogManager } from './dialogManager.js';
 import { tSync } from './i18nBinder.js';
 import {
 	AccountSession, MAX_DISPLAY_NAME_LENGTH,
 	deleteAccount, fetchProviders, fetchSession, linkPath, providerName,
-	renameAccount, saveHandle, saveVisibility, saveMessagePolicy, unlinkProvider,
+	renameAccount, readSession, saveHandle, saveVisibility, saveMessagePolicy, unlinkProvider,
 	type PresenceVisibility, type MessagePolicy,
 } from './account.js';
 
@@ -83,19 +82,36 @@ function operationMessage(result: string, provider?: string): string {
  * Opens the account settings. Resolves once the dialog is on screen; everything after that is
  * driven by its own controls.
  */
-export async function openAccountSettings(options: AccountSettingsOptions = {}): Promise<void> {
+/**
+ * Builds the account settings into a container.
+ *
+ * It used to be a dialog. A dialog is right for a question with an answer; this is a place you go
+ * to change several things and read what happened, and putting it behind a modal meant every one of
+ * those changes cost an open and a close. It is a tab of the settings screen now, and the only
+ * structural difference is that nothing traps focus and nothing has to be dismissed.
+ */
+export async function renderAccountSettings(
+	mount: HTMLElement, options: AccountSettingsOptions = {},
+): Promise<void> {
 	const fetchImpl = options.fetchImpl ?? fetch;
 	const returnUrl = options.returnUrl ?? '/';
 
-	const [providers, initialSession] = await Promise.all([
+	const [providers, read] = await Promise.all([
 		fetchProviders(fetchImpl),
-		fetchSession(fetchImpl),
+		readSession(fetchImpl),
 	]);
 
-	if (!initialSession.signedIn) {
+	// A request that could not be ANSWERED is not a sign-out. Treating it as one used to throw
+	// somebody out of the screen they had just opened, on one bad request.
+	if (read === null) {
+		mount.replaceChildren();
+		return;
+	}
+	if (!read.signedIn) {
 		options.onSignedOut?.();
 		return;
 	}
+	const initialSession = read;
 
 	let session: AccountSession = initialSession;
 
@@ -384,8 +400,9 @@ export async function openAccountSettings(options: AccountSettingsOptions = {}):
 					const result = await unlinkProvider(fetchImpl, issuer);
 					session = await fetchSession(fetchImpl);
 					if (!session.signedIn) {
+						// Signed out from under us. The caller decides where to send them; there is
+						// no dialog to close any more.
 						options.onSignedOut?.();
-						dialogManager.close();
 						return;
 					}
 					setStatus(result === 'ok'
@@ -462,7 +479,6 @@ export async function openAccountSettings(options: AccountSettingsOptions = {}):
 		confirm.addEventListener('click', async () => {
 			const result = await deleteAccount(fetchImpl);
 			if (result === 'ok' || result === 'signed_out') {
-				dialogManager.close();
 				options.onSignedOut?.();
 				return;
 			}
@@ -484,26 +500,10 @@ export async function openAccountSettings(options: AccountSettingsOptions = {}):
 	renderEraseButton();
 	content.append(eraseHeading, eraseExplanation, eraseRegion);
 
-	// A link that has just come back through a provider reports itself the moment the dialog opens.
+	// A link that has just come back through a provider reports itself the moment this is shown.
 	if (options.linkReturn) {
 		setStatus(linkResultMessage(options.linkReturn));
 	}
 
-	dialogManager.show({
-		title: 'Your account',
-		titleI18nKey: 'account.settings.title',
-		contentElement: content,
-		className: 'account-settings-dialog',
-		plainButtons: true,
-		initialFocus: nameInput,
-		returnFocusTo: options.returnFocusTo,
-		buttons: [
-			{
-				label: 'Close',
-				i18nKey: 'common.close',
-				variant: 'secondary',
-				action: () => dialogManager.close(),
-			},
-		],
-	});
+	mount.replaceChildren(content);
 }

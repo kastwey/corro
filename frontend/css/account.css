@@ -272,3 +272,56 @@
 		text-align: center;
 	}
 }
+
+/* ── Sign in with Apple: Apple's official button treatment ─────────
+ * Apple's brand guidelines ask for their own mark and a black-or-white button rather than the
+ * neutral link styling the other providers use. We keep the link semantics and the row's sizing
+ * but paint it as the official button: black with a white mark in light mode, white with a black
+ * mark in dark. The logo is a currentColor mask, so it flips with the label instead of shipping
+ * two images, and hover/focus are pinned here because the shared rules swap in accent tokens that
+ * would break the official treatment. */
+.account-signin-link[data-provider="apple"] {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.35em;
+	border-color: #000;
+	background: #000;
+	color: #fff;
+	text-decoration: none;
+}
+
+.account-signin-link[data-provider="apple"]::before {
+	content: "";
+	flex: 0 0 auto;
+	width: 1.05em;
+	height: 1.05em;
+	margin-top: -0.1em; /* the mark's optical centre sits a touch high */
+	background-color: currentColor;
+	-webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20384%20512%27%3E%3Cpath%20d%3D%27M318.7%20268.7c-.2-36.7%2016.4-64.4%2050-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3%2020.7-88.5%2020.7-15%200-49.4-19.7-76.4-19.7C63.3%20141.2%204%20184.8%204%20273.5q0%2039.3%2014.4%2081.2c12.8%2036.7%2059%20126.7%20107.2%20125.2%2025.2-.6%2043-17.9%2075.8-17.9%2031.8%200%2048.3%2017.9%2076.4%2017.9%2048.6-.7%2090.4-82.5%20102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4%2024.8-61.9%2024-72.5-24.1%201.4-52%2016.4-67.9%2034.9-17.5%2019.8-27.8%2044.3-25.6%2071.9%2026.1%202%2049.9-11.4%2069.5-34.3z%27%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+	        mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20384%20512%27%3E%3Cpath%20d%3D%27M318.7%20268.7c-.2-36.7%2016.4-64.4%2050-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3%2020.7-88.5%2020.7-15%200-49.4-19.7-76.4-19.7C63.3%20141.2%204%20184.8%204%20273.5q0%2039.3%2014.4%2081.2c12.8%2036.7%2059%20126.7%20107.2%20125.2%2025.2-.6%2043-17.9%2075.8-17.9%2031.8%200%2048.3%2017.9%2076.4%2017.9%2048.6-.7%2090.4-82.5%20102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4%2024.8-61.9%2024-72.5-24.1%201.4-52%2016.4-67.9%2034.9-17.5%2019.8-27.8%2044.3-25.6%2071.9%2026.1%202%2049.9-11.4%2069.5-34.3z%27%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+}
+
+.account-signin-link[data-provider="apple"]:hover {
+	border-color: #000;
+	background: #1a1a1a;
+}
+
+.account-signin-link[data-provider="apple"]:focus-visible {
+	border-color: #000;
+}
+
+[data-theme="dark"] .account-signin-link[data-provider="apple"] {
+	border-color: #fff;
+	background: #fff;
+	color: #000;
+}
+
+[data-theme="dark"] .account-signin-link[data-provider="apple"]:hover {
+	border-color: #fff;
+	background: #e8e8e8;
+}
+
+[data-theme="dark"] .account-signin-link[data-provider="apple"]:focus-visible {
+	border-color: #fff;
+}

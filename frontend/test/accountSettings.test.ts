@@ -2,13 +2,13 @@ import test, { before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { setupDom, installFakeI18next } from './helpers/dom.js';
 
-let openAccountSettings: typeof import('../src/accountSettings.js').openAccountSettings;
+let renderAccountSettings: typeof import('../src/accountSettings.js').renderAccountSettings;
 let methodLineText: typeof import('../src/accountSettings.js').methodLineText;
 let linkResultMessage: typeof import('../src/accountSettings.js').linkResultMessage;
 let dialogManager: typeof import('../src/dialogManager.js').dialogManager;
 
 /**
- * The "your account" dialog. The behaviours worth pinning are the ones with consequences: adding a
+ * The "your account" settings, now a tab of the settings screen rather than a dialog. The behaviours worth pinning are the ones with consequences: adding a
  * provider is a LINK because it navigates away, removing one is a button because it posts, and the
  * last remaining sign-in method is refused with a spoken reason instead of a `disabled` attribute
  * that would leave a screen-reader user at a control that silently does nothing.
@@ -17,7 +17,7 @@ let dialogManager: typeof import('../src/dialogManager.js').dialogManager;
 before(async () => {
 	setupDom();
 	installFakeI18next('en');
-	({ openAccountSettings, methodLineText, linkResultMessage } = await import('../src/accountSettings.js'));
+	({ renderAccountSettings, methodLineText, linkResultMessage } = await import('../src/accountSettings.js'));
 	({ dialogManager } = await import('../src/dialogManager.js'));
 });
 
@@ -60,7 +60,10 @@ async function open(overrides: {
 		'/api/auth/me': { body: sessionBody(identities) },
 		...overrides.routes,
 	});
-	await openAccountSettings({ fetchImpl: impl, returnUrl: '/', ...overrides.options });
+	// Mounted into a container, the way the settings screen's profile tab does it.
+	const mount = document.createElement('div');
+	document.body.appendChild(mount);
+	await renderAccountSettings(mount, { fetchImpl: impl, returnUrl: '/', ...overrides.options });
 	return { calls, dialog: document.querySelector('.account-settings') as HTMLElement };
 }
 
@@ -161,7 +164,9 @@ test('removing a provider reports it and refreshes the list', async () => {
 		'/api/auth/unlink/microsoft': { status: 204 },
 	});
 	let changed = 0;
-	await openAccountSettings({ fetchImpl: impl, returnUrl: '/', onChanged: () => changed++ });
+	await renderAccountSettings(
+		document.body.appendChild(document.createElement('div')),
+		{ fetchImpl: impl, returnUrl: '/', onChanged: () => changed++ });
 	const dialog = document.querySelector('.account-settings') as HTMLElement;
 
 	identities = [{ issuer: 'google', email: 'ana@gmail.com' }];
@@ -287,7 +292,9 @@ test('the settings never open for somebody who is not signed in', async () => {
 		'/api/auth/me': { body: { signedIn: false } },
 	});
 
-	await openAccountSettings({ fetchImpl: impl, onSignedOut: () => signedOut++ });
+	await renderAccountSettings(
+		document.body.appendChild(document.createElement('div')),
+		{ fetchImpl: impl, onSignedOut: () => signedOut++ });
 
 	assert.equal(document.querySelector('.account-settings'), null);
 	assert.equal(signedOut, 1);

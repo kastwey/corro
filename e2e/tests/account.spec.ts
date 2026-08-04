@@ -10,7 +10,9 @@
 
 import { test, expect } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
-import { appI18n, gotoLobbyHome, newPlayerPage } from '../helpers/game';
+import {
+	appI18n, closeAccountSettings, gotoLobbyHome, newPlayerPage, openAccountSettings, signOutFromMenu,
+} from '../helpers/game';
 
 const es = appI18n('es').account as Record<string, string> & { provider: Record<string, string> };
 
@@ -55,9 +57,9 @@ test('signing in names the player and offers signing out again', async ({ browse
 	// Signing in must not have disturbed the lobby itself.
 	await expect(page.locator('#go-create-btn')).toBeVisible();
 
-	const signOut = page.getByRole('button', { name: es.signOut });
-	await expect(signOut).toBeVisible();
-	await signOut.click();
+	// Signing out lives in the account menu now: one control named with the player, rather than
+	// two buttons in the header that everybody passes on the way to everything else.
+	await signOutFromMenu(page);
 
 	await expect(page.locator('#account-bar .account-status')).toHaveCount(0);
 	await expect(page.getByRole('link', { name: signInLinkName() })).toBeVisible();
@@ -122,21 +124,16 @@ const settings = appI18n('es').account.settings as Record<string, string>;
 async function openSettings(page: import('../helpers/test').Page, subject = 'e2e-player') {
 	await page.goto(`/api/auth/signin/e2e?returnUrl=%2F&subject=${subject}`);
 	await expect(page.locator('#account-bar .account-status')).toBeVisible();
-	await page.getByRole('button', { name: appI18n('es').account.manage as string }).click();
-	await expect(page.locator('.account-settings')).toBeVisible();
+	await openAccountSettings(page);
 	// The dialog places its own initial focus shortly after opening. Wait for that to settle, so a
 	// test that moves focus is not racing it — and so the intended landing spot stays pinned.
-	await expect(page.locator('#account-name-input')).toBeFocused();
+	// A SCREEN lands on its heading, which is the top of what you just opened. The dialog it
+	// replaced landed on the first field, because a dialog has no top to speak of.
+	await expect(page.locator('#settings-heading')).toBeFocused();
 }
 
-/**
- * Closes the settings dialog. Exact match: "Cerrar" is otherwise a prefix of "Cerrar sesión".
- * Closing hides the dialog rather than emptying it, so visibility — not presence — is what changes.
- */
-async function closeSettings(page: import('../helpers/test').Page) {
-	await page.getByRole('button', { name: appI18n('es').common.close as string, exact: true }).click();
-	await expect(page.locator('.account-settings')).not.toBeVisible();
-}
+/** Leaving the settings screen, which is a back button now rather than a dialog's Close. */
+const closeSettings = closeAccountSettings;
 
 test('the settings show the account, its sign-in methods and how to erase it', async ({ browser }) => {
 	const page = await newPlayerPage(browser);
@@ -192,7 +189,7 @@ test('renaming the account updates what the lobby says about you', async ({ brow
 
 	await expect(page.locator('.account-settings-status')).toHaveText(settings.nameSaved);
 
-	// The bar behind the dialog reflects it immediately.
+	// The account bar reflects it as soon as the screen is left.
 	await closeSettings(page);
 	await expect(page.locator('#account-bar .account-status'))
 		.toHaveText((appI18n('es').account.signedInAs as string).replace('{{name}}', 'Ana la Roja'));
@@ -258,9 +255,10 @@ test('the settings and every refusal state are Axe-clean in the dark theme too',
 	await page.locator('#theme-toggle').click();
 	await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 
-	await page.getByRole('button', { name: appI18n('es').account.manage as string }).click();
-	await expect(page.locator('.account-settings')).toBeVisible();
-	await expect(page.locator('#account-name-input')).toBeFocused();
+	await openAccountSettings(page);
+	// A SCREEN lands on its heading, which is the top of what you just opened. The dialog it
+	// replaced landed on the first field, because a dialog has no top to speak of.
+	await expect(page.locator('#settings-heading')).toBeFocused();
 
 	// The refused control keeps a readable foreground in this palette, not just a faded one.
 	await expect(page.locator('button.account-unlink-btn').first()).toHaveAttribute('aria-disabled', 'true');

@@ -271,25 +271,44 @@ test('signed in, it names the player and offers sign-out', async () => {
 
 	assert.equal(session.signedIn, true);
 	assert.equal(el.querySelector('.account-status')?.textContent, 'Signed in as Ana.');
-	assert.equal(el.querySelector('#account-signout-btn')?.textContent, 'Sign out');
+	// One control, named with the player's own name: signing out and the settings live inside it.
+	// Two buttons in the header is two tab stops passed on the way to everything else, every time.
+	assert.equal(el.querySelector('#account-manage-btn')?.textContent, 'Ana');
+	assert.equal(el.querySelector('#account-signout-btn'), null);
 	assert.equal(el.querySelectorAll('a.account-signin-link').length, 0);
 });
 
-test('the manage affordance appears only when the host page can open the settings', async () => {
-	// The bar stays free of the dialog layer: with no opener injected there is nothing to offer.
+test('the menu offers the settings only when the host page can show them', async () => {
 	const el = mount();
 	const routes = { ...BOTH_PROVIDERS, '/api/auth/me': SIGNED_IN_BODY };
 
+	// With no way to show settings, the menu still exists — signing out lives in it — but has
+	// nothing to say about settings.
 	await initAccountBar(el, { fetchImpl: fakeFetch(routes).impl });
-	assert.equal(el.querySelector('#account-manage-btn'), null);
+	(el.querySelector('#account-manage-btn') as HTMLButtonElement).click();
+	assert.deepEqual(menuLabels(), ['Sign out']);
 
 	let opened = 0;
 	await initAccountBar(el, { fetchImpl: fakeFetch(routes).impl, onManageAccount: () => opened++ });
-	const manage = el.querySelector('#account-manage-btn') as HTMLButtonElement;
-	assert.equal(manage?.textContent, 'Your account');
-	manage.click();
+	const menuButton = el.querySelector('#account-manage-btn') as HTMLButtonElement;
+	assert.equal(menuButton.getAttribute('aria-haspopup'), 'menu');
+	menuButton.click();
+	assert.deepEqual(menuLabels(), ['Account settings', 'Sign out']);
+
+	(menuItem('Account settings') as HTMLElement).click();
 	assert.equal(opened, 1);
 });
+
+/** The labels of whatever menu is open, in order. */
+function menuLabels(): string[] {
+	return Array.from(document.querySelectorAll('[role="menu"] [role="menuitem"]'))
+		.map(item => item.textContent ?? '');
+}
+
+function menuItem(label: string): Element | null {
+	return Array.from(document.querySelectorAll('[role="menu"] [role="menuitem"]'))
+		.find(item => item.textContent === label) ?? null;
+}
 
 test('signing out returns to the signed-out control and notifies the host page', async () => {
 	const el = mount();
@@ -301,7 +320,8 @@ test('signing out returns to the signed-out control and notifies the host page',
 	let notified = 0;
 
 	await initAccountBar(el, { fetchImpl: impl, onSignedOut: () => notified++ });
-	(el.querySelector('#account-signout-btn') as HTMLButtonElement).click();
+	(el.querySelector('#account-manage-btn') as HTMLButtonElement).click();
+	(menuItem('Sign out') as HTMLElement).click();
 	await new Promise(resolve => setTimeout(resolve, 0));
 
 	assert.equal(notified, 1);
@@ -403,5 +423,9 @@ test('it renders in the language of the page it was loaded into', async () => {
 	await initAccountBar(el, { fetchImpl: impl });
 
 	assert.equal(el.querySelector('.account-status')?.textContent, 'Sesión iniciada como Ana.');
-	assert.equal(el.querySelector('#account-signout-btn')?.textContent, 'Cerrar sesión');
+	// The menu is named with the player, and its items are translated.
+	assert.equal(el.querySelector('#account-manage-btn')?.textContent, 'Ana');
+	(el.querySelector('#account-manage-btn') as HTMLButtonElement).click();
+	// No settings opener was injected here, so the menu holds only what it can actually do.
+	assert.deepEqual(menuLabels(), ['Cerrar sesión']);
 });

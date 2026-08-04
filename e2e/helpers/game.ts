@@ -522,3 +522,50 @@ export async function declineByEndingTurn(page: Page): Promise<void> {
 	await expect(confirm).toBeVisible();
 	await confirm.locator('.btn-primary').click();
 }
+
+/**
+ * Open the account settings, which live on the settings SCREEN rather than in a dialog.
+ *
+ * A helper rather than five copies: the settings moved out of a `<dialog>` and every spec that
+ * touches an account had its own three lines for opening one. The next move would have cost the
+ * same five edits again.
+ *
+ * Lands with the profile tab showing, which is where the account itself lives.
+ */
+export async function openAccountSettings(page: Page): Promise<void> {
+	const item = page.getByRole('menuitem', { name: appI18n('es').account.settingsMenu as string });
+	const content = page.locator('.account-settings');
+
+	// Opening takes TWO clicks — the menu, then the item — and the account bar rebuilds itself
+	// whenever the session changes under it, which takes the open menu with it. Losing the menu
+	// between the two clicks is rare on an idle machine and not rare under four parallel shards.
+	//
+	// The whole sequence retries, content and all, rather than only the item click: an attempt that
+	// half-succeeded would otherwise leave the screen open and the next attempt would be clicking
+	// the account menu on top of it.
+	for (let attempt = 0; attempt < 3; attempt++) {
+		try {
+			await page.locator('#account-manage-btn').click({ timeout: 5_000 });
+			await item.click({ timeout: 5_000 });
+			await expect(page.locator('#view-settings')).toBeVisible({ timeout: 5_000 });
+			await expect(content).toBeVisible({ timeout: 5_000 });
+			return;
+		} catch (error) {
+			if (attempt === 2) throw error;
+			// Back to somewhere known before trying again, so a half-open state is not built on.
+			await gotoLobbyHome(page);
+		}
+	}
+}
+
+/** Leave the settings screen the way its own control does. */
+export async function closeAccountSettings(page: Page): Promise<void> {
+	await page.locator('#settings-back-btn').click();
+	await expect(page.locator('#view-settings')).toBeHidden();
+}
+
+/** Sign out through the account menu, which is where it lives now. */
+export async function signOutFromMenu(page: Page): Promise<void> {
+	await page.locator('#account-manage-btn').click();
+	await page.getByRole('menuitem', { name: appI18n('es').account.signOut as string }).click();
+}

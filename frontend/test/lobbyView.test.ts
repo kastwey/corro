@@ -26,6 +26,9 @@ function renderViews(): void {
 		<section id="view-friends" class="lobby-view hidden" hidden>
 			<h2 id="friends-heading" data-view-heading tabindex="-1">Friends</h2>
 		</section>
+		<section id="view-settings" class="lobby-view hidden" hidden>
+			<h2 id="settings-heading" data-view-heading tabindex="-1">Settings</h2>
+		</section>
 		<section id="view-waiting" class="lobby-view hidden" hidden>
 			<div id="game-created-message" tabindex="-1">Created</div>
 		</section>`;

@@ -11,7 +11,7 @@
 import { test, expect } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
 import {
-	appI18n, createGame, expectAnnouncement, gotoLobbyHome, joinGame, newPlayerPage,
+	appI18n, closeAccountSettings, createGame, expectAnnouncement, gotoLobbyHome, joinGame, newPlayerPage, openAccountSettings,
 } from '../helpers/game';
 import type { Page } from '../helpers/test';
 
@@ -30,8 +30,7 @@ async function listedPlayer(
 	await page.goto(`/api/auth/signin/e2e?returnUrl=%2F&subject=${subject}`);
 	await expect(page.locator('#account-bar .account-status')).toBeVisible();
 
-	await page.getByRole('button', { name: appI18n('es').account.manage as string }).click();
-	await expect(page.locator('.account-settings')).toBeVisible();
+	await openAccountSettings(page);
 	const field = page.locator('#account-handle-input');
 	await field.fill(handle);
 	await expect(field).toHaveValue(handle);
@@ -40,14 +39,13 @@ async function listedPlayer(
 	await page.locator('#account-visibility-everyone').check();
 	await expect(page.locator('#account-settings-status'))
 		.toHaveText(account.visibilitySavedEveryone);
-	await page.getByRole('button', { name: 'Cerrar', exact: true }).click();
+	await closeAccountSettings(page);
 	return page;
 }
 
 /** Open the account dialog, landing where it puts focus. */
 async function openSettings(page: Page) {
-	await page.getByRole('button', { name: appI18n('es').account.manage as string }).click();
-	await expect(page.locator('.account-settings')).toBeVisible();
+	await openAccountSettings(page);
 }
 
 /** Open the list of who is connected, freshly read. */
@@ -221,7 +219,7 @@ test('somebody at your table can be asked, however they hide from the room', asy
 	await berto.locator('#account-visibility-nobody').check();
 	await expect(berto.locator('#account-settings-status'))
 		.toHaveText(account.visibilitySavedNobody);
-	await berto.getByRole('button', { name: 'Cerrar', exact: true }).click();
+	await closeAccountSettings(berto);
 
 	// Neither of them is asked for a name: signed in, the table uses the account's own. So the
 	// seats are named by the E2E provider's display names, not by anything typed here.

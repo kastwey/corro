@@ -7,7 +7,9 @@
 
 import { test, expect } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
-import { appI18n, chooseBoard, createGame, gotoLobbyHome, newPlayerPage } from '../helpers/game';
+import {
+	appI18n, chooseBoard, closeAccountSettings, createGame, gotoLobbyHome, newPlayerPage, openAccountSettings,
+} from '../helpers/game';
 
 const account = appI18n('es').account.settings as Record<string, string>;
 const online = appI18n('es').lobby.online as Record<string, string>;
@@ -18,9 +20,9 @@ async function signIn(page: import('../helpers/test').Page, subject: string) {
 }
 
 async function openSettings(page: import('../helpers/test').Page) {
-	await page.getByRole('button', { name: appI18n('es').account.manage as string }).click();
-	await expect(page.locator('.account-settings')).toBeVisible();
-	await expect(page.locator('#account-name-input')).toBeFocused();
+	await openAccountSettings(page);
+	// A screen lands on its heading, which is the top of what was just opened.
+	await expect(page.locator('#settings-heading')).toBeFocused();
 }
 
 /**
@@ -41,7 +43,7 @@ async function becomeListed(page: import('../helpers/test').Page, handle: string
 	await page.locator('#account-visibility-everyone').check();
 	await expect(page.locator('#account-settings-status'))
 		.toHaveText(account.visibilitySavedEveryone);
-	await page.getByRole('button', { name: 'Cerrar', exact: true }).click();
+	await closeAccountSettings(page);
 }
 
 test('a public name is claimed, refused when taken, and the reasons are Axe-clean', async ({ browser }) => {
@@ -130,7 +132,7 @@ test('the list is members-only, opt-in, and never names an account', async ({ br
 	await ana.locator('#account-visibility-nobody').check();
 	await expect(ana.locator('#account-settings-status'))
 		.toHaveText(account.visibilitySavedNobody);
-	await ana.getByRole('button', { name: 'Cerrar', exact: true }).click();
+	await closeAccountSettings(ana);
 
 	// gotoLobbyHome rather than reload(): the lobby's own startup settles the view last, so a
 	// click that lands before it finishes is undone by it.
@@ -217,7 +219,7 @@ test('the visibility choices look like radios, beside the words they decide', as
 
 	// Every other checkbox and radio in the app relies on the same rule, so one of each is pinned
 	// here too — the fix was made once, in forms.css, and this is what says so.
-	await ana.getByRole('button', { name: 'Cerrar', exact: true }).click();
+	await closeAccountSettings(ana);
 	await gotoLobbyHome(ana);
 	await ana.locator('#go-create-btn').click();
 	await chooseBoard(ana, 'four-colours');
@@ -247,7 +249,7 @@ test('who can see you is one question with three answers, and each is kept exact
 	] as const) {
 		await ana.locator(`#${id}`).check();
 		await expect(ana.locator('#account-settings-status')).toHaveText(said);
-		await ana.getByRole('button', { name: 'Cerrar', exact: true }).click();
+		await closeAccountSettings(ana);
 		await openSettings(ana);
 		await expect(ana.locator(`#${id}`)).toBeChecked();
 	}
@@ -270,7 +272,7 @@ test('only friends means only friends, and everybody else is a number', async ({
 	await quiet.locator('#account-visibility-friends').check();
 	await expect(quiet.locator('#account-settings-status'))
 		.toHaveText(account.visibilitySavedFriends);
-	await quiet.getByRole('button', { name: 'Cerrar', exact: true }).click();
+	await closeAccountSettings(quiet);
 
 	await gotoLobbyHome(stranger);
 	await stranger.locator('#go-online-btn').click();

@@ -12,6 +12,7 @@
 // parity test scans for them literally, so a key that stops existing fails the suite instead of
 // silently rendering as its own name.
 import { tSync } from './i18nBinder.js';
+import { popupMenu } from './popupMenu.js';
 
 /** One provider login bound to the account. The subject stays server-side: it IS the identity, and
  *  the client has no use for it. */
@@ -154,6 +155,16 @@ export function providerName(provider: string): string {
  * The signed-in line. One flowing sentence, because a screen reader speaks it as a single line —
  * and it stays a sentence when the provider gave us no name to put in it.
  */
+/**
+ * What the account menu is called: the player's own name. Falls back the same way the status line
+ * does, so somebody whose provider supplied no name still has something to press rather than a
+ * button labelled with nothing.
+ */
+export function accountMenuName(session: AccountSession): string {
+	const name = session.user?.displayName?.trim();
+	return name && name.length > 0 ? name : tSync('account.menuLabel');
+}
+
 export function signedInText(session: AccountSession): string {
 	const name = session.user?.displayName;
 	return name ? tSync('account.signedInAs', { name }) : tSync('account.signedIn');
@@ -178,6 +189,25 @@ export async function fetchSession(fetchImpl: typeof fetch): Promise<AccountSess
 		return parseSession(await response.json());
 	} catch {
 		return SIGNED_OUT;
+	}
+}
+
+/**
+ * The session, or NULL when the question could not be asked.
+ *
+ * The difference matters wherever "signed out" causes something to happen. fetchSession answers a
+ * failed request with SIGNED_OUT, which is fine for painting a bar — it shows the sign-in links,
+ * and the next read corrects it — and wrong for anything that ACTS on the answer: a hiccup on one
+ * request would throw somebody out of the screen they had just opened.
+ */
+export async function readSession(fetchImpl: typeof fetch): Promise<AccountSession | null> {
+	try {
+		const response = await fetchImpl('/api/auth/me');
+		if (response.status === 401) return SIGNED_OUT;
+		if (!response.ok) return null;
+		return parseSession(await response.json());
+	} catch {
+		return null;
 	}
 }
 
@@ -429,29 +459,44 @@ export async function initAccountBar(
 			status.textContent = signedInText(session);
 			mount.appendChild(status);
 
-			if (options.onManageAccount) {
-				const manage = document.createElement('button');
-				manage.type = 'button';
-				manage.id = 'account-manage-btn';
-				manage.className = 'secondary-button account-manage-btn';
-				manage.textContent = tSync('account.manage');
-				manage.addEventListener('click', () => options.onManageAccount!());
-				mount.appendChild(manage);
-			}
-
-			const out = document.createElement('button');
-			out.type = 'button';
-			out.id = 'account-signout-btn';
-			out.className = 'secondary-button account-signout-btn';
-			out.textContent = tSync('account.signOut');
-			out.addEventListener('click', async () => {
+			const signOutAndRefresh = async () => {
 				if (await signOut(fetchImpl)) {
 					session = SIGNED_OUT;
 					render();
 					options.onSignedOut?.();
 				}
+			};
+
+			// One control rather than two side by side: the player's own name, opening the small
+			// set of things that are about THEM. Two buttons sitting in the header is two tab stops
+			// somebody passes on the way to everything else, every time.
+			const menuButton = document.createElement('button');
+			menuButton.type = 'button';
+			menuButton.id = 'account-manage-btn';
+			menuButton.className = 'secondary-button account-manage-btn';
+			menuButton.setAttribute('aria-haspopup', 'menu');
+			menuButton.textContent = accountMenuName(session);
+			menuButton.addEventListener('click', () => {
+				popupMenu.open({
+					ariaLabel: tSync('account.menuLabel'),
+					anchor: menuButton,
+					items: [
+						...(options.onManageAccount
+							? [{
+								label: tSync('account.settingsMenu'),
+								onSelect: () => options.onManageAccount!(),
+							}]
+							: []),
+						{
+							label: tSync('account.signOut'),
+							onSelect: () => void signOutAndRefresh(),
+						},
+					],
+					onClose: () => menuButton.focus(),
+				});
 			});
-			mount.appendChild(out);
+			mount.appendChild(menuButton);
+
 			return;
 		}
 

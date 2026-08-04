@@ -6,7 +6,10 @@
 //
 // Two rules shape everything here:
 //
-//  * It is NEVER a live region and never refreshes under the reader. A number that changes while
+//  * It REFRESHES when the server says the count changed, but it is still never a live region: the
+//    number is corrected in place and nobody is interrupted to hear it. A count that spoke every
+//    time somebody opened a tab would be a ticker.
+//  * It was never a live region and never refreshed at all. A number that changes while
 //    somebody is reading the page is a ticker talking over them; this is a fact stated once, on
 //    arrival, like the rest of the footer.
 //  * A deployment that has not turned it on says NOTHING — the element stays hidden rather than

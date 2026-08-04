@@ -130,7 +130,11 @@ public partial class GameHub : Hub
 	{
 		if (SignedInUserId() is { Length: > 0 } userId)
 		{
+			var wasHere = _presence?.IsOnline(userId) ?? false;
 			_presence?.Add(userId, Context.ConnectionId);
+			// A second tab is not an arrival. Only the connection that brought somebody INTO the
+			// room is worth telling anybody about.
+			if (!wasHere) await AnnouncePresenceAsync(userId, arriving: true);
 		}
 		await base.OnConnectedAsync();
 	}
@@ -146,6 +150,11 @@ public partial class GameHub : Hub
 		if (SignedInUserId() is { Length: > 0 } presentUserId)
 		{
 			_presence?.Remove(presentUserId, Context.ConnectionId);
+			// And closing one tab is not leaving: only the last connection going means they are gone.
+			if (_presence?.IsOnline(presentUserId) == false)
+			{
+				await AnnouncePresenceAsync(presentUserId, arriving: false);
+			}
 		}
 
 		// Clean up game mapping

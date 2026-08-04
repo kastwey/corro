@@ -308,6 +308,42 @@
 			<p id="online-status" class="form-hint" role="status" aria-live="polite"></p>
 		</section>
 
+		<!-- VIEW: SETTINGS — everything about this player, in one place with tabs.
+			 It replaces the account DIALOG: a dialog is right for a question with an answer, and
+			 this is a place you go to change several things and read what happened. Behind a modal
+			 each of those changes cost an open and a close. -->
+		<section id="view-settings" class="lobby-view hidden" aria-labelledby="settings-heading" hidden>
+			<button type="button" id="settings-back-btn" class="secondary-button lobby-back-btn" data-i18n="lobby.backToHome">Back to home</button>
+			<h2 id="settings-heading" data-view-heading tabindex="-1" data-i18n="lobby.settings.heading">Settings</h2>
+
+			<div role="tablist" id="settings-tabs" class="lobby-tabs" data-i18n-attr:aria-label="lobby.settings.tabsLabel" aria-label="Settings sections">
+				<button type="button" role="tab" id="settings-tab-profile" aria-controls="settings-panel-profile" aria-selected="true" data-i18n="lobby.settings.tabProfile">Profile</button>
+				<button type="button" role="tab" id="settings-tab-notices" aria-controls="settings-panel-notices" aria-selected="false" data-i18n="lobby.settings.tabNotices">Lobby notices</button>
+			</div>
+
+			<div role="tabpanel" id="settings-panel-profile" aria-labelledby="settings-tab-profile" tabindex="0"></div>
+
+			<div role="tabpanel" id="settings-panel-notices" aria-labelledby="settings-tab-notices" tabindex="0" hidden>
+				<fieldset class="form-group account-settings-listed">
+					<legend data-i18n="lobby.settings.arrivalsLegend">Tell me when somebody arrives in the lobby?</legend>
+					<p class="account-settings-hint" id="settings-arrivals-hint" data-i18n="lobby.settings.arrivalsHint">Said once, quietly, while you are in the lobby. Never during a game.</p>
+					<div class="account-settings-choice">
+						<input type="radio" name="lobby-arrivals" id="settings-arrivals-nobody" value="Nobody" aria-describedby="settings-arrivals-hint">
+						<label for="settings-arrivals-nobody" data-i18n="lobby.settings.arrivalsNobody">Nobody</label>
+					</div>
+					<div class="account-settings-choice">
+						<input type="radio" name="lobby-arrivals" id="settings-arrivals-friends" value="Friends" checked aria-describedby="settings-arrivals-hint">
+						<label for="settings-arrivals-friends" data-i18n="lobby.settings.arrivalsFriends">Only my friends</label>
+					</div>
+					<div class="account-settings-choice">
+						<input type="radio" name="lobby-arrivals" id="settings-arrivals-everyone" value="Everyone" aria-describedby="settings-arrivals-hint">
+						<label for="settings-arrivals-everyone" data-i18n="lobby.settings.arrivalsEveryone">Everybody</label>
+					</div>
+				</fieldset>
+				<p id="settings-notices-status" class="form-hint" role="status" aria-live="polite"></p>
+			</div>
+		</section>
+
 		<!-- VIEW: FRIENDS — your friends, and the requests waiting for an answer -->
 		<section id="view-friends" class="lobby-view hidden" aria-labelledby="friends-heading" hidden>
 			<button type="button" id="friends-back-btn" class="secondary-button lobby-back-btn" data-i18n="lobby.backToHome">Back to home</button>

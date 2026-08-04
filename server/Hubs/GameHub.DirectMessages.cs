@@ -144,6 +144,54 @@ public partial class GameHub
 		return new DirectMessageResult { Delivered = audience, Unreachable = unreachable };
 	}
 
+	/// <summary>
+	/// Tell the room that somebody arrived or left, and hand everyone the new head count.
+	///
+	/// Sent only to people who could see them anyway: the presence setting decides who this player
+	/// is visible to, and an arrival notice that ignored it would announce somebody who chose to be
+	/// hidden. Whether it is SAID at all is the reader's own choice, made on their own device.
+	///
+	/// The count goes to everybody, because it is the same number the footer already publishes.
+	/// </summary>
+	private async Task AnnouncePresenceAsync(string userId, bool arriving)
+	{
+		if (_users is null || _presence is null) return;
+
+		// The count first: it is for everyone and does not depend on who arrived.
+		await Clients.All.SendAsync("PresenceCount", new
+		{
+			players = _presence.OnlineCount,
+			tables = _registry.CountActiveTables(),
+		});
+
+		var user = await _users.GetUserAsync(userId);
+		if (user?.Handle is not { Length: > 0 } handle) return;
+		if (user.EffectiveVisibility == PresenceVisibility.Nobody) return;
+
+		var friendIds = _friendships is null
+			? new Dictionary<string, FriendshipService.Relationship>()
+			: (Dictionary<string, FriendshipService.Relationship>)
+				await _friendships.RelationshipsForAsync(userId);
+
+		foreach (var readerId in _presence.OnlineUserIds())
+		{
+			if (readerId == userId) continue;
+			var isFriend = friendIds.GetValueOrDefault(readerId, FriendshipService.Relationship.None)
+				== FriendshipService.Relationship.Friends;
+			// "Only friends" means exactly that, here as everywhere else.
+			if (user.EffectiveVisibility == PresenceVisibility.Friends && !isFriend) continue;
+
+			var connections = _presence.ConnectionsOf(readerId).ToList();
+			if (connections.Count == 0) continue;
+			await Clients.Clients(connections).SendAsync("PresenceChanged", new
+			{
+				handle,
+				isFriend,
+				arriving,
+			});
+		}
+	}
+
 	private async Task<IReadOnlyDictionary<string, FriendshipService.Relationship>>
 		ResolveRelationshipsAsync(string senderId)
 		=> _friendships is null

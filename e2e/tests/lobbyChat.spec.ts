@@ -10,7 +10,9 @@
 
 import { test, expect } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
-import { appI18n, gotoLobbyHome, newPlayerPage } from '../helpers/game';
+import {
+	appI18n, closeAccountSettings, gotoLobbyHome, newPlayerPage, openAccountSettings,
+} from '../helpers/game';
 import type { Page } from '../helpers/test';
 
 const account = appI18n('es').account.settings as Record<string, string>;
@@ -25,8 +27,7 @@ async function chatter(
 	await page.goto(`/api/auth/signin/e2e?returnUrl=%2F&subject=${subject}`);
 	await expect(page.locator('#account-bar .account-status')).toBeVisible();
 
-	await page.getByRole('button', { name: appI18n('es').account.manage as string }).click();
-	await expect(page.locator('.account-settings')).toBeVisible();
+	await openAccountSettings(page);
 	const field = page.locator('#account-handle-input');
 	await field.fill(handle);
 	await expect(field).toHaveValue(handle);
@@ -36,7 +37,7 @@ async function chatter(
 	await expect(page.locator('#account-settings-status'))
 		.toHaveText(account.visibilitySavedEveryone);
 	await page.locator(`#account-messages-${options.messages ?? 'anyone'}`).check();
-	await page.getByRole('button', { name: 'Cerrar', exact: true }).click();
+	await closeAccountSettings(page);
 
 	await gotoLobbyHome(page);
 	await expect(page.locator('#lobby-chat')).toBeVisible();

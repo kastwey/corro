@@ -7,7 +7,7 @@
 import { test, expect } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
 import {
-	appI18n, createGame, expectAnnouncement, gotoLobbyHome, newPlayerPage,
+	appI18n, closeAccountSettings, createGame, expectAnnouncement, gotoLobbyHome, newPlayerPage, openAccountSettings,
 } from '../helpers/game';
 import type { Page } from '../helpers/test';
 
@@ -23,15 +23,14 @@ async function member(
 	await page.goto(`/api/auth/signin/e2e?returnUrl=%2F&subject=${subject}`);
 	await expect(page.locator('#account-bar .account-status')).toBeVisible();
 
-	await page.getByRole('button', { name: appI18n('es').account.manage as string }).click();
-	await expect(page.locator('.account-settings')).toBeVisible();
+	await openAccountSettings(page);
 	const field = page.locator('#account-handle-input');
 	await field.fill(handle);
 	await expect(field).toHaveValue(handle);
 	await page.locator('#account-handle-save').click();
 	await expect(page.locator('#account-settings-status')).toHaveText(account.handleSaved);
 	await page.locator('#account-messages-anyone').check();
-	await page.getByRole('button', { name: 'Cerrar', exact: true }).click();
+	await closeAccountSettings(page);
 	return page;
 }
 
