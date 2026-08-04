@@ -13,6 +13,11 @@ public class CosmosGameRepository : IGameRepository
 	private readonly Container _container;
 	private readonly ILogger<CosmosGameRepository> _logger;
 
+	/// <summary>Lobbies and games alike. Named here rather than inline so the startup provisioning
+	/// and its coverage test read the same constant — a container nobody creates is a feature that
+	/// fails only when somebody first tries to write to it.</summary>
+	internal const string GamesContainerName = "Games";
+
 	public CosmosGameRepository(CosmosClient cosmosClient, ILogger<CosmosGameRepository> logger)
 	{
 		_cosmosClient = cosmosClient;
@@ -20,7 +25,7 @@ public class CosmosGameRepository : IGameRepository
 
 		// Database and unified container configuration
 		var database = _cosmosClient.GetDatabase("CorroGame");
-		_container = database.GetContainer("Games"); // Single container for everything
+		_container = database.GetContainer(GamesContainerName); // Single container for everything
 	}
 
 	public async Task<GameDocument?> LoadGameAsync(string gameId)

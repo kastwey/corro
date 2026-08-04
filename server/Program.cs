@@ -111,18 +111,26 @@ internal class Program
 		// file returns index.html (so direct links / refresh don't 404), from the same provider.
 		app.MapFallbackToFile("index.html", new StaticFileOptions { FileProvider = webRootFiles });
 
-		// Initialize Cosmos DB automatically (now just one container)
-		if (builder.Environment.IsDevelopment())
+		// Make sure every container this build reads exists, in EVERY environment.
+		//
+		// This used to run only in Development, on the reasoning that production containers are
+		// provisioned by infrastructure. Nobody was provisioning them: the production database held
+		// only Games, so the three containers accounts need had never existed there and signing in
+		// could not work — a whole feature missing in silence, since the code only discovers a
+		// container is absent when somebody tries to write to it. Every container added since would
+		// have arrived the same way.
+		//
+		// It is safe to repeat: CreateIfNotExists is idempotent, and it costs four metadata calls at
+		// startup. A failure is logged and does NOT stop the app — accounts are optional by design,
+		// so a site that still deals cards is far better than no site at all.
+		try
 		{
-			try
-			{
-				app.Services.InitializeCosmosDbAsync().GetAwaiter().GetResult();
-			}
-			catch (Exception ex)
-			{
-				var logger = app.Services.GetRequiredService<ILogger<Program>>();
-				logger.LogError(ex, "Could not initialize Cosmos DB. Make sure the connection string is configured.");
-			}
+			app.Services.InitializeCosmosDbAsync().GetAwaiter().GetResult();
+		}
+		catch (Exception ex)
+		{
+			var logger = app.Services.GetRequiredService<ILogger<Program>>();
+			logger.LogError(ex, "Could not initialize Cosmos DB. Accounts and saved games may be unavailable; games in memory still work.");
 		}
 
 		app.Run();

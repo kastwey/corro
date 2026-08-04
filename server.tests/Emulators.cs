@@ -2,6 +2,7 @@ using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CorroServer.Services;
+using CorroServer.Extensions;
 using CorroServer.Services.Accounts;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -85,19 +86,20 @@ internal static class Emulators
 		return new CosmosGameRepository(client, NullLogger<CosmosGameRepository>.Instance);
 	}
 
-	/// <summary>The account repository against the emulator, with EVERY account container ensured —
-	/// each partitioned by the key it is actually queried with, exactly as the server creates them at
-	/// startup. All four, because the interesting behaviour of the two newer ones (a handle claimed
-	/// twice, two people asking each other at once) is precisely the duplicate-id rejection that only
-	/// a real container performs.</summary>
+	/// <summary>
+	/// The account repository against the emulator, with every container ensured from the SAME list
+	/// the server provisions from — never a copy of it. This helper used to keep its own shorter
+	/// list, which is how the handle-claim race ended up with no integration coverage at all: the
+	/// container it needed was simply never created here.
+	/// </summary>
 	public static async Task<CosmosUserRepository> NewCosmosUserRepositoryAsync()
 	{
 		var client = NewCosmosClient();
 		var db = (await client.CreateDatabaseIfNotExistsAsync(CosmosUserRepository.DatabaseName)).Database;
-		await db.CreateContainerIfNotExistsAsync(CosmosUserRepository.UsersContainerName, "/userId");
-		await db.CreateContainerIfNotExistsAsync(CosmosUserRepository.IdentitiesContainerName, "/identityKey");
-		await db.CreateContainerIfNotExistsAsync(CosmosUserRepository.HandlesContainerName, "/handle");
-		await db.CreateContainerIfNotExistsAsync(CosmosUserRepository.FriendshipsContainerName, "/pairId");
+		foreach (var (name, partitionKeyPath) in ServiceCollectionExtensions.CosmosContainers)
+		{
+			await db.CreateContainerIfNotExistsAsync(name, partitionKeyPath);
+		}
 		return new CosmosUserRepository(client, NullLogger<CosmosUserRepository>.Instance);
 	}
 }

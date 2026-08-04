@@ -237,6 +237,34 @@ public static class ServiceCollectionExtensions
 		|| connectionString.Contains("127.0.0.1")
 		|| connectionString.Contains(CosmosEmulatorAccountKey, StringComparison.Ordinal);
 
+	/// <summary>
+	/// Every container this build reads, with the key it is partitioned by.
+	///
+	/// Declared once, as data, because the two things that must agree about it live far apart: the
+	/// repositories that OPEN these containers, and the startup that CREATES them. When they were
+	/// separate lists of code they drifted, and the drift was invisible — a missing container is not
+	/// an error until somebody tries to write to one, which in production meant a whole feature that
+	/// simply never worked. <c>CosmosContainerProvisioningTests</c> now holds them together.
+	///
+	/// Each is partitioned by the key it is actually QUERIED with, so its lookup is a point read and
+	/// the container's own duplicate-id rejection can serve as the concurrency guard: Users by
+	/// account, Identities by the (issuer, subject) composite sign-in arrives with, Handles by the
+	/// name whose uniqueness they decide, and Friendships by the PAIR, since a friendship is one
+	/// fact about two people.
+	/// </summary>
+	public static readonly IReadOnlyList<(string Name, string PartitionKeyPath)> CosmosContainers =
+	[
+		(CosmosGameRepository.GamesContainerName, "/gameId"),
+		(CosmosUserRepository.UsersContainerName, "/userId"),
+		(CosmosUserRepository.IdentitiesContainerName, "/identityKey"),
+		(CosmosUserRepository.HandlesContainerName, "/handle"),
+		(CosmosUserRepository.FriendshipsContainerName, "/pairId"),
+	];
+
+	/// <summary>
+	/// Ensures the database and every container above. Idempotent, and cheap enough to run on every
+	/// startup in every environment — which it must, because nothing else provisions them.
+	/// </summary>
 	public static async Task InitializeCosmosDbAsync(this IServiceProvider serviceProvider)
 	{
 		var logger = serviceProvider.GetRequiredService<ILogger<CosmosClient>>();
@@ -249,69 +277,24 @@ public static class ServiceCollectionExtensions
 
 		try
 		{
-			logger.LogInformation("Initializing Cosmos DB database and containers...");
+			logger.LogInformation("Ensuring the Cosmos DB database and its {Count} containers...", CosmosContainers.Count);
 
-			// Create database without throughput (for serverless accounts)
+			// No throughput anywhere below: the account is serverless, which assigns it itself.
 			var databaseResponse = await cosmosClient.CreateDatabaseIfNotExistsAsync(
-				id: "CorroGame"
-			// No throughput for serverless accounts
-			);
-
+				id: CosmosUserRepository.DatabaseName);
 			var database = databaseResponse.Database;
-			logger.LogInformation("CorroGame database: {Status}",
+			logger.LogInformation("{Database} database: {Status}",
+				CosmosUserRepository.DatabaseName,
 				databaseResponse.StatusCode == System.Net.HttpStatusCode.Created ? "Created" : "Already exists");
 
-			// Create Games container (unified for lobbies and games)
-			var gamesContainerResponse = await database.CreateContainerIfNotExistsAsync(
-				id: "Games",
-				partitionKeyPath: "/gameId"
-			// No throughput - automatically assigned for serverless accounts
-			);
-
-			logger.LogInformation("Games container: {Status}",
-				gamesContainerResponse.StatusCode == System.Net.HttpStatusCode.Created ? "Created" : "Already exists");
-
-			// Accounts live in two containers because sign-in and every later request arrive with
-			// DIFFERENT keys: Users answers "who is this account" by account id, Identities answers
-			// "which account is this provider login" by the (issuer, subject) composite. Partitioning
-			// each by the key it is actually queried with keeps both a point read.
-			var usersContainerResponse = await database.CreateContainerIfNotExistsAsync(
-				id: CosmosUserRepository.UsersContainerName,
-				partitionKeyPath: "/userId"
-			);
-
-			logger.LogInformation("Users container: {Status}",
-				usersContainerResponse.StatusCode == System.Net.HttpStatusCode.Created ? "Created" : "Already exists");
-
-			var identitiesContainerResponse = await database.CreateContainerIfNotExistsAsync(
-				id: CosmosUserRepository.IdentitiesContainerName,
-				partitionKeyPath: "/identityKey"
-			);
-
-			logger.LogInformation("Identities container: {Status}",
-				identitiesContainerResponse.StatusCode == System.Net.HttpStatusCode.Created ? "Created" : "Already exists");
-
-			// And for the same reason again: a handle's uniqueness is decided by the handle, which
-			// is not the account key. Its own partition makes the claim a point read, and lets the
-			// container's duplicate-id rejection be the guard against two players claiming one name.
-			var handlesContainerResponse = await database.CreateContainerIfNotExistsAsync(
-				id: CosmosUserRepository.HandlesContainerName,
-				partitionKeyPath: "/handle"
-			);
-
-			logger.LogInformation("Handles container: {Status}",
-				handlesContainerResponse.StatusCode == System.Net.HttpStatusCode.Created ? "Created" : "Already exists");
-
-			// A friendship is one fact about a PAIR, so it is partitioned by the pair rather than by
-			// either person: one document that cannot disagree with itself, and — a third time — a
-			// duplicate-id rejection that settles two people asking each other at the same moment.
-			var friendshipsContainerResponse = await database.CreateContainerIfNotExistsAsync(
-				id: CosmosUserRepository.FriendshipsContainerName,
-				partitionKeyPath: "/pairId"
-			);
-
-			logger.LogInformation("Friendships container: {Status}",
-				friendshipsContainerResponse.StatusCode == System.Net.HttpStatusCode.Created ? "Created" : "Already exists");
+			foreach (var (name, partitionKeyPath) in CosmosContainers)
+			{
+				var response = await database.CreateContainerIfNotExistsAsync(name, partitionKeyPath);
+				// "Created" in production is worth noticing: it means this container had been
+				// missing, and whatever reads it had been failing until now.
+				logger.LogInformation("{Container} container: {Status}", name,
+					response.StatusCode == System.Net.HttpStatusCode.Created ? "Created" : "Already exists");
+			}
 
 			logger.LogInformation("Cosmos DB initialization completed successfully");
 		}

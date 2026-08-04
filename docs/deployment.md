@@ -54,6 +54,16 @@ deployment instead of silently removing private games from production.
 - Production already has the `CosmosDB` and `PackageBlobs` App Service connection strings
   configured for durable games and uploaded packages. The deployment changes application
   files only and leaves both connection strings untouched.
+- **The app provisions its own Cosmos containers**, on every startup and in every environment
+  (`InitializeCosmosDbAsync`). Nothing external needs to create them, and the call is
+  idempotent. This is not how it began: the provisioning ran in Development only, on the
+  assumption that infrastructure created the production containers, and nothing did — the
+  production database held `Games` alone, so accounts could not work there and nobody could
+  tell, because Cosmos reports a missing container only when something writes to one.
+  `ServiceCollectionExtensions.CosmosContainers` is the single list, checked against the
+  repositories by `CosmosContainerProvisioningTests`; do not keep a copy of it anywhere.
+  A `Created` line in the startup log outside a fresh environment means a container had been
+  missing and whatever reads it had been failing.
 - The host identity comes from the `SiteBranding` section in `server/appsettings.json`. App
   Service settings override it with ASP.NET Core's double-underscore convention:
   `SiteBranding__Title`, `SiteBranding__Taglines__en`, `SiteBranding__Taglines__es`,
