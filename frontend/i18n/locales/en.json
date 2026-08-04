@@ -120,7 +120,10 @@
     "home": {
       "createButton": "Create a table",
       "joinButton": "Join with a code",
-      "onlineButton": "Who is online"
+      "onlineButton": "Who is online",
+      "friendsButton": "Friends",
+      "friendsButtonWaiting": "Friends, {{count}} waiting",
+      "friendsButtonWaiting_one": "Friends, 1 waiting"
     },
     "createGame": "Create a new table",
     "joinGame": "Join a table",
@@ -275,7 +278,30 @@
       "row": "{{handle}}, {{activity}}.",
       "activityInLobby": "in the lobby",
       "activityAtTable": "at a table",
-      "activityPlaying": "playing"
+      "activityPlaying": "playing",
+      "actionsFor": "Actions for {{handle}}"
+    },
+    "friends": {
+      "heading": "Friends",
+      "hint": "Requests waiting for your answer come first. Asking to be friends starts from the list of who is online.",
+      "empty": "You have no friends here yet, and nobody is waiting for an answer.",
+      "menuLabel": "What you can do with this player",
+      "actionsFor": "Actions for {{handle}}",
+      "row": "{{handle}}. {{state}}",
+      "stateFriends": "Your friend.",
+      "stateSent": "You asked to be friends.",
+      "stateReceived": "Asked to be your friend.",
+      "stateSelf": "This is you.",
+      "actionRequest": "Ask {{handle}} to be friends",
+      "actionAccept": "Accept {{handle}}",
+      "actionDecline": "Decline {{handle}}",
+      "actionRemove": "Stop being friends with {{handle}}",
+      "resultSent": "Your request was sent to {{handle}}.",
+      "resultAccepted": "{{handle}} is now your friend.",
+      "resultDeclined": "You declined {{handle}}. They are not told, and they cannot ask again.",
+      "resultRemoved": "You and {{handle}} are no longer friends.",
+      "resultNobody": "Nobody is listed under that name.",
+      "resultFailed": "That could not be done. Try again in a moment."
     },
     "selectBoard": "Select game:",
     "boardFilterHint": "Type to filter, or press Down arrow to walk the list.",

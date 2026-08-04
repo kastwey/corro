@@ -65,4 +65,32 @@ public interface IUserRepository
 	/// </summary>
 	Task<HandleClaimDocument> ReplaceHandleClaimAsync(
 		HandleClaimDocument claim, CancellationToken ct = default);
+
+	/// <summary>What two accounts are to each other, or null when neither has ever asked.</summary>
+	Task<FriendshipDocument?> GetFriendshipAsync(string pairId, CancellationToken ct = default);
+
+	/// <summary>
+	/// Records a first request, and is the race guard for it — the third use of the same pattern
+	/// as sign-in and handles. Two people who ask each other at the same instant get ONE request
+	/// (the stored one comes back), never two mirrored ones that would each wait for the other.
+	/// </summary>
+	Task<FriendshipDocument> CreateOrGetFriendshipAsync(
+		FriendshipDocument friendship, CancellationToken ct = default);
+
+	/// <summary>Overwrites an existing relationship: answering a request, or asking again after
+	/// having refused one.</summary>
+	Task<FriendshipDocument> ReplaceFriendshipAsync(
+		FriendshipDocument friendship, CancellationToken ct = default);
+
+	/// <summary>Ends a relationship outright. Missing is success.</summary>
+	Task DeleteFriendshipAsync(string pairId, CancellationToken ct = default);
+
+	/// <summary>
+	/// Every relationship one account is part of, in any state. A cross-partition read of a small
+	/// container, run when somebody opens their friends list — never on a hot path. The alternative,
+	/// mirroring each friendship onto both sides, buys a point read with two documents that can
+	/// drift apart, and a friendship that disagrees with itself is worse than a slower query.
+	/// </summary>
+	Task<IReadOnlyList<FriendshipDocument>> FriendshipsOfAsync(
+		string userId, CancellationToken ct = default);
 }

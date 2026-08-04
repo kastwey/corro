@@ -120,7 +120,10 @@
     "home": {
       "createButton": "Crear una mesa",
       "joinButton": "Unirse con un código",
-      "onlineButton": "Quién está conectado"
+      "onlineButton": "Quién está conectado",
+      "friendsButton": "Amigos",
+      "friendsButtonWaiting": "Amigos, {{count}} esperando",
+      "friendsButtonWaiting_one": "Amigos, 1 esperando"
     },
     "createGame": "Crear una mesa nueva",
     "joinGame": "Unirse a una mesa",
@@ -275,7 +278,30 @@
       "row": "{{handle}}, {{activity}}.",
       "activityInLobby": "en el lobby",
       "activityAtTable": "en una mesa",
-      "activityPlaying": "jugando"
+      "activityPlaying": "jugando",
+      "actionsFor": "Acciones para {{handle}}"
+    },
+    "friends": {
+      "heading": "Amigos",
+      "hint": "Las solicitudes que esperan tu respuesta salen primero. Para pedir amistad, entra en la lista de quién está conectado.",
+      "empty": "Todavía no tienes amigos aquí, y nadie espera respuesta.",
+      "menuLabel": "Qué puedes hacer con este jugador",
+      "actionsFor": "Acciones para {{handle}}",
+      "row": "{{handle}}. {{state}}",
+      "stateFriends": "Tu amigo.",
+      "stateSent": "Le pediste amistad.",
+      "stateReceived": "Te ha pedido amistad.",
+      "stateSelf": "Eres tú.",
+      "actionRequest": "Pedir amistad a {{handle}}",
+      "actionAccept": "Aceptar a {{handle}}",
+      "actionDecline": "Rechazar a {{handle}}",
+      "actionRemove": "Dejar de ser amigo de {{handle}}",
+      "resultSent": "Se envió tu solicitud a {{handle}}.",
+      "resultAccepted": "{{handle}} ya es tu amigo.",
+      "resultDeclined": "Has rechazado a {{handle}}. No se le avisa, y no puede volver a pedírtelo.",
+      "resultRemoved": "{{handle}} y tú ya no sois amigos.",
+      "resultNobody": "No hay nadie con ese nombre en la lista.",
+      "resultFailed": "No se ha podido hacer. Inténtalo dentro de un momento."
     },
     "selectBoard": "Selecciona el juego:",
     "boardFilterHint": "Escribe para filtrar, o pulsa flecha abajo para recorrer la lista.",

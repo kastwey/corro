@@ -21,10 +21,12 @@ public class CosmosUserRepository : IUserRepository
 	internal const string UsersContainerName = "Users";
 	internal const string IdentitiesContainerName = "Identities";
 	internal const string HandlesContainerName = "Handles";
+	internal const string FriendshipsContainerName = "Friendships";
 
 	private readonly Container _users;
 	private readonly Container _identities;
 	private readonly Container _handles;
+	private readonly Container _friendships;
 	private readonly ILogger<CosmosUserRepository> _logger;
 
 	public CosmosUserRepository(CosmosClient cosmosClient, ILogger<CosmosUserRepository> logger)
@@ -36,6 +38,9 @@ public class CosmosUserRepository : IUserRepository
 		// partition key, so it gets a container partitioned by itself — a point read, and a
 		// duplicate-id rejection that IS the race guard.
 		_handles = database.GetContainer(HandlesContainerName);
+		// Partitioned by the PAIR, not by either person: a friendship is one fact about two
+		// accounts, and one document is the only way it cannot disagree with itself.
+		_friendships = database.GetContainer(FriendshipsContainerName);
 		_logger = logger;
 	}
 
@@ -244,5 +249,98 @@ public class CosmosUserRepository : IUserRepository
 			new PartitionKey(claim.Handle),
 			cancellationToken: ct);
 		return response.Resource;
+	}
+
+	public async Task<FriendshipDocument?> GetFriendshipAsync(
+		string pairId,
+		CancellationToken ct = default)
+	{
+		try
+		{
+			var response = await _friendships.ReadItemAsync<FriendshipDocument>(
+				pairId,
+				partitionKey: new PartitionKey(pairId),
+				cancellationToken: ct);
+			return response.Resource;
+		}
+		catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+		{
+			return null;
+		}
+	}
+
+	/// <summary>
+	/// Create-if-absent on the duplicate-id rejection once more. Here it settles a genuinely
+	/// simultaneous case: two people who ask each other in the same second. One request is stored,
+	/// the other caller is handed it, and whoever lost is holding a request FROM the other — which
+	/// they can simply accept.
+	/// </summary>
+	public async Task<FriendshipDocument> CreateOrGetFriendshipAsync(
+		FriendshipDocument friendship,
+		CancellationToken ct = default)
+	{
+		try
+		{
+			var response = await _friendships.CreateItemAsync(
+				friendship,
+				new PartitionKey(friendship.PairId),
+				cancellationToken: ct);
+			return response.Resource;
+		}
+		catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.Conflict)
+		{
+			// The winner must exist: Cosmos only reports the conflict once the item is durable.
+			var existing = await GetFriendshipAsync(friendship.PairId, ct);
+			return existing ?? throw new InvalidOperationException(
+				$"Friendship '{friendship.PairId}' reported a conflict but could not be read back.");
+		}
+	}
+
+	public async Task<FriendshipDocument> ReplaceFriendshipAsync(
+		FriendshipDocument friendship,
+		CancellationToken ct = default)
+	{
+		var response = await _friendships.UpsertItemAsync(
+			friendship,
+			new PartitionKey(friendship.PairId),
+			cancellationToken: ct);
+		return response.Resource;
+	}
+
+	public async Task DeleteFriendshipAsync(string pairId, CancellationToken ct = default)
+	{
+		try
+		{
+			await _friendships.DeleteItemAsync<FriendshipDocument>(
+				id: pairId,
+				partitionKey: new PartitionKey(pairId),
+				cancellationToken: ct);
+		}
+		catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+		{
+			// Already gone: ending a friendship has to be safe to retry.
+		}
+	}
+
+	/// <summary>
+	/// The second cross-partition query in this file, and for the same kind of reason: the container
+	/// is keyed by the PAIR so that a relationship is one document, which means "everything one
+	/// person is part of" cannot be a point read. It runs when somebody opens their friends list.
+	/// </summary>
+	public async Task<IReadOnlyList<FriendshipDocument>> FriendshipsOfAsync(
+		string userId,
+		CancellationToken ct = default)
+	{
+		var query = new QueryDefinition(
+			"SELECT VALUE c FROM c WHERE c.userA = @userId OR c.userB = @userId")
+			.WithParameter("@userId", userId);
+
+		var friendships = new List<FriendshipDocument>();
+		using var iterator = _friendships.GetItemQueryIterator<FriendshipDocument>(query);
+		while (iterator.HasMoreResults)
+		{
+			friendships.AddRange(await iterator.ReadNextAsync(ct));
+		}
+		return friendships;
 	}
 }

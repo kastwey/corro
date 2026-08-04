@@ -28,6 +28,8 @@ import { initPrivacyNotice } from '../privacyNotice.js';
 import { wireLanguageSelector } from '../languageSelector.js';
 import { ComboBox } from '../comboBox.js';
 import { OnlineList } from '../onlinePlayers.js';
+import { FriendsList } from '../friendsList.js';
+import { fetchFriends, type FriendEntry } from '../friends.js';
 import { listenForShake, requestShakePermission } from '../shakeGesture.js';
 import { initializeSiteMetrics } from '../siteMetrics.js';
 import { showSecondAccountNotice } from '../secondAccountNotice.js';
@@ -61,6 +63,7 @@ class UnifiedLobbyUI {
 	private boardPicker: ComboBox | null = null;
 	/** Who is connected. Built when the view is first opened; members only. */
 	private onlineList: OnlineList | null = null;
+	private friendsList: FriendsList | null = null;
 
 	constructor() {
 		void this.init();
@@ -167,6 +170,13 @@ class UnifiedLobbyUI {
 			// is a dead end with extra steps.
 			const online = getElement('go-online-btn');
 			if (online) online.hidden = !session.signedIn;
+			const friends = getElement('go-friends-btn');
+			if (friends) friends.hidden = !session.signedIn;
+			// Read once on arrival so somebody who has been asked hears it from the home page,
+			// rather than having to open a list to discover there was anything to open it for.
+			if (session.signedIn) {
+				void fetchFriends(fetch).then(entries => this.labelFriendsButton(entries));
+			}
 
 			// A link that has just come back reopens the settings where the player started it, so
 			// the outcome is reported in context instead of vanishing into a page reload.
@@ -747,9 +757,42 @@ class UnifiedLobbyUI {
 			list: getElement('online-list')!,
 			empty: getElement('online-empty'),
 			error: getElement('online-error'),
+			status: getElement('online-status'),
 			t: (key, vars) => i18nBinder.tSync(key, vars),
 		});
 		await this.onlineList.refresh();
+	}
+
+	/**
+	 * Your friends, and the requests waiting for an answer. A separate page from the one above
+	 * because a request has to be answerable whether or not the person who sent it is online.
+	 *
+	 * Refreshing it also refreshes the way IN to it, since answering a request is exactly what
+	 * changes the count that button carries.
+	 */
+	private async showFriendsView(): Promise<void> {
+		showView('view-friends');
+		window.history.pushState({ view: 'view-friends' }, '');
+		this.friendsList ??= new FriendsList({
+			list: getElement('friends-list')!,
+			empty: getElement('friends-empty'),
+			status: getElement('friends-status'),
+			t: (key, vars) => i18nBinder.tSync(key, vars),
+		});
+		this.labelFriendsButton(await this.friendsList.refresh());
+	}
+
+	/**
+	 * The friends button says how many requests are waiting. A count that only existed as a badge
+	 * would be invisible to the people this whole surface is for, so it is in the button's name.
+	 */
+	private labelFriendsButton(entries: readonly FriendEntry[]): void {
+		const button = getElement('go-friends-btn');
+		if (!button) return;
+		const waiting = FriendsList.waiting(entries);
+		button.textContent = waiting > 0
+			? i18nBinder.tSync('lobby.home.friendsButtonWaiting', { count: waiting })
+			: i18nBinder.tSync('lobby.home.friendsButton');
 	}
 
 	private setupHomeNavigation(): void {
@@ -757,6 +800,8 @@ class UnifiedLobbyUI {
 		getElement('go-join-btn')?.addEventListener('click', () => this.showJoinView());
 		getElement('go-online-btn')?.addEventListener('click', () => void this.showOnlineView());
 		getElement('online-back-btn')?.addEventListener('click', () => window.history.back());
+		getElement('go-friends-btn')?.addEventListener('click', () => void this.showFriendsView());
+		getElement('friends-back-btn')?.addEventListener('click', () => window.history.back());
 		// The in-page "Back" buttons unwind history so the on-screen button and the browser's
 		// Back button traverse the same stack (create/join → home) — never off the site.
 		getElement('create-back-btn')?.addEventListener('click', () => window.history.back());

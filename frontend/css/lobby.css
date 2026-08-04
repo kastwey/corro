@@ -442,7 +442,8 @@
 /* The same roster shape as the table and the in-game players panel, so somebody who has met one
    has met all three. The surface scrolls once the room is big; its rows are the focus stops. */
 
-.online-surface {
+.online-surface,
+.friends-surface {
 	max-height: 22rem;
 	overflow-y: auto;
 	border: 1px solid var(--border);
@@ -456,7 +457,8 @@
 	list-style: none;
 }
 
-.online-player {
+.online-player,
+.friend-row {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -466,20 +468,57 @@
 	color: var(--text);
 }
 
-.online-player + .online-player {
+.online-player + .online-player,
+.friend-row + .friend-row {
 	border-top: 1px solid var(--border);
 }
 
 /* Each person is one focus stop, so the row itself has to show where the keyboard is. */
 .online-player:focus,
-.online-player:focus-visible {
+.online-player:focus-visible,
+.friend-row:focus,
+.friend-row:focus-visible {
 	outline: 3px solid var(--focus, #ffd24d);
 	outline-offset: -3px;
 	background: var(--surface);
 }
 
-.online-player__actions {
+.online-player__actions,
+.friend-row__actions {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.4rem;
+}
+
+/* The row owns the tab order, so a button never shows focus of its own until the keyboard is
+   actually inside the row's toolbar — where it must be unmistakable. */
+.online-player__btn,
+.friend-row__btn {
+	padding: 0.3rem 0.6rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--surface);
+	color: var(--text);
+	font-size: 0.9rem;
+	cursor: pointer;
+}
+
+.online-player__btn:hover,
+.friend-row__btn:hover {
+	background: var(--surface-2);
+}
+
+.online-player__btn:focus,
+.online-player__btn:focus-visible,
+.friend-row__btn:focus,
+.friend-row__btn:focus-visible {
+	outline: 3px solid var(--focus, #ffd24d);
+	outline-offset: 1px;
+}
+
+/* The line is what a screen reader reads; it takes the space the buttons do not need. */
+.online-player__line,
+.friend-row__line {
+	flex: 1 1 auto;
+	min-width: 0;
 }

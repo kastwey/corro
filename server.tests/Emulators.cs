@@ -85,15 +85,19 @@ internal static class Emulators
 		return new CosmosGameRepository(client, NullLogger<CosmosGameRepository>.Instance);
 	}
 
-	/// <summary>The account repository against the emulator, with both account containers ensured.
-	/// They are partitioned by the key each one is actually queried with, exactly as the server
-	/// creates them at startup.</summary>
+	/// <summary>The account repository against the emulator, with EVERY account container ensured —
+	/// each partitioned by the key it is actually queried with, exactly as the server creates them at
+	/// startup. All four, because the interesting behaviour of the two newer ones (a handle claimed
+	/// twice, two people asking each other at once) is precisely the duplicate-id rejection that only
+	/// a real container performs.</summary>
 	public static async Task<CosmosUserRepository> NewCosmosUserRepositoryAsync()
 	{
 		var client = NewCosmosClient();
 		var db = (await client.CreateDatabaseIfNotExistsAsync(CosmosUserRepository.DatabaseName)).Database;
 		await db.CreateContainerIfNotExistsAsync(CosmosUserRepository.UsersContainerName, "/userId");
 		await db.CreateContainerIfNotExistsAsync(CosmosUserRepository.IdentitiesContainerName, "/identityKey");
+		await db.CreateContainerIfNotExistsAsync(CosmosUserRepository.HandlesContainerName, "/handle");
+		await db.CreateContainerIfNotExistsAsync(CosmosUserRepository.FriendshipsContainerName, "/pairId");
 		return new CosmosUserRepository(client, NullLogger<CosmosUserRepository>.Instance);
 	}
 }

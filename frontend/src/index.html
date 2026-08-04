@@ -59,6 +59,9 @@
 				<!-- Revealed only for a signed-in player: the list is members-only, so offering the
 					 way in to somebody who would be turned away is a dead end with extra steps. -->
 				<button type="button" id="go-online-btn" class="home-action-btn secondary-button" data-i18n="lobby.home.onlineButton" hidden>Who is online</button>
+				<!-- Same rule, and its label carries the count of requests waiting: a person who
+					 cannot glance at a badge has to hear that there is something to answer. -->
+				<button type="button" id="go-friends-btn" class="home-action-btn secondary-button" data-i18n="lobby.home.friendsButton" hidden>Friends</button>
 			</div>
 			<ul id="your-games-list" class="saved-game-list"></ul>
 			<p id="your-games-empty" class="your-games-empty hidden" data-i18n="lobby.savedGames.empty">You don't have any games yet. Create a new one or join with a code.</p>
@@ -261,15 +264,28 @@
 			<h2 id="online-heading" data-view-heading tabindex="-1" data-i18n="lobby.online.heading">Who is online</h2>
 			<p class="form-hint" data-i18n="lobby.online.hint">Only players who chose a public name and asked to be listed appear here.</p>
 			<!-- The same roster widget the table and the players panel use: one tab stop, arrows
-				 between people, and Shift+F10 for a person's actions once there are any to offer
-				 (asking to be friends, and messaging, come with those features). role="application"
-				 is what tells a screen reader the arrows mean something here; it is on a WRAPPER so
-				 the list semantics survive. -->
+				 between people, Right into a person's actions and Shift+F10 for the same as a menu.
+				 role="application" is what tells a screen reader the arrows mean something here; it
+				 is on a WRAPPER so the list semantics survive. -->
 			<div class="online-surface" role="application" aria-labelledby="online-heading">
 				<ul id="online-list" class="online-list" role="list"></ul>
 			</div>
 			<p id="online-empty" class="your-games-empty" data-i18n="lobby.online.empty" hidden>Nobody is listed right now.</p>
 			<p id="online-error" class="form-hint" role="status" aria-live="polite"></p>
+			<!-- The reader's OWN action is theirs to hear; the room changing around them is not. -->
+			<p id="online-status" class="form-hint" role="status" aria-live="polite"></p>
+		</section>
+
+		<!-- VIEW: FRIENDS — your friends, and the requests waiting for an answer -->
+		<section id="view-friends" class="lobby-view hidden" aria-labelledby="friends-heading" hidden>
+			<button type="button" id="friends-back-btn" class="secondary-button lobby-back-btn" data-i18n="lobby.backToHome">Back to home</button>
+			<h2 id="friends-heading" data-view-heading tabindex="-1" data-i18n="lobby.friends.heading">Friends</h2>
+			<p class="form-hint" data-i18n="lobby.friends.hint">Requests waiting for your answer come first. Asking to be friends starts from the list of who is online.</p>
+			<div class="friends-surface" role="application" aria-labelledby="friends-heading">
+				<ul id="friends-list" class="online-list" role="list"></ul>
+			</div>
+			<p id="friends-empty" class="your-games-empty" data-i18n="lobby.friends.empty" hidden>You have no friends here yet, and nobody is waiting for an answer.</p>
+			<p id="friends-status" class="form-hint" role="status" aria-live="polite"></p>
 		</section>
 
 		<!-- VIEW: JOIN — enter a code, then pick name and piece -->

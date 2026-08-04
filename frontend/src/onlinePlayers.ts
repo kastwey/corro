@@ -1,32 +1,48 @@
 // onlinePlayers.ts — the list of who is connected.
 //
-// The same roster widget the table and the in-game players panel use (RovingToolbarList): one tab
-// stop for the whole list, arrows between people, Right into a person's actions and Shift+F10 for
-// the same actions as a menu. Deliberately the SAME thing to learn as the other two rosters —
-// somebody who has met one has met all three.
+// Built on the shared roster (friendRoster.ts), so it is the same thing to operate as the table
+// roster and the in-game players panel: one tab stop, arrows between people, Right into a person's
+// actions, Shift+F10 for the same actions as a menu.
 //
-// It shows a handle and a coarse activity, never a display name and never which table: the
-// question this answers is "is anyone around, and can I interrupt them?", not "where are they".
+// It shows a handle and a coarse activity, never a display name and never which table: the question
+// this answers is "is anyone around, and can I interrupt them?", not "where are they". Each row also
+// says what the reader already is to that person, because a reader arrowing down the list has to
+// hear that without stepping into the row to find out.
 //
 // It is not a live region and does not poll. People arriving and leaving is a stream of changes
 // nobody asked to be read; the list is a page you visit, refreshed when you arrive and by asking.
 
-import { RovingToolbarList } from './accessibleList.js';
-import { reconcileChildren } from './domReconcile.js';
+import { FriendRoster } from './friendRoster.js';
+import {
+	actionLabel,
+	actionsFor,
+	asRelationship,
+	relationshipText,
+	performFriendAction,
+	resultText,
+	type FriendActionKey,
+	type FriendResult,
+	type Relationship,
+	type Translate,
+} from './friends.js';
 
 /** One person, as the server publishes them. */
 export interface OnlinePlayer {
 	readonly handle: string;
 	/** InLobby | AtTable | Playing — coarse on purpose. */
 	readonly activity: string;
+	/** What the reader is to them: what the row offers to do about it. */
+	readonly relationship: Relationship;
 }
 
 export interface OnlineListDeps {
 	list: HTMLElement;
 	empty: HTMLElement | null;
 	error: HTMLElement | null;
+	/** Where the outcome of the reader's OWN action is said. Never used for the room changing. */
+	status?: HTMLElement | null;
 	/** Already translated. `activity` keys map to one flowing line per person. */
-	t: (key: string, vars?: Record<string, unknown>) => string;
+	t: Translate;
 	fetchImpl?: typeof fetch;
 }
 
@@ -48,27 +64,40 @@ export function parseOnlinePlayers(payload: unknown): OnlinePlayer[] {
 		const handle = (entry as { handle?: unknown })?.handle;
 		const activity = (entry as { activity?: unknown })?.activity;
 		return typeof handle === 'string' && handle.length > 0 && typeof activity === 'string'
-			? [{ handle, activity }]
+			? [{
+				handle,
+				activity,
+				relationship: asRelationship((entry as { relationship?: unknown })?.relationship),
+			}]
 			: [];
 	});
 }
 
 /**
- * One person as a single flowing line: "@kastwey, playing." A screen reader reads the row, so the
- * name and what they are doing are one sentence rather than two facts glued together.
+ * One person as a single flowing line: "kastwey, playing. Friend." The name, what they are doing
+ * and where the two of them stand are one sentence rather than three facts glued together.
  */
-export function describePlayer(
-	player: OnlinePlayer,
-	t: (key: string, vars?: Record<string, unknown>) => string,
-): string {
+export function describePlayer(player: OnlinePlayer, t: Translate): string {
 	const key = ACTIVITY_KEYS[player.activity] ?? ACTIVITY_KEYS.InLobby;
-	return t('lobby.online.row', { handle: player.handle, activity: t(key) });
+	const line = t('lobby.online.row', { handle: player.handle, activity: t(key) });
+	const standing = relationshipText(player.relationship, t);
+	return standing ? `${line} ${standing}` : line;
 }
 
 export class OnlineList {
-	private nav: RovingToolbarList | null = null;
+	private readonly roster: FriendRoster;
+	private busy = false;
 
-	constructor(private readonly deps: OnlineListDeps) {}
+	constructor(private readonly deps: OnlineListDeps) {
+		this.roster = new FriendRoster({
+			list: deps.list,
+			empty: deps.empty,
+			menuHost: () => document.getElementById('view-online'),
+			menuLabel: () => deps.t('lobby.online.menuLabel'),
+			rowClass: 'online-player',
+			buttonClass: 'online-player__btn',
+		});
+	}
 
 	/** Ask the server and paint. Returns what was shown, which is what the tests assert. */
 	async refresh(): Promise<OnlinePlayer[]> {
@@ -83,7 +112,17 @@ export class OnlineList {
 			failed = true;
 		}
 
-		this.render(players);
+		this.roster.render(players.map(player => ({
+			key: player.handle,
+			line: describePlayer(player, this.deps.t),
+			actionsLabel: this.deps.t('lobby.online.actionsFor', { handle: player.handle }),
+			actions: actionsFor(player.relationship).map(action => ({
+				key: action,
+				label: actionLabel(action, player.handle, this.deps.t),
+				onClick: () => void this.act(action, player.handle),
+			})),
+		})));
+
 		if (this.deps.error) {
 			// The only thing worth saying out loud here, and only when asking actually failed.
 			this.deps.error.textContent = failed ? this.deps.t('lobby.online.failed') : '';
@@ -91,54 +130,28 @@ export class OnlineList {
 		return players;
 	}
 
-	private render(players: readonly OnlinePlayer[]): void {
-		reconcileChildren(this.deps.list, {
-			items: [...players],
-			key: player => player.handle.toLowerCase(),
-			keyOf: element => (element as HTMLElement).dataset.handle?.toLowerCase(),
-			create: player => {
-				const row = document.createElement('li');
-				row.className = 'online-player';
-				row.tabIndex = -1;
-				this.fill(row, player);
-				return row;
-			},
-			update: (element, player) => this.fill(element as HTMLElement, player),
-			// Somebody leaving while their row holds the keyboard hands focus on rather than
-			// dropping the reader onto <body>.
-			rescueFocus: () => this.deps.list.querySelector<HTMLElement>('.online-player'),
-		});
-
-		if (this.deps.empty) this.deps.empty.hidden = players.length > 0;
-		this.ensureNav();
-		this.nav?.refreshRovingTabindex();
-	}
-
-	private fill(row: HTMLElement, player: OnlinePlayer): void {
-		row.dataset.handle = player.handle;
-		const line = describePlayer(player, this.deps.t);
-		if (row.textContent !== line) row.textContent = line;
-		// The row's own label IS the line: nothing else in it speaks, so they cannot diverge.
-		row.setAttribute('aria-label', line);
-	}
-
-	private ensureNav(): void {
-		if (this.nav) return;
-		this.nav = new RovingToolbarList({
-			list: this.deps.list,
-			itemSelector: '.online-player',
-			// The actions themselves arrive with friendships and messaging; the widget already
-			// knows how to carry them, and offers no menu while a row has none.
-			toolbarButtonSelector: '.online-player__actions button',
-			menuLabel: () => this.deps.t('lobby.online.menuLabel'),
-			menuClass: 'player-context-menu',
-			menuItemClass: 'player-context-menu-item',
-			menuHost: () => document.getElementById('view-online'),
-		});
+	/**
+	 * Do one thing, say how it went, and re-read the list — the server decides what the
+	 * relationship now is, so nothing here guesses at the new state.
+	 */
+	private async act(action: FriendActionKey, handle: string): Promise<void> {
+		// A second click while the first is in flight would race two writes against one row.
+		if (this.busy) return;
+		this.busy = true;
+		try {
+			const result: FriendResult = await performFriendAction(
+				this.deps.fetchImpl ?? fetch, action, handle);
+			if (this.deps.status) {
+				this.deps.status.textContent = resultText(result, handle, this.deps.t);
+			}
+			await this.refresh();
+		} finally {
+			this.busy = false;
+		}
 	}
 
 	/** Move the keyboard into the list. False when there is nobody to move to. */
 	focusFirst(): boolean {
-		return this.nav?.focusItem(0) ?? false;
+		return this.roster.focusFirst();
 	}
 }

@@ -302,6 +302,17 @@ public static class ServiceCollectionExtensions
 			logger.LogInformation("Handles container: {Status}",
 				handlesContainerResponse.StatusCode == System.Net.HttpStatusCode.Created ? "Created" : "Already exists");
 
+			// A friendship is one fact about a PAIR, so it is partitioned by the pair rather than by
+			// either person: one document that cannot disagree with itself, and — a third time — a
+			// duplicate-id rejection that settles two people asking each other at the same moment.
+			var friendshipsContainerResponse = await database.CreateContainerIfNotExistsAsync(
+				id: CosmosUserRepository.FriendshipsContainerName,
+				partitionKeyPath: "/pairId"
+			);
+
+			logger.LogInformation("Friendships container: {Status}",
+				friendshipsContainerResponse.StatusCode == System.Net.HttpStatusCode.Created ? "Created" : "Already exists");
+
 			logger.LogInformation("Cosmos DB initialization completed successfully");
 		}
 		catch (Exception ex)

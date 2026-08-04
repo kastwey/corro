@@ -83,6 +83,31 @@ Desactivarla te retira por completo de la lista: a los demás no se les indica q
 ni ningún recuento te incluye. Un nombre público que dejas de usar no se entrega de inmediato a otra
 persona, para que nadie pueda tomar un nombre que tus amistades conocen y hacerse pasar por ti.
 
+## Solicitudes de amistad
+
+Desde la lista de jugadores conectados puedes pedir amistad a alguien. Pedirla guarda un único
+registro de la relación entre las dos cuentas: quién la pidió, si está pendiente, aceptada o
+rechazada, y cuándo. No viaja contigo ningún otro dato.
+
+Solo pueden pedírtela por tu nombre si tienes un nombre público Y has pedido aparecer en la lista,
+de modo que ser localizable sigue siendo una decisión tuya. El servidor responde igual ante un
+nombre inexistente que ante alguien que eligió no aparecer, así que esa página no sirve para
+averiguar qué nombres existen.
+
+Dos cosas sobre rechazar conviene decirlas claramente, porque son decisiones y no consecuencias de
+cómo está construido:
+
+- **El rechazo se recuerda.** El registro sobrevive, así que esa persona no puede volver a pedírtelo.
+  Si se borrara sin más, un "no" significaría "esta noche no" y tu única salida real sería dejar de
+  aparecer en la lista.
+- **El rechazo no se comunica.** Quien lo pidió sigue viendo que lo pidió, y nunca se le dice qué
+  decidiste. Tampoco puede retirar una solicitud: un botón que funcionara antes de la respuesta y
+  fallara después anunciaría tu decisión al fallar.
+
+Puedes deshacer una amistad cuando quieras, desde cualquiera de los dos lados; eso borra el
+registro, y después cualquiera de los dos puede volver a pedirla. Borrar tu cuenta elimina todos
+estos registros, incluidos los que están en las listas de quienes eran amigos tuyos.
+
 ## Cookies y datos guardados en el navegador
 
 Corro utiliza estas cookies propias:

@@ -77,6 +77,30 @@ Turning it off removes you from the list completely: other players are not told 
 hidden, and no count includes you. A handle you stop using is not immediately given to somebody
 else, so nobody can take a name your friends know and appear as you.
 
+## Friend requests
+
+From the list of players connected you can ask somebody to be friends. Asking stores one record of
+the relationship between the two accounts: which of you asked, whether it is waiting, agreed or
+refused, and when. Nothing else about you travels with it.
+
+You can only be asked by name if you have a public name AND asked to be listed, so being findable
+stays a decision you make. The server answers the same way to an unknown name and to somebody who
+chose not to be listed, so the request page cannot be used to test which names exist.
+
+Two things about refusing are worth stating plainly, because they are choices rather than
+consequences of how it was built:
+
+- **A refusal is remembered.** The record survives it, so the same person cannot ask you again. Were
+  it simply erased, "no" would mean "not this evening" and your only real escape would be to stop
+  being listed at all.
+- **A refusal is not reported.** The person who asked continues to see that they asked, and is never
+  told what you decided. Nor can they take a request back — a button that worked before an answer
+  and failed afterwards would announce your decision by failing.
+
+You can end a friendship at any time, from either side; it erases the record, and either of you may
+ask again afterwards. Deleting your account erases every one of these records, including from the
+lists of people who were friends with you.
+
 ## Cookies and data kept in your browser
 
 Corro itself uses these first-party cookies:

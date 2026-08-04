@@ -25,19 +25,26 @@ public class PresenceController : ControllerBase
 	private readonly PresenceRegistry _presence;
 	private readonly GameSessionRegistry _sessions;
 	private readonly IUserRepository _users;
+	private readonly FriendshipService _friendships;
 
 	public PresenceController(
 		PresenceRegistry presence,
 		GameSessionRegistry sessions,
-		IUserRepository users)
+		IUserRepository users,
+		FriendshipService friendships)
 	{
 		_presence = presence;
 		_sessions = sessions;
 		_users = users;
+		_friendships = friendships;
 	}
 
-	/// <summary>One person in the list: the name they chose, and roughly what they are doing.</summary>
-	public sealed record OnlinePlayer(string Handle, string Activity);
+	/// <summary>
+	/// One person in the list: the name they chose, roughly what they are doing, and what they
+	/// already are to the reader — which is what decides the action their row offers. It travels
+	/// with the row because the alternative is one request per person on screen.
+	/// </summary>
+	public sealed record OnlinePlayer(string Handle, string Activity, string Relationship);
 
 	/// <summary>
 	/// Everybody connected who has both chosen a handle and asked to be listed.
@@ -48,19 +55,31 @@ public class PresenceController : ControllerBase
 	[HttpGet("online")]
 	public async Task<ActionResult<object>> GetOnline(CancellationToken ct)
 	{
-		if (SessionPrincipal.UserId(User) is not { Length: > 0 })
+		if (SessionPrincipal.UserId(User) is not { Length: > 0 } readerId)
 		{
 			// A member-only list, not a secret one: 401 rather than an empty array, so the client
 			// can offer to sign in instead of showing an empty room.
 			return Unauthorized();
 		}
 
+		// One read of the reader's own relationships answers every row, rather than a lookup per
+		// person on screen.
+		var relationships = await _friendships.RelationshipsForAsync(readerId, ct);
+
 		var listed = new List<OnlinePlayer>();
 		foreach (var userId in _presence.OnlineUserIds())
 		{
 			var user = await _users.GetUserAsync(userId, ct);
 			if (user is null || !user.ListedPublicly || user.Handle is not { Length: > 0 } handle) continue;
-			listed.Add(new OnlinePlayer(handle, ActivityOf(userId).ToString()));
+
+			// The reader sees THEMSELVES in the room, marked and offering nothing to do. It is the
+			// only way somebody who has just ticked "list me" can confirm it worked — and for a
+			// player who cannot glance at anything, a room they are told about but never appear in
+			// is a room they have to take on faith.
+			var relationship = userId == readerId
+				? FriendshipService.Relationship.Self
+				: relationships.GetValueOrDefault(userId, FriendshipService.Relationship.None);
+			listed.Add(new OnlinePlayer(handle, ActivityOf(userId).ToString(), relationship.ToString()));
 		}
 
 		listed.Sort((a, b) => string.Compare(a.Handle, b.Handle, StringComparison.OrdinalIgnoreCase));

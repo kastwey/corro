@@ -437,8 +437,16 @@ public sealed class UserAccountService
 			}
 		}
 
+		// Friendships go completely, unlike the handle: a friendship is a fact about TWO people, so
+		// half of one left behind would keep naming somebody who asked to be gone — on the other
+		// person's list, where they cannot reach it.
+		foreach (var friendship in await _repository.FriendshipsOfAsync(userId, ct))
+		{
+			await _repository.DeleteFriendshipAsync(friendship.PairId, ct);
+		}
+
 		await _repository.DeleteUserAsync(userId, ct);
-		_logger.LogInformation("Erased account {UserId} and its identity links.", userId);
+		_logger.LogInformation("Erased account {UserId}, its identity links and its friendships.", userId);
 	}
 
 	/// <summary>Why a handle could not be set. Each one is a different thing to tell the player.</summary>

@@ -105,9 +105,11 @@ test('the list is members-only, opt-in, and never names an account', async ({ br
 
 	const rows = berto.locator('#online-list .online-player');
 	await expect(rows.filter({ hasText: 'anaonline' })).toHaveCount(1);
-	// One flowing line: the name, and roughly what they are doing.
+	// One flowing line: the name, and roughly what they are doing. Asserted on the row's LABEL,
+	// because the row also contains its action buttons and their names are not part of the
+	// sentence a screen reader reads for the person.
 	await expect(rows.filter({ hasText: 'anaonline' }))
-		.toHaveText(`anaonline, ${online.activityInLobby}.`);
+		.toHaveAttribute('aria-label', `anaonline, ${online.activityInLobby}.`);
 
 	// The account display name — seeded from the provider, usually somebody's real name — is
 	// nowhere in this list, and neither is any table.
@@ -147,7 +149,7 @@ test('the list says what somebody is doing, never which game', async ({ browser 
 	await gotoLobbyHome(watcher);
 	await watcher.locator('#go-online-btn').click();
 	await expect(watcher.locator('#online-list .online-player'))
-		.toHaveText(`anaplaying, ${online.activityInLobby}.`);
+		.toHaveAttribute('aria-label', `anaplaying, ${online.activityInLobby}.`);
 
 	// Ana sits down at a table. The status follows what the SERVER knows — nobody reports their
 	// own, so nobody can lie about it.
@@ -156,8 +158,27 @@ test('the list says what somebody is doing, never which game', async ({ browser 
 	await gotoLobbyHome(watcher);
 	await watcher.locator('#go-online-btn').click();
 	await expect(watcher.locator('#online-list .online-player'))
-		.toHaveText(`anaplaying, ${online.activityAtTable}.`);
+		.toHaveAttribute('aria-label', `anaplaying, ${online.activityAtTable}.`);
 	// The invite code is what would let a stranger follow her there. It is not in the list.
 	await expect(watcher.locator('#online-list')).not.toContainText(code);
 	await flushAxeAudit(watcher);
+});
+
+// Somebody who has just ticked "list me" has no other way to check it worked. A player who cannot
+// glance at anything would otherwise have to take the whole room on faith.
+test('you appear in the room yourself, marked, with nothing to do about it', async ({ browser }) => {
+	const ana = await newPlayerPage(browser, 'es-ES');
+	await signIn(ana, 'presence-self');
+	await becomeListed(ana, 'selfana');
+
+	await gotoLobbyHome(ana);
+	await ana.locator('#go-online-btn').click();
+
+	const mine = ana.locator('#online-list .online-player');
+	await expect(mine).toHaveAttribute(
+		'aria-label',
+		`selfana, ${online.activityInLobby}. ${appI18n('es').lobby.friends.stateSelf}`);
+	// Nobody asks themselves to be friends.
+	await expect(mine.getByRole('button')).toHaveCount(0);
+	await flushAxeAudit(ana);
 });

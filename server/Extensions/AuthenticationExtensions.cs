@@ -44,6 +44,7 @@ public static class AuthenticationExtensions
 		var options = section.Get<ExternalAuthOptions>() ?? new ExternalAuthOptions();
 
 		services.AddSingleton<UserAccountService>();
+		services.AddSingleton<FriendshipService>();
 		services.AddSingleton(new AuthProviderCatalog(
 			options.ConfiguredProviders().Select(p => new AuthProviderDescriptor(p.Key, IsTestDouble: false))));
 

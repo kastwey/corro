@@ -150,3 +150,68 @@ public record HandleClaimDocument
 	[JsonPropertyName("releasedAtUtc")]
 	public DateTime? ReleasedAtUtc { get; init; }
 }
+
+/// <summary>Where a friendship stands. There is no "nobody asked" value: that is the absence of
+/// the document.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum FriendshipState
+{
+	/// <summary>Asked for, not answered.</summary>
+	Pending,
+
+	/// <summary>Both sides agreed. Symmetric — neither is the owner.</summary>
+	Accepted,
+
+	/// <summary>Answered no. The document SURVIVES the refusal, which is the whole point: it is
+	/// what stops the same request arriving again every evening.</summary>
+	Declined,
+}
+
+/// <summary>
+/// One relationship between two accounts, stored ONCE rather than mirrored on both sides — a
+/// friendship is a single fact about a pair, and two copies of it can disagree.
+///
+/// The id is the two account ids in a fixed order (see <c>FriendshipKey</c>), so "are we anything
+/// to each other?" is a point read and the container's duplicate-id rejection is again the race
+/// guard: two people asking each other at the same instant produce one request, not two mirror
+/// images of each other.
+///
+/// Listing what somebody has (their friends, who asked them) is therefore a cross-partition query
+/// over a small container, the same deliberate trade as
+/// <c>IUserRepository.OtherAccountProvidersForEmailAsync</c>. It runs when a player opens the
+/// friends view, not on any hot path.
+/// </summary>
+public record FriendshipDocument
+{
+	[JsonPropertyName("id")]
+	public required string Id { get; init; } // Equals PairId; also the partition key.
+
+	/// <summary>"{lower}|{higher}" — the two account ids sorted by ordinal comparison, so the pair
+	/// has ONE key whichever side is asking.</summary>
+	[JsonPropertyName("pairId")]
+	public required string PairId { get; init; }
+
+	/// <summary>The lexicographically lower account id of the pair. Order carries no meaning
+	/// beyond making the key deterministic.</summary>
+	[JsonPropertyName("userA")]
+	public required string UserA { get; init; }
+
+	/// <summary>The lexicographically higher account id of the pair.</summary>
+	[JsonPropertyName("userB")]
+	public required string UserB { get; init; }
+
+	/// <summary>Which of the two asked. Needed to tell an incoming request from an outgoing one,
+	/// and to keep a refusal pointed at the person who was refused.</summary>
+	[JsonPropertyName("requestedBy")]
+	public required string RequestedBy { get; init; }
+
+	[JsonPropertyName("state")]
+	public required FriendshipState State { get; init; }
+
+	[JsonPropertyName("requestedAtUtc")]
+	public DateTime RequestedAtUtc { get; init; }
+
+	/// <summary>When it was accepted or declined. NULL while it is still a question.</summary>
+	[JsonPropertyName("respondedAtUtc")]
+	public DateTime? RespondedAtUtc { get; init; }
+}
