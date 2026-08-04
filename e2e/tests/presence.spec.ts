@@ -292,3 +292,33 @@ test('only friends means only friends, and everybody else is a number', async ({
 	await expect(quiet.locator('#online-standing'))
 		.toHaveText(appI18n('es').lobby.online.youFriends as string);
 });
+
+// The whole point of putting unlock codes on the account: a hidden board unlocked on one device is
+// there on the next, without anybody having to find the code again. The browser copy is what makes
+// the feature work signed out, and it must not be disturbed by any of this.
+test('an unlock code follows the account to a browser that never saw it', async ({ browser }) => {
+	const laptop = await newPlayerPage(browser, 'es-ES');
+	await signIn(laptop, 'unlock-carrier');
+	await gotoLobbyHome(laptop);
+	await laptop.locator('#go-create-btn').click();
+	await expect(laptop.locator('#board-listbox [data-item-id="hidden"]')).toHaveCount(0);
+
+	// Unlocked here, while signed in: the code goes to the account as well as to this browser.
+	await laptop.keyboard.press('Control+Shift+Alt+C');
+	const unlock = laptop.locator('.game-dialog.dialog-unlock');
+	await unlock.locator('#unlock-code-input').fill('e2e-hidden');
+	await unlock.locator('#unlock-code-input').press('Enter');
+	await expect(laptop.locator('#board-listbox [data-item-id="hidden"]')).toHaveCount(1);
+
+	// A different browser: same person, nothing in its storage, and it has never seen the code.
+	const phone = await newPlayerPage(browser, 'es-ES');
+	await gotoLobbyHome(phone);
+	await phone.locator('#go-create-btn').click();
+	await expect(phone.locator('#board-listbox [data-item-id="hidden"]')).toHaveCount(0);
+
+	await signIn(phone, 'unlock-carrier');
+	await gotoLobbyHome(phone);
+	await phone.locator('#go-create-btn').click();
+	await expect(phone.locator('#board-listbox [data-item-id="hidden"]')).toHaveCount(1);
+	await flushAxeAudit(phone);
+});

@@ -116,7 +116,7 @@ public class CosmosUserRepositoryIntegrationTests
 
 		var userId = Assert.Single(results.Select(u => u.UserId).Distinct());
 
-		await service.DeleteAccountAsync(userId);
+		await service.DeleteAccountAsync(userId, DateTime.UtcNow);
 		Assert.Null(await repo.GetIdentityLinkAsync(IdentityKey.For(identity.Issuer, identity.Subject)));
 	}
 

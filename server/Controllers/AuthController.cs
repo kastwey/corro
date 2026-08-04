@@ -90,6 +90,9 @@ public class AuthController : ControllerBase
 				user.Handle,
 				Visibility = user.EffectiveVisibility.ToString(),
 				user.HandleChangedAtUtc,
+				// The hidden boards this account carries. Sent with the session so the very first
+				// board request from a fresh device already asks for the right ones.
+				user.UnlockCodes,
 				// Issuer plus the address that provider reported, so the settings screen can show
 				// WHICH account each provider is linked to. Subjects stay server-side: they are the
 				// identity itself and the client has no use for them.
@@ -348,12 +351,15 @@ public class AuthController : ControllerBase
 			return Unauthorized();
 		}
 
-		await _accounts.DeleteAccountAsync(userId, ct);
+		await _accounts.DeleteAccountAsync(userId, DateTime.UtcNow, ct);
 		await HttpContext.SignOutAsync(AuthenticationExtensions.SessionScheme);
 		return NoContent();
 	}
 
 	public sealed record HandleRequest(string Handle);
+	/// <summary>Codes typed on some device, in whatever shape they were typed.</summary>
+	public sealed record UnlockCodesRequest(IReadOnlyList<string>? Codes);
+
 	/// <summary>The chosen audience, by name: Nobody, Friends or Everyone.</summary>
 	public sealed record VisibilityRequest(string? Visibility);
 
@@ -404,6 +410,29 @@ public class AuthController : ControllerBase
 				Conflict(new { code = "HANDLE_TOO_SOON", changeableAtUtc = result.ChangeableAtUtc }),
 			_ => Unauthorized(),
 		};
+	}
+
+	/// <summary>
+	/// Adds unlock codes to the account, so the hidden boards they reveal follow the player to
+	/// every device instead of living in one browser's storage.
+	///
+	/// Additive only. The browser keeps its own copy — unlocking has never needed an account and
+	/// still does not — so there is nothing to remove here that would not simply come back on the
+	/// next request from that device.
+	///
+	/// A POST rather than a GET, like everything else that changes account state: the session
+	/// cookie is SameSite=Lax, so a GET could be fired by a link from anywhere.
+	/// </summary>
+	[HttpPost("unlock-codes")]
+	public async Task<ActionResult<object>> AddUnlockCodes(
+		[FromBody] UnlockCodesRequest request, CancellationToken ct)
+	{
+		var userId = SessionPrincipal.UserId(User);
+		if (userId is null) return Unauthorized();
+
+		var codes = await _accounts.AddUnlockCodesAsync(
+			userId, request?.Codes ?? Array.Empty<string>(), ct);
+		return Ok(new { unlockCodes = codes });
 	}
 
 	/// <summary>

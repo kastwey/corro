@@ -162,7 +162,7 @@ public class PlayerHandleTests
 		await NewAccountAsync(repository, "u2");
 		await service.SetHandleAsync("u1", "kastwey", Now);
 
-		await service.DeleteAccountAsync("u1");
+		await service.DeleteAccountAsync("u1", Now);
 
 		var claim = await repository.GetHandleClaimAsync("kastwey");
 		Assert.NotNull(claim);
@@ -243,6 +243,74 @@ public class PlayerHandleTests
 
 		Assert.Equal(PresenceVisibility.Nobody, hidden.EffectiveVisibility);
 		Assert.Equal(PresenceVisibility.Everyone, shown.EffectiveVisibility);
+	}
+
+	// ── Unlock codes on the account ───────────────────────────────────────────────────────────
+	//
+	// They lived in one browser's storage, so a code typed on a laptop revealed nothing on a phone.
+	// The account copy travels; the browser copy stays, because unlocking has never needed an
+	// account and playing signed out must keep working exactly as before.
+
+	[Fact]
+	public async Task Codes_are_added_normalized_and_never_duplicated()
+	{
+		var service = NewService(out var repository);
+		await NewAccountAsync(repository, "u1");
+
+		await service.AddUnlockCodesAsync("u1", new[] { "  SECRET  ", "other" });
+		var held = await service.AddUnlockCodesAsync("u1", new[] { "secret", "THIRD" });
+
+		Assert.Equal(new[] { "secret", "other", "third" }, held);
+	}
+
+	[Fact]
+	public async Task Adding_is_additive_so_one_device_never_erases_another()
+	{
+		var service = NewService(out var repository);
+		await NewAccountAsync(repository, "u1");
+		await service.AddUnlockCodesAsync("u1", new[] { "laptop" });
+
+		// A phone that only knows its own code hands that over; the laptop's is untouched.
+		var held = await service.AddUnlockCodesAsync("u1", new[] { "phone" });
+
+		Assert.Equal(new[] { "laptop", "phone" }, held);
+	}
+
+	[Fact]
+	public async Task Blank_and_absurdly_long_codes_are_ignored_rather_than_stored()
+	{
+		var service = NewService(out var repository);
+		await NewAccountAsync(repository, "u1");
+
+		var held = await service.AddUnlockCodesAsync("u1", new[]
+		{
+			"", "   ", null!, new string('x', UserAccountService.MaxUnlockCodeLength + 1), "good",
+		});
+
+		Assert.Equal(new[] { "good" }, held);
+	}
+
+	// It is a list a client can append to, so it needs a bound — far above any real use, and there
+	// so a loop cannot grow one account document without end.
+	[Fact]
+	public async Task The_list_is_bounded()
+	{
+		var service = NewService(out var repository);
+		await NewAccountAsync(repository, "u1");
+
+		var many = Enumerable.Range(0, UserAccountService.MaxUnlockCodes * 2)
+			.Select(i => $"code{i}")
+			.ToArray();
+		var held = await service.AddUnlockCodesAsync("u1", many);
+
+		Assert.Equal(UserAccountService.MaxUnlockCodes, held.Count);
+	}
+
+	[Fact]
+	public async Task An_account_that_does_not_exist_stores_nothing()
+	{
+		var service = NewService(out _);
+		Assert.Empty(await service.AddUnlockCodesAsync("nobody", new[] { "secret" }));
 	}
 
 	// A rollback to a build that only understands "listed or not" must not publish anybody: only

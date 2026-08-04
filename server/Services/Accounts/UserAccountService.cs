@@ -414,8 +414,14 @@ public sealed class UserAccountService
 	/// Erases the account and every identity mapping that points at it, so the provider logins are
 	/// released and a later sign-in starts a genuinely new account. Identity mappings go first: an
 	/// orphaned mapping would otherwise keep resolving to an account that no longer exists.
+	///
+	/// The time is passed in, like every other method here that stamps one. It used to read the
+	/// clock itself, which made the handle's release cooldown depend on when the test happened to
+	/// run: the suite compared a fixed date against a real one, and passed only while the two stayed
+	/// close enough. That is a test that fails on a Tuesday for no reason anybody changed.
 	/// </summary>
-	public async Task DeleteAccountAsync(string userId, CancellationToken ct = default)
+	public async Task DeleteAccountAsync(
+		string userId, DateTime utcNow, CancellationToken ct = default)
 	{
 		var user = await _repository.GetUserAsync(userId, ct);
 		if (user is not null)
@@ -437,7 +443,7 @@ public sealed class UserAccountService
 			if (claim is not null && claim.UserId == userId && claim.ReleasedAtUtc is null)
 			{
 				await _repository.ReplaceHandleClaimAsync(
-					claim with { ReleasedAtUtc = DateTime.UtcNow }, ct);
+					claim with { ReleasedAtUtc = utcNow }, ct);
 			}
 		}
 
@@ -558,6 +564,52 @@ public sealed class UserAccountService
 		return claim is null
 			|| PlayerHandle.CanTakeOver(new HandleClaim(claim.UserId, claim.ReleasedAtUtc), forUserId, utcNow);
 	}
+
+	/// <summary>
+	/// Adds unlock codes to the account, normalized and de-duplicated, and returns the full set it
+	/// holds afterwards.
+	///
+	/// Additive on purpose, and it is what signing in calls with whatever the browser had: somebody
+	/// who unlocked a board months ago on this device should not have to find the code again to see
+	/// it on their phone. Nothing is removed here — the browser keeps its own copy, so a code
+	/// dropped from the account would come straight back on the next request from that device.
+	///
+	/// Capped, because it is a list a client can append to. The cap is far above any real use and
+	/// exists so a loop cannot grow one account document without bound.
+	/// </summary>
+	public async Task<IReadOnlyList<string>> AddUnlockCodesAsync(
+		string userId,
+		IEnumerable<string> codes,
+		CancellationToken ct = default)
+	{
+		var user = await _repository.GetUserAsync(userId, ct);
+		if (user is null) return Array.Empty<string>();
+
+		var held = new List<string>(user.UnlockCodes);
+		var known = held.ToHashSet(StringComparer.Ordinal);
+		foreach (var code in codes ?? Array.Empty<string>())
+		{
+			if (string.IsNullOrWhiteSpace(code)) continue;
+			// Normalized by the SERVER, the same way the manifest codes are: what a client sends is
+			// the text somebody typed, in whatever shape they typed it.
+			var normalized = Services.Corro.ShippedPackageProvider.Normalize(code);
+			if (normalized.Length == 0 || normalized.Length > MaxUnlockCodeLength) continue;
+			if (!known.Add(normalized)) continue;
+			held.Add(normalized);
+			if (held.Count >= MaxUnlockCodes) break;
+		}
+
+		if (held.Count == user.UnlockCodes.Count) return user.UnlockCodes;
+
+		var saved = await _repository.UpsertUserAsync(user with { UnlockCodes = held }, ct);
+		return saved.UnlockCodes;
+	}
+
+	/// <summary>Far above any real use; a bound rather than a limit anybody will meet.</summary>
+	public const int MaxUnlockCodes = 100;
+
+	/// <summary>Long enough for any code somebody would type, short enough to bound the document.</summary>
+	public const int MaxUnlockCodeLength = 64;
 
 	/// <summary>
 	/// Who may see this player in the list of who is connected. Only the handle is ever published

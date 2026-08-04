@@ -98,6 +98,12 @@ requerido.
 Un nombre público que dejas de usar no se entrega de inmediato a otra persona, para que nadie pueda
 tomar un nombre que tus amistades conocen y hacerse pasar por ti.
 
+La cuenta lleva también los **códigos de desbloqueo** de tableros ocultos que hayas introducido, de
+modo que un tablero desbloqueado en un dispositivo está en el siguiente. Se guardan tal cual se
+escriben, normalizados; no son credenciales: el código es la misma cadena que volverías a teclear, y
+tenerlo no revela más que un tablero en una lista. Tu navegador conserva además su propia copia, así
+que desbloquear sigue funcionando sin cuenta ninguna.
+
 ## Solicitudes de amistad
 
 Desde la lista de jugadores conectados puedes pedir amistad a alguien. Pedirla guarda un único

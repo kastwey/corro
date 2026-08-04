@@ -445,7 +445,7 @@ public class UserAccountServiceTests
 		var (service, repo) = NewService();
 		var created = await service.SignInAsync(Identity(), Now);
 
-		await service.DeleteAccountAsync(created.UserId);
+		await service.DeleteAccountAsync(created.UserId, Now);
 
 		Assert.Null(await repo.GetUserAsync(created.UserId));
 		Assert.Null(await repo.GetIdentityLinkAsync(IdentityKey.For(AuthProviders.Google, "1234567890")));
@@ -460,7 +460,7 @@ public class UserAccountServiceTests
 		var account = await service.SignInAsync(Identity(AuthProviders.Google, "g-1"), Now);
 		await service.LinkIdentityAsync(account.UserId, Identity(AuthProviders.Microsoft, "m-1"), Now);
 
-		await service.DeleteAccountAsync(account.UserId);
+		await service.DeleteAccountAsync(account.UserId, Now);
 
 		Assert.Null(await repo.GetIdentityLinkAsync(IdentityKey.For(AuthProviders.Google, "g-1")));
 		Assert.Null(await repo.GetIdentityLinkAsync(IdentityKey.For(AuthProviders.Microsoft, "m-1")));
@@ -472,7 +472,7 @@ public class UserAccountServiceTests
 		// Erasure has to be real: the returning player must not land back on the deleted account.
 		var (service, _) = NewService();
 		var original = await service.SignInAsync(Identity(), Now);
-		await service.DeleteAccountAsync(original.UserId);
+		await service.DeleteAccountAsync(original.UserId, Now);
 
 		var fresh = await service.SignInAsync(Identity(), Now.AddDays(1));
 
@@ -485,6 +485,6 @@ public class UserAccountServiceTests
 		// Erasure must be safe to retry after a partial failure.
 		var (service, _) = NewService();
 
-		await service.DeleteAccountAsync("never-existed");
+		await service.DeleteAccountAsync("never-existed", Now);
 	}
 }

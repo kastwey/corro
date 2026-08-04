@@ -51,6 +51,8 @@ export interface AccountUser {
 	/** Whether they asked to appear in that list. Off unless they turned it on. */
 	/** Who may see this player in the list of who is connected. */
 	visibility: PresenceVisibility;
+	/** Unlock codes this account carries from device to device. */
+	unlockCodes: string[];
 	identities: LinkedIdentityView[];
 }
 
@@ -85,6 +87,9 @@ export function parseSession(raw: unknown): AccountSession {
 			email: typeof user.email === 'string' && user.email ? user.email : null,
 			handle: typeof user.handle === 'string' && user.handle ? user.handle : null,
 			visibility: asVisibility(user.visibility),
+			unlockCodes: Array.isArray(user.unlockCodes)
+				? user.unlockCodes.filter((code: unknown): code is string => typeof code === 'string')
+				: [],
 			identities: Array.isArray(user.identities)
 				? user.identities
 					.filter((i: any) => i && typeof i.issuer === 'string' && i.issuer)
@@ -274,6 +279,33 @@ function formatDate(iso?: string): string {
 		: date.toLocaleDateString(document.documentElement.lang || undefined, {
 			year: 'numeric', month: 'long', day: 'numeric',
 		});
+}
+
+/**
+ * Hands the account the unlock codes this browser holds, and returns everything it holds
+ * afterwards. Additive: nothing is ever removed, here or on the server.
+ *
+ * This is what makes a code typed months ago on a laptop reveal the same board on a phone — the
+ * same bargain signing in already makes for the tables this browser was holding.
+ */
+export async function adoptUnlockCodes(
+	fetchImpl: typeof fetch, codes: readonly string[],
+): Promise<string[]> {
+	if (codes.length === 0) return [];
+	try {
+		const response = await fetchImpl('/api/auth/unlock-codes', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ codes }),
+		});
+		if (!response.ok) return [];
+		const payload = await response.json() as { unlockCodes?: unknown };
+		return Array.isArray(payload.unlockCodes)
+			? payload.unlockCodes.filter((c: unknown): c is string => typeof c === 'string')
+			: [];
+	} catch {
+		return [];
+	}
 }
 
 /** Who may see this player connected. True when the server stored the choice. */

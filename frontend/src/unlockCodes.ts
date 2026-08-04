@@ -8,13 +8,34 @@
  * is typed only once and unlocked boards stay visible across reloads — this is the "cookie" the design
  * called for, done with localStorage.
  *
- * The server holds no per-player state: it treats the replayed codes purely as a filter.
+ * A signed-in player's codes ALSO live on their account, and the two are unioned on the way out.
+ * That is what makes a code typed on one device reveal the same boards on the next: the browser
+ * copy keeps working signed out, and the account copy travels. Neither replaces the other.
+ *
+ * The server holds no per-request state: it treats the replayed codes purely as a filter.
  */
 
 /** The request header carrying the comma-separated unlock codes to the server. */
 export const UNLOCK_HEADER = 'X-Corro-Unlock';
 
 const STORAGE_KEY = 'corro.unlockCodes';
+
+/**
+ * The codes the signed-in account carries, as the session last reported them. Held in memory only:
+ * localStorage is the browser's own copy and this is somebody's account, which would be the wrong
+ * thing to leave behind on a shared computer after they sign out.
+ */
+let accountCodes: readonly string[] = [];
+
+/** Replace what the account is known to hold. Called with every session read; [] when signed out. */
+export function setAccountUnlockCodes(codes: readonly string[]): void {
+	accountCodes = codes.map(normalize).filter(code => code.length > 0);
+}
+
+/** What the account holds, as this browser last heard it. */
+export function getAccountUnlockCodes(): readonly string[] {
+	return accountCodes;
+}
 
 /**
  * Canonical form of a code so entry is forgiving and matches the server's own normalization
@@ -62,7 +83,17 @@ export function addUnlockCode(code: string): void {
  */
 export function unlockHeaderValue(candidate?: string): string {
 	const codes = getUnlockCodes();
+	// The account's codes come too, so a fresh device asks for the right boards on its very first
+	// request rather than after the player finds the code again.
+	for (const code of accountCodes) {
+		if (!codes.includes(code)) codes.push(code);
+	}
 	const c = candidate ? normalize(candidate) : '';
 	if (c && !codes.includes(c)) codes.push(c);
 	return codes.join(',');
+}
+
+/** Codes this browser holds that the account has not been told about yet. */
+export function unlockCodesToAdopt(): string[] {
+	return getUnlockCodes().filter(code => !accountCodes.includes(code));
 }

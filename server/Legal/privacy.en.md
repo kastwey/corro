@@ -92,6 +92,11 @@ public name — playing has never required one.
 A handle you stop using is not immediately given to somebody else, so nobody can take a name your
 friends know and appear as you.
 
+An account also carries the **unlock codes** for hidden boards you have entered, so a board unlocked
+on one device is there on the next. They are stored as typed, normalized; they are not credentials —
+the code is the same string you would type again, and holding it reveals nothing but a board in a
+list. Your browser keeps its own copy as well, so unlocking still works with no account at all.
+
 ## Friend requests
 
 From the list of players connected you can ask somebody to be friends. Asking stores one record of

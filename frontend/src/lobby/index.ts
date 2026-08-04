@@ -7,7 +7,9 @@ import {
 	GameSettings, SavedGameInfo, PackageUploadResponse, ShippedBoard
 } from '../models.js';
 import { gameClient } from '../gameClient.js';
-import { hasUnlockCode, addUnlockCode } from '../unlockCodes.js';
+import {
+	hasUnlockCode, addUnlockCode, setAccountUnlockCodes, unlockCodesToAdopt, unlockHeaderValue,
+} from '../unlockCodes.js';
 import { i18nBinder } from '../i18nBinder.js';
 import { isLobbyPathFor, lobbyPathFor } from '../languageUrl.js';
 import { renderHouseRules, readHouseRuleValues } from '../houseRules.js';
@@ -21,7 +23,7 @@ import { renderSeatSelector, getUsedSeats } from './seats.js';
 import { LatestOnly } from './latestOnly.js';
 import { tokenIconHtml, setPackageTokens } from '../tokenIcons.js';
 import { initThemeToggle } from '../themeToggle.js';
-import { initAccountBar } from '../account.js';
+import { adoptUnlockCodes, initAccountBar, type AccountSession } from '../account.js';
 import { openAccountSettings } from '../accountSettings.js';
 import { initializeSiteBranding } from '../siteBranding.js';
 import { initPrivacyNotice } from '../privacyNotice.js';
@@ -64,6 +66,8 @@ class UnifiedLobbyUI {
 	/** Who is connected. Built when the view is first opened; members only. */
 	private onlineList: OnlineList | null = null;
 	private friendsList: FriendsList | null = null;
+	/** Whether this page has a session, so unlock codes know if there is an account to reach. */
+	private signedIn = false;
 
 	constructor() {
 		void this.init();
@@ -173,6 +177,7 @@ class UnifiedLobbyUI {
 			const friends = getElement('go-friends-btn');
 			if (friends) friends.hidden = !session.signedIn;
 			this.useAccountName(session.user?.displayName ?? null);
+			void this.carryUnlockCodes(session);
 			// Read once on arrival so somebody who has been asked hears it from the home page,
 			// rather than having to open a list to discover there was anything to open it for.
 			if (session.signedIn) {
@@ -352,6 +357,10 @@ class UnifiedLobbyUI {
 				return;
 			}
 			addUnlockCode(code);
+			// Straight onto the account too, when there is one. Waiting for the next page load
+			// would mean unlocking on a laptop and finding nothing on the phone until the laptop
+			// happened to be opened again.
+			void this.rememberUnlockCodeOnAccount(code);
 			this.shippedBoards = boards;
 			this.renderBoardSelector();
 			const lang = i18nBinder.getCurrentLanguage();
@@ -824,6 +833,66 @@ class UnifiedLobbyUI {
 			notice.textContent = known
 				? i18nBinder.tSync('lobby.playingAs', { name: name!.trim() })
 				: '';
+		}
+	}
+
+	/**
+	 * Keep the hidden boards this player has unlocked with their ACCOUNT rather than with one
+	 * browser.
+	 *
+	 * Two directions, both additive. What the account already holds is used from now on, so a fresh
+	 * device shows those boards without anybody typing anything. And what this browser was holding
+	 * is handed over — the same bargain signing in already makes for the tables it was holding, and
+	 * for the same reason: months of playing before signing in should not be stranded on one device.
+	 *
+	 * Nothing is removed from the browser, so signing out leaves it exactly as capable as before.
+	 */
+	private async carryUnlockCodes(session: AccountSession): Promise<void> {
+		this.signedIn = session.signedIn;
+		if (!session.signedIn) {
+			setAccountUnlockCodes([]);
+			return;
+		}
+
+		const before = new Set(unlockHeaderValue().split(',').filter(Boolean));
+		setAccountUnlockCodes(session.user?.unlockCodes ?? []);
+
+		const mine = unlockCodesToAdopt();
+		if (mine.length > 0) {
+			const held = await adoptUnlockCodes(fetch, mine);
+			if (held.length > 0) setAccountUnlockCodes(held);
+		}
+
+		// The board list was asked for before the session arrived — it has to be, or signing in
+		// would gate the whole lobby on an account nobody is required to have. So when the account
+		// turns out to hold codes this browser did not, the list is asked for again with them. On a
+		// device that has seen the code before, nothing changed and nothing is re-fetched.
+		const after = unlockHeaderValue().split(',').filter(Boolean);
+		if (after.some(code => !before.has(code))) {
+			await this.reloadBoardsWithUnlockCodes();
+		}
+	}
+
+	/**
+	 * Hand a freshly typed code to the account, if the player has one. Failures are silent: the
+	 * board is already unlocked in this browser, which is what they asked for, and an account that
+	 * did not record it will simply be given the code again on the next sign-in.
+	 */
+	private async rememberUnlockCodeOnAccount(code: string): Promise<void> {
+		if (!this.signedIn) return;
+		const held = await adoptUnlockCodes(fetch, [code]);
+		if (held.length > 0) setAccountUnlockCodes(held);
+	}
+
+	/** Re-read the shipped boards now that more unlock codes travel with the request. */
+	private async reloadBoardsWithUnlockCodes(): Promise<void> {
+		try {
+			const boards = await gameClient.getShippedBoards();
+			if (boards.length === this.shippedBoards.length) return;
+			this.shippedBoards = boards;
+			this.renderBoardSelector();
+		} catch (error) {
+			console.error('Error re-reading the boards this account unlocks:', error);
 		}
 	}
 

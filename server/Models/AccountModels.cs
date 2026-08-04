@@ -81,6 +81,19 @@ public record UserDocument
 	[JsonPropertyName("email")]
 	public string? Email { get; init; }
 
+	/// <summary>
+	/// Unlock codes for hidden boards, normalized, that this account carries from device to device.
+	///
+	/// The browser keeps its own copy too and always has: nothing about unlocking a board requires
+	/// an account, and playing signed out must keep working exactly as before. This is the copy that
+	/// travels — sign in anywhere and the hidden boards are simply there.
+	///
+	/// NOT a credential. It is the same string the player typed and would type again; holding it
+	/// grants nothing but a board appearing in a list.
+	/// </summary>
+	[JsonPropertyName("unlockCodes")]
+	public List<string> UnlockCodes { get; init; } = new();
+
 	/// <summary>Every external login that resolves to this account. More than one entry means
 	/// the player explicitly linked a second provider while already signed in.</summary>
 	[JsonPropertyName("identities")]

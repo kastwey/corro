@@ -400,7 +400,7 @@ public class FriendshipServiceTests
 		var accounts = new UserAccountService(
 			world.Repository,
 			Microsoft.Extensions.Logging.Abstractions.NullLogger<UserAccountService>.Instance);
-		await accounts.DeleteAccountAsync("u-ana");
+		await accounts.DeleteAccountAsync("u-ana", Now);
 
 		Assert.Null(await world.PairAsync("u-ana", "u-berto"));
 		Assert.Null(await world.PairAsync("u-ana", "u-cora"));
