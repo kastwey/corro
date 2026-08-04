@@ -313,10 +313,27 @@
 			<button type="button" id="friends-back-btn" class="secondary-button lobby-back-btn" data-i18n="lobby.backToHome">Back to home</button>
 			<h2 id="friends-heading" data-view-heading tabindex="-1" data-i18n="lobby.friends.heading">Friends</h2>
 			<p class="form-hint" data-i18n="lobby.friends.hint">Requests waiting for your answer come first. Asking to be friends starts from the list of who is online.</p>
-			<div class="friends-surface" role="application" aria-labelledby="friends-heading">
-				<ul id="friends-list" class="online-list" role="list"></ul>
+			<!-- Two questions, two tabs: who your friends are, and what is waiting for an answer.
+				 The requests tab carries its own count, because a number nobody can glance at has
+				 to be in the name of the thing. -->
+			<div role="tablist" id="friends-tabs" class="lobby-tabs" data-i18n-attr:aria-label="lobby.friends.tabsLabel" aria-label="Friends and requests">
+				<button type="button" role="tab" id="friends-tab-people" aria-controls="friends-panel-people" aria-selected="true" data-i18n="lobby.friends.tabPeople">Friends</button>
+				<button type="button" role="tab" id="friends-tab-requests" aria-controls="friends-panel-requests" aria-selected="false" data-i18n="lobby.friends.tabRequests">Requests</button>
 			</div>
-			<p id="friends-empty" class="your-games-empty" data-i18n="lobby.friends.empty" hidden>You have no friends here yet, and nobody is waiting for an answer.</p>
+
+			<div role="tabpanel" id="friends-panel-people" aria-labelledby="friends-tab-people" tabindex="0">
+				<div class="friends-surface" role="application" aria-labelledby="friends-tab-people">
+					<ul id="friends-list" class="online-list" role="list"></ul>
+				</div>
+				<p id="friends-empty" class="your-games-empty" data-i18n="lobby.friends.emptyPeople" hidden>You have no friends here yet.</p>
+			</div>
+
+			<div role="tabpanel" id="friends-panel-requests" aria-labelledby="friends-tab-requests" tabindex="0" hidden>
+				<div class="friends-surface" role="application" aria-labelledby="friends-tab-requests">
+					<ul id="friends-requests-list" class="online-list" role="list"></ul>
+				</div>
+				<p id="friends-requests-empty" class="your-games-empty" data-i18n="lobby.friends.emptyRequests" hidden>Nobody is waiting for an answer.</p>
+			</div>
 			<p id="friends-status" class="form-hint" role="status" aria-live="polite"></p>
 		</section>
 

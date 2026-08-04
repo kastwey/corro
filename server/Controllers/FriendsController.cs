@@ -27,19 +27,32 @@ public class FriendsController : ControllerBase
 	private readonly FriendshipService _friendships;
 	private readonly IGameRepository _games;
 	private readonly GameSessionRegistry _sessions;
+	private readonly PresenceRegistry _presence;
+	private readonly IUserRepository _users;
 
 	public FriendsController(
 		FriendshipService friendships,
 		IGameRepository games,
-		GameSessionRegistry sessions)
+		GameSessionRegistry sessions,
+		PresenceRegistry presence,
+		IUserRepository users)
 	{
 		_friendships = friendships;
 		_games = games;
 		_sessions = sessions;
+		_presence = presence;
+		_users = users;
 	}
 
-	/// <summary>One entry in the player's own list.</summary>
-	public sealed record FriendEntry(string Handle, string Relationship);
+	/// <summary>
+	/// One entry in the player's own list.
+	///
+	/// <paramref name="JoinableGameId"/> is the one place the rule that presence never names a table
+	/// is deliberately narrowed, and it is narrowed twice over: only for a FRIEND, and only for a
+	/// table that still has room. Knowing that a friend is somewhere with a free seat is the whole
+	/// point of asking to join them; knowing which table a stranger is at is not.
+	/// </summary>
+	public sealed record FriendEntry(string Handle, string Relationship, string? JoinableGameId);
 
 	/// <summary>The other player, named the way the asker sees them.</summary>
 	public sealed record HandleRequest(string Handle);
@@ -55,12 +68,17 @@ public class FriendsController : ControllerBase
 		if (SessionPrincipal.UserId(User) is not { Length: > 0 } userId) return Unauthorized();
 
 		var entries = await _friendships.ListAsync(userId, ct);
-		return new
+		var friends = new List<FriendEntry>();
+		foreach (var entry in entries)
 		{
-			Friends = entries
-				.Select(entry => new FriendEntry(entry.Handle, entry.Relationship.ToString()))
-				.ToList(),
-		};
+			friends.Add(new FriendEntry(
+				entry.Handle,
+				entry.Relationship.ToString(),
+				entry.Relationship == FriendshipService.Relationship.Friends
+					? await JoinableTableOfAsync(entry.Handle, userId, ct)
+					: null));
+		}
+		return new { Friends = friends };
 	}
 
 	/// <summary>
@@ -163,6 +181,31 @@ public class FriendsController : ControllerBase
 		return await _friendships.RemoveFriendAsync(userId, handle, ct)
 			? NoContent()
 			: NotFound(new { code = "NO_SUCH_FRIENDSHIP" });
+	}
+
+	/// <summary>
+	/// The table a friend is sitting at, if it is one this reader could join: waiting, with room,
+	/// and not one they are already at. Read from the live session registry rather than by querying
+	/// games, so it costs nothing per friend and cannot name a table nobody is actually at.
+	/// </summary>
+	private async Task<string?> JoinableTableOfAsync(
+		string handle, string readerId, CancellationToken ct)
+	{
+		var friend = await _users.GetUserAsync(
+			(await _users.GetHandleClaimAsync(PlayerHandle.Normalize(handle), ct))?.UserId
+				?? string.Empty, ct);
+		if (friend is null) return null;
+
+		foreach (var connectionId in _presence.ConnectionsOf(friend.UserId))
+		{
+			if (!_sessions.TryLocateConnection(connectionId, out var gameId, out _)) continue;
+			var game = await _games.LoadGameAsync(gameId);
+			if (game is null || !game.HasRoom) continue;
+			// A table the reader is already sitting at is not one to ask to be let into.
+			if (game.Players.Any(p => p.UserId == readerId)) continue;
+			return gameId;
+		}
+		return null;
 	}
 
 	private async Task<IActionResult> Respond(

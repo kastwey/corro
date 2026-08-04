@@ -25,12 +25,25 @@ import {
 } from './friends.js';
 
 export interface FriendsListDeps {
+	/** The people tab's list, and the tab of things to answer. */
 	list: HTMLElement;
 	empty: HTMLElement | null;
+	requestsList?: HTMLElement | null;
+	requestsEmpty?: HTMLElement | null;
 	/** Where the outcome of the reader's own action is said, once. */
 	status?: HTMLElement | null;
 	t: Translate;
 	fetchImpl?: typeof fetch;
+	/** Start writing to somebody: hands the lobby's message box their name. */
+	writeTo?: (handle: string) => void;
+	/** Ask a friend to be let into the table they are at. Absent when nothing can be asked. */
+	askToJoin?: (gameId: string, handle: string) => Promise<void>;
+	/**
+	 * Called after EVERY read, including the one that follows answering something. The count in the
+	 * requests tab's name lives outside this list, and setting it only when the view opens leaves it
+	 * claiming somebody is waiting seconds after they were answered.
+	 */
+	onRefreshed?: (entries: FriendEntry[]) => void;
 }
 
 /** Requests waiting on the reader first; everyone else alphabetically. */
@@ -49,6 +62,24 @@ export function sortFriends(entries: readonly FriendEntry[]): FriendEntry[] {
 }
 
 /**
+ * The two tabs, split.
+ *
+ * People you are something to go in one; things waiting on an answer go in the other. A request
+ * you SENT belongs with the people — it is somebody you are waiting on, not something to answer —
+ * which is the distinction the two tabs exist to make.
+ */
+export function splitForTabs(entries: readonly FriendEntry[]): {
+	people: FriendEntry[];
+	requests: FriendEntry[];
+} {
+	const sorted = sortFriends(entries);
+	return {
+		people: sorted.filter(entry => entry.relationship !== 'RequestReceived'),
+		requests: sorted.filter(entry => entry.relationship === 'RequestReceived'),
+	};
+}
+
+/**
  * One person as a single flowing line: "berto. Has asked to be your friend." The relationship is the
  * whole point of this list, so unlike the online roster there is no activity to lead with.
  */
@@ -61,6 +92,7 @@ export function describeFriend(entry: FriendEntry, t: Translate): string {
 
 export class FriendsList {
 	private readonly roster: FriendRoster;
+	private readonly requestsRoster: FriendRoster | null;
 	private busy = false;
 
 	constructor(private readonly deps: FriendsListDeps) {
@@ -72,24 +104,68 @@ export class FriendsList {
 			rowClass: 'friend-row',
 			buttonClass: 'friend-row__btn',
 		});
+		// The second tab is the same roster asking a different question, so it is the same widget.
+		this.requestsRoster = deps.requestsList
+			? new FriendRoster({
+				list: deps.requestsList,
+				empty: deps.requestsEmpty ?? null,
+				menuHost: () => document.getElementById('view-friends'),
+				menuLabel: () => deps.t('lobby.friends.menuLabel'),
+				rowClass: 'friend-row',
+				buttonClass: 'friend-row__btn',
+			})
+			: null;
 	}
 
-	/** Ask the server and paint. Returns what was shown, which is what the tests assert. */
+	/** Ask the server and paint both tabs. Returns everything, which is what the tests assert. */
 	async refresh(): Promise<FriendEntry[]> {
-		const entries = sortFriends(await fetchFriends(this.deps.fetchImpl ?? fetch));
+		const entries = await fetchFriends(this.deps.fetchImpl ?? fetch);
+		const { people, requests } = splitForTabs(entries);
 
-		this.roster.render(entries.map(entry => ({
+		this.roster.render(people.map(entry => this.rowFor(entry)));
+		this.requestsRoster?.render(requests.map(entry => this.rowFor(entry)));
+
+		const sorted = sortFriends(entries);
+		this.deps.onRefreshed?.(sorted);
+		return sorted;
+	}
+
+	/**
+	 * One person as a row. What it offers follows from where the two of them stand, plus the two
+	 * things only a FRIEND can be offered: writing to them, and asking into the table they are at.
+	 */
+	private rowFor(entry: FriendEntry) {
+		const t = this.deps.t;
+		const actions = actionsFor(entry.relationship).map(action => ({
+			key: action,
+			label: actionLabel(action, entry.handle, t),
+			onClick: () => void this.act(action, entry.handle),
+		}));
+
+		if (entry.relationship === 'Friends' && this.deps.writeTo) {
+			actions.unshift({
+				key: 'chat' as FriendActionKey,
+				label: t('lobby.friends.actionChat', { handle: entry.handle }),
+				onClick: () => { this.deps.writeTo?.(entry.handle); },
+			});
+		}
+		// Only when they are actually at a table with room: an action that is usually absent is
+		// better than one that is usually refused.
+		if (entry.joinableGameId && this.deps.askToJoin) {
+			const gameId = entry.joinableGameId;
+			actions.push({
+				key: 'join' as FriendActionKey,
+				label: t('lobby.friends.actionJoin', { handle: entry.handle }),
+				onClick: () => void this.deps.askToJoin?.(gameId, entry.handle),
+			});
+		}
+
+		return {
 			key: entry.handle,
-			line: describeFriend(entry, this.deps.t),
-			actionsLabel: this.deps.t('lobby.friends.actionsFor', { handle: entry.handle }),
-			actions: actionsFor(entry.relationship).map(action => ({
-				key: action,
-				label: actionLabel(action, entry.handle, this.deps.t),
-				onClick: () => void this.act(action, entry.handle),
-			})),
-		})));
-
-		return entries;
+			line: describeFriend(entry, t),
+			actionsLabel: t('lobby.friends.actionsFor', { handle: entry.handle }),
+			actions,
+		};
 	}
 
 	/** How many requests are waiting on an answer — what the way in to this view announces. */

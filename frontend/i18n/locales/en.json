@@ -46,6 +46,7 @@
     "provider": {
       "google": "Google",
       "microsoft": "Microsoft",
+      "apple": "Apple",
       "e2e": "the test provider"
     },
     "settings": {
@@ -302,7 +303,6 @@
     "friends": {
       "heading": "Friends",
       "hint": "Requests waiting for your answer come first. Asking to be friends starts from the list of who is online.",
-      "empty": "You have no friends here yet, and nobody is waiting for an answer.",
       "menuLabel": "What you can do with this player",
       "actionsFor": "Actions for {{handle}}",
       "row": "{{handle}}. {{state}}",
@@ -319,7 +319,18 @@
       "resultDeclined": "You declined {{handle}}. They are not told, and they cannot ask again.",
       "resultRemoved": "You and {{handle}} are no longer friends.",
       "resultNobody": "Nobody is listed under that name.",
-      "resultFailed": "That could not be done. Try again in a moment."
+      "resultFailed": "That could not be done. Try again in a moment.",
+      "tabsLabel": "Friends and requests",
+      "tabPeople": "Friends",
+      "tabRequests": "Requests",
+      "tabRequestsWaiting": "Requests, {{count}} waiting",
+      "tabRequestsWaiting_one": "Requests, 1 waiting",
+      "emptyPeople": "You have no friends here yet. Ask somebody from the list of who is online.",
+      "emptyRequests": "Nobody is waiting for an answer.",
+      "actionChat": "Write to {{handle}}",
+      "actionJoin": "Ask {{handle}} to let you into their table",
+      "joinAsked": "Asked. If they say yes, you will be taken there.",
+      "joinFailed": "That could not be asked right now."
     },
     "chat": {
       "heading": "Messages",

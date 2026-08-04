@@ -35,8 +35,9 @@ public static class AuthenticationExtensions
 		services.AddOptions<ExternalAuthOptions>()
 			.Bind(section)
 			.Validate(options => options.IsValid,
-				$"{ExternalAuthOptions.SectionName}: each provider must supply BOTH ClientId and ClientSecret or "
-				+ "neither, and SessionDays must be between 1 and 365.")
+				$"{ExternalAuthOptions.SectionName}: each OAuth provider must be fully configured or left off "
+				+ "(Google and Microsoft need ClientId + ClientSecret; Apple needs ClientId, TeamId, KeyId and "
+				+ "PrivateKey), and SessionDays must be between 1 and 365.")
 			.ValidateOnStart();
 
 		// Read once at startup: the authentication schemes themselves are fixed at registration
@@ -46,7 +47,7 @@ public static class AuthenticationExtensions
 		services.AddSingleton<UserAccountService>();
 		services.AddSingleton<FriendshipService>();
 		services.AddSingleton(new AuthProviderCatalog(
-			options.ConfiguredProviders().Select(p => new AuthProviderDescriptor(p.Key, IsTestDouble: false))));
+			options.ConfiguredProviders().Select(key => new AuthProviderDescriptor(key, IsTestDouble: false))));
 
 		var builder = services
 			.AddAuthentication(SessionScheme)
@@ -113,6 +114,25 @@ public static class AuthenticationExtensions
 				microsoft.ClientSecret = options.Microsoft.ClientSecret!;
 				microsoft.SignInScheme = ExternalScheme;
 				microsoft.SaveTokens = false;
+			});
+		}
+
+		if (options.Apple.IsConfigured)
+		{
+			// Apple's client secret is not a static string like the others: it is a short-lived
+			// ES256 JWT the handler signs from the .p8 private key, carrying the Team ID, Key ID and
+			// Services ID. GenerateClientSecret = true makes the handler mint and refresh it, so
+			// nothing here has to be rotated by hand.
+			builder.AddApple(AuthProviders.Apple, apple =>
+			{
+				apple.ClientId = options.Apple.ClientId!;
+				apple.TeamId = options.Apple.TeamId!;
+				apple.KeyId = options.Apple.KeyId!;
+				apple.GenerateClientSecret = true;
+				apple.PrivateKey = (_, _) =>
+					Task.FromResult(options.Apple.PrivateKey!.AsMemory());
+				apple.SignInScheme = ExternalScheme;
+				apple.SaveTokens = false;
 			});
 		}
 

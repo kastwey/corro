@@ -355,7 +355,7 @@ const repoRoot = join(here, '..');
 test('accountProviderLabels: every shipped provider slug is named in both locales', () => {
 	for (const locale of ['en', 'es']) {
 		const dict = JSON.parse(readFileSync(join(repoRoot, 'i18n', 'locales', `${locale}.json`), 'utf8'));
-		for (const slug of ['google', 'microsoft', 'e2e']) {
+		for (const slug of ['google', 'microsoft', 'apple', 'e2e']) {
 			assert.ok(dict.account?.provider?.[slug], `${locale}.json names the "${slug}" provider`);
 		}
 	}

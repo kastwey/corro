@@ -58,7 +58,15 @@ test('a stranger has no standing to announce; everybody else does', () => {
 test('only whole entries are believed', () => {
 	assert.deepEqual(
 		parseFriends({ friends: [{ handle: 'ana', relationship: 'Friends' }] }),
-		[{ handle: 'ana', relationship: 'Friends' }]);
+		[{ handle: 'ana', relationship: 'Friends', joinableGameId: null }]);
+	// The one place a table is named, and only ever a friend's.
+	assert.deepEqual(
+		parseFriends({ friends: [{ handle: 'ana', relationship: 'Friends', joinableGameId: 'g1' }] }),
+		[{ handle: 'ana', relationship: 'Friends', joinableGameId: 'g1' }]);
+	// An empty or absent one is no table, never an empty string somebody could act on.
+	assert.deepEqual(
+		parseFriends({ friends: [{ handle: 'ana', relationship: 'Friends', joinableGameId: '' }] }),
+		[{ handle: 'ana', relationship: 'Friends', joinableGameId: null }]);
 	for (const payload of [
 		{ friends: [{ handle: '' }] },
 		{ friends: 'nope' },

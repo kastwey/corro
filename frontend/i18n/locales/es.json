@@ -46,6 +46,7 @@
     "provider": {
       "google": "Google",
       "microsoft": "Microsoft",
+      "apple": "Apple",
       "e2e": "el proveedor de prueba"
     },
     "settings": {
@@ -302,7 +303,6 @@
     "friends": {
       "heading": "Amigos",
       "hint": "Las solicitudes que esperan tu respuesta salen primero. Para pedir amistad, entra en la lista de quién está conectado.",
-      "empty": "Todavía no tienes amigos aquí, y nadie espera respuesta.",
       "menuLabel": "Qué puedes hacer con este jugador",
       "actionsFor": "Acciones para {{handle}}",
       "row": "{{handle}}. {{state}}",
@@ -319,7 +319,18 @@
       "resultDeclined": "Has rechazado a {{handle}}. No se le avisa, y no puede volver a pedírtelo.",
       "resultRemoved": "{{handle}} y tú ya no sois amigos.",
       "resultNobody": "No hay nadie con ese nombre en la lista.",
-      "resultFailed": "No se ha podido hacer. Inténtalo dentro de un momento."
+      "resultFailed": "No se ha podido hacer. Inténtalo dentro de un momento.",
+      "tabsLabel": "Amigos y solicitudes",
+      "tabPeople": "Amigos",
+      "tabRequests": "Solicitudes",
+      "tabRequestsWaiting": "Solicitudes, {{count}} esperando",
+      "tabRequestsWaiting_one": "Solicitudes, 1 esperando",
+      "emptyPeople": "Todavía no tienes amigos aquí. Pídeselo a alguien desde la lista de quién está conectado.",
+      "emptyRequests": "Nadie espera respuesta.",
+      "actionChat": "Escribir a {{handle}}",
+      "actionJoin": "Pedir a {{handle}} que te deje entrar en su mesa",
+      "joinAsked": "Pedido. Si dicen que sí, te llevamos allí.",
+      "joinFailed": "Ahora mismo no se ha podido pedir."
     },
     "chat": {
       "heading": "Mensajes",

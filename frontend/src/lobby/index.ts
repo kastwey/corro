@@ -32,6 +32,7 @@ import { ComboBox } from '../comboBox.js';
 import { OnlineList, parseOnlinePlayers } from '../onlinePlayers.js';
 import { LobbyChat } from '../lobbyChat.js';
 import { FriendRoster } from '../friendRoster.js';
+import { Tabs } from '../tabs.js';
 import {
 	actionsForInvitation, asInviteResult, describeInvitation, parsePendingInvitations, resultText,
 } from '../tableInvites.js';
@@ -75,6 +76,7 @@ class UnifiedLobbyUI {
 	private signedIn = false;
 	private lobbyChat: LobbyChat | null = null;
 	private invitesRoster: FriendRoster | null = null;
+	private friendsTabs: Tabs | null = null;
 	/** Public names the @ autocomplete offers, refreshed when the lobby is opened. */
 	private chatCandidates: string[] = [];
 
@@ -199,6 +201,11 @@ class UnifiedLobbyUI {
 					const code = (data as { inviteCode?: unknown } | null)?.inviteCode;
 					if (typeof code === 'string' && code.length > 0) void this.enterTableByCode(code);
 				});
+				// Read again once the hub is actually up. The session arrives over HTTP and the
+				// invitations over the hub, and there is no order between them: reading first and
+				// never again meant a slow connection showed an empty list and left it that way,
+				// which is indistinguishable from having been invited to nothing.
+				gameClient.on('connected', () => void this.refreshInvitations());
 				void this.refreshInvitations();
 			}
 			this.useAccountName(session.user?.displayName ?? null);
@@ -812,16 +819,40 @@ class UnifiedLobbyUI {
 		this.friendsList ??= new FriendsList({
 			list: getElement('friends-list')!,
 			empty: getElement('friends-empty'),
+			requestsList: getElement('friends-requests-list'),
+			requestsEmpty: getElement('friends-requests-empty'),
 			status: getElement('friends-status'),
 			t: (key, vars) => i18nBinder.tSync(key, vars),
+			// Writing to a friend starts in the message box that is already on the home page, with
+			// their name in it — rather than a second place to type that would have to learn all the
+			// same tricks.
+			writeTo: handle => this.startWritingTo(handle),
+			askToJoin: (gameId, handle) => this.askToJoinTable(gameId, handle),
+			onRefreshed: entries => this.labelFriendsSurfaces(entries),
 		});
-		this.labelFriendsButton(await this.friendsList.refresh());
+		const tablist = getElement('friends-tabs');
+		if (tablist) this.friendsTabs ??= new Tabs({ tablist });
+
+		await this.friendsList.refresh();
 	}
 
 	/**
 	 * The friends button says how many requests are waiting. A count that only existed as a badge
 	 * would be invisible to the people this whole surface is for, so it is in the button's name.
 	 */
+	/**
+	 * Everywhere the number of waiting requests is written: the way in, and the tab that holds them.
+	 * Both are NAMES rather than badges, so somebody who cannot glance at a corner of the screen
+	 * still hears that something wants an answer.
+	 */
+	private labelFriendsSurfaces(entries: readonly FriendEntry[]): void {
+		this.labelFriendsButton(entries);
+		const waiting = FriendsList.waiting(entries);
+		this.friendsTabs?.setLabel('friends-tab-requests', waiting > 0
+			? i18nBinder.tSync('lobby.friends.tabRequestsWaiting', { count: waiting })
+			: i18nBinder.tSync('lobby.friends.tabRequests'));
+	}
+
 	private labelFriendsButton(entries: readonly FriendEntry[]): void {
 		const button = getElement('go-friends-btn');
 		if (!button) return;
@@ -1053,6 +1084,27 @@ class UnifiedLobbyUI {
 	private sayInvite(text: string): void {
 		const status = getElement('lobby-invites-status');
 		if (status) status.textContent = text;
+	}
+
+	/** Put somebody's name in the message box and hand the keyboard to it. */
+	private startWritingTo(handle: string): void {
+		const input = getElement<HTMLTextAreaElement>('lobby-chat-input');
+		if (!input) return;
+		this.showHome();
+		const prefix = `@${handle} `;
+		if (!input.value.startsWith(prefix)) input.value = prefix + input.value;
+		input.focus();
+		input.setSelectionRange(input.value.length, input.value.length);
+	}
+
+	/** Knock on a friend's table. If they say yes, the accept path takes this player there. */
+	private async askToJoinTable(gameId: string, handle: string): Promise<void> {
+		const { outcome } = await gameClient.requestToJoinTable(gameId);
+		const status = getElement('friends-status');
+		if (!status) return;
+		status.textContent = i18nBinder.tSync(
+			outcome === 'ASKED' ? 'lobby.friends.joinAsked' : 'lobby.friends.joinFailed',
+			{ handle });
 	}
 
 	private setupHomeNavigation(): void {

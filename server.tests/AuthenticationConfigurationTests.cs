@@ -115,7 +115,37 @@ public class ExternalAuthOptionsTests
 
 		Assert.True(options.IsValid);
 		var provider = Assert.Single(options.ConfiguredProviders());
-		Assert.Equal(AuthProviders.Google, provider.Key);
+		Assert.Equal(AuthProviders.Google, provider);
+	}
+
+	[Fact]
+	public void A_fully_configured_Apple_provider_is_offered()
+	{
+		var options = new ExternalAuthOptions
+		{
+			Apple = new AppleProviderOptions
+			{
+				ClientId = "games.allwelcome.web",
+				TeamId = "TEAMID1234",
+				KeyId = "KEYID12345",
+				PrivateKey = "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----",
+			},
+		};
+
+		Assert.True(options.IsValid);
+		Assert.Equal(AuthProviders.Apple, Assert.Single(options.ConfiguredProviders()));
+	}
+
+	[Fact]
+	public void A_half_configured_Apple_provider_is_invalid()
+	{
+		// One of the four Apple fields alone is a half-filled section, which must fail startup.
+		var options = new ExternalAuthOptions
+		{
+			Apple = new AppleProviderOptions { ClientId = "games.allwelcome.web" },
+		};
+
+		Assert.False(options.IsValid);
 	}
 
 	[Theory]
@@ -158,7 +188,7 @@ public class ExternalAuthOptionsTests
 	public void Provider_slugs_are_valid_identity_key_issuers()
 	{
 		// The slugs are persisted inside every identity key, so they must satisfy the key's own rules.
-		foreach (var (key, _) in new ExternalAuthOptions
+		foreach (var key in new ExternalAuthOptions
 		{
 			Google = new ExternalProviderOptions { ClientId = "id", ClientSecret = "secret" },
 			Microsoft = new ExternalProviderOptions { ClientId = "id", ClientSecret = "secret" },
@@ -207,6 +237,6 @@ public class AuthProviderCatalogTests
 			Microsoft = new ExternalProviderOptions { ClientId = "id", ClientSecret = "secret" },
 		};
 
-		Assert.DoesNotContain(options.ConfiguredProviders(), p => p.Key == AuthProviders.E2E);
+		Assert.DoesNotContain(options.ConfiguredProviders(), p => p == AuthProviders.E2E);
 	}
 }

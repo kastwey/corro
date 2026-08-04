@@ -20,6 +20,12 @@ const RELATIONSHIPS: readonly Relationship[] = [
 export interface FriendEntry {
 	readonly handle: string;
 	readonly relationship: Relationship;
+	/**
+	 * The table this friend is sitting at, when it is one this reader could join. Null otherwise —
+	 * which is almost always, since it needs them to be at a table that is waiting and not full.
+	 * The one place presence names a table, and only ever a friend's.
+	 */
+	readonly joinableGameId?: string | null;
 }
 
 /** A relationship the server sent, or 'None' for anything this client does not recognise — an
@@ -34,9 +40,13 @@ export function parseFriends(payload: unknown): FriendEntry[] {
 	if (!Array.isArray(friends)) return [];
 	return friends.flatMap(entry => {
 		const handle = (entry as { handle?: unknown })?.handle;
-		return typeof handle === 'string' && handle.length > 0
-			? [{ handle, relationship: asRelationship((entry as { relationship?: unknown })?.relationship) }]
-			: [];
+		if (typeof handle !== 'string' || handle.length === 0) return [];
+		const joinable = (entry as { joinableGameId?: unknown })?.joinableGameId;
+		return [{
+			handle,
+			relationship: asRelationship((entry as { relationship?: unknown })?.relationship),
+			joinableGameId: typeof joinable === 'string' && joinable.length > 0 ? joinable : null,
+		}];
 	});
 }
 

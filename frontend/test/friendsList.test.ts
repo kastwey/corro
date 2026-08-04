@@ -40,6 +40,8 @@ function harness() {
 				<ul id="friends-list" role="list"></ul>
 			</div>
 			<p id="friends-empty" hidden></p>
+			<ul id="friends-requests-list" role="list"></ul>
+			<p id="friends-requests-empty" hidden></p>
 			<p id="friends-status" role="status" aria-live="polite"></p>
 		</div>`;
 	const list = document.getElementById('friends-list') as HTMLElement;
@@ -53,9 +55,13 @@ function harness() {
 		lineOf: (row: HTMLElement) => row.querySelector('.friend-row__line')?.textContent,
 		buttonsOf: (row: HTMLElement) =>
 			Array.from(row.querySelectorAll<HTMLElement>('.friend-row__btn')),
+		requestRows: () => Array.from(
+			document.querySelectorAll<HTMLElement>('#friends-requests-list .friend-row')),
 		build: (fetchImpl: typeof fetch) => new FriendsList({
 			list,
 			empty: document.getElementById('friends-empty'),
+			requestsList: document.getElementById('friends-requests-list'),
+			requestsEmpty: document.getElementById('friends-requests-empty'),
 			status: document.getElementById('friends-status'),
 			t: translate,
 			fetchImpl,
@@ -98,7 +104,9 @@ test('a person reads as one flowing line: the name, and where the two of you sta
 		'ana. Tu amigo.');
 });
 
-test('the list is one tab stop, and each row offers what its relationship allows', async () => {
+// People you are something to in one tab; things waiting on an answer in the other. A request you
+// SENT belongs with the people — it is somebody you are waiting on, not something to answer.
+test('the two tabs split people from things to answer', async () => {
 	const h = harness();
 	await h.build(answering({
 		friends: [
@@ -108,17 +116,20 @@ test('the list is one tab stop, and each row offers what its relationship allows
 		],
 	})).refresh();
 
-	assert.deepEqual(h.rows().map(h.lineOf), [
-		'berto. Te ha pedido amistad.',
-		'ana. Tu amigo.',
-		'cora. Le pediste amistad.',
-	]);
-	assert.deepEqual(h.rows().map(row => row.tabIndex), [0, -1, -1]);
+	assert.deepEqual(h.rows().map(h.lineOf), ['ana. Tu amigo.', 'cora. Le pediste amistad.']);
+	assert.deepEqual(h.requestRows().map(h.lineOf), ['berto. Te ha pedido amistad.']);
+
+	// Each list is its own single tab stop.
+	assert.deepEqual(h.rows().map(row => row.tabIndex), [0, -1]);
+	assert.deepEqual(h.requestRows().map(row => row.tabIndex), [0]);
+
 	assert.deepEqual(h.rows().map(row => h.buttonsOf(row).map(b => b.textContent)), [
-		['Aceptar a berto', 'Rechazar a berto'],
 		['Dejar de ser amigo de ana'],
 		// Waiting on somebody is not a thing you can act on.
 		[],
+	]);
+	assert.deepEqual(h.requestRows().map(row => h.buttonsOf(row).map(b => b.textContent)), [
+		['Aceptar a berto', 'Rechazar a berto'],
 	]);
 });
 
@@ -130,7 +141,7 @@ test('answering re-reads the list rather than guessing the new state', async () 
 	));
 	await list.refresh();
 
-	h.buttonsOf(h.rows()[0])[0].click();
+	h.buttonsOf(h.requestRows()[0])[0].click();
 	await new Promise(resolve => setTimeout(resolve, 0));
 
 	assert.deepEqual(h.calls.map(c => `${c.method} ${c.url}`), [
@@ -138,6 +149,8 @@ test('answering re-reads the list rather than guessing the new state', async () 
 		'POST /api/friends/requests/accept',
 		'GET /api/friends',
 	]);
+	// Answered, so they move out of the things-to-answer tab and into the people.
+	assert.deepEqual(h.requestRows(), []);
 	assert.equal(h.lineOf(h.rows()[0]), 'berto. Tu amigo.');
 	assert.equal(h.status.textContent, 'berto ya es tu amigo.');
 });

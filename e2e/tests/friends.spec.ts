@@ -57,11 +57,19 @@ async function openOnline(page: Page) {
 	return page.locator('#online-list .online-player');
 }
 
-/** Open the friends list, freshly read. */
+/** Open the friends view on the PEOPLE tab, which is where it starts. */
 async function openFriends(page: Page) {
 	await gotoLobbyHome(page);
 	await page.locator('#go-friends-btn').click();
 	return page.locator('#friends-list .friend-row');
+}
+
+/** Open the friends view on the tab of things waiting for an answer. */
+async function openRequests(page: Page) {
+	await gotoLobbyHome(page);
+	await page.locator('#go-friends-btn').click();
+	await page.locator('#friends-tab-requests').click();
+	return page.locator('#friends-requests-list .friend-row');
 }
 
 test('a request is asked from the room, answered from the friends list, and ended by either side', async ({ browser }) => {
@@ -89,7 +97,7 @@ test('a request is asked from the room, answered from the friends list, and ende
 	await expect(berto.locator('#go-friends-btn'))
 		.toHaveText(appI18n('es').lobby.home.friendsButtonWaiting_one as string);
 
-	const waiting = await openFriends(berto);
+	const waiting = await openRequests(berto);
 	// Asserted on the label rather than the text: the row CONTAINS its buttons, and their names
 	// are not part of the sentence a screen reader reads for the person.
 	await expect(waiting).toHaveAttribute('aria-label', `anafr. ${friends.stateReceived}`);
@@ -98,7 +106,9 @@ test('a request is asked from the room, answered from the friends list, and ende
 	await waiting.getByRole('button', { name: withHandle(friends.actionAccept, 'anafr') }).click();
 	await expect(berto.locator('#friends-status'))
 		.toHaveText(withHandle(friends.resultAccepted, 'anafr'));
-	await expect(waiting).toHaveAttribute('aria-label', `anafr. ${friends.stateFriends}`);
+	// Answered, so they leave the tab that was asking and join the people.
+	await expect(berto.locator('#friends-list .friend-row'))
+		.toHaveAttribute('aria-label', `anafr. ${friends.stateFriends}`);
 	// And the way in stops asking for an answer.
 	await gotoLobbyHome(berto);
 	await expect(berto.locator('#go-friends-btn'))
@@ -136,14 +146,16 @@ test('a refusal is remembered, never reported, and cannot be reset by asking aga
 		.toHaveText(withHandle(friends.resultSent, 'refuserfr'));
 
 	// Berto says no. He is told what that means, because it is not undoable.
-	const waiting = await openFriends(berto);
+	const waiting = await openRequests(berto);
 	await waiting.getByRole('button', { name: withHandle(friends.actionDecline, 'askerfr') })
 		.click();
 	await expect(berto.locator('#friends-status'))
 		.toHaveText(withHandle(friends.resultDeclined, 'askerfr'));
-	// And it leaves nothing behind on his list: a refusal is not a relationship he carries around.
+	// And it leaves nothing behind on either tab: a refusal is not a relationship he carries around.
+	await expect(berto.locator('#friends-requests-list .friend-row')).toHaveCount(0);
 	await expect(berto.locator('#friends-list .friend-row')).toHaveCount(0);
-	await expect(berto.locator('#friends-empty')).toBeVisible();
+	// He is standing on the requests tab, so that is the emptiness he is told about.
+	await expect(berto.locator('#friends-requests-empty')).toBeVisible();
 	await flushAxeAudit(berto);
 
 	// Ana is shown what SHE did — that she asked — and nothing about the answer.
@@ -155,7 +167,7 @@ test('a refusal is remembered, never reported, and cannot be reset by asking aga
 	await expect(refuserRow.getByRole('button')).toHaveCount(0);
 
 	// Asking again from her own list reaches nobody: Berto is not asked a second time.
-	await expect(berto.locator('#friends-list .friend-row')).toHaveCount(0);
+	await expect(berto.locator('#friends-requests-list .friend-row')).toHaveCount(0);
 	await gotoLobbyHome(berto);
 	await expect(berto.locator('#go-friends-btn'))
 		.toHaveText(appI18n('es').lobby.home.friendsButton as string);
@@ -232,8 +244,8 @@ test('somebody at your table can be asked, however they hide from the room', asy
 	await expectAnnouncement(ana, new RegExp(table.befriend_sent));
 	await flushAxeAudit(ana);
 
-	// And it arrives as an ordinary request, answerable from his friends list.
-	const waiting = await openFriends(berto);
+	// And it arrives as an ordinary request, answerable from his friends view.
+	const waiting = await openRequests(berto);
 	await expect(waiting).toHaveAttribute('aria-label', `hostana. ${friends.stateReceived}`);
 
 	// Nobody is offered the chance to befriend themselves.
@@ -242,4 +254,47 @@ test('somebody at your table can be asked, however they hide from the room', asy
 	await expect(anaRow.getByRole('button', {
 		name: table.askToBeFriendsOf.replace('{{name}}', anaSeat),
 	})).toHaveCount(0);
+});
+
+// Two questions, two tabs. The requests tab carries its own count, because a number nobody can
+// glance at has to be in the name of the thing rather than beside it.
+test('the friends view splits people from things to answer, and says how many wait', async ({ browser }) => {
+	const ana = await listedPlayer(browser, 'friends-tabs-a', 'tabsana');
+	const berto = await listedPlayer(browser, 'friends-tabs-b', 'tabsberto');
+
+	const rows = await openOnline(berto);
+	await rows.filter({ hasText: 'tabsana' })
+		.getByRole('button', { name: withHandle(friends.actionRequest, 'tabsana') }).click();
+
+	await gotoLobbyHome(ana);
+	await ana.locator('#go-friends-btn').click();
+
+	// The strip is one tab stop, and the requests tab says what is waiting.
+	const tablist = ana.getByRole('tablist', { name: friends.tabsLabel });
+	await expect(tablist).toBeVisible();
+	const requestsTab = ana.locator('#friends-tab-requests');
+	await expect(requestsTab).toHaveText(
+		appI18n('es').lobby.friends.tabRequestsWaiting_one as string);
+
+	// People first, and it holds no request to answer.
+	await expect(ana.locator('#friends-tab-people')).toHaveAttribute('aria-selected', 'true');
+	await expect(ana.locator('#friends-panel-requests')).toBeHidden();
+	await flushAxeAudit(ana);
+
+	// The arrows move along the strip AND bring their panel with them.
+	await ana.locator('#friends-tab-people').focus();
+	await ana.keyboard.press('ArrowRight');
+	await expect(requestsTab).toBeFocused();
+	await expect(ana.locator('#friends-panel-requests')).toBeVisible();
+	await expect(ana.locator('#friends-panel-people')).toBeHidden();
+
+	const waiting = ana.locator('#friends-requests-list .friend-row');
+	await expect(waiting).toHaveAttribute('aria-label', `tabsberto. ${friends.stateReceived}`);
+	await flushAxeAudit(ana);
+
+	// Answered, and it leaves the tab that was asking for an answer.
+	await waiting.getByRole('button', { name: withHandle(friends.actionAccept, 'tabsberto') })
+		.click();
+	await expect(ana.locator('#friends-requests-list .friend-row')).toHaveCount(0);
+	await expect(requestsTab).toHaveText(appI18n('es').lobby.friends.tabRequests as string);
 });
