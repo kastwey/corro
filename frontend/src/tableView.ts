@@ -74,10 +74,16 @@ export interface TableViewDeps {
 	askToBeFriends?: (playerId: string) => Promise<void>;
 	/** This player's own seat, so the roster never offers to befriend them to themselves. */
 	selfPlayerId?: () => string | null;
+	/** Ask somebody to this table by public name. Absent when the local player has no account. */
+	invite?: (handle: string) => Promise<void>;
+	/** Let somebody in who asked, or refuse them. */
+	answerJoinRequest?: (handle: string, accept: boolean) => Promise<void>;
 }
 
 export class TableView {
 	private deps: TableViewDeps | null = null;
+	/** The invite controls are wired once; the table repaints often. */
+	private inviteWired = false;
 	private root: HTMLElement | null = null;
 	private gameSurface: HTMLElement | null = null;
 	private surfaceIntro: HTMLElement | null = null;
@@ -203,6 +209,8 @@ export class TableView {
 	setTable(table: GameInfo): void {
 		this.matchesPlayed = table.matchesPlayed ?? 0;
 		this.renderPlayers(table);
+		this.renderJoinRequests(table);
+		this.wireInvite(table);
 		this.renderInvites(table);
 		this.renderRejoinCode();
 		this.renderContentLanguage(table);
@@ -296,6 +304,79 @@ export class TableView {
 	 * stop whose label reads the whole row in one sentence, and its actions live behind the arrow
 	 * key — exactly the bargain the players panel already makes in game.
 	 */
+	/**
+	 * Asking somebody by public name. Offered only when this player could actually invite — signed
+	 * in, at a table with room — because a control that always answers "no" is a dead end with
+	 * extra steps.
+	 */
+	private wireInvite(table: GameInfo): void {
+		const section = this.root?.querySelector<HTMLElement>('#table-invite-someone');
+		const input = this.root?.querySelector<HTMLInputElement>('#table-invite-handle');
+		const send = this.root?.querySelector<HTMLButtonElement>('#table-invite-send');
+		if (!section || !input || !send || !this.deps) return;
+
+		const room = table.status === 'waiting_for_players'
+			&& table.players.length < table.maxPlayers;
+		section.hidden = !this.deps.invite || !room;
+		if (section.hidden || this.inviteWired) return;
+
+		this.inviteWired = true;
+		const submit = () => {
+			const handle = input.value.trim();
+			if (handle.length === 0) return;
+			input.value = '';
+			void this.deps?.invite?.(handle);
+		};
+		send.addEventListener('click', submit);
+		input.addEventListener('keydown', (event: KeyboardEvent) => {
+			if (event.key !== 'Enter') return;
+			event.preventDefault();
+			submit();
+		});
+	}
+
+	/**
+	 * People asking to be let in. Shown to the whole table rather than only the host: anybody
+	 * already seated can answer, and a request that only the host can see waits for the one person
+	 * who may have stepped away.
+	 *
+	 * Its own list, not part of the roster: these are not players, and a row that looked like one
+	 * would be read as somebody who had already sat down.
+	 */
+	private renderJoinRequests(table: GameInfo): void {
+		const list = this.root?.querySelector<HTMLElement>('#table-join-requests');
+		const section = this.root?.querySelector<HTMLElement>('#table-join-requests-section');
+		if (!list || !section || !this.deps) return;
+
+		const asking = table.joinRequests ?? [];
+		// An empty region is a heading and a tab stop for nothing.
+		section.hidden = asking.length === 0 || !this.deps.answerJoinRequest;
+		list.replaceChildren(...asking.map(request => {
+			const t = this.deps!.t;
+			const item = document.createElement('li');
+			item.className = 'player-item';
+			item.tabIndex = -1;
+			const line = t('table.joinRequestFrom').replace('{{handle}}', request.handle);
+			item.setAttribute('aria-label', line);
+			const text = document.createElement('span');
+			text.textContent = line;
+			const actions = document.createElement('div');
+			actions.className = 'player-item__actions';
+			actions.appendChild(this.rowAction(
+				'player-item__admit',
+				t('table.joinRequestAcceptShort'),
+				t('table.joinRequestAccept').replace('{{handle}}', request.handle),
+				() => void this.deps?.answerJoinRequest?.(request.handle, true)));
+			actions.appendChild(this.rowAction(
+				'player-item__refuse',
+				t('table.joinRequestDeclineShort'),
+				t('table.joinRequestDecline').replace('{{handle}}', request.handle),
+				() => void this.deps?.answerJoinRequest?.(request.handle, false)));
+			item.append(text, actions);
+			return item;
+		}));
+	}
+
 	private renderPlayers(table: GameInfo): void {
 		if (!this.players || !this.deps) return;
 		const t = this.deps.t;

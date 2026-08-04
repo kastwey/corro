@@ -63,6 +63,16 @@
 					 cannot glance at a badge has to hear that there is something to answer. -->
 				<button type="button" id="go-friends-btn" class="home-action-btn secondary-button" data-i18n="lobby.home.friendsButton" hidden>Friends</button>
 			</div>
+			<!-- Tables waiting on an answer. Above the chat because a seat expires and a message
+				 does not: a table that fills while somebody reads past it is gone. Revealed only
+				 when something is actually waiting, so an empty region never takes a tab stop. -->
+			<section class="lobby-invites" id="lobby-invites" aria-labelledby="lobby-invites-heading" hidden>
+				<h3 id="lobby-invites-heading" data-i18n="lobby.invites.heading">Waiting for you</h3>
+				<p class="form-hint" data-i18n="lobby.invites.hint">Tables you have been asked to, and doors you knocked on.</p>
+				<ul id="lobby-invites-list" class="lobby-chat__log" role="list"></ul>
+				<p id="lobby-invites-status" class="form-hint" role="status" aria-live="polite"></p>
+			</section>
+
 			<!-- Writing to people. Permanent rather than a dialog: a message arriving must not steal
 				 focus or open anything, and somebody who wants to write should not have to remember
 				 a chord first. Revealed only for a signed-in player, like the other two ways in. -->

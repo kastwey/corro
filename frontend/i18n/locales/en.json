@@ -357,7 +357,8 @@
       "gone": "That table is no longer waiting for you.",
       "failed": "That could not be done. Try again in a moment.",
       "askSent": "Asked. You will be taken there if they say yes.",
-      "askToJoin": "Ask {{handle}} to let you into their table"
+      "askToJoin": "Ask {{handle}} to let you into their table",
+      "arrived": "Somebody has asked you to a table."
     },
     "selectBoard": "Select game:",
     "boardFilterHint": "Type to filter, or press Down arrow to walk the list.",
@@ -1866,7 +1867,7 @@
     "heading": "At the table",
     "introHost": "No game is running. Talk, invite whoever is missing, and start when you are all ready.",
     "introGuest": "No game is running. Talk while the others arrive; the host starts when you are ready.",
-    "inviteLabel": "Public name of who you want to invite",
+    "inviteLabel": "Invite code:",
     "copyCode": "Copy code",
     "playersHeading": "Who is here",
     "playerMenuLabel": "What you can do with this player",
@@ -1911,7 +1912,13 @@
     "inviteRefused": "{{handle}} could not be invited: they may be unreachable, or not accept invitations from you.",
     "joinRequestFrom": "{{handle}} is asking to join this table.",
     "joinRequestAccept": "Let {{handle}} in",
-    "joinRequestDecline": "Refuse {{handle}}"
+    "joinRequestDecline": "Refuse {{handle}}",
+    "joinRequestAcceptShort": "Let in",
+    "joinRequestDeclineShort": "Refuse",
+    "joinRequestsHeading": "Asking to join",
+    "inviteWhoLabel": "Public name of who you want to invite",
+    "joinRequestAdmitted": "{{handle}} is in.",
+    "joinRequestRefused": "{{handle}} was refused."
   },
   "common": {
     "ok": "OK",

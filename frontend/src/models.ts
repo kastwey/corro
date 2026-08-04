@@ -54,6 +54,19 @@ export interface LobbyPlayer {
   joinedAt: string;
 }
 
+/** Somebody asked to a table. The account behind them never leaves the server. */
+export interface TableInvitation {
+  handle: string;
+  invitedBy: string;
+  invitedAtUtc: string;
+}
+
+/** Somebody asking to be let in. Answered by anybody already seated. */
+export interface TableJoinRequest {
+  handle: string;
+  requestedAtUtc: string;
+}
+
 /** A race seat as the lobby offers it: identity, swatch colour and localizable name. */
 export interface LobbySeatInfo {
   id: string;
@@ -847,9 +860,20 @@ export interface GameInfo {
   gameId: string;
   hostId: string;
   inviteCode: string;
-  status: 'WaitingForPlayers' | 'Active' | 'Completed' | 'Starting' | 'Abandoned';
+  /**
+   * The table's lifecycle state, in the shape it ACTUALLY arrives in.
+   *
+   * snake_case, not the PascalCase this said for a long time: the SignalR pipeline serializes
+   * enums with a snake-case policy, and nothing on this side compared the value, so a type that
+   * named five strings the server never sends went unnoticed until something did compare it — and
+   * silently never matched.
+   */
+  status: 'waiting_for_players' | 'active' | 'completed' | 'starting' | 'abandoned';
   maxPlayers: number;
   players: LobbyPlayer[];
+  /** People asked to this table, and people asking to be let in. Only public names. */
+  invitations?: TableInvitation[];
+  joinRequests?: TableJoinRequest[];
   board?: string;
   /** Host-selected package-content language, fixed when play starts. */
   language?: string;

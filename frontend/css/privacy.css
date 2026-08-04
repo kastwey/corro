@@ -146,6 +146,9 @@ body.privacy-page {
 	text-underline-offset: 0.2em;
 }
 
+/* The same rule global.css states for the app, repeated because this page deliberately does not
+   load global.css — it is a document, not the application. Not duplication to remove: deleting it
+   would let any class that sets display put a hidden element back on screen here. */
 .privacy-page [hidden] {
 	display: none !important;
 }

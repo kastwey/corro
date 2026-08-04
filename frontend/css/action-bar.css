@@ -14,9 +14,6 @@
 	border-radius: 8px;
 }
 
-.action-bar[hidden] {
-	display: none;
-}
 
 .action-bar-buttons {
 	display: flex;

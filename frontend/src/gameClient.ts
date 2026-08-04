@@ -58,6 +58,10 @@ export interface GameClientEvents {
 	'connected': void;
 	/** A private message reaching this player. Unknown shape on purpose: the panel validates it. */
 	'directMessage': unknown;
+	/** A table has asked this player to join it. */
+	'tableInvitation': unknown;
+	/** A table this player knocked on has let them in. */
+	'joinRequestAccepted': unknown;
 	'disconnected': void;
 	'connectionError': Error;
 	'reconnecting': void;
@@ -198,6 +202,14 @@ export class UnifiedGameClient {
 		// do with it, and deliberately does not speak over whatever they are doing.
 		this.connection.on('DirectMessage', (data: unknown) => {
 			this.emit('directMessage', data);
+		});
+		// Somebody asking this player to a table, and a table letting them in. Both are addressed
+		// to them personally, so unlike the room changing they are worth saying once.
+		this.connection.on('TableInvitation', (data: unknown) => {
+			this.emit('tableInvitation', data);
+		});
+		this.connection.on('JoinRequestAccepted', (data: unknown) => {
+			this.emit('joinRequestAccepted', data);
 		});
 		this.connection.on('GameCreated', (data: CreateGameResponse) => {
 			this.emit('gameCreated', data);
@@ -461,6 +473,61 @@ export class UnifiedGameClient {
 			};
 		} catch {
 			return { delivered: [], unreachable: handles };
+		}
+	}
+
+	/** Tables waiting on this player: invitations to answer, and doors they knocked on. */
+	async getMyTableInvitations(): Promise<unknown> {
+		if (!this.connection) return [];
+		try {
+			return await this.connection.invoke('GetMyTableInvitations');
+		} catch {
+			return [];
+		}
+	}
+
+	/** Ask somebody to a table, by public name. */
+	async inviteToTable(gameId: string, handle: string): Promise<{ outcome: string }> {
+		return this.inviteCall('InviteToTable', { gameId, handle });
+	}
+
+	/** Ask a friend's table to let this player in. */
+	async requestToJoinTable(gameId: string): Promise<{ outcome: string }> {
+		return this.inviteCall('RequestToJoinTable', { gameId });
+	}
+
+	async answerTableInvitation(
+		gameId: string, accept: boolean,
+	): Promise<{ outcome: string; inviteCode?: string }> {
+		return this.inviteCall(
+			accept ? 'AcceptTableInvitation' : 'DeclineTableInvitation', { gameId });
+	}
+
+	/** Let somebody in who asked, or refuse them. */
+	async answerJoinRequest(
+		gameId: string, handle: string, accept: boolean,
+	): Promise<{ outcome: string }> {
+		if (!this.connection) return { outcome: 'REFUSED' };
+		try {
+			const result = await this.connection.invoke('AnswerJoinRequest', { gameId, handle }, accept);
+			return { outcome: String(result?.outcome ?? 'REFUSED') };
+		} catch {
+			return { outcome: 'REFUSED' };
+		}
+	}
+
+	private async inviteCall(
+		method: string, payload: Record<string, unknown>,
+	): Promise<{ outcome: string; inviteCode?: string }> {
+		if (!this.connection) return { outcome: 'REFUSED' };
+		try {
+			const result = await this.connection.invoke(method, payload);
+			return {
+				outcome: String(result?.outcome ?? 'REFUSED'),
+				inviteCode: typeof result?.inviteCode === 'string' ? result.inviteCode : undefined,
+			};
+		} catch {
+			return { outcome: 'REFUSED' };
 		}
 	}
 

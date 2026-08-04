@@ -43,10 +43,18 @@ public partial class GameHub
 		public required string Outcome { get; init; }
 		/// <summary>Set only when somebody was actually admitted, so their client can be sent there.</summary>
 		public string? GameId { get; init; }
+
+		/// <summary>
+		/// The table's invite code, sent ONLY to somebody who has just been admitted. It lets their
+		/// client walk the ordinary join — pick a piece, take a seat, mint the credentials — instead
+		/// of this path growing a second way into a table that would have to be kept in step with it.
+		/// </summary>
+		public string? InviteCode { get; init; }
 	}
 
-	private static TableInviteResult Outcome(string outcome, string? gameId = null)
-		=> new() { Outcome = outcome, GameId = gameId };
+	private static TableInviteResult Outcome(
+		string outcome, string? gameId = null, string? inviteCode = null)
+		=> new() { Outcome = outcome, GameId = gameId, InviteCode = inviteCode };
 
 	/// <summary>One table waiting on this player's answer, as they need to see it.</summary>
 	public record PendingInvitation
@@ -193,7 +201,7 @@ public partial class GameHub
 		});
 		if (saved is not null) await BroadcastLobbyAsync(saved);
 
-		return full ? Outcome("TABLE_FULL") : Outcome("JOINING", game.GameId);
+		return full ? Outcome("TABLE_FULL") : Outcome("JOINING", game.GameId, game.InviteCode);
 	}
 
 	/// <summary>Turns an invitation down. Nothing is reported to the table beyond it disappearing.</summary>
@@ -248,9 +256,11 @@ public partial class GameHub
 		if (!accept) return Outcome("DECLINED");
 		if (!game.HasRoom) return Outcome("TABLE_FULL");
 
+		// The code goes to the person admitted, never to the table: it is their way in, not news.
 		await NotifyAsync(askerId, "JoinRequestAccepted", new
 		{
 			gameId = game.GameId,
+			inviteCode = game.InviteCode,
 			handle = ask.Handle,
 		});
 		return Outcome("ADMITTED", game.GameId);

@@ -31,6 +31,10 @@ import { wireLanguageSelector } from '../languageSelector.js';
 import { ComboBox } from '../comboBox.js';
 import { OnlineList, parseOnlinePlayers } from '../onlinePlayers.js';
 import { LobbyChat } from '../lobbyChat.js';
+import { FriendRoster } from '../friendRoster.js';
+import {
+	actionsForInvitation, asInviteResult, describeInvitation, parsePendingInvitations, resultText,
+} from '../tableInvites.js';
 import { FriendsList } from '../friendsList.js';
 import { fetchFriends, type FriendEntry } from '../friends.js';
 import { listenForShake, requestShakePermission } from '../shakeGesture.js';
@@ -70,6 +74,7 @@ class UnifiedLobbyUI {
 	/** Whether this page has a session, so unlock codes know if there is an account to reach. */
 	private signedIn = false;
 	private lobbyChat: LobbyChat | null = null;
+	private invitesRoster: FriendRoster | null = null;
 	/** Public names the @ autocomplete offers, refreshed when the lobby is opened. */
 	private chatCandidates: string[] = [];
 
@@ -184,7 +189,18 @@ class UnifiedLobbyUI {
 			// somebody who has one.
 			const chat = getElement('lobby-chat');
 			if (chat) chat.hidden = !session.signedIn;
-			if (session.signedIn) this.startLobbyChat(session);
+			if (session.signedIn) {
+				this.startLobbyChat(session);
+				// Something landing while they are here is worth saying once — unlike the room
+				// changing around them, an invitation is addressed to them personally.
+				gameClient.on('tableInvitation', () => void this.refreshInvitations(
+					i18nBinder.tSync('lobby.invites.arrived')));
+				gameClient.on('joinRequestAccepted', (data: unknown) => {
+					const code = (data as { inviteCode?: unknown } | null)?.inviteCode;
+					if (typeof code === 'string' && code.length > 0) void this.enterTableByCode(code);
+				});
+				void this.refreshInvitations();
+			}
 			this.useAccountName(session.user?.displayName ?? null);
 			void this.carryUnlockCodes(session);
 			// Read once on arrival so somebody who has been asked hears it from the home page,
@@ -958,6 +974,87 @@ class UnifiedLobbyUI {
 		this.chatCandidates = [...names].sort((a, b) => a.localeCompare(b));
 	}
 
+	/**
+	 * Tables waiting on this player. Read once on arrival, and refreshed when one lands while they
+	 * are here — never polled, for the same reason the online list is not: a page you visit, not a
+	 * ticker. An invitation IS addressed to them personally, though, so a new one says so once.
+	 */
+	private async refreshInvitations(announce?: string): Promise<void> {
+		const list = getElement('lobby-invites-list');
+		const section = getElement('lobby-invites');
+		if (!list || !section) return;
+
+		const pending = parsePendingInvitations(await gameClient.getMyTableInvitations());
+		// An empty region would still be a heading and a tab stop for nothing.
+		section.hidden = pending.length === 0;
+
+		this.invitesRoster ??= new FriendRoster({
+			list,
+			empty: null,
+			menuHost: () => section,
+			menuLabel: () => i18nBinder.tSync('lobby.invites.menuLabel'),
+			rowClass: 'lobby-invite',
+			buttonClass: 'lobby-invite__btn',
+		});
+
+		const t = (key: string, vars?: Record<string, unknown>) => i18nBinder.tSync(key, vars);
+		this.invitesRoster.render(pending.map(invitation => ({
+			key: invitation.gameId,
+			line: describeInvitation(invitation, id => this.boardNameFor(id), t),
+			actionsLabel: t('lobby.invites.actionsFor'),
+			actions: actionsForInvitation(invitation).map(action => ({
+				key: action,
+				label: t(`lobby.invites.${action}`),
+				onClick: () => void this.answerInvitation(invitation.gameId, action === 'accept'),
+			})),
+		})));
+
+		if (announce) this.sayInvite(announce);
+	}
+
+	/** A shipped board's name in this player's language, or null when it cannot be named. */
+	private boardNameFor(boardId: string | null): string | null {
+		if (!boardId) return null;
+		const board = this.shippedBoards.find(b => b.id === boardId);
+		return board ? pickPackageName(board.name, i18nBinder.getCurrentLanguage()) : null;
+	}
+
+	/**
+	 * Answer an invitation. Accepting walks the ORDINARY join with the code the server hands back,
+	 * rather than growing a second way into a table that would have to be kept in step with it.
+	 */
+	private async answerInvitation(gameId: string, accept: boolean): Promise<void> {
+		const { outcome, inviteCode } = await gameClient.answerTableInvitation(gameId, accept);
+		const result = asInviteResult(outcome);
+		this.sayInvite(resultText(result, (key, vars) => i18nBinder.tSync(key, vars)));
+
+		if (result === 'joining' && inviteCode) {
+			await this.enterTableByCode(inviteCode);
+			return;
+		}
+		await this.refreshInvitations();
+	}
+
+	/** Take somebody to a table they have been let into, through the join they already know. */
+	private async enterTableByCode(inviteCode: string): Promise<void> {
+		try {
+			const resolved = await gameClient.resolveJoinCode(inviteCode);
+			if (resolved.game) {
+				this.currentGame = resolved.game;
+				this.showJoinView();
+				await this.showJoinStep2(resolved.game);
+			}
+		} catch (error) {
+			console.error('Error entering the table we were invited to:', error);
+			this.sayInvite(i18nBinder.tSync('lobby.invites.gone'));
+		}
+	}
+
+	private sayInvite(text: string): void {
+		const status = getElement('lobby-invites-status');
+		if (status) status.textContent = text;
+	}
+
 	private setupHomeNavigation(): void {
 		getElement('go-create-btn')?.addEventListener('click', () => this.showCreateView());
 		getElement('go-join-btn')?.addEventListener('click', () => this.showJoinView());
@@ -1572,7 +1669,10 @@ class UnifiedLobbyUI {
 		try {
 			showLoading(true);
 			let gameState = await gameClient.getGameState(session.gameId);
-			if (gameState?.status === 'WaitingForPlayers') {
+			// snake_case, as the wire actually carries it. This read 'WaitingForPlayers' for a
+			// long time, which is a comparison that was simply never true: resuming a table that
+			// had not started skipped the lobby reconnect and fell through to the generic path.
+			if (gameState?.status === 'waiting_for_players') {
 				gameState = await gameClient.reconnectLobby(
 					session.gameId,
 					session.playerId,

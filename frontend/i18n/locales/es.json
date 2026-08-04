@@ -357,7 +357,8 @@
       "gone": "Esa mesa ya no te espera.",
       "failed": "No se ha podido hacer. Inténtalo dentro de un momento.",
       "askSent": "Pedido. Si dicen que sí, te llevamos allí.",
-      "askToJoin": "Pedir a {{handle}} que te deje entrar en su mesa"
+      "askToJoin": "Pedir a {{handle}} que te deje entrar en su mesa",
+      "arrived": "Alguien te ha invitado a una mesa."
     },
     "selectBoard": "Selecciona el juego:",
     "boardFilterHint": "Escribe para filtrar, o pulsa flecha abajo para recorrer la lista.",
@@ -1866,7 +1867,7 @@
     "heading": "En la mesa",
     "introHost": "No hay ninguna partida en marcha. Charla, invita a quien falte y empieza cuando estéis.",
     "introGuest": "No hay ninguna partida en marcha. Charla mientras llegan los demás; el anfitrión empieza cuando estéis.",
-    "inviteLabel": "Nombre público de quien quieres invitar",
+    "inviteLabel": "Código de invitación:",
     "copyCode": "Copiar el código",
     "playersHeading": "Quién está aquí",
     "playerMenuLabel": "Qué puedes hacer con este jugador",
@@ -1911,7 +1912,13 @@
     "inviteRefused": "No se ha podido invitar a {{handle}}: puede estar inalcanzable o no aceptar invitaciones tuyas.",
     "joinRequestFrom": "{{handle}} pide entrar en esta mesa.",
     "joinRequestAccept": "Dejar entrar a {{handle}}",
-    "joinRequestDecline": "Rechazar a {{handle}}"
+    "joinRequestDecline": "Rechazar a {{handle}}",
+    "joinRequestAcceptShort": "Dejar entrar",
+    "joinRequestDeclineShort": "Rechazar",
+    "joinRequestsHeading": "Piden entrar",
+    "inviteWhoLabel": "Nombre público de quien quieres invitar",
+    "joinRequestAdmitted": "{{handle}} ya está dentro.",
+    "joinRequestRefused": "Has rechazado a {{handle}}."
   },
   "common": {
     "ok": "Aceptar",

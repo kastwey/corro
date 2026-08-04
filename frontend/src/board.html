@@ -71,6 +71,23 @@
 		<strong id="table-code"></strong>
 		<button type="button" id="table-copy-code" class="secondary-button" data-i18n="table.copyCode" hidden>Copy code</button>
 	  </p>
+	  <!-- Asking somebody by public name, for when the code is not the point: a friend who is
+		   already here somewhere should not have to be sent a string to type. Revealed only for a
+		   signed-in player, since an invitation needs an account at both ends. -->
+	  <p class="table-view__invite" id="table-invite-someone" hidden>
+		<label for="table-invite-handle" data-i18n="table.inviteWhoLabel">Public name of who you want to invite</label>
+		<input type="text" id="table-invite-handle" maxlength="20" autocomplete="off">
+		<button type="button" id="table-invite-send" class="secondary-button" data-i18n="table.inviteSend">Invite</button>
+	  </p>
+	  <p id="table-invite-status" class="form-hint" role="status" aria-live="polite"></p>
+
+	  <!-- People asking to be let in. Answerable by anybody already seated, not only the host: a
+		   request only the host can see waits for the one person who may have stepped away. -->
+	  <section id="table-join-requests-section" aria-labelledby="table-join-requests-heading" hidden>
+		<h3 id="table-join-requests-heading" data-i18n="table.joinRequestsHeading">Asking to join</h3>
+		<ul id="table-join-requests" class="player-list" role="list"></ul>
+	  </section>
+
 	  <p class="table-view__invite">
 		<span data-i18n="lobby.inviteLink">Invite link:</span>
 		<span id="table-invite-url"></span>

@@ -14,9 +14,6 @@
 	border-radius: var(--radius);
 }
 
-.account-bar[hidden] {
-	display: none;
-}
 
 .account-prompt,
 .account-status {

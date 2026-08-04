@@ -2,6 +2,7 @@
 
 import { createAnnouncer } from './announcer.js';
 import { requestFriendAtTable } from './friends.js';
+import { asSendInviteResult, sendResultText } from './tableInvites.js';
 import type { AnnounceFn } from './announcer.js';
 import {
 	announceHistoryPrev,
@@ -528,6 +529,23 @@ async function initBoard() {
 		// actually play with. The outcome is spoken through the game's own announcer rather than a
 		// second live region.
 		selfPlayerId: () => playerSession.playerId,
+		// Asking somebody to this table by public name, and answering whoever asks to be let in.
+		// Both spoken through the game's own announcer rather than a second live region.
+		invite: async (handle: string) => {
+			const { outcome } = await gameClient.inviteToTable(gameId, handle);
+			announce(createAnnouncement('_raw', {
+				text: sendResultText(asSendInviteResult(outcome), handle, tSync),
+			}), { instant: true });
+		},
+		answerJoinRequest: async (handle: string, accept: boolean) => {
+			const { outcome } = await gameClient.answerJoinRequest(gameId, handle, accept);
+			announce(createAnnouncement('_raw', {
+				text: tSync(outcome === 'ADMITTED'
+					? 'table.joinRequestAdmitted'
+					: outcome === 'DECLINED' ? 'table.joinRequestRefused' : 'table.inviteRefused',
+					{ handle }),
+			}), { instant: true });
+		},
 		askToBeFriends: async (playerId: string) => {
 			const result = await requestFriendAtTable(fetch, gameId, playerId);
 			// tSync, not the local t: that one prefixes `game.` for the board's own strings, and

@@ -257,9 +257,6 @@
   text-align: center;
 }
 
-.forbidden-timer[hidden] {
-  display: none;
-}
 
 .forbidden-timer[data-urgent="true"] {
   border-color: var(--danger);

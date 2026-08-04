@@ -1,3 +1,21 @@
+/* The `hidden` attribute means hidden, whatever else a rule says.
+ *
+ * The browser's own [hidden] rule is display:none at the lowest possible weight, so ANY class that
+ * sets display beats it — and then an element the code believes is hidden is on screen, in the tab
+ * order, and read out. Several rules in this project existed to undo that one element at a time,
+ * which is how it was found: the next element to need it was simply visible, and its buttons did
+ * nothing because the code around them had also decided it was hidden.
+ *
+ * `!important` is the point, not a shortcut. Anything that genuinely needs to be laid out must not
+ * carry the attribute in the first place.
+ *
+ * Stated in BOTH entry stylesheets because the two pages share none: the lobby loads global.css and
+ * the board loads styles.css. Removing either copy puts the bug back on that page alone, which is
+ * exactly how it hid for so long. */
+[hidden] {
+	display: none !important;
+}
+
 /* The announcer owns this off-screen live region; it must never affect visual layout. */
 #sr-live {
   position: absolute;
