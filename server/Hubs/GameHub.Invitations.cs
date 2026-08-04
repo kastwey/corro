@@ -48,6 +48,44 @@ public partial class GameHub
 	private static TableInviteResult Outcome(string outcome, string? gameId = null)
 		=> new() { Outcome = outcome, GameId = gameId };
 
+	/// <summary>One table waiting on this player's answer, as they need to see it.</summary>
+	public record PendingInvitation
+	{
+		public required string GameId { get; init; }
+		/// <summary>Who asked, by public name.</summary>
+		public required string InvitedBy { get; init; }
+		/// <summary>Which shipped board it is, so the client can name it in the player's own
+		/// language rather than being handed a name in somebody else's.</summary>
+		public string? BoardId { get; init; }
+		/// <summary>True when this player ASKED to be let in rather than being invited: the same
+		/// list, and a different sentence.</summary>
+		public bool Asked { get; init; }
+	}
+
+	/// <summary>
+	/// Every table waiting on this player — invitations to answer, and doors they knocked on.
+	/// Read when the lobby opens, which is the only moment somebody needs the whole list; a new one
+	/// arriving while they are here is pushed instead.
+	/// </summary>
+	public async Task<IReadOnlyList<PendingInvitation>> GetMyTableInvitations()
+	{
+		if (SignedInUserId() is not { Length: > 0 } userId) return Array.Empty<PendingInvitation>();
+
+		var tables = await _gameRepository.GetTablesInvitingUserAsync(userId, 20);
+		return tables
+			// A table that filled or started since is not an answer anybody can act on.
+			.Where(game => game.HasRoom)
+			.Select(game => new PendingInvitation
+			{
+				GameId = game.GameId,
+				InvitedBy = game.Invitations.FirstOrDefault(i => i.UserId == userId)?.InvitedBy
+					?? string.Empty,
+				BoardId = game.ShippedBoardId,
+				Asked = game.JoinRequests.Any(r => r.UserId == userId),
+			})
+			.ToList();
+	}
+
 	/// <summary>
 	/// Asks somebody to this table. The caller must hold a seat here — an invitation to a table you
 	/// are not at is somebody else's invitation to make.
