@@ -11,7 +11,7 @@
 import { test, expect } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
 import {
-	appI18n, closeAccountSettings, gotoLobbyHome, newPlayerPage, openAccountSettings, signOutFromMenu,
+	appI18n, closeAccountSettings, createGame, gotoLobbyHome, newPlayerPage, openAccountSettings, signOutFromMenu,
 } from '../helpers/game';
 
 const es = appI18n('es').account as Record<string, string> & { provider: Record<string, string> };
@@ -324,4 +324,31 @@ test('creating a game still works without signing in', async ({ browser }) => {
 
 	await expect(page.locator('#create-form')).toBeVisible();
 	await expect(page.locator('#host-name')).toBeEditable();
+});
+
+// A seat's name allows twenty characters and an account's allows forty. Once the create form stopped
+// asking signed-in players for a name, anybody whose account name was merely LONG could not create a
+// table at all: the field they would have shortened is hidden, and the only sign was a validation
+// error about a name they were never shown.
+test('a long account name is cut to fit a seat instead of blocking the table', async ({ browser }) => {
+	const page = await newPlayerPage(browser);
+	// The E2E provider names accounts after the subject, so this one is comfortably over twenty.
+	await page.goto('/api/auth/signin/e2e?returnUrl=%2F&subject=a-very-long-account-subject');
+	await expect(page.locator('#account-bar .account-status')).toBeVisible();
+
+	await gotoLobbyHome(page);
+	await page.locator('#go-create-btn').click();
+
+	// The form says which name will be used — the cut one, not the one on file.
+	const notice = page.locator('#host-name-known');
+	await expect(notice).toBeVisible();
+	const said = (await notice.textContent()) ?? '';
+	expect(said.length).toBeGreaterThan(0);
+	await expect(page.locator('#host-name-group')).toBeHidden();
+	expect((await page.locator('#host-name').inputValue()).length).toBeLessThanOrEqual(20);
+
+	// And the table is actually created, which is the whole point.
+	const code = await createGame(page, 'ignored', 'snakes-and-ladders');
+	expect(code.length).toBeGreaterThan(0);
+	await flushAxeAudit(page);
 });

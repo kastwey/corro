@@ -74,6 +74,11 @@ export interface TableViewDeps {
 	askToBeFriends?: (playerId: string) => Promise<void>;
 	/** This player's own seat, so the roster never offers to befriend them to themselves. */
 	selfPlayerId?: () => string | null;
+	/**
+	 * Answer an invitation to ANOTHER table while sitting at this one. Accepting leaves this table
+	 * and goes there; declining says no. Absent when the local player has no account.
+	 */
+	answerInvitation?: (gameId: string, accept: boolean) => Promise<void>;
 	/** Ask somebody to this table by public name. Absent when the local player has no account. */
 	invite?: (handle: string) => Promise<void>;
 	/** Let somebody in who asked, or refuse them. */
@@ -304,6 +309,45 @@ export class TableView {
 	 * stop whose label reads the whole row in one sentence, and its actions live behind the arrow
 	 * key — exactly the bargain the players panel already makes in game.
 	 */
+	/**
+	 * Tables asking for YOU, shown while you are sitting at another one.
+	 *
+	 * Its own region rather than a line in the roster: these are not people at this table, and a
+	 * row that looked like one would read as somebody who had sat down. Hidden entirely when
+	 * nothing is waiting, so it never costs a stop for an empty heading.
+	 */
+	showMyInvitations(invitations: readonly { gameId: string; from: string }[]): void {
+		const list = this.root?.querySelector<HTMLElement>('#table-my-invites');
+		const section = this.root?.querySelector<HTMLElement>('#table-my-invites-section');
+		if (!list || !section || !this.deps) return;
+
+		section.hidden = invitations.length === 0 || !this.deps.answerInvitation;
+		const t = this.deps.t;
+		list.replaceChildren(...invitations.map(invitation => {
+			const item = document.createElement('li');
+			item.className = 'player-item';
+			item.tabIndex = -1;
+			const line = t('lobby.invites.invited').replace('{{from}}', invitation.from);
+			item.setAttribute('aria-label', line);
+			const text = document.createElement('span');
+			text.textContent = line;
+			const actions = document.createElement('div');
+			actions.className = 'player-item__actions';
+			actions.appendChild(this.rowAction(
+				'player-item__accept-invite',
+				t('lobby.invites.accept'),
+				t('lobby.invites.accept'),
+				() => void this.deps?.answerInvitation?.(invitation.gameId, true)));
+			actions.appendChild(this.rowAction(
+				'player-item__decline-invite',
+				t('lobby.invites.decline'),
+				t('lobby.invites.decline'),
+				() => void this.deps?.answerInvitation?.(invitation.gameId, false)));
+			item.append(text, actions);
+			return item;
+		}));
+	}
+
 	/**
 	 * Asking somebody by public name. Offered only when this player could actually invite — signed
 	 * in, at a table with room — because a control that always answers "no" is a dead end with

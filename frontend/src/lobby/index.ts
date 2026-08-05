@@ -873,12 +873,21 @@ class UnifiedLobbyUI {
 			const notice = getElement(noticeId);
 			if (!group || !input || !notice) continue;
 
+			// A seat's name is shorter than an account's — twenty against forty — so the account
+			// name has to be cut to fit. Without this a player whose name is merely long could not
+			// create a table AT ALL: the field they would have shortened is hidden, and the only
+			// sign was a validation error about a name they were never shown.
+			const seatName = known
+				? name!.trim().slice(0, input.maxLength > 0 ? input.maxLength : name!.length)
+				: '';
+
 			group.hidden = known;
 			input.required = !known;
-			if (known) input.value = name!.trim();
+			if (known) input.value = seatName;
 			notice.hidden = !known;
+			// Says the name that will actually be used, cut and all, rather than the one on file.
 			notice.textContent = known
-				? i18nBinder.tSync('lobby.playingAs', { name: name!.trim() })
+				? i18nBinder.tSync('lobby.playingAs', { name: seatName })
 				: '';
 		}
 	}

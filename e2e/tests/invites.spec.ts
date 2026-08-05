@@ -68,3 +68,42 @@ test('nothing is waiting when nothing is waiting, and the region takes no tab st
 	await expect(alone.locator('#lobby-invites')).toBeHidden();
 	await flushAxeAudit(alone);
 });
+
+// Half the feature was unreachable from where people actually sit: the server pushed the
+// invitation to every connection, and only the lobby listened. Somebody at a table — which is
+// where you are when a friend wants you at theirs — saw nothing at all.
+test('an invitation reaches you at a table, and accepting takes you to the other one', async ({ browser }) => {
+	const ana = await member(browser, 'inv-at-table-host', 'invtablehost');
+	const berto = await member(browser, 'inv-at-table-guest', 'invtableguest');
+
+	// Berto is already sitting at his own table when the invitation arrives.
+	await createGame(berto, 'Berto', 'snakes-and-ladders');
+	await expect(berto.locator('#table-view')).toBeVisible();
+	await expect(berto.locator('#table-my-invites-section')).toBeHidden();
+
+	const anaCode = await createGame(ana, 'Ana', 'snakes-and-ladders');
+	await ana.locator('#table-invite-handle').fill('invtableguest');
+	await ana.locator('#table-invite-send').click();
+	await expectAnnouncement(ana, new RegExp(table.inviteSent.replace('{{handle}}', 'invtableguest')));
+
+	// It lands where he is, said once and shown in a region only he can see.
+	await expectAnnouncement(berto, new RegExp(invites.arrived));
+	const waiting = berto.locator('#table-my-invites .player-item');
+	await expect(waiting).toHaveCount(1);
+	await expect(waiting).toContainText('invtablehost');
+	await flushAxeAudit(berto);
+
+	// Accepting leaves this table for the other one, through the ordinary join.
+	await waiting.getByRole('button', { name: invites.accept }).click();
+	await expect(berto.locator('#join-step2')).toBeVisible();
+	expect(anaCode.length).toBeGreaterThan(0);
+});
+
+test('a table you are already at never asks you to join it', async ({ browser }) => {
+	const ana = await member(browser, 'inv-self-table', 'invselftable');
+	await createGame(ana, 'Ana', 'snakes-and-ladders');
+
+	await expect(ana.locator('#table-view')).toBeVisible();
+	await expect(ana.locator('#table-my-invites-section')).toBeHidden();
+	await flushAxeAudit(ana);
+});

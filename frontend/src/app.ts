@@ -2,7 +2,10 @@
 
 import { createAnnouncer } from './announcer.js';
 import { requestFriendAtTable } from './friends.js';
-import { asSendInviteResult, sendResultText } from './tableInvites.js';
+import {
+	asInviteResult, asSendInviteResult, parsePendingInvitations,
+	resultText as inviteResultText, sendResultText,
+} from './tableInvites.js';
 import type { AnnounceFn } from './announcer.js';
 import {
 	announceHistoryPrev,
@@ -471,6 +474,20 @@ async function initBoard() {
 		}
 	}
 
+	/**
+	 * Tables asking for this player while they sit at another one. Read when the page starts and
+	 * whenever one lands, never polled — an invitation is addressed to them personally, so it is
+	 * worth saying once, and the room changing around them is not.
+	 */
+	const refreshMyInvitations = async (): Promise<void> => {
+		const pending = parsePendingInvitations(await gameClient.getMyTableInvitations())
+			// Not the table they are already sitting at, and not doors they knocked on: there is
+			// nothing to answer about either.
+			.filter(invitation => invitation.gameId !== gameId && !invitation.asked);
+		tableView.showMyInvitations(
+			pending.map(invitation => ({ gameId: invitation.gameId, from: invitation.invitedBy })));
+	};
+
 	// The table this page belongs to (docs/tables.md). It is shown whenever no match is running —
 	// between two games, or on arriving at a table that has not started one — and the board takes
 	// the page back when one starts. Deliberately NOT a separate page: chat and voice are mounted
@@ -529,6 +546,23 @@ async function initBoard() {
 		// actually play with. The outcome is spoken through the game's own announcer rather than a
 		// second live region.
 		selfPlayerId: () => playerSession.playerId,
+		// An invitation to another table, answered from this one. Accepting LEAVES this table: the
+		// lobby takes it from there with the code the server hands back, so there is one way into a
+		// table rather than a second that would have to be kept in step with it.
+		answerInvitation: async (inviteGameId: string, accept: boolean) => {
+			const { outcome, inviteCode } = await gameClient.answerTableInvitation(inviteGameId, accept);
+			const result = asInviteResult(outcome);
+			announce(createAnnouncement('_raw', { text: inviteResultText(result, tSync) }),
+				{ instant: true });
+			if (result === 'joining' && inviteCode) {
+				// Leaving is a navigation, not a command: the lobby is where joining lives.
+				// The lobby's own invite-link parameter, so this walks the join everybody else
+				// walks rather than a second way in.
+				window.location.href = `/?code=${encodeURIComponent(inviteCode)}`;
+				return;
+			}
+			await refreshMyInvitations();
+		},
 		// Asking somebody to this table by public name, and answering whoever asks to be let in.
 		// Both spoken through the game's own announcer rather than a second live region.
 		invite: async (handle: string) => {
@@ -2259,6 +2293,22 @@ async function initBoard() {
 		if (!tableView.isVisible()) return;
 		applyTable(table);
 	});
+	// Somebody asking this player to THEIR table while this one is open. Said once, and added to
+	// the region only they can see; it never takes the keyboard out of their hands mid-turn.
+	gameClient.on('tableInvitation', () => {
+		announce(createAnnouncement('_raw', { text: tSync('lobby.invites.arrived') }),
+			{ instant: true });
+		void refreshMyInvitations();
+	});
+	gameClient.on('joinRequestAccepted', (data: unknown) => {
+		const code = (data as { inviteCode?: unknown } | null)?.inviteCode;
+		if (typeof code === 'string' && code.length > 0) {
+			window.location.href = `/?code=${encodeURIComponent(code)}`;
+		}
+	});
+	// Read once the hub is up: the page and the connection settle in no particular order.
+	gameClient.on('connected', () => void refreshMyInvitations());
+	void refreshMyInvitations();
 	// Somebody gave up their seat. The roster repaint is silent, so the table is told — including
 	// who is holding the sceptre now, which is the part that changes what people can do.
 	gameClient.on('playerLeftTable', data => {

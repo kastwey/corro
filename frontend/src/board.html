@@ -81,6 +81,14 @@
 	  </p>
 	  <p id="table-invite-status" class="form-hint" role="status" aria-live="polite"></p>
 
+	  <!-- Somebody asking you to THEIR table while you are sitting at this one. Only you can see
+		   it, and it never steals focus: an invitation is worth telling you about, not worth taking
+		   the keyboard out of your hands mid-turn. -->
+	  <section id="table-my-invites-section" aria-labelledby="table-my-invites-heading" hidden>
+		<h3 id="table-my-invites-heading" data-i18n="lobby.invites.heading">Waiting for you</h3>
+		<ul id="table-my-invites" class="player-list" role="list"></ul>
+	  </section>
+
 	  <!-- People asking to be let in. Answerable by anybody already seated, not only the host: a
 		   request only the host can see waits for the one person who may have stepped away. -->
 	  <section id="table-join-requests-section" aria-labelledby="table-join-requests-heading" hidden>

@@ -128,15 +128,27 @@ public partial class GameHub : Hub
 	/// </summary>
 	public override async Task OnConnectedAsync()
 	{
+		var arrived = false;
+		string? arrivingUserId = null;
 		if (SignedInUserId() is { Length: > 0 } userId)
 		{
-			var wasHere = _presence?.IsOnline(userId) ?? false;
-			_presence?.Add(userId, Context.ConnectionId);
 			// A second tab is not an arrival. Only the connection that brought somebody INTO the
 			// room is worth telling anybody about.
-			if (!wasHere) await AnnouncePresenceAsync(userId, arriving: true);
+			arrived = !(_presence?.IsOnline(userId) ?? false);
+			arrivingUserId = userId;
+			_presence?.Add(userId, Context.ConnectionId);
 		}
+
 		await base.OnConnectedAsync();
+
+		// AFTER the handshake, never inside it. Telling the room costs a lookup per person who
+		// could see the arrival, so doing it before base.OnConnectedAsync made every new connection
+		// wait on work proportional to how many were already there — which is exactly backwards,
+		// and showed up as a busy server refusing to finish anything.
+		if (arrived && arrivingUserId is not null)
+		{
+			await AnnouncePresenceAsync(arrivingUserId, arriving: true);
+		}
 	}
 
 	public override async Task OnDisconnectedAsync(Exception? exception)
@@ -144,6 +156,7 @@ public partial class GameHub : Hub
 		// Announced navigations (waiting room → board) are a handover, not a departure. Read once
 		// here so the record is cleared for every connection, announced or not.
 		var handedOver = _registry.TryConsumeHandoff(Context.ConnectionId);
+		string? departedUserId = null;
 
 		// Presence drops this connection; the person only leaves the list with their last one, so
 		// a second tab — or a navigation from the table to the board — never blinks them out.
@@ -153,7 +166,7 @@ public partial class GameHub : Hub
 			// And closing one tab is not leaving: only the last connection going means they are gone.
 			if (_presence?.IsOnline(presentUserId) == false)
 			{
-				await AnnouncePresenceAsync(presentUserId, arriving: false);
+				departedUserId = presentUserId;
 			}
 		}
 
@@ -200,6 +213,13 @@ public partial class GameHub : Hub
 		}
 
 		await base.OnDisconnectedAsync(exception);
+
+		// Same reasoning as the arrival: told after, so a departure never holds up the teardown of
+		// a connection that has already gone.
+		if (departedUserId is not null)
+		{
+			await AnnouncePresenceAsync(departedUserId, arriving: false);
+		}
 	}
 
 	// ============================================
