@@ -152,19 +152,11 @@ export function providerName(provider: string): string {
 }
 
 /**
- * The signed-in line. One flowing sentence, because a screen reader speaks it as a single line —
- * and it stays a sentence when the provider gave us no name to put in it.
+ * The signed-in line, which is ALSO the name of the button that opens the account menu — there is
+ * one control here, not a sentence followed by a button repeating the name inside it. One flowing
+ * sentence, because a screen reader speaks it as a single line, and it stays a sentence when the
+ * provider gave us no name to put in it.
  */
-/**
- * What the account menu is called: the player's own name. Falls back the same way the status line
- * does, so somebody whose provider supplied no name still has something to press rather than a
- * button labelled with nothing.
- */
-export function accountMenuName(session: AccountSession): string {
-	const name = session.user?.displayName?.trim();
-	return name && name.length > 0 ? name : tSync('account.menuLabel');
-}
-
 export function signedInText(session: AccountSession): string {
 	const name = session.user?.displayName;
 	return name ? tSync('account.signedInAs', { name }) : tSync('account.signedIn');
@@ -454,11 +446,6 @@ export async function initAccountBar(
 		}
 
 		if (session.signedIn) {
-			const status = document.createElement('p');
-			status.className = 'account-status';
-			status.textContent = signedInText(session);
-			mount.appendChild(status);
-
 			const signOutAndRefresh = async () => {
 				if (await signOut(fetchImpl)) {
 					session = SIGNED_OUT;
@@ -473,9 +460,14 @@ export async function initAccountBar(
 			const menuButton = document.createElement('button');
 			menuButton.type = 'button';
 			menuButton.id = 'account-manage-btn';
-			menuButton.className = 'secondary-button account-manage-btn';
+			menuButton.className = 'secondary-button account-manage-btn account-status';
 			menuButton.setAttribute('aria-haspopup', 'menu');
-			menuButton.textContent = accountMenuName(session);
+			// The whole sentence IS the button's name. There used to be a status line as well —
+			// "Signed in as Juanjo" and then a button called "Juanjo" — so a screen reader said the
+			// name twice in a row and the second one carried no new information. Saying where you
+			// press is what the sentence was missing, and it keeps account-status because that is
+			// still what this element is: the one place the signed-in state is stated.
+			menuButton.textContent = signedInText(session);
 			menuButton.addEventListener('click', () => {
 				popupMenu.open({
 					ariaLabel: tSync('account.menuLabel'),

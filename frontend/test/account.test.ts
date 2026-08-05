@@ -270,10 +270,17 @@ test('signed in, it names the player and offers sign-out', async () => {
 	const session = await initAccountBar(el, { fetchImpl: impl });
 
 	assert.equal(session.signedIn, true);
-	assert.equal(el.querySelector('.account-status')?.textContent, 'Signed in as Ana.');
-	// One control, named with the player's own name: signing out and the settings live inside it.
-	// Two buttons in the header is two tab stops passed on the way to everything else, every time.
-	assert.equal(el.querySelector('#account-manage-btn')?.textContent, 'Ana');
+	// ONE control, and the sentence IS its name. There used to be a status line as well, so a
+	// screen reader said "Signed in as Ana." and then a button called "Ana" — the same name twice
+	// in a row, the second time carrying nothing new.
+	const manage = el.querySelector('#account-manage-btn');
+	assert.equal(manage?.textContent, 'Signed in as Ana.');
+	assert.equal(manage?.tagName, 'BUTTON');
+	assert.equal(manage?.getAttribute('aria-haspopup'), 'menu');
+	assert.equal(el.querySelectorAll('.account-status').length, 1);
+	assert.equal(el.querySelector('.account-status'), manage);
+	// The name is spoken once in the whole bar.
+	assert.equal((el.textContent?.match(/Ana/g) ?? []).length, 1);
 	assert.equal(el.querySelector('#account-signout-btn'), null);
 	assert.equal(el.querySelectorAll('a.account-signin-link').length, 0);
 });
@@ -423,8 +430,9 @@ test('it renders in the language of the page it was loaded into', async () => {
 	await initAccountBar(el, { fetchImpl: impl });
 
 	assert.equal(el.querySelector('.account-status')?.textContent, 'Sesión iniciada como Ana.');
+	assert.equal((el.textContent?.match(/Ana/g) ?? []).length, 1);
 	// The menu is named with the player, and its items are translated.
-	assert.equal(el.querySelector('#account-manage-btn')?.textContent, 'Ana');
+	assert.equal(el.querySelector('#account-manage-btn')?.textContent, 'Sesión iniciada como Ana.');
 	(el.querySelector('#account-manage-btn') as HTMLButtonElement).click();
 	// No settings opener was injected here, so the menu holds only what it can actually do.
 	assert.deepEqual(menuLabels(), ['Cerrar sesión']);

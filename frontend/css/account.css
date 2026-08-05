@@ -15,8 +15,7 @@
 }
 
 
-.account-prompt,
-.account-status {
+.account-prompt {
 	margin: 0;
 	font-size: 13px;
 	color: var(--text-muted);
@@ -24,9 +23,12 @@
 	min-width: 0;
 }
 
+/* The signed-in sentence is the menu button (see account.ts), so it is styled as a control and
+ * not as the paragraph it used to be: pressable, and visibly so. */
 .account-status {
-	color: var(--text);
 	font-weight: 600;
+	text-align: left;
+	max-width: 100%;
 }
 
 /* The sign-in affordances navigate away, so they are links. They are STYLED like buttons for
