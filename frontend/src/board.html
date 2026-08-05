@@ -79,6 +79,15 @@
 		<input type="text" id="table-invite-handle" maxlength="20" autocomplete="off">
 		<button type="button" id="table-invite-send" class="secondary-button" data-i18n="table.inviteSend">Invite</button>
 	  </p>
+	  <!-- Friends who could actually come: connected, and not in the middle of a game. Nobody
+		   should have to know a public name by heart to ask a friend to play. It is a listbox for
+		   the same reason the chat's name list is one — loose buttons are announced with no idea
+		   they are a list, no position and no count. -->
+	  <div id="table-invite-friends-block" hidden>
+		<p class="form-hint" id="table-invite-friends-hint" data-i18n="table.inviteFriendsHint">Or ask one of your friends who is free right now.</p>
+		<ul id="table-invite-friends" class="lobby-chat__suggestions" role="listbox"
+			data-i18n-attr:aria-label="table.inviteFriendsLabel" aria-label="Friends you can invite"></ul>
+	  </div>
 	  <p id="table-invite-status" class="form-hint" role="status" aria-live="polite"></p>
 
 	  <!-- Somebody asking you to THEIR table while you are sitting at this one. Only you can see

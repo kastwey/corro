@@ -81,6 +81,11 @@ export interface TableViewDeps {
 	answerInvitation?: (gameId: string, accept: boolean) => Promise<void>;
 	/** Ask somebody to this table by public name. Absent when the local player has no account. */
 	invite?: (handle: string) => Promise<void>;
+	/**
+	 * Friends who could actually come: connected, and not already playing. Read when the table is
+	 * shown, so nobody has to know a public name by heart to ask a friend.
+	 */
+	invitableFriends?: () => Promise<string[]>;
 	/** Let somebody in who asked, or refuse them. */
 	answerJoinRequest?: (handle: string, accept: boolean) => Promise<void>;
 }
@@ -377,6 +382,49 @@ export class TableView {
 			event.preventDefault();
 			submit();
 		});
+
+		void this.showInvitableFriends();
+	}
+
+	/**
+	 * The friends who could come, as options. Hidden entirely when there are none — an empty list
+	 * with a heading is a stop that answers nothing.
+	 */
+	private async showInvitableFriends(): Promise<void> {
+		const block = this.root?.querySelector<HTMLElement>('#table-invite-friends-block');
+		const list = this.root?.querySelector<HTMLElement>('#table-invite-friends');
+		if (!block || !list || !this.deps?.invitableFriends || !this.deps.invite) return;
+
+		const friends = await this.deps.invitableFriends();
+		block.hidden = friends.length === 0;
+		const t = this.deps.t;
+		list.replaceChildren(...friends.map((handle, index) => {
+			const option = document.createElement('li');
+			// role=option in a listbox is what turns "a button" into "2 of 5" for a screen reader.
+			option.setAttribute('role', 'option');
+			option.setAttribute('aria-selected', 'false');
+			option.className = 'lobby-chat__suggestion';
+			option.tabIndex = index === 0 ? 0 : -1;
+			option.textContent = handle;
+			option.setAttribute('aria-label', t('table.inviteFriend').replace('{{handle}}', handle));
+			option.addEventListener('click', () => void this.deps?.invite?.(handle));
+			option.addEventListener('keydown', (event: KeyboardEvent) => {
+				if (event.key === 'Enter' || event.key === ' ') {
+					event.preventDefault();
+					void this.deps?.invite?.(handle);
+					return;
+				}
+				if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+				event.preventDefault();
+				const options = Array.from(
+					list.querySelectorAll<HTMLElement>('[role="option"]'));
+				const next = (index + (event.key === 'ArrowDown' ? 1 : -1) + options.length)
+					% options.length;
+				options.forEach((o, i) => { o.tabIndex = i === next ? 0 : -1; });
+				options[next].focus();
+			});
+			return option;
+		}));
 	}
 
 	/**

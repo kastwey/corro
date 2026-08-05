@@ -1951,7 +1951,10 @@
     "joinRequestsHeading": "Piden entrar",
     "inviteWhoLabel": "Nombre público de quien quieres invitar",
     "joinRequestAdmitted": "{{handle}} ya está dentro.",
-    "joinRequestRefused": "Has rechazado a {{handle}}."
+    "joinRequestRefused": "Has rechazado a {{handle}}.",
+    "inviteFriendsHint": "O pídeselo a uno de tus amigos que está libre ahora mismo.",
+    "inviteFriendsLabel": "Amigos a los que puedes invitar",
+    "inviteFriend": "Invitar a {{handle}}"
   },
   "common": {
     "ok": "Aceptar",

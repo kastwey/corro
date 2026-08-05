@@ -121,6 +121,22 @@ You can end a friendship at any time, from either side; it erases the record, an
 ask again afterwards. Deleting your account erases every one of these records, including from the
 lists of people who were friends with you.
 
+## Invitations to a table
+
+Anybody at a table with room can ask you to it by your public name, and you can ask to be let into a
+table a friend of yours is sitting at. Who may ask YOU is the same setting that decides who may
+message you: an invitation is an interruption too, and two settings meaning nearly the same thing is
+a way to be quietly wrong about one of them.
+
+An invitation is stored ON that table, not in a mailbox: your public name, who asked, and when. That
+is what lets it survive a reload and reach you if you were away. It also means it expires on its
+own — when the table fills, starts, or is deleted, it goes with it, and nothing has to remember to
+tidy up. The same is true of a request to join, which stores your public name on the table you
+knocked on.
+
+Everybody at that table can see who has been asked and who is asking. Nobody outside it can. Turning
+an invitation down erases it and tells the table nothing beyond its disappearance.
+
 ## Private messages
 
 You can write to other players from the lobby by naming them with "@" and their public name. Who

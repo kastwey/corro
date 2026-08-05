@@ -1,5 +1,6 @@
 using System.Reflection;
 using CorroServer.Hubs;
+using CorroServer.Tests.Doubles;
 using CorroServer.Models;
 using CorroServer.Models.Corro;
 using CorroServer.Services;
@@ -525,110 +526,11 @@ public class GameHubSavedGamesTests
 
 	// ── SignalR fakes ────────────────────────────────────────────────────────
 
-	private sealed class RecordingProxy : ISingleClientProxy
-	{
-		private readonly List<string> _methods = new();
-		public bool Received(string method) => _methods.Contains(method);
-		public Task SendCoreAsync(string method, object?[] args, CancellationToken cancellationToken = default)
-		{
-			_methods.Add(method);
-			return Task.CompletedTask;
-		}
-		public Task<T> InvokeCoreAsync<T>(string method, object?[] args, CancellationToken cancellationToken = default)
-			=> throw new NotImplementedException();
-	}
 
-	private sealed class FakeClients : IHubCallerClients
-	{
-		private readonly RecordingProxy _caller = new();
-		private readonly Dictionary<string, RecordingProxy> _groups = new();
-		private readonly RecordingProxy _shared = new();
 
-		public RecordingProxy Caller => _caller;
 
-		public RecordingProxy Group(string groupName)
-		{
-			if (!_groups.TryGetValue(groupName, out var proxy))
-			{
-				proxy = new RecordingProxy();
-				_groups[groupName] = proxy;
-			}
-			return proxy;
-		}
 
-		ISingleClientProxy IHubCallerClients.Caller => _caller;
-		ISingleClientProxy IHubCallerClients.Client(string connectionId) => _shared;
-		IClientProxy IHubCallerClients<IClientProxy>.Caller => _caller;
-		IClientProxy IHubCallerClients<IClientProxy>.Others => _shared;
-		IClientProxy IHubCallerClients<IClientProxy>.OthersInGroup(string groupName) => _shared;
-		IClientProxy IHubClients<IClientProxy>.All => _shared;
-		IClientProxy IHubClients<IClientProxy>.AllExcept(IReadOnlyList<string> excludedConnectionIds) => _shared;
-		IClientProxy IHubClients<IClientProxy>.Client(string connectionId) => _shared;
-		IClientProxy IHubClients<IClientProxy>.Clients(IReadOnlyList<string> connectionIds) => _shared;
-		IClientProxy IHubClients<IClientProxy>.Group(string groupName) => Group(groupName);
-		IClientProxy IHubClients<IClientProxy>.GroupExcept(string groupName, IReadOnlyList<string> excludedConnectionIds) => _shared;
-		IClientProxy IHubClients<IClientProxy>.Groups(IReadOnlyList<string> groupNames) => _shared;
-		IClientProxy IHubClients<IClientProxy>.User(string userId) => _shared;
-		IClientProxy IHubClients<IClientProxy>.Users(IReadOnlyList<string> userIds) => _shared;
-	}
 
-	private sealed class FakeCallerContext : HubCallerContext
-	{
-		public FakeCallerContext(string connectionId, System.Security.Claims.ClaimsPrincipal? user = null)
-		{
-			ConnectionId = connectionId;
-			User = user;
-		}
-		public override string ConnectionId { get; }
-		public override string? UserIdentifier => null;
-		/// <summary>The session the handshake established, or null for the anonymous player —
-		/// which is what almost every connection is.</summary>
-		public override System.Security.Claims.ClaimsPrincipal? User { get; }
-		public override IDictionary<object, object?> Items { get; } = new Dictionary<object, object?>();
-		public override Microsoft.AspNetCore.Http.Features.IFeatureCollection Features { get; }
-			= new Microsoft.AspNetCore.Http.Features.FeatureCollection();
-		public override CancellationToken ConnectionAborted => CancellationToken.None;
-		public override void Abort() { }
-	}
 
-	private sealed class FakeGroupManager : IGroupManager
-	{
-		public Task AddToGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default) => Task.CompletedTask;
-		public Task RemoveFromGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default) => Task.CompletedTask;
-	}
 
-	private sealed class FakeHubContext : IHubContext<GameHub>
-	{
-		private readonly FakeHubClients _clients = new();
-		public IHubClients Clients => _clients;
-		public IGroupManager Groups { get; } = new FakeGroupManager();
-	}
-
-	private sealed class FakeHubClients : IHubClients
-	{
-		private readonly RecordingProxy _proxy = new();
-		ISingleClientProxy IHubClients.Client(string connectionId) => _proxy;
-		IClientProxy IHubClients<IClientProxy>.All => _proxy;
-		IClientProxy IHubClients<IClientProxy>.AllExcept(IReadOnlyList<string> excludedConnectionIds) => _proxy;
-		IClientProxy IHubClients<IClientProxy>.Client(string connectionId) => _proxy;
-		IClientProxy IHubClients<IClientProxy>.Clients(IReadOnlyList<string> connectionIds) => _proxy;
-		IClientProxy IHubClients<IClientProxy>.Group(string groupName) => _proxy;
-		IClientProxy IHubClients<IClientProxy>.GroupExcept(string groupName, IReadOnlyList<string> excludedConnectionIds) => _proxy;
-		IClientProxy IHubClients<IClientProxy>.Groups(IReadOnlyList<string> groupNames) => _proxy;
-		IClientProxy IHubClients<IClientProxy>.User(string userId) => _proxy;
-		IClientProxy IHubClients<IClientProxy>.Users(IReadOnlyList<string> userIds) => _proxy;
-	}
-
-	private sealed class FakeGameServiceFactory : IGameServiceFactory
-	{
-		public IGameService Create(string? gameId = null) => throw new NotImplementedException();
-	}
-
-	private sealed class FakeAuctionTimer : IAuctionTimerService
-	{
-		public void StartTimers(string gameId, GameSettings settings, AuctionState auction) { }
-		public void StopTimers(string gameId) { }
-		public event Func<string, AuctionTimerTickEventArgs, Task>? OnTimerTick { add { } remove { } }
-		public event Func<string, Task>? OnBidTimeout { add { } remove { } }
-	}
 }

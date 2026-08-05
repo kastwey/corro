@@ -30,6 +30,11 @@ async function member(
 	await page.locator('#account-handle-save').click();
 	await expect(page.locator('#account-settings-status')).toHaveText(account.handleSaved);
 	await page.locator('#account-messages-anyone').check();
+	// Visible to everyone, so these tests can find each other in the room before they are friends.
+	// A new account is friends-only, which is right for people and unhelpful for a fixture.
+	await page.locator('#account-visibility-everyone').check();
+	await expect(page.locator('#account-settings-status'))
+		.toHaveText(account.visibilitySavedEveryone);
 	await closeAccountSettings(page);
 	return page;
 }
@@ -106,4 +111,42 @@ test('a table you are already at never asks you to join it', async ({ browser })
 	await expect(ana.locator('#table-view')).toBeVisible();
 	await expect(ana.locator('#table-my-invites-section')).toBeHidden();
 	await flushAxeAudit(ana);
+});
+
+// Nobody should have to know a public name by heart to ask a friend to play.
+test('a friend can be invited from a list instead of by typing their name', async ({ browser }) => {
+	const ana = await member(browser, 'inv-picker-host', 'invpickerhost');
+	const berto = await member(browser, 'inv-picker-friend', 'invpickerfriend');
+
+	// They become friends the ordinary way, from the room.
+	await gotoLobbyHome(berto);
+	await berto.locator('#go-online-btn').click();
+	await berto.locator('#online-list .online-player').filter({ hasText: 'invpickerhost' })
+		.getByRole('button', { name: /invpickerhost/ }).click();
+	await gotoLobbyHome(ana);
+	await ana.locator('#go-friends-btn').click();
+	await ana.locator('#friends-tab-requests').click();
+	await ana.locator('#friends-requests-list .friend-row')
+		.getByRole('button', { name: /invpickerfriend/ }).first().click();
+
+	await createGame(ana, 'Ana', 'snakes-and-ladders');
+	await expect(ana.locator('#table-view')).toBeVisible();
+
+	// A real listbox, not loose buttons: without the roles each one is announced alone, with no
+	// position and no idea how many more there are.
+	const picker = ana.locator('#table-invite-friends');
+	await expect(picker).toHaveRole('listbox');
+	const options = picker.getByRole('option');
+	await expect(options).toHaveCount(1);
+	await expect(options.first()).toHaveText('invpickerfriend');
+	await flushAxeAudit(ana);
+
+	// One tab stop, arrows inside, and choosing invites without anybody typing a name.
+	await expect(options.first()).toHaveAttribute('tabindex', '0');
+	await options.first().click();
+	await expectAnnouncement(
+		ana, new RegExp(table.inviteSent.replace('{{handle}}', 'invpickerfriend')));
+
+	await gotoLobbyHome(berto);
+	await expect(berto.locator('#lobby-invites-list .lobby-invite')).toHaveCount(1);
 });

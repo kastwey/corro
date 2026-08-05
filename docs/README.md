@@ -19,6 +19,7 @@ interest.
 | [flows.md](flows.md) | Concrete end-to-end walkthroughs: playing a card, starting a game, a bot's turn, reconnecting after a restart. Follow one event from a keypress to the screen reader. |
 | [tables.md](tables.md) | The table that outlives its matches: why the existing id is the table's, what a finished match retires instead of deleting, where the chat and the voice room belong, and what is left for later. |
 | [accounts.md](accounts.md) | Optional player accounts and external sign-in: why identity is (issuer, subject) and never the email, the two Cosmos containers, the session cookie and the seam a future mobile app plugs into. |
+| [social.md](social.md) | Everything between people rather than between a player and a board: presence, friendships, private messages and table invitations — the three-step visibility settings, and the rule that every refusal says the same sentence. |
 | [deployment.md](deployment.md) | Production delivery to `imperio.kastwey.org`: the CI gate, passwordless GitHub OIDC setup, smoke checks and rollback. |
 | [voice-chat.md](voice-chat.md) | Optional self-hosted LiveKit voice: authority, audio-only tokens, host controls, accessibility, security, VPS operation and tests. |
 | [tutorial-city-board.md](tutorial-city-board.md) | **For content creators (no code):** a do-it-with-me guide to building a full 40-square property board of *your own city* as a package. |

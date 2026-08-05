@@ -1,5 +1,8 @@
 # Player accounts and external sign-in
 
+> What an account is FOR — being seen, being found, being written to, being asked to a table —
+> is [social.md](social.md). This document is the account itself: identity, sign-in and storage.
+
 Accounts are **optional and additive**. Creating a game, joining one and playing it all work
 exactly as they did before this feature existed, with no account and no sign-in. Nothing in the
 gameplay path may ever become conditional on being signed in — an account only adds durable,

@@ -1,7 +1,7 @@
 // app.ts — frontend (server mode only)
 
 import { createAnnouncer } from './announcer.js';
-import { requestFriendAtTable } from './friends.js';
+import { fetchFriends, requestFriendAtTable } from './friends.js';
 import {
 	asInviteResult, asSendInviteResult, parsePendingInvitations,
 	resultText as inviteResultText, sendResultText,
@@ -546,6 +546,14 @@ async function initBoard() {
 		// actually play with. The outcome is spoken through the game's own announcer rather than a
 		// second live region.
 		selfPlayerId: () => playerSession.playerId,
+		// Friends who are connected and not already playing. The friends list says which of them
+		// is at a joinable table; anybody NOT deep in a game is somebody who could come here.
+		invitableFriends: async () => {
+			const friends = await fetchFriends(fetch);
+			return friends
+				.filter(friend => friend.relationship === 'Friends')
+				.map(friend => friend.handle);
+		},
 		// An invitation to another table, answered from this one. Accepting LEAVES this table: the
 		// lobby takes it from there with the code the server hands back, so there is one way into a
 		// table rather than a second that would have to be kept in step with it.

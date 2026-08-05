@@ -129,6 +129,22 @@ Puedes deshacer una amistad cuando quieras, desde cualquiera de los dos lados; e
 registro, y después cualquiera de los dos puede volver a pedirla. Borrar tu cuenta elimina todos
 estos registros, incluidos los que están en las listas de quienes eran amigos tuyos.
 
+## Invitaciones a una mesa
+
+Cualquiera que esté en una mesa con sitio puede invitarte por tu nombre público, y tú puedes pedir
+entrar en la mesa donde esté sentado un amigo tuyo. Quién puede pedírtelo a TI lo decide el mismo
+ajuste que dice quién puede escribirte: una invitación también es una interrupción, y tener dos
+ajustes que significan casi lo mismo es la forma de equivocarse en uno sin enterarse.
+
+Una invitación se guarda EN esa mesa, no en un buzón: tu nombre público, quién la hizo y cuándo. Eso
+es lo que le permite sobrevivir a una recarga y alcanzarte si estabas ausente. También hace que
+caduque sola: cuando la mesa se llena, empieza o se borra, la invitación se va con ella y nadie tiene
+que acordarse de limpiar. Lo mismo vale para una petición de entrada, que guarda tu nombre público en
+la mesa a cuya puerta llamaste.
+
+Todos los de esa mesa ven a quién se ha invitado y quién está pidiendo entrar. Nadie de fuera. Al
+rechazar una invitación se borra, y a la mesa no se le dice nada más allá de su desaparición.
+
 ## Mensajes privados
 
 Desde el lobby puedes escribir a otros jugadores nombrándolos con "@" y su nombre público. Quién
