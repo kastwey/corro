@@ -324,3 +324,31 @@ test('an unlock code follows the account to a browser that never saw it', async 
 	await expect(phone.locator('#board-listbox [data-item-id="hidden"]')).toHaveCount(1);
 	await flushAxeAudit(phone);
 });
+
+// A tabpanel gets tabindex="0" only when it holds NOTHING focusable, so its text can be reached at
+// all. Give one to a panel full of controls and Tab lands on the panel FIRST — a stop with no name
+// of its own, where a screen reader reads the entire contents aloud before you have done anything.
+// Reported as "there is a strange tab after the tabs where NVDA reads the whole screen".
+test('Tab from a tab goes straight to the controls, not onto the panel itself', async ({ browser }) => {
+	const ana = await newPlayerPage(browser, 'es-ES');
+	await signIn(ana, 'presence-tabstop');
+	await openAccountSettings(ana);
+
+	// No panel anywhere claims a tab stop.
+	for (const panel of await ana.locator('[role="tabpanel"]').all()) {
+		await expect(panel).not.toHaveAttribute('tabindex', '0');
+	}
+
+	// From the selected tab, one Tab reaches the first control INSIDE the panel.
+	await ana.locator('#settings-tab-profile').focus();
+	await ana.keyboard.press('Tab');
+	await expect(ana.locator('#account-name-input')).toBeFocused();
+
+	// And the same on the other tab, whose panel is a radio group.
+	await ana.locator('#settings-tab-profile').focus();
+	await ana.keyboard.press('ArrowRight');
+	await expect(ana.locator('#settings-tab-notices')).toBeFocused();
+	await ana.keyboard.press('Tab');
+	await expect(ana.locator('#settings-arrivals-friends')).toBeFocused();
+	await flushAxeAudit(ana);
+});

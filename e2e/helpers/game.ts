@@ -534,26 +534,32 @@ export async function declineByEndingTurn(page: Page): Promise<void> {
  */
 export async function openAccountSettings(page: Page): Promise<void> {
 	const item = page.getByRole('menuitem', { name: appI18n('es').account.settingsMenu as string });
+	const view = page.locator('#view-settings');
 	const content = page.locator('.account-settings');
 
 	// Opening takes TWO clicks — the menu, then the item — and the account bar rebuilds itself
-	// whenever the session changes under it, which takes the open menu with it. Losing the menu
-	// between the two clicks is rare on an idle machine and not rare under four parallel shards.
+	// whenever the session changes under it, which can take the open menu away in between.
 	//
-	// The whole sequence retries, content and all, rather than only the item click: an attempt that
-	// half-succeeded would otherwise leave the screen open and the next attempt would be clicking
-	// the account menu on top of it.
-	for (let attempt = 0; attempt < 3; attempt++) {
+	// What is retried is the OUTCOME, not the click: a click that lands on a menu about to be
+	// replaced succeeds and opens nothing, so "the item was clickable" is the wrong thing to
+	// believe.
+	//
+	// The per-step budget is generous on purpose. A first draft capped each step at four seconds
+	// inside a suite whose ordinary tolerance is twenty-five, so under four parallel shards this
+	// helper gave up long before anything else would have — and every account test failed at once
+	// while the same suite passed perfectly when run serially.
+	const step = 12_000;
+	for (let attempt = 0; attempt < 2; attempt++) {
 		try {
-			await page.locator('#account-manage-btn').click({ timeout: 5_000 });
-			await item.click({ timeout: 5_000 });
-			await expect(page.locator('#view-settings')).toBeVisible({ timeout: 5_000 });
-			await expect(content).toBeVisible({ timeout: 5_000 });
+			await page.locator('#account-manage-btn').click({ timeout: step });
+			await item.click({ timeout: step });
+			await expect(view).toBeVisible({ timeout: step });
+			await expect(content).toBeVisible({ timeout: step });
 			return;
 		} catch (error) {
-			if (attempt === 2) throw error;
-			// Back to somewhere known before trying again, so a half-open state is not built on.
-			await gotoLobbyHome(page);
+			if (attempt === 1) throw error;
+			// Leave no half-open menu behind for the next attempt to click through.
+			await page.keyboard.press('Escape');
 		}
 	}
 }

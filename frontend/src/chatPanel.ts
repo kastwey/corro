@@ -20,11 +20,12 @@
 
 import { makeDialogDraggable } from './dialogDrag.js';
 import { nextRovingIndex } from './accessibleList.js';
-// Aliased: this class has its own completeMention (the whole interaction), and the import is just
-// the text edit inside it. Two identical names at different scopes is a trap for the next reader.
+// Aliased so the name says what it does here: this is the TEXT EDIT, while choosing which name to
+// insert belongs to MentionList.
 import {
 	completeMention as replaceMentionText, mentionAtCaret, TABLE_NAME_SHAPE,
 } from './mentions.js';
+import { MentionList } from './mentionList.js';
 import { soundEvents } from './soundEvents.js';
 import type { ChatMessageDto, Player } from './models.js';
 
@@ -71,11 +72,11 @@ export class ChatPanel {
 	private input: HTMLTextAreaElement | null = null;
 	private sendBtn: HTMLButtonElement | null = null;
 	private mentionList: HTMLUListElement | null = null;
+	private mentions: MentionList | null = null;
 	private logRegion: HTMLElement | null = null;
 	private returnFocus: HTMLElement | null = null;
 	private rovingIndex = -1;
 	private mentionOptions: Player[] = [];
-	private mentionActive = 0;
 	private unreadCount = 0;
 	private recordedMessageIds = new Set<string>();
 	/** Start offset of the "@token" being completed in the textarea, or -1 when closed. */
@@ -128,7 +129,7 @@ export class ChatPanel {
 					<textarea id="chat-input" rows="2"></textarea>
 					<button type="button" id="chat-send" class="btn btn-primary"></button>
 				</div>
-				<ul class="chat-mention-list hidden" id="chat-mention-list" role="listbox"></ul>
+				<ul class="chat-mention-list" id="chat-mention-list" role="listbox" hidden></ul>
 			</div>
 		`;
 		// Deliberately NO aria-describedby: a description is re-announced on EVERY entry,
@@ -160,12 +161,19 @@ export class ChatPanel {
 		this.sendBtn.textContent = t('game.chat_send');
 		this.mentionList = panel.querySelector<HTMLUListElement>('#chat-mention-list')!;
 		this.mentionList.setAttribute('aria-label', t('game.chat_mention_label'));
+		// The same widget the lobby's message box uses. It was written twice, and one of the two
+		// was announced as loose buttons with no idea they were a list.
+		this.mentions = new MentionList({
+			list: this.mentionList,
+			input: this.input!,
+			onChoose: name => this.insertMention(name),
+			onTyped: () => this.refreshMentions(),
+		});
 
 		this.sendBtn.addEventListener('click', () => void this.sendCurrent());
 		this.input.addEventListener('keydown', e => this.onInputKeydown(e));
 		this.input.addEventListener('input', () => this.refreshMentions());
 		this.list.addEventListener('keydown', e => this.onListKeydown(e));
-		this.mentionList.addEventListener('keydown', e => this.onMentionKeydown(e));
 
 		const notification = document.createElement('button');
 		notification.type = 'button';
@@ -380,14 +388,14 @@ export class ChatPanel {
 			// Enter sends; Shift+Enter falls through to the native line break.
 			e.preventDefault();
 			e.stopPropagation();
-			if (this.mentionStart >= 0) { this.completeMention(); return; }
+			if (this.mentions?.isOpen) { this.insertMention(this.mentionOptions[0].name); return; }
 			void this.sendCurrent();
 			return;
 		}
-		if (e.key === 'Tab' && !e.shiftKey && this.mentionStart >= 0) {
+		if (e.key === 'Tab' && !e.shiftKey && this.mentions?.isOpen) {
 			e.preventDefault();
 			e.stopPropagation();
-			this.completeMention();
+			this.insertMention(this.mentionOptions[0].name);
 			return;
 		}
 		if (e.key === 'Tab' && e.shiftKey) {
@@ -400,11 +408,11 @@ export class ChatPanel {
 			}
 			return;
 		}
-		if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && this.mentionStart >= 0) {
+		if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && this.mentions?.isOpen) {
 			// Back into the open suggestion list from the textarea.
 			e.preventDefault();
 			e.stopPropagation();
-			this.focusMentionOption(this.mentionActive);
+			this.mentions.focusFirst();
 			return;
 		}
 		if (e.key === 'Escape') {
@@ -434,108 +442,29 @@ export class ChatPanel {
 		if (this.mentionOptions.length === 0) { this.closeMentions(); return; }
 
 		this.mentionStart = caret - typed.length - 1;
-		this.mentionActive = 0;
-		this.renderMentions();
-		// Typing (from either place) lands focus on the list, per spec: the reader hears
-		// the current best match; ←/→ go back to the text.
-		this.focusMentionOption(0);
-	}
-
-	private renderMentions(): void {
-		const ul = this.mentionList!;
-		ul.innerHTML = '';
-		this.mentionOptions.forEach((p, i) => {
-			const li = document.createElement('li');
-			li.setAttribute('role', 'option');
-			li.tabIndex = i === this.mentionActive ? 0 : -1;
-			li.textContent = p.name;
-			li.addEventListener('click', () => { this.mentionActive = i; this.completeMention(); });
-			ul.appendChild(li);
-		});
-		ul.classList.remove('hidden');
-	}
-
-	private focusMentionOption(index: number): void {
-		const items = this.mentionList!.querySelectorAll<HTMLElement>('li');
-		if (items.length === 0) return;
-		this.mentionActive = Math.max(0, Math.min(index, items.length - 1));
-		items.forEach((el, i) => { el.tabIndex = i === this.mentionActive ? 0 : -1; });
-		items[this.mentionActive].focus();
-	}
-
-	private onMentionKeydown(e: KeyboardEvent): void {
-		const input = this.input!;
-		if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-			e.preventDefault();
-			e.stopPropagation();
-			const delta = e.key === 'ArrowDown' ? 1 : -1;
-			this.focusMentionOption(this.mentionActive + delta);
-			return;
-		}
-		if (e.key === 'Enter' || e.key === 'Tab') {
-			e.preventDefault();
-			e.stopPropagation();
-			this.completeMention();
-			return;
-		}
-		if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-			// Hand focus back to the textarea so the reader can walk the text character by
-			// character (an option list cannot be read that way). The list stays open;
-			// ↑/↓ or typing return to it.
-			e.preventDefault();
-			e.stopPropagation();
-			input.focus();
-			return;
-		}
-		if (e.key === 'Escape') {
-			e.preventDefault();
-			e.stopPropagation();
-			this.closeMentions();
-			input.focus();
-			return;
-		}
-		if (e.key === 'Backspace') {
-			e.preventDefault();
-			e.stopPropagation();
-			const caret = input.selectionStart ?? input.value.length;
-			if (caret > 0) {
-				input.value = input.value.slice(0, caret - 1) + input.value.slice(caret);
-				input.setSelectionRange(caret - 1, caret - 1);
-			}
-			this.refreshMentions();
-			return;
-		}
-		// Printable characters keep typing INTO the textarea while focus stays on the
-		// list, filtering live (refreshMentions re-focuses the best match).
-		if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
-			e.preventDefault();
-			e.stopPropagation();
-			const caret = input.selectionStart ?? input.value.length;
-			input.value = input.value.slice(0, caret) + e.key + input.value.slice(caret);
-			input.setSelectionRange(caret + 1, caret + 1);
-			this.refreshMentions();
-		}
-	}
-
-	private completeMention(): void {
-		const input = this.input!;
-		const player = this.mentionOptions[this.mentionActive];
-		if (!player || this.mentionStart < 0) { this.closeMentions(); return; }
-		// Shared with the lobby's message box: replacing what was typed and placing the caret after
-		// it is the same job in both places, and was written twice before this.
-		const { text, caret } = replaceMentionText(
-			input.value, input.selectionStart ?? input.value.length, player.name);
-		input.value = text;
-		input.setSelectionRange(caret, caret);
-		this.closeMentions();
-		input.focus();
+		// Typing lands focus on the list, as this panel's contract has always said: the reader
+		// hears the current best match, and ←/→ go back to the text.
+		this.mentions!.show(this.mentionOptions.map(p => p.name));
 	}
 
 	private closeMentions(): void {
 		this.mentionStart = -1;
 		this.mentionOptions = [];
-		this.mentionList?.classList.add('hidden');
-		if (this.mentionList) this.mentionList.innerHTML = '';
+		this.mentions?.close();
+	}
+
+	/** Put a chosen name into the text. The list itself decided WHICH name. */
+	private insertMention(name: string): void {
+		const input = this.input!;
+		// Replacing what was typed and placing the caret after it is the same job the lobby's
+		// message box does, and was written twice before mentions.ts.
+		const { text, caret } = replaceMentionText(
+			input.value, input.selectionStart ?? input.value.length, name);
+		input.value = text;
+		input.setSelectionRange(caret, caret);
+		this.mentionStart = -1;
+		this.mentionOptions = [];
+		input.focus();
 	}
 
 	// ── voicing ───────────────────────────────────────────────────────────────

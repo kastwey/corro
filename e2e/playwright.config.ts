@@ -35,7 +35,13 @@ export default defineConfig({
 	// widened under load), and this number only decides when a slow-but-correct run is declared
 	// hung. Judging a shared machine by a solo-machine stopwatch made the suite flaky, and a
 	// flaky accessibility gate is worth less than a slow one.
-	timeout: SHARD_COUNT > 1 ? 180_000 : 90_000,
+	//
+	// Raised again from 180s. The suite grew — friends, messages, invitations and a settings
+	// SCREEN where an account dialog used to be, so several tests now cross views instead of
+	// opening a modal — and at four shards the slowest of them started being declared hung while
+	// the very same suite passed 126 of 126 run serially. That is starvation, not a defect, and
+	// judging a shared machine by a solo-machine stopwatch is what makes a suite flaky.
+	timeout: SHARD_COUNT > 1 ? 300_000 : 90_000,
 	expect: { timeout: SHARD_COUNT > 1 ? 25_000 : 15_000 },
 	// Shards run as separate processes at the same time, so each needs its own folders — one
 	// shared report folder means four processes overwriting each other's failure traces.

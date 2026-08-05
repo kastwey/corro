@@ -128,13 +128,24 @@ test('the matching names are counted out loud and walked with the arrows', async
 	// learns about.
 	await expect(ana.locator('#lobby-chat-status'))
 		.toHaveText(chat.matches.replace('{{count}}', '2'));
-	const options = ana.locator('#lobby-chat-suggestions button');
+	// A real listbox of options, not loose buttons: without the roles a screen reader announces
+	// each one alone, with no position and no idea how many more there are.
+	const suggestions = ana.locator('#lobby-chat-suggestions');
+	await expect(suggestions).toHaveRole('listbox');
+	const options = suggestions.getByRole('option');
 	await expect(options).toHaveCount(2);
 	await flushAxeAudit(ana);
 
 	// Down from the box reaches them, exactly as the announcement invites.
 	await input.press('ArrowDown');
 	await expect(options.first()).toBeFocused();
+	await expect(options.first()).toHaveAttribute('aria-selected', 'true');
+
+	// The arrows walk it, and the selection follows the focus.
+	await ana.keyboard.press('ArrowDown');
+	await expect(options.nth(1)).toBeFocused();
+	await expect(options.nth(1)).toHaveAttribute('aria-selected', 'true');
+	await ana.keyboard.press('ArrowUp');
 
 	await options.first().press('Enter');
 	await expect(input).toHaveValue('@lchatmatchone ');

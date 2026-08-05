@@ -369,7 +369,8 @@
       "noOneToReplyTo": "Nobody has written to you yet, so there is nobody to reply to.",
       "nothingToSay": "The message is empty.",
       "sent": "Sent to {{to}}.",
-      "unreachable": "{{handles}} did not receive it: they may be away, or not accept messages from you."
+      "unreachable": "{{handles}} did not receive it: they may be away, or not accept messages from you.",
+      "suggestionsLabel": "Matching players"
     },
     "invites": {
       "heading": "Waiting for you",

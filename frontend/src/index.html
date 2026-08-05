@@ -82,9 +82,11 @@
 				<ul id="lobby-chat-log" class="lobby-chat__log" role="list" data-i18n-attr:aria-label="lobby.chat.logLabel" aria-label="Messages received and sent"></ul>
 				<label for="lobby-chat-input" data-i18n="lobby.chat.inputLabel">Your message</label>
 				<textarea id="lobby-chat-input" rows="2" maxlength="1000"></textarea>
-				<!-- The matching names. Its count is SAID (see lobby-chat-status), because a list
-					 that silently appears is a list somebody listening never learns about. -->
-				<div id="lobby-chat-suggestions" class="lobby-chat__suggestions" hidden></div>
+				<!-- The matching names, as a real LISTBOX. It was a plain container of buttons, which
+					 a screen reader announces one at a time with no idea they are a list at all — no
+					 position, no count. Its size is also said out loud (see lobby-chat-status). -->
+				<ul id="lobby-chat-suggestions" class="lobby-chat__suggestions" role="listbox"
+					data-i18n-attr:aria-label="lobby.chat.suggestionsLabel" aria-label="Matching players" hidden></ul>
 				<button type="button" id="lobby-chat-send" class="secondary-button" data-i18n="lobby.chat.send">Send</button>
 				<p id="lobby-chat-status" class="form-hint" role="status" aria-live="polite"></p>
 			</section>
@@ -321,9 +323,14 @@
 				<button type="button" role="tab" id="settings-tab-notices" aria-controls="settings-panel-notices" aria-selected="false" data-i18n="lobby.settings.tabNotices">Lobby notices</button>
 			</div>
 
-			<div role="tabpanel" id="settings-panel-profile" aria-labelledby="settings-tab-profile" tabindex="0"></div>
+			<!-- No tabindex on any of these panels. A tabpanel gets one only when it holds NOTHING
+				 focusable, so somebody can reach its text at all; give one to a panel full of
+				 controls and Tab lands on the panel itself first — a stop with no name of its own,
+				 where a screen reader reads the entire contents aloud before you have done
+				 anything. Every panel here has its own controls, so Tab goes straight to them. -->
+			<div role="tabpanel" id="settings-panel-profile" aria-labelledby="settings-tab-profile"></div>
 
-			<div role="tabpanel" id="settings-panel-notices" aria-labelledby="settings-tab-notices" tabindex="0" hidden>
+			<div role="tabpanel" id="settings-panel-notices" aria-labelledby="settings-tab-notices" hidden>
 				<fieldset class="form-group account-settings-listed">
 					<legend data-i18n="lobby.settings.arrivalsLegend">Tell me when somebody arrives in the lobby?</legend>
 					<p class="account-settings-hint" id="settings-arrivals-hint" data-i18n="lobby.settings.arrivalsHint">Said once, quietly, while you are in the lobby. Never during a game.</p>
@@ -357,14 +364,14 @@
 				<button type="button" role="tab" id="friends-tab-requests" aria-controls="friends-panel-requests" aria-selected="false" data-i18n="lobby.friends.tabRequests">Requests</button>
 			</div>
 
-			<div role="tabpanel" id="friends-panel-people" aria-labelledby="friends-tab-people" tabindex="0">
+			<div role="tabpanel" id="friends-panel-people" aria-labelledby="friends-tab-people">
 				<div class="friends-surface" role="application" aria-labelledby="friends-tab-people">
 					<ul id="friends-list" class="online-list" role="list"></ul>
 				</div>
 				<p id="friends-empty" class="your-games-empty" data-i18n="lobby.friends.emptyPeople" hidden>You have no friends here yet.</p>
 			</div>
 
-			<div role="tabpanel" id="friends-panel-requests" aria-labelledby="friends-tab-requests" tabindex="0" hidden>
+			<div role="tabpanel" id="friends-panel-requests" aria-labelledby="friends-tab-requests" hidden>
 				<div class="friends-surface" role="application" aria-labelledby="friends-tab-requests">
 					<ul id="friends-requests-list" class="online-list" role="list"></ul>
 				</div>

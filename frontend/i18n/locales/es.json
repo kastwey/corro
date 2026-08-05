@@ -369,7 +369,8 @@
       "noOneToReplyTo": "Todavía no te ha escrito nadie, así que no hay a quién responder.",
       "nothingToSay": "El mensaje está vacío.",
       "sent": "Enviado a {{to}}.",
-      "unreachable": "{{handles}} no lo ha recibido: puede estar ausente o no aceptar mensajes tuyos."
+      "unreachable": "{{handles}} no lo ha recibido: puede estar ausente o no aceptar mensajes tuyos.",
+      "suggestionsLabel": "Jugadores que coinciden"
     },
     "invites": {
       "heading": "Te están esperando",

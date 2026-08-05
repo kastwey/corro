@@ -57,7 +57,7 @@ function harness(options: {
 			<ul id="chat-log" role="list"></ul>
 			<textarea id="chat-input"></textarea>
 			<button id="chat-send" type="button">Enviar</button>
-			<div id="chat-suggestions" hidden></div>
+			<ul id="chat-suggestions" role="listbox" hidden></ul>
 			<p id="chat-status" role="status" aria-live="polite"></p>
 		</div>`;
 	const sent: Array<{ handles: string[]; text: string }> = [];
@@ -183,8 +183,10 @@ test('a message that reached some of its recipients keeps the ones it reached', 
 	assert.deepEqual(h.lines(), ['Tú, a ana: hola']);
 });
 
-// A list that silently appears is a list somebody listening never learns about.
-test('the matching names are counted out loud, and Down walks them', () => {
+// A list that silently appears is a list somebody listening never learns about — and one made of
+// bare buttons is announced with no idea it is a list at all: no position, no count, nothing to say
+// how many more there are. It is a listbox of options, like the one the in-game chat always had.
+test('the matching names are a real list, counted out loud, and Down walks them', () => {
 	const h = harness();
 	h.input.value = 'hola @an';
 	h.input.setSelectionRange(8, 8);
@@ -192,9 +194,25 @@ test('the matching names are counted out loud, and Down walks them', () => {
 
 	assert.equal(h.status.textContent, '2 usuarios encontrados.');
 	assert.equal(h.suggestions.hidden, false);
-	assert.deepEqual(
-		Array.from(h.suggestions.querySelectorAll('button')).map(b => b.textContent),
-		['ana', 'anabel']);
+	assert.equal(h.suggestions.getAttribute('role'), 'listbox');
+
+	const options = Array.from(h.suggestions.querySelectorAll('[role="option"]'));
+	assert.deepEqual(options.map(o => o.textContent), ['ana', 'anabel']);
+	// One way in, and the first is the one selected — which is what a reader is told.
+	assert.deepEqual(options.map(o => (o as HTMLElement).tabIndex), [0, -1]);
+	assert.deepEqual(options.map(o => o.getAttribute('aria-selected')), ['true', 'false']);
+
+	// Typing does not steal the keyboard; Down is what walks in, as the count invites.
+	assert.notEqual(document.activeElement, options[0]);
+	h.input.dispatchEvent(new window.KeyboardEvent(
+		'keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+	assert.equal(document.activeElement, options[0]);
+
+	// And inside the list the arrows move the selection with the focus.
+	options[0].dispatchEvent(new window.KeyboardEvent(
+		'keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+	assert.equal(document.activeElement, options[1]);
+	assert.equal(options[1].getAttribute('aria-selected'), 'true');
 });
 
 test('choosing a name replaces what was typed and leaves room for the next word', () => {
@@ -203,10 +221,27 @@ test('choosing a name replaces what was typed and leaves room for the next word'
 	h.input.setSelectionRange(8, 8);
 	h.input.dispatchEvent(new window.Event('input'));
 
-	(h.suggestions.querySelector('button') as HTMLButtonElement).click();
+	(h.suggestions.querySelector('[role="option"]') as HTMLElement).click();
 
 	assert.equal(h.input.value, 'hola @ana ');
 	assert.equal(h.suggestions.hidden, true);
+});
+
+// The text can be read character by character; an option list cannot. Left or Right hands the
+// keyboard back without closing what was found.
+test('Left or Right returns to the text, and the list stays open', () => {
+	const h = harness();
+	h.input.value = 'hola @an';
+	h.input.setSelectionRange(8, 8);
+	h.input.dispatchEvent(new window.Event('input'));
+	const option = h.suggestions.querySelector('[role="option"]') as HTMLElement;
+	option.focus();
+
+	option.dispatchEvent(new window.KeyboardEvent(
+		'keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+
+	assert.equal(document.activeElement, h.input);
+	assert.equal(h.suggestions.hidden, false);
 });
 
 test('matching is by prefix and case-insensitive', () => {

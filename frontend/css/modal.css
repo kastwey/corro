@@ -713,6 +713,8 @@
 	overflow-y: auto;
 }
 
+/* Open and closed are the `hidden` ATTRIBUTE here, as everywhere else — one mechanism rather than
+   a class on this list and an attribute on its twin in the lobby. */
 .chat-mention-list li {
 	padding: 0.2rem 0.4rem;
 	border-radius: var(--radius-sm);

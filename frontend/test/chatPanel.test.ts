@@ -236,7 +236,7 @@ test('←/→ hand focus back to the textarea; ↑/↓ from it return to the lis
 
 	key(option, 'ArrowLeft');
 	assert.equal(document.activeElement, input(), '← goes back to review the text letter by letter');
-	assert.ok(!mentions().classList.contains('hidden'), 'the list stays open');
+	assert.ok(!mentions().hidden, 'the list stays open');
 
 	key(input(), 'ArrowDown');
 	assert.equal(document.activeElement, mentions().querySelector('li'), '↓ re-enters the list');
@@ -244,7 +244,7 @@ test('←/→ hand focus back to the textarea; ↑/↓ from it return to the lis
 	key(mentions().querySelector('li')!, 'Enter');
 	assert.equal(input().value, '@Amaterasu ');
 	assert.equal(document.activeElement, input(), 'completion returns to the compose box');
-	assert.ok(mentions().classList.contains('hidden'));
+	assert.ok(mentions().hidden);
 });
 
 test('Tab also completes the mention; Escape closes the list without completing', () => {
@@ -255,7 +255,7 @@ test('Tab also completes the mention; Escape closes the list without completing'
 	typeMention('@Berto @a');
 	key(mentions().querySelector('li')!, 'Escape');
 	assert.equal(input().value, '@Berto @a', 'Escape keeps the raw text');
-	assert.ok(mentions().classList.contains('hidden'));
+	assert.ok(mentions().hidden);
 	assert.equal(document.activeElement, input());
 });
 

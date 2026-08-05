@@ -13,6 +13,7 @@
 // conversation while still leaving nothing behind on a shared computer.
 
 import { RovingToolbarList } from './accessibleList.js';
+import { MentionList } from './mentionList.js';
 import {
 	addressMessage,
 	completeMention,
@@ -99,11 +100,20 @@ export function matchingCandidates(
 export class LobbyChat {
 	private history: ChatLine[] = [];
 	private lastConversation: string[] = [];
+	private readonly suggestions: MentionList;
+	/** The LOG's roving list, which is a different widget from the suggestions above it. */
 	private nav: RovingToolbarList | null = null;
-	private open = false;
 
 	constructor(private readonly deps: LobbyChatDeps) {
 		this.history = readHistory(this.storage());
+		this.suggestions = new MentionList({
+			list: deps.suggestions,
+			input: deps.input,
+			onChoose: handle => this.choose(handle),
+			onTyped: () => this.refreshSuggestions(),
+			announce: text => { if (deps.status) deps.status.textContent = text; },
+			countText: count => deps.t('lobby.chat.matches', { count }),
+		});
 		this.render();
 		this.wire();
 	}
@@ -181,56 +191,35 @@ export class LobbyChat {
 	private onKeyDown(event: KeyboardEvent): void {
 		if (event.key === 'Enter' && !event.shiftKey) {
 			event.preventDefault();
-			if (this.open) this.closeSuggestions();
+			this.suggestions.close();
 			void this.submit();
 			return;
 		}
 		// Down from the box walks into the matches, which is what the announcement invites.
-		if (event.key === 'ArrowDown' && this.open) {
+		if (event.key === 'ArrowDown' && this.suggestions.isOpen) {
 			event.preventDefault();
-			(this.deps.suggestions.querySelector('button') as HTMLElement | null)?.focus();
+			this.suggestions.focusFirst();
 			return;
 		}
-		if (event.key === 'Escape' && this.open) {
+		if (event.key === 'Escape' && this.suggestions.isOpen) {
 			event.preventDefault();
-			this.closeSuggestions();
+			this.suggestions.close();
 		}
 	}
 
 	/**
-	 * Offer the names that match what is being typed, and SAY how many there are — a list that
-	 * silently appears is a list somebody listening never learns about.
+	 * Offer the names that match what is being typed. The list itself — its semantics, its keys and
+	 * saying how many there are — belongs to MentionList, which the in-game chat uses too.
 	 */
 	private refreshSuggestions(): void {
 		const typed = mentionAtCaret(this.deps.input.value, this.deps.input.selectionStart ?? 0);
 		if (typed === null) {
-			this.closeSuggestions();
+			this.suggestions.close();
 			return;
 		}
-
-		const matches = matchingCandidates(typed, this.deps.candidates());
-		this.deps.suggestions.replaceChildren(...matches.map(handle => {
-			const option = document.createElement('button');
-			option.type = 'button';
-			option.className = 'lobby-chat__suggestion';
-			option.textContent = handle;
-			option.addEventListener('click', () => this.choose(handle));
-			option.addEventListener('keydown', event => {
-				if (event.key === 'Enter' || event.key === 'Tab') {
-					event.preventDefault();
-					this.choose(handle);
-				}
-			});
-			return option;
-		}));
-
-		this.deps.suggestions.hidden = matches.length === 0;
-		this.open = matches.length > 0;
-		if (this.deps.status) {
-			this.deps.status.textContent = matches.length > 0
-				? this.deps.t('lobby.chat.matches', { count: matches.length })
-				: '';
-		}
+		// Shown without taking the keyboard: somebody mid-word should keep typing, and the
+		// announcement tells them Down is there when they want it.
+		this.suggestions.show(matchingCandidates(typed, this.deps.candidates()), { takeFocus: false });
 	}
 
 	private choose(handle: string): void {
@@ -238,14 +227,7 @@ export class LobbyChat {
 			this.deps.input.value, this.deps.input.selectionStart ?? 0, handle);
 		this.deps.input.value = text;
 		this.deps.input.setSelectionRange(caret, caret);
-		this.closeSuggestions();
 		this.deps.input.focus();
-	}
-
-	private closeSuggestions(): void {
-		this.deps.suggestions.replaceChildren();
-		this.deps.suggestions.hidden = true;
-		this.open = false;
 	}
 
 	/** Send what is typed, or say why it went nowhere. */

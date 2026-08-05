@@ -82,6 +82,9 @@ class UnifiedLobbyUI {
 	private friendsTabs: Tabs | null = null;
 	private settingsTabs: Tabs | null = null;
 	private noticesWired = false;
+	private listeningForPeople = false;
+	/** Set when something opened a view before the startup got to choose one. */
+	private viewClaimed = false;
 	/** Public names the @ autocomplete offers, refreshed when the lobby is opened. */
 	private chatCandidates: string[] = [];
 
@@ -193,24 +196,7 @@ class UnifiedLobbyUI {
 			if (chat) chat.hidden = !session.signedIn;
 			if (session.signedIn) {
 				this.startLobbyChat(session);
-				// Something landing while they are here is worth saying once — unlike the room
-				// changing around them, an invitation is addressed to them personally.
-				gameClient.on('tableInvitation', () => void this.refreshInvitations(
-					i18nBinder.tSync('lobby.invites.arrived')));
-				gameClient.on('joinRequestAccepted', (data: unknown) => {
-					const code = (data as { inviteCode?: unknown } | null)?.inviteCode;
-					if (typeof code === 'string' && code.length > 0) void this.enterTableByCode(code);
-				});
-				// Read again once the hub is actually up. The session arrives over HTTP and the
-				// invitations over the hub, and there is no order between them: reading first and
-				// never again meant a slow connection showed an empty list and left it that way,
-				// which is indistinguishable from having been invited to nothing.
-				gameClient.on('connected', () => void this.refreshInvitations());
-				// Somebody arriving or leaving, and the head count that goes with it. Both are
-				// corrected in place; whether the ARRIVAL is said out loud is this device's own
-				// choice (see lobbyNotices), because it is a preference about speech here.
-				gameClient.on('presenceChanged', (data: unknown) => this.onPresenceChanged(data));
-				gameClient.on('presenceCount', (data: unknown) => this.onPresenceCount(data));
+				this.listenForPeople();
 				void this.refreshInvitations();
 			}
 			this.useAccountName(session.user?.displayName ?? null);
@@ -1117,6 +1103,8 @@ class UnifiedLobbyUI {
 	 * that used to be a dialog; the notices tab is what the lobby is allowed to say out loud.
 	 */
 	private async showSettingsView(linkReturn: LinkReturn | null = null): Promise<void> {
+		// The startup settles the view LAST, so anything opened before it has to say so.
+		this.viewClaimed = true;
 		showView('view-settings');
 		window.history.pushState({ view: 'view-settings' }, '');
 
@@ -1161,6 +1149,32 @@ class UnifiedLobbyUI {
 				}
 			});
 		}
+	}
+
+	/**
+	 * Subscribe to the things that arrive unasked: invitations, doors opening, people coming and
+	 * going. ONCE — this used to live inside setupAccountBar, which runs again on every change to
+	 * the account, so the handlers piled up and each event was answered as many times as the bar
+	 * had been rebuilt. The visible symptom was a page that never stopped repainting.
+	 */
+	private listenForPeople(): void {
+		if (this.listeningForPeople) return;
+		this.listeningForPeople = true;
+
+		// Something landing while they are here is worth saying once — unlike the room changing
+		// around them, an invitation is addressed to them personally.
+		gameClient.on('tableInvitation', () => void this.refreshInvitations(
+			i18nBinder.tSync('lobby.invites.arrived')));
+		gameClient.on('joinRequestAccepted', (data: unknown) => {
+			const code = (data as { inviteCode?: unknown } | null)?.inviteCode;
+			if (typeof code === 'string' && code.length > 0) void this.enterTableByCode(code);
+		});
+		gameClient.on('connected', () => void this.refreshInvitations());
+		// Somebody arriving or leaving, and the head count that goes with it. Both are corrected in
+		// place; whether the ARRIVAL is said out loud is this device's own choice (see
+		// lobbyNotices), because it is a preference about speech here.
+		gameClient.on('presenceChanged', (data: unknown) => this.onPresenceChanged(data));
+		gameClient.on('presenceCount', (data: unknown) => this.onPresenceCount(data));
 	}
 
 	/** Somebody arrived or left. Said once, quietly, and only if this device asked to hear it. */
@@ -1505,8 +1519,13 @@ class UnifiedLobbyUI {
 			}
 		}
 
-		// Otherwise show the home view with the list of games this browser is part of.
-		showView('view-home');
+		// Otherwise show the home view with the list of games this browser is part of — unless
+		// something has already claimed the screen. Coming back from linking a provider reopens the
+		// settings to report the outcome, and this runs afterwards: without the guard it puts the
+		// player back on the home page and the answer they went away for is never shown.
+		if (!this.viewClaimed) {
+			showView('view-home');
+		}
 		void this.refreshSavedGames();
 	}
 
