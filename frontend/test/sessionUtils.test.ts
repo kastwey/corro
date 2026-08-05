@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { GameSessionStore, SavedGame } from '../src/sessionUtils.js';
+import { GameSessionStore, SavedGame, reconcileRejoinCode } from '../src/sessionUtils.js';
 
 /**
  * Minimal localStorage mock backed by a Map, covering the bits GameSessionStore
@@ -115,4 +115,47 @@ test('recovers gracefully from corrupted storage', () => {
 
 	localStorage.setItem('corro_games', JSON.stringify({ not: 'an array' }));
 	assert.deepEqual(GameSessionStore.getGames(), []);
+});
+
+/**
+ * The re-entry code answers one question — how somebody gets back to a seat after losing the
+ * browser data holding it — and an account answers it better, from a device that has never seen
+ * the table. So the server withholds it from a signed-in player, and this is the browser taking
+ * that answer seriously in both directions.
+ */
+
+const SEAT: SavedGame = {
+	gameId: 'g1',
+	playerId: 'p1',
+	playerSecretId: 's1',
+	playerName: 'Ana',
+	token: 'red_hat',
+	board: 'classic',
+	isHost: false,
+	updatedAt: 1,
+};
+
+test('a code arriving for the first time is kept', () => {
+	assert.deepEqual(
+		reconcileRejoinCode(SEAT, 'A2B3C4D5'),
+		{ ...SEAT, rejoinCode: 'A2B3C4D5' });
+});
+
+// The bug this exists for: signing in withholds the code, and the copy stored while anonymous
+// would otherwise stay on the table forever, asking to be noted down for nothing.
+test('a stale code is dropped when the server says there is none', () => {
+	assert.deepEqual(
+		reconcileRejoinCode({ ...SEAT, rejoinCode: 'A2B3C4D5' }, null),
+		{ ...SEAT, rejoinCode: undefined });
+});
+
+// Every authenticated join asks this. Writing an unchanged answer would touch updatedAt and keep
+// a table the player has finished with alive in the saved list.
+test('an unchanged answer writes nothing', () => {
+	assert.equal(reconcileRejoinCode({ ...SEAT, rejoinCode: 'A2B3C4D5' }, 'A2B3C4D5'), null);
+	assert.equal(reconcileRejoinCode(SEAT, null), null);
+});
+
+test('a table this browser does not hold is not invented', () => {
+	assert.equal(reconcileRejoinCode(null, 'A2B3C4D5'), null);
 });

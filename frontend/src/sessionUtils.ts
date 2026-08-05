@@ -17,7 +17,8 @@ export interface SavedGame {
 	isHost: boolean;
 	/** The player's RE-ENTRY code: typed in the lobby's code box it reclaims this seat
 	 *  from any browser (the account-less recovery key). Absent on entries saved before
-	 *  the feature; the board backfills it on the next authenticated join. */
+	 *  the feature, and absent while signed in — an account finds the seat by itself, so the
+	 *  server withholds the code and reconcileRejoinCode drops any older copy. */
 	rejoinCode?: string;
 	/** Epoch ms of the last time this entry was created/touched. */
 	updatedAt: number;
@@ -102,4 +103,21 @@ export class GameSessionStore {
 			/* ignore quota / disabled storage */
 		}
 	}
+}
+
+/**
+ * What this browser should keep after the server answers whether there is a re-entry code.
+ *
+ * Null is an ANSWER, not silence: a signed-in player is deliberately given none, because their
+ * account finds the seat from any device. Taking only the positive answer — which is what this
+ * did — meant a code stored before signing in stayed on display forever, which is precisely the
+ * noise withholding it was meant to remove.
+ *
+ * Returns the entry to save, or null when nothing needs writing. Callers must not write on every
+ * join: an unchanged answer would touch `updatedAt` and keep a dead table alive in the list.
+ */
+export function reconcileRejoinCode(saved: SavedGame | null, code: string | null): SavedGame | null {
+	if (!saved) return null;
+	if ((saved.rejoinCode ?? null) === code) return null;
+	return { ...saved, rejoinCode: code ?? undefined };
 }

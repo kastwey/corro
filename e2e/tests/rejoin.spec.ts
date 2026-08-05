@@ -8,6 +8,7 @@ import { test, expect, type Page } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
 import {
 	actionButton,
+	appI18n,
 	buyPendingProperty,
 	createGame,
 	expectAnnouncement,
@@ -155,4 +156,37 @@ test('the board group shortcuts still work after a reload', async ({ browser }) 
 	await ana.locator('#board').focus();
 	await ana.keyboard.press('b');
 	expect(await cursor().getAttribute('data-index')).toBe(afterFirstJump);
+});
+
+// The other half of the story. The code exists for ONE reason — getting back to a seat after
+// losing the browser data holding it — and an account does that better, from a device that has
+// never seen the table. So a signed-in player is not shown it: being asked to note down a string
+// nothing will ever ask for reads as something you must keep safe, and it is not.
+//
+// Both halves are asserted together on purpose. Hiding the box is only safe while the thing that
+// replaces it works, so this test would fail the same way if the account stopped finding tables.
+test('signed in, no re-entry code is offered — the account is the way back', async ({ browser }) => {
+	const ana = await newPlayerPage(browser);
+	await ana.goto('/api/auth/signin/e2e?returnUrl=%2F&subject=rejoin-ana');
+	await gotoLobbyHome(ana);
+
+	await createGame(ana, 'Ana', BOARD);
+
+	// The table is there; the code box is not.
+	await expect(ana.locator('#table-view')).toBeVisible();
+	await expect(ana.locator('#table-rejoin-mount .invite-code__value')).toHaveCount(0);
+	// Nor is it hiding elsewhere on the page: the point is that nothing asks to be noted down.
+	await expect(ana.locator('.rejoin-code')).toHaveCount(0);
+	await flushAxeAudit(ana);
+
+	// A browser that has never seen this table: no saved session, only the account.
+	const elsewhere = await newPlayerPage(browser);
+	await elsewhere.goto('/api/auth/signin/e2e?returnUrl=%2F&subject=rejoin-ana');
+	await gotoLobbyHome(elsewhere);
+
+	// Found by WHO SHE IS: this browser has no saved session to have found it with.
+	await expect(elsewhere.locator('#your-games-list li')).toHaveCount(1);
+	const savedGames = appI18n('es').lobby.savedGames as Record<string, string>;
+	await expect(elsewhere.locator('#your-games-list li').first()
+		.getByRole('button', { name: savedGames.resume })).toBeVisible();
 });

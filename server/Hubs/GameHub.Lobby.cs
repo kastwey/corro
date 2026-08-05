@@ -157,7 +157,7 @@ public partial class GameHub
 				InviteCode = inviteCode,
 				Game = savedGame.Sanitized(),
 				HostSecretId = hostSecretId,
-				HostRejoinCode = hostRejoinCode
+				HostRejoinCode = RejoinCodeForOwnNewSeat(hostRejoinCode)
 			};
 
 			await Clients.Caller.SendAsync("GameCreated", response);
@@ -619,7 +619,7 @@ public partial class GameHub
 				PlayerId = playerId,
 				PlayerSecretId = playerSecretId,
 				Game = updatedGame.Sanitized(),
-				RejoinCode = playerRejoinCode
+				RejoinCode = RejoinCodeForOwnNewSeat(playerRejoinCode)
 			};
 
 			_logger?.LogDebug("JoinGameLobby: Sending GameJoined to caller");

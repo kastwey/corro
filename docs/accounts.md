@@ -189,6 +189,34 @@ new work when that day comes: the refresh-token store, and a revocation check �
 for the latter is the hub's `OnConnectedAsync`, because a SignalR connection is long-lived and that
 is the moment revocation actually has an effect.
 
+## What signing in takes AWAY: the re-entry code
+
+Every seat carries an 8-character re-entry code, which typed into the lobby's code box reclaims it
+from any browser. It exists for one situation — the browser data holding the seat is gone — and an
+account covers that situation better: `GetMyTables` finds the seat by WHO YOU ARE, on a device that
+has never seen the table.
+
+So a signed-in player is not shown the code. Offering both would ask somebody to note down a string
+that nothing will ever ask them for, and a code presented with a copy button reads as something you
+must keep safe. Removing it is not a small tidy-up: it is the difference between an account that
+simplifies the game and one that adds a chore.
+
+Three details keep it safe, and each is load-bearing:
+
+- **The code is never deleted**, only withheld. It stays on the game document, so this is not a
+  one-way door.
+- **The CALLER decides, not the seat.** Somebody who signs out still holds the seat through their
+  browser, and at that moment the code is their only way back — so the next join hands it over
+  again. Deciding from the seat's stored account would strand them.
+- **A seat with no account still gets it**, even from a signed-in caller. A seat taken anonymously
+  and never adopted is not found by `GetMyTables`, so hiding the code there would leave somebody
+  with no way home at all.
+
+One rule, in `GameHub.RejoinCodeToShow`, applied at all three places the server hands a code out
+(create, join, authenticated rejoin). The browser takes the answer in BOTH directions
+(`reconcileRejoinCode`): a copy stored before signing in is dropped, or it would sit on the table
+forever — exactly the noise this removes.
+
 ## Configuration
 
 Providers are configured under `Authentication`, and each one is either **untouched or complete** —

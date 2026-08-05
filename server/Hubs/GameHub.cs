@@ -294,9 +294,10 @@ public partial class GameHub : Hub
 			_registry.MapConnectionToGame(Context.ConnectionId, gameId);
 			_registry.AuthenticateConnection(Context.ConnectionId, playerId);
 
-			// Every authenticated (re)join hands the caller their RE-ENTRY code, privately —
+			// Every authenticated (re)join mints the caller's RE-ENTRY code if it is missing —
 			// the account-less recovery key (see ClaimSeatByRejoinCode). Games created before
-			// the feature get one minted on first contact.
+			// the feature get one on first contact. Whether it is SHOWN is a separate question,
+			// answered by RejoinCodeToShow: it is always stored, so signing out gets it back.
 			if (string.IsNullOrEmpty(player.RejoinCode))
 			{
 				game = game with
@@ -329,7 +330,7 @@ public partial class GameHub : Hub
 				// code, the shared deck, the team count — had to be added to it one at a time while
 				// the very same document was already being broadcast on the next change.
 				await Clients.Caller.SendAsync("LobbyState", game.Sanitized());
-				await Clients.Caller.SendAsync("GameJoined", new { GameId = gameId, PlayerId = playerId, RejoinCode = player.RejoinCode });
+				await Clients.Caller.SendAsync("GameJoined", new { GameId = gameId, PlayerId = playerId, RejoinCode = RejoinCodeToShow(player) });
 				return;
 			}
 
@@ -422,7 +423,7 @@ public partial class GameHub : Hub
 				await Clients.Caller.SendAsync("ChatHistory", game.ChatMessages);
 			}
 
-			await Clients.Caller.SendAsync("GameJoined", new { GameId = gameId, PlayerId = playerId, RejoinCode = player.RejoinCode });
+			await Clients.Caller.SendAsync("GameJoined", new { GameId = gameId, PlayerId = playerId, RejoinCode = RejoinCodeToShow(player) });
 			_logger?.LogInformation("Player {PlayerId} successfully authenticated and joined game {GameId}", playerId, gameId);
 		}
 		catch (Exception ex)
@@ -431,4 +432,34 @@ public partial class GameHub : Hub
 			await Clients.Caller.SendAsync("Error", "GAME_AUTH_ERROR");
 		}
 	}
+
+	/// <summary>
+	/// The re-entry code to hand this caller, or null when it would be noise.
+	///
+	/// The code answers exactly one question: how somebody gets back to their seat after losing
+	/// the browser data that was holding it. An account answers the same question better — the
+	/// seat is found by who you ARE (see GetMyTables), from a device that has never seen this
+	/// table. Showing both would mean asking a player to note down a string that nothing will
+	/// ever ask them for, which is worse than not offering it: it reads as something they must
+	/// keep safe.
+	///
+	/// It is the CALLER's session that decides, not the seat's stored account: somebody who signs
+	/// out still holds this seat through the browser, and at that moment the code is their only
+	/// way back, so the next join hands it over again. Nothing is deleted for this — the code
+	/// stays on the document, which is what makes signing out safe rather than a one-way door.
+	/// </summary>
+	private string? RejoinCodeToShow(LobbyPlayer player)
+		=> RejoinCodeToShow(SignedInUserId(), player.UserId, player.RejoinCode);
+
+	/// <summary>
+	/// The same answer for a seat the caller is taking right now. Both sides of the rule are the
+	/// caller because that is what a new seat IS: it is written with their account (or without one
+	/// if they are anonymous), so it recovers the same way.
+	/// </summary>
+	private string? RejoinCodeForOwnNewSeat(string code)
+		=> RejoinCodeToShow(SignedInUserId(), SignedInUserId(), code);
+
+	/// <summary>The rule itself, free of the connection it is asked on behalf of.</summary>
+	internal static string? RejoinCodeToShow(string? callerUserId, string? seatUserId, string? code)
+		=> !string.IsNullOrEmpty(callerUserId) && seatUserId == callerUserId ? null : code;
 }

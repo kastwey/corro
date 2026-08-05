@@ -8,7 +8,7 @@ import type { GameCommand, GameState, Player, Square, CommandResponse, PropertyM
 import { translateServerErrorSync, i18nBinder } from './i18nBinder.js';
 import { resolveSquareName } from './localizeSquare.js';
 import type { Board } from './board.js';
-import { GameSessionStore } from './sessionUtils.js';
+import { GameSessionStore, reconcileRejoinCode } from './sessionUtils.js';
 import { createCommandRegistry, createAnnouncement } from './commands/registry.js';
 import type { CommandContext } from './commands/registry.js';
 import { TurnSequencer } from './turnSequencer.js';
@@ -76,8 +76,12 @@ export interface TradeResolvedData {
 
 export interface GameManagerEvents {
 	'gameStateUpdated': GameState;
-	/** The join ack delivered this player's re-entry code (recovery key). */
-	'rejoinCodeAvailable': string;
+	/**
+	 * The join ack answered whether this player has a re-entry code to keep. Null is a real
+	 * answer, not silence: a signed-in player is deliberately not given one (the server decides —
+	 * GameHub.RejoinCodeToShow), and the panel showing a stale one has to clear.
+	 */
+	'rejoinCodeAvailable': string | null;
 	'connectionStatusChanged': { status: 'connected' | 'reconnecting' | 'disconnected' };
 	'reconnectionAttempt': { state: 'connecting' | 'success' | 'failed'; attempt?: number; error?: string };
 	'turnChanged': { playerId: string };
@@ -235,23 +239,20 @@ export class GameManager {
 		});
 
 		gameClient.on('gameJoined', (data) => {
-			// The board ack carries this player's RE-ENTRY code (their account-less
-			// recovery key): surface it for the connection panel and keep the saved
-			// session in sync so pre-feature entries get backfilled.
-			const rejoinCode = data?.rejoinCode;
+			// The board ack ANSWERS whether this player has a RE-ENTRY code (the account-less
+			// recovery key): surface it for the connection panel and keep the saved session in
+			// step. A signed-in player is given none, so null is an answer and not silence.
+			const rejoinCode = data?.rejoinCode ?? null;
 			const gameId = data?.gameId;
-			if (rejoinCode) {
-				this.myRejoinCode = rejoinCode;
-				if (gameId) {
-					const saved = GameSessionStore.getGame(gameId);
-					if (saved && saved.rejoinCode !== rejoinCode) {
-						GameSessionStore.saveGame({ ...saved, rejoinCode });
-					}
-				}
-				// The ack arrives AFTER the state snapshot: tell the UI directly, or the
-				// connection panel would only learn the code on the next state push.
-				this.emit('rejoinCodeAvailable', rejoinCode);
+			this.myRejoinCode = rejoinCode;
+			// The server's answer is authoritative in BOTH directions (see reconcileRejoinCode).
+			if (gameId) {
+				const updated = reconcileRejoinCode(GameSessionStore.getGame(gameId), rejoinCode);
+				if (updated) GameSessionStore.saveGame(updated);
 			}
+			// The ack arrives AFTER the state snapshot: tell the UI directly, or the
+			// connection panel would only learn the code on the next state push.
+			this.emit('rejoinCodeAvailable', rejoinCode);
 			// No client-side "joined" line: the SERVER owns the entry voice (it announces
 			// the reconnection transition) — a second line here just echoed it.
 		});
