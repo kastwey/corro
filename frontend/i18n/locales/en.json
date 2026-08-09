@@ -1234,6 +1234,7 @@
     "assembly_pick_own_slot": "Which of your pieces gets {{card}}?",
     "assembly_pick_give_slot": "Which of your pieces do you give in exchange?",
     "assembly_status_piles": "Deck: {{draw}}. Discards: {{discard}}.",
+    "assembly_status_exiled": "Out of the game: {{count}}.",
     "assembly_pile_deck": "Deck",
     "assembly_pile_discard": "Discards",
     "help_cmd_assembly_piles": "Read the deck and discard counts",

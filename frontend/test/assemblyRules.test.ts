@@ -276,3 +276,18 @@ test('card help describes what the expansion changed, not the plain card', () =>
 	assert.equal(assemblyCardHelp(gs, 's-double', t), 'game.assembly_help_doubleact');
 	assert.equal(assemblyCardHelp(gs, 's-handswap', t), 'game.assembly_help_handswap');
 });
+
+test('the status line counts each slot state, sealed pieces included', () => {
+	const gs = game([seat('me', ['p-red'], [
+		slot('red', { shields: [inst('e-red', 2)], sealed: true }),
+		slot('grey', { inert: true }),
+		slot('green', { afflictions: [inst('x-red', 1)] }),
+	])]);
+
+	const line = assemblyStatusText(gs, 'me', t)!;
+	// Sealed and inert pieces are functional; only the damaged one is not.
+	assert.match(line, /game\.assembly_status_progress\(2\|4\)/);
+	assert.match(line, /game\.assembly_state_locked/);   // the sealed piece reads as secured
+	assert.match(line, /game\.assembly_state_afflicted/);
+	assert.equal(functionalColors(gs.assembly!.seats[0]), 2);
+});

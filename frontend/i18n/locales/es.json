@@ -1234,6 +1234,7 @@
     "assembly_pick_own_slot": "¿En qué pieza tuya aplicas {{card}}?",
     "assembly_pick_give_slot": "¿Qué pieza tuya entregas a cambio?",
     "assembly_status_piles": "Mazo: {{draw}}. Descartes: {{discard}}.",
+    "assembly_status_exiled": "Fuera de la partida: {{count}}.",
     "assembly_pile_deck": "Mazo",
     "assembly_pile_discard": "Descartes",
     "help_cmd_assembly_piles": "Leer los recuentos del mazo y los descartes",

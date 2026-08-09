@@ -62,7 +62,8 @@
     "assembly_exiled_self": "Retiras la avería del $t({{piece}}) de {{target}} y la sacas del taller para siempre",
     "assembly_exiled_own": "{{player}} retira la avería de su propio $t({{piece}}) y la saca del taller para siempre",
     "assembly_exiled_own_self": "Retiras la avería de tu propio $t({{piece}}) y la sacas del taller para siempre",
-    "assembly_help_piece_inert": "Módulo blindado: instálalo como cualquier otro. Es plancha maciza: ninguna avería lo toca y no se le puede hacer mantenimiento, así que sigue operativo mientras lo conserves. Solo la grúa, una requisa o un cambio total pueden quitártelo."
+    "assembly_help_piece_inert": "Módulo blindado: instálalo como cualquier otro. Es plancha maciza: ninguna avería lo toca y no se le puede hacer mantenimiento, así que sigue operativo mientras lo conserves. Solo la grúa, una requisa o un cambio total pueden quitártelo.",
+    "assembly_status_exiled": "Fuera del taller: {{count}}."
   },
   "tokens": {
     "wrench": "Llave inglesa",

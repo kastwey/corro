@@ -151,10 +151,17 @@ export class AssemblyBoard {
 
 	private pileStatusText(): string | null {
 		const assembly = this.deps.getGameState()?.assembly;
-		return assembly ? this.deps.tSync('game.assembly_status_piles', {
+		if (!assembly) return null;
+		const piles = this.deps.tSync('game.assembly_status_piles', {
 			draw: assembly.drawCount ?? 0,
 			discard: assembly.discardCount ?? 0,
-		}) : null;
+		});
+		// Cards taken out of the game are NEWS only once some have been: on a table with no
+		// exile in play, a permanent "0" would be noise on every press of the key.
+		const exiled = assembly.exiledCount ?? 0;
+		return exiled > 0
+			? `${piles} ${this.deps.tSync('game.assembly_status_exiled', { count: exiled })}`
+			: piles;
 	}
 
 	// ── The hand ──────────────────────────────────────────────────────────────

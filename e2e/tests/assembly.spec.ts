@@ -43,7 +43,7 @@ test('assembly: install, auto-targeted breakdown, refusal, face-down discard, re
 	await expect(anaCards.locator('[data-card-art="package"]')).toHaveCount(3);
 	await expect(anaCards.first()).toHaveAttribute('aria-label', /Reactor/);
 	await expect(ana.locator('.hand-card--info')).toHaveCount(0);
-	await expect(ana.locator('.assembly-piles [data-pile="deck"] .gcard__back-label')).toHaveText('62');
+	await expect(ana.locator('.assembly-piles [data-pile="deck"] .gcard__back-label')).toHaveText('87');
 	await expect(ana.locator('.assembly-piles [data-pile="discard"] .gcard__back-label')).toHaveText('0');
 	await expect(ana.locator('#board .assembly-rack')).toHaveCount(2);
 	const pileSize = await ana.locator('.assembly-piles [data-pile="deck"] .gcard').evaluate(element => {
@@ -56,7 +56,7 @@ test('assembly: install, auto-targeted breakdown, refusal, face-down discard, re
 	await expect(ana.locator('.dice-control')).toBeHidden();
 	await anaCards.first().focus();
 	await ana.keyboard.press('d');
-	await expectAnnouncement(ana, /Mazo: 62\. Descartes: 0\./);
+	await expectAnnouncement(ana, /Mazo: 87\. Descartes: 0\./);
 	await expect(anaCards.first()).toBeFocused();
 
 	// ── Per-card HELP (live-play request): the row's Ayuda opens a reading dialog with

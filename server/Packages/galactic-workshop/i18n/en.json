@@ -62,7 +62,8 @@
     "assembly_exiled_self": "You haul the breakdown off {{target}}'s $t({{piece}}) and out of the workshop for good",
     "assembly_exiled_own": "{{player}} hauls the breakdown off their own $t({{piece}}) and out of the workshop for good",
     "assembly_exiled_own_self": "You haul the breakdown off your own $t({{piece}}) and out of the workshop for good",
-    "assembly_help_piece_inert": "Armoured module: install it like any other. It is solid plating — no breakdown can touch it and no maintenance can be done on it — so it stays operational for as long as you keep it. Only the crane, a requisition or a total trade-in can take it off you."
+    "assembly_help_piece_inert": "Armoured module: install it like any other. It is solid plating — no breakdown can touch it and no maintenance can be done on it — so it stays operational for as long as you keep it. Only the crane, a requisition or a total trade-in can take it off you.",
+    "assembly_status_exiled": "Hauled out of the workshop: {{count}}."
   },
   "tokens": {
     "wrench": "Wrench",
