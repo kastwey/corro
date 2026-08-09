@@ -103,9 +103,12 @@ export class CategoriesBoard {
 		this.shell.className = 'categories-shell';
 		this.shell.tabIndex = -1;
 		this.shell.innerHTML = `
-			<div class="categories-hero" aria-hidden="true">
-				<span class="categories-hero__halo"></span>
-				<span class="categories-hero__letter"></span>
+			<!-- The round's letter die. Decoration, and aria-hidden on purpose: the same letter
+			     is spoken in the round headline, printed in the sheet heading and answered by T,
+			     so a player who never sees this loses nothing. -->
+			<div class="categories-die" aria-hidden="true">
+				<span class="categories-die__face"></span>
+				<span class="categories-die__letter"></span>
 			</div>
 			<div class="categories-headline">
 				<h2 class="categories-title"></h2>
@@ -335,7 +338,7 @@ export class CategoriesBoard {
 		this.nowLine.textContent = categoriesNowPlayingText(gs, myId, this.deps.tSync) ?? '';
 		this.dutyLine.textContent = categoriesDutyText(gs, myId, this.deps.tSync) ?? '';
 		this.progressLine.textContent = categoriesProgressText(gs, this.deps.tSync) ?? '';
-		this.required<HTMLElement>('.categories-hero__letter').textContent = round.letter;
+		this.renderDie(round.letter, round.roundNumber);
 
 		// The sheet is the writers' surface; the judge never has one. Both are hidden during
 		// review, when the answers themselves are the only thing on the table.
@@ -367,6 +370,23 @@ export class CategoriesBoard {
 			|| focusedAfterUpdate.closest('[hidden]'))) {
 			this.focusHand();
 		}
+	}
+
+	/**
+	 * The die shows the round's letter. Re-stamping the round NUMBER (not the letter) restarts
+	 * the roll, so two rounds that happen to draw the same letter still read as two rolls — and
+	 * a repaint for any other reason never re-rolls a die that is already sitting there.
+	 */
+	private renderDie(letter: string, roundNumber: number): void {
+		const face = this.required<HTMLElement>('.categories-die');
+		this.required<HTMLElement>('.categories-die__letter').textContent = letter;
+		if (face.dataset.round === String(roundNumber)) return;
+		face.dataset.round = String(roundNumber);
+		// Restart the CSS animation: removing the class and forcing a reflow is the only way to
+		// replay it on an element that never leaves the DOM.
+		face.classList.remove('categories-die--rolling');
+		void face.offsetWidth;
+		face.classList.add('categories-die--rolling');
 	}
 
 	/**

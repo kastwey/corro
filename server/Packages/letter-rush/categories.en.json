@@ -1,7 +1,7 @@
 {
   "letters": [
     "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
-    "L", "M", "N", "O", "P", "R", "S", "T", "W"
+    "K", "L", "M", "N", "O", "P", "R", "S", "T", "V", "W"
   ],
   "categories": [
     { "id": "animal", "name": "An animal" },
