@@ -1,0 +1,13 @@
+{
+  "letters": ["A", "B", "C", "D", "E", "F", "G", "L", "M", "P", "R", "S", "T"],
+  "categories": [
+    { "id": "animal", "name": "Un animal" },
+    { "id": "country", "name": "Un país" },
+    { "id": "food", "name": "Algo que se pueda comer" },
+    { "id": "colour", "name": "Un color" },
+    { "id": "job", "name": "Una profesión" },
+    { "id": "sport", "name": "Un deporte" },
+    { "id": "clothing", "name": "Una prenda de ropa" },
+    { "id": "vehicle", "name": "Una forma de desplazarse" }
+  ]
+}

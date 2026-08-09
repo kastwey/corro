@@ -8,6 +8,7 @@ import type {
 	JourneyRulesConfig, AssemblyRulesConfig, DraftRulesConfig, SheddingRulesConfig,
 	TriviaRulesConfig,
 	ForbiddenRulesConfig,
+	CategoriesRulesConfig,
 } from './models.js';
 
 type T = (key: string, vars?: Record<string, unknown>) => string;
@@ -113,6 +114,23 @@ export function buildForbiddenRulesLines(rules: ForbiddenRulesConfig | null | un
 		t('game.forbidden_rules_correct', { points: r.correctPoints }),
 		t('game.forbidden_rules_violation', { points: r.violationPenalty }),
 		t('game.forbidden_rules_cycles', { count: r.cycles }),
+	];
+}
+
+// ── Categories ─────────────────────────────────────────────────────────────────
+
+export function buildCategoriesRulesLines(rules: CategoriesRulesConfig | null | undefined, t: T): string[] {
+	const r = rules ?? {
+		roundSeconds: 120,
+		categoriesPerRound: 6,
+		pointsPerAnswer: 1,
+		cycles: 1,
+	};
+	return [
+		t('game.categories_rules_time', { seconds: r.roundSeconds }),
+		t('game.categories_rules_categories', { count: r.categoriesPerRound }),
+		t('game.categories_rules_points', { points: r.pointsPerAnswer }),
+		t('game.categories_rules_cycles', { count: r.cycles }),
 	];
 }
 

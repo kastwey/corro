@@ -4,7 +4,7 @@ import type { AnnouncementEvent } from './gameClient.js';
 import type { AnnounceFn } from './announcer.js';
 import { commitAnnouncerBeforeState } from './announcer.js';
 import type { CardDrawnNotification } from './models.js';
-import type { GameCommand, GameState, Player, Square, CommandResponse, PropertyMortgagedResponse, BuildingsSoldResponse, BuildingBuiltResponse, TradeSideDto } from './models.js';
+import type { CategoriesEntry, CategoriesRuling, GameCommand, GameState, Player, Square, CommandResponse, PropertyMortgagedResponse, BuildingsSoldResponse, BuildingBuiltResponse, TradeSideDto } from './models.js';
 import { translateServerErrorSync, i18nBinder } from './i18nBinder.js';
 import { resolveSquareName } from './localizeSquare.js';
 import type { Board } from './board.js';
@@ -91,7 +91,7 @@ export interface GameManagerEvents {
 	'auctionPassed': AuctionPassedData;
 	'auctionEnded': AuctionEndedData;
 	'auctionTimerTick': { squareIndex: number; secondsRemaining: number; currentBid: number; highestBidderId?: string; highestBidderName?: string };
-	'forbiddenTimerTick': { secondsRemaining: number };
+	'roundClockTick': { secondsRemaining: number };
 	// Debt & Bankruptcy events
 	'propertyMortgaged': PropertyMortgagedResponse;
 	'propertyUnmortgaged': any;
@@ -305,8 +305,8 @@ export class GameManager {
 			this.emit('auctionTimerTick' as keyof GameManagerEvents, data);
 		});
 
-		gameClient.on('forbiddenTimerTick', data => {
-			this.emit('forbiddenTimerTick', data);
+		gameClient.on('roundClockTick', data => {
+			this.emit('roundClockTick', data);
 		});
 
 		// Card drawn (the card decks) - drives the visual reveal
@@ -642,6 +642,30 @@ export class GameManager {
 
 	async forbiddenViolation(cardSequence: number): Promise<void> {
 		await this.send({ $type: 'FORBIDDEN_VIOLATION', cardSequence });
+	}
+
+	/** Categories family: the round judge starts the authoritative writing clock. */
+	async categoriesStartRound(roundNumber: number): Promise<void> {
+		await this.send({ $type: 'CATEGORIES_START_ROUND', roundNumber });
+	}
+
+	/** Categories family: save this writer's sheet. The WHOLE sheet travels every time, so a
+	 *  dropped message costs nothing — the next one carries the same answers again. */
+	async categoriesWrite(roundNumber: number, entries: CategoriesEntry[]): Promise<void> {
+		await this.send({ $type: 'CATEGORIES_WRITE', roundNumber, entries });
+	}
+
+	async categoriesFinishWriting(roundNumber: number): Promise<void> {
+		await this.send({ $type: 'CATEGORIES_FINISH_WRITING', roundNumber });
+	}
+
+	/** Categories family: the judge's verdicts for one category — OFF-TURN for everyone else. */
+	async categoriesRulePrompt(
+		roundNumber: number,
+		promptIndex: number,
+		rulings: CategoriesRuling[],
+	): Promise<void> {
+		await this.send({ $type: 'CATEGORIES_RULE_PROMPT', roundNumber, promptIndex, rulings });
 	}
 
 	/** Journey family: draw the top card (the start of your turn). */

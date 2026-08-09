@@ -2,20 +2,21 @@ using System.Collections.Concurrent;
 
 namespace CorroServer.Services;
 
-public sealed record ForbiddenTimerTickEventArgs(int SecondsRemaining);
+public sealed record RoundClockTickEventArgs(int SecondsRemaining);
 
-/// <summary>One authoritative timed clue turn per game. It mirrors the auction clock: the
+/// <summary>One authoritative timed round per game, whichever family is playing it (the
+/// forbidden clue turn, the categories writing round). It mirrors the auction clock: the
 /// service samples a start timestamp held by live game state, emits silent visual ticks and
 /// fires one expiry event; business rules stay in the command handler.</summary>
-public interface IForbiddenTurnTimerService
+public interface IRoundClockService
 {
 	void Arm(string gameId, Func<DateTime?> startedAtUtc, Func<int> durationSeconds);
 	void Cancel(string gameId);
-	event Func<string, ForbiddenTimerTickEventArgs, Task>? OnTimerTick;
-	event Func<string, Task>? OnTurnExpired;
+	event Func<string, RoundClockTickEventArgs, Task>? OnTick;
+	event Func<string, Task>? OnExpired;
 }
 
-public sealed class ForbiddenTurnTimerService : IForbiddenTurnTimerService, IDisposable
+public sealed class RoundClockService : IRoundClockService, IDisposable
 {
 	private const double TickMilliseconds = 250;
 
@@ -28,13 +29,13 @@ public sealed class ForbiddenTurnTimerService : IForbiddenTurnTimerService, IDis
 	}
 
 	private readonly ConcurrentDictionary<string, Window> _windows = new();
-	private readonly ILogger<ForbiddenTurnTimerService>? _logger;
+	private readonly ILogger<RoundClockService>? _logger;
 
-	public ForbiddenTurnTimerService(ILogger<ForbiddenTurnTimerService>? logger = null)
+	public RoundClockService(ILogger<RoundClockService>? logger = null)
 		=> _logger = logger;
 
-	public event Func<string, ForbiddenTimerTickEventArgs, Task>? OnTimerTick;
-	public event Func<string, Task>? OnTurnExpired;
+	public event Func<string, RoundClockTickEventArgs, Task>? OnTick;
+	public event Func<string, Task>? OnExpired;
 
 	internal static AuthoritativeCountdown.Decision Evaluate(
 		DateTime startedAtUtc,
@@ -84,9 +85,9 @@ public sealed class ForbiddenTurnTimerService : IForbiddenTurnTimerService, IDis
 			var duration = window.DurationSeconds();
 			var decision = Evaluate(started.Value, duration, DateTime.UtcNow);
 			var seconds = decision.RemainingSeconds;
-			if (Interlocked.Exchange(ref window.LastSeconds, seconds) != seconds && OnTimerTick is not null)
+			if (Interlocked.Exchange(ref window.LastSeconds, seconds) != seconds && OnTick is not null)
 			{
-				await OnTimerTick(gameId, new ForbiddenTimerTickEventArgs(seconds));
+				await OnTick(gameId, new RoundClockTickEventArgs(seconds));
 			}
 			if (!decision.Expired)
 			{
@@ -94,14 +95,14 @@ public sealed class ForbiddenTurnTimerService : IForbiddenTurnTimerService, IDis
 			}
 
 			Cancel(gameId);
-			if (OnTurnExpired is not null)
+			if (OnExpired is not null)
 			{
-				await OnTurnExpired(gameId);
+				await OnExpired(gameId);
 			}
 		}
 		catch (Exception exception)
 		{
-			_logger?.LogError(exception, "ForbiddenTurnTimerService: error ticking turn for {GameId}", gameId);
+			_logger?.LogError(exception, "RoundClockService: error ticking the round for {GameId}", gameId);
 		}
 	}
 

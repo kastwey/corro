@@ -5,6 +5,7 @@
 // hand. Pure DOM/wiring — no family rules or i18n of its own. Lives once so the convention
 // is fix-once; each board keeps its own visual region and words its own status text.
 
+import { isTypingTarget } from './typingTarget.js';
 import type { GameState } from './models.js';
 import type { HelpShortcut } from './shortcuts.js';
 import type { HandPanel } from './handPanel.js';
@@ -64,6 +65,8 @@ export function registerStatusKeys(element: HTMLElement, deps: StatusKeysDeps): 
 	element.addEventListener('keydown', (e) => {
 		if (e.key !== 's' && e.key !== 'S') return;
 		if (e.ctrlKey || e.altKey || e.metaKey) return;
+		// A surface with a text field on it (the categories sheet) types its own letters.
+		if (isTypingTarget(e.target)) return;
 		const gs = deps.getGameState();
 		const myId = deps.getMyPlayerId();
 		if (!gs || !myId) return;
@@ -90,6 +93,7 @@ export function registerPileStatusKey(element: HTMLElement, deps: PileStatusKeyD
 	element.addEventListener('keydown', (e) => {
 		if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
 		if (e.key.toLowerCase() !== 'd') return;
+		if (isTypingTarget(e.target)) return;
 		const text = deps.read();
 		if (!text) return;
 		e.preventDefault();

@@ -18,6 +18,7 @@ and sounds. Different packages can therefore share mechanics without sharing nam
 | `draft` | Everyone picks secretly, then hands rotate | yes | hand and public table | yes |
 | `shedding` | Match the discard or draw | yes | hand and discard pile | yes |
 | `exploding` | Play actions, then draw against elimination risk | yes | hand and draw pile | yes |
+| `categories` | Everyone writes to shared prompts at once; a rotating judge rules | yes, until the review | round card, sheet and answer list | — |
 
 The server registry in `server/Services/Corro/Families/GameFamilies.cs` is authoritative.
 The format details for each family live in [`../CORRO_FORMAT.md`](../CORRO_FORMAT.md).
@@ -73,10 +74,27 @@ leaves the server. Persistence stores the complete authoritative state.
 Projection code is security-sensitive. A new or changed family must test both what the
 owner can see and what rivals and unauthenticated viewers cannot see.
 
+Categories hides answers the same way, and for the same reason: while the writing clock runs, an
+answer reaches its own writer and nobody else — not a rival, not the round's judge, not the public
+view. It is the one family whose hidden information becomes PUBLIC mid-round: at review the answers
+are read out and ruled on, so everybody sees them all.
+
 Forbidden Words also separates **content language** from interface language. The host chooses one
 package-supplied word deck in the lobby (defaulting to the host interface), and that shared choice is
 visible to the room and locked when play starts. The clue-giver and monitor therefore adjudicate the
 same target and forbidden words even when their buttons and help are localized differently.
+
+## Timed rounds
+
+A family with an authoritative clock does not own a timer. It answers two questions from
+`IGameFamily` — `RoundClock(state)` (the live countdown, or null) and `ExpireRoundCommand(state)`
+(what resolves it) — and the session registry drives the one shared `RoundClockService` from those
+answers, re-sampling them on every state change. The remaining time is never stored: it is always
+recomputed from the start stamp and the duration, so a reconnecting player, a restored game and
+every other client agree on the same deadline. The expiry travels the ordinary command pipeline,
+so the rules and the spoken voice of a timeout live in a handler like every other outcome.
+
+Forbidden Words and Categories both use it, and neither has a line of timer code.
 
 ## Movement pacing
 

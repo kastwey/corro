@@ -407,7 +407,16 @@ public class CorroPackageSdkTests
 
 		var schemaDirectory = Path.Combine(destination, ".vscode", "schemas");
 		var schemaFiles = Directory.GetFiles(schemaDirectory, "*.json");
-		Assert.Equal(6, schemaFiles.Length);
+		// Every generated project ships the WHOLE schema set, whichever family it targets: an
+		// author who changes gameType by hand keeps working editor validation. Named rather than
+		// counted, so a schema that stops being copied says which one.
+		Assert.Equal(
+			new[]
+			{
+				"board.schema.json", "cards.schema.json", "categories.schema.json", "i18n.schema.json",
+				"manifest.schema.json", "questions.schema.json", "words.schema.json",
+			},
+			schemaFiles.Select(Path.GetFileName).OrderBy(name => name, StringComparer.Ordinal).ToArray());
 		foreach (var schema in schemaFiles)
 		{
 			using var parsed = JsonDocument.Parse(await File.ReadAllTextAsync(schema));
@@ -435,7 +444,14 @@ public class CorroPackageSdkTests
 		}
 
 		var definition = await new CorroServer.Services.Corro.CorroPackageLoader().LoadAsync(destination);
-		var playerCount = family == "forbidden" ? 4 : 2;
+		var playerCount = family switch
+		{
+			// The smallest table each family can legally seat: two teams of two, or a judge and
+			// the two writers whose answers can coincide.
+			"forbidden" => 4,
+			"categories" => 3,
+			_ => 2,
+		};
 		var players = definition.Manifest.Tokens.Take(playerCount).Select((token, index) => new CorroServer.Models.Player
 		{
 			Id = "player-" + index,

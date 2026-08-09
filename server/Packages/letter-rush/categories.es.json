@@ -1,0 +1,38 @@
+{
+  "letters": [
+    "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
+    "L", "M", "N", "O", "P", "R", "S", "T", "V"
+  ],
+  "categories": [
+    { "id": "animal", "name": "Un animal" },
+    { "id": "country", "name": "Un país" },
+    { "id": "city", "name": "Una ciudad" },
+    { "id": "food", "name": "Algo que se pueda comer" },
+    { "id": "drink", "name": "Algo que se pueda beber" },
+    { "id": "colour", "name": "Un color" },
+    { "id": "job", "name": "Una profesión" },
+    { "id": "sport", "name": "Un deporte" },
+    { "id": "instrument", "name": "Un instrumento musical" },
+    { "id": "clothing", "name": "Una prenda de ropa" },
+    { "id": "kitchen", "name": "Algo que hay en una cocina" },
+    { "id": "beach", "name": "Algo que te llevas a la playa" },
+    { "id": "plant", "name": "Una planta o un árbol" },
+    { "id": "film", "name": "Una película" },
+    { "id": "book", "name": "Un libro" },
+    { "id": "song", "name": "Una canción" },
+    { "id": "name", "name": "Un nombre de persona" },
+    { "id": "surname", "name": "Un apellido" },
+    { "id": "vehicle", "name": "Una forma de desplazarse" },
+    { "id": "body", "name": "Una parte del cuerpo" },
+    { "id": "school", "name": "Una asignatura" },
+    { "id": "tool", "name": "Una herramienta" },
+    { "id": "sound", "name": "Algo que hace ruido" },
+    { "id": "cold", "name": "Algo frío" },
+    { "id": "round", "name": "Algo redondo" },
+    { "id": "verb", "name": "Algo que se pueda hacer" },
+    { "id": "adjective", "name": "Una palabra que describa a una persona" },
+    { "id": "gift", "name": "Un buen regalo" },
+    { "id": "boring", "name": "Algo aburrido" },
+    { "id": "expensive", "name": "Algo caro" }
+  ]
+}

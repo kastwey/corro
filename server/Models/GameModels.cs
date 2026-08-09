@@ -349,6 +349,15 @@ public record GameState
 	/// <summary>The forbidden-family rules in effect, persisted for restore and shown in the
 	/// active-rules dialog.</summary>
 	public Corro.ForbiddenRulesConfig? ForbiddenRules { get; set; }
+	/// <summary>Categories-family scores and the round in play. Rival answers are removed by
+	/// CategoriesFamily.ProjectFor while the writing clock runs.</summary>
+	public CategoriesState? Categories { get; set; }
+	/// <summary>The resolved host-language categories deck (prompts + letters), shuffled at start.
+	/// Server-only: it is the source of every future round, so ProjectFor removes it.</summary>
+	public Corro.CategoryDeckDef? CategoryDeck { get; set; }
+	/// <summary>The categories-family rules in effect, persisted for restore and shown in the
+	/// active-rules dialog.</summary>
+	public Corro.CategoriesRulesConfig? CategoriesRules { get; set; }
 	/// <summary>The property rules in effect (economy, holding, buildings) — public config the
 	/// client shows in the active-rules dialog. Null outside the property family.</summary>
 	public GameSettings? Settings { get; set; }

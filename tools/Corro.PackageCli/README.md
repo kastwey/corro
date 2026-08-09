@@ -17,7 +17,7 @@ dotnet run --project tools/Corro.PackageCli -p:SkipFrontendBuild=true -- new jou
 ```
 
 `new` supports `property`, `race`, `track`, `journey`, `assembly`, `draft`, `shedding`,
-`exploding`, `trivia` and `forbidden`. Every template is neutral, original, bilingual and immediately valid.
+`exploding`, `trivia`, `forbidden` and `categories`. Every template is neutral, original, bilingual and immediately valid.
 The destination must be absent or empty; the command never overwrites an author's files.
 
 The generated project contains:

@@ -139,6 +139,8 @@ public sealed record Manifest
 	public TriviaRulesConfig? TriviaRules { get; init; }
 	/// <summary>Rules of the "forbidden" family (manifest "forbiddenRules"). Null for other families.</summary>
 	public ForbiddenRulesConfig? ForbiddenRules { get; init; }
+	/// <summary>Rules of the "categories" family (manifest "categoriesRules"). Null for other families.</summary>
+	public CategoriesRulesConfig? CategoriesRules { get; init; }
 	/// <summary>The host-customizable rules this board exposes (each a generic catalog code with its
 	/// default, type, bounds, group and i18n name key). The lobby renders the editable ones.</summary>
 	public List<HouseRuleDef> HouseRules { get; init; } = new();
@@ -321,6 +323,10 @@ public sealed record GameDefinition
 	/// <summary>The forbidden-word decks, keyed by locale. The host's game language resolves one
 	/// deck at start; target and forbidden words then remain in that language for every player.</summary>
 	public Dictionary<string, List<ForbiddenWordDef>>? ForbiddenWords { get; init; }
+	/// <summary>The categories decks, keyed by locale: each locale's prompts and its own letters.
+	/// The host's game language resolves one deck at start, and the whole table then writes to the
+	/// same prompts in the same language. Null for other families.</summary>
+	public Dictionary<string, CategoryDeckDef>? CategoryDecks { get; init; }
 	/// <summary>The journey deck catalog (cards.json as card definitions with copy counts).
 	/// Null for other families — the journey family has no board at all.</summary>
 	public List<JourneyCardDef>? JourneyDeck { get; init; }

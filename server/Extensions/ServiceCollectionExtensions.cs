@@ -161,7 +161,7 @@ public static class ServiceCollectionExtensions
 		services.AddSingleton<PackageRestorer>();
 		services.AddSingleton<IAuctionTimerService, AuctionTimerService>();
 		services.AddSingleton<INopeWindowService, NopeWindowService>();
-		services.AddSingleton<IForbiddenTurnTimerService, ForbiddenTurnTimerService>();
+		services.AddSingleton<IRoundClockService, RoundClockService>();
 		services.AddSingleton<ILiveKitVoiceService, LiveKitVoiceService>();
 		// The process-wide live-session registry (in-memory games, connection maps, persisters). A
 		// single injected singleton replacing GameHub's former static state.

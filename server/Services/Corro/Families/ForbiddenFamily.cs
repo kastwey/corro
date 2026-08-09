@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Text;
 using CorroServer.Models;
 using CorroServer.Models.Corro;
 using CorroServer.Services.Commands;
@@ -123,7 +121,7 @@ public sealed class ForbiddenFamily : IGameFamily
 					throw new InvalidOperationException(
 						$"forbidden locale '{locale}' has a blank or duplicate card id '{word.Id}'.");
 				}
-				var target = Normalize(word.Target);
+				var target = AnswerText.Normalize(word.Target);
 				if (target.Length == 0 || !targets.Add(target))
 				{
 					throw new InvalidOperationException(
@@ -137,7 +135,7 @@ public sealed class ForbiddenFamily : IGameFamily
 				var banned = new HashSet<string>(StringComparer.Ordinal);
 				foreach (var forbidden in word.Forbidden)
 				{
-					var normalized = Normalize(forbidden);
+					var normalized = AnswerText.Normalize(forbidden);
 					if (normalized.Length == 0 || normalized == target || !banned.Add(normalized))
 					{
 						throw new InvalidOperationException(
@@ -223,6 +221,16 @@ public sealed class ForbiddenFamily : IGameFamily
 	public Task<ServerResponse>? ProcessRoll(Func<int> rollSingleDie, Player player, GameContext context)
 		=> null;
 
+	public RoundClock? RoundClock(GameState state)
+		=> state.Forbidden?.Turn is { Phase: ForbiddenTurnPhase.Active } turn
+			? new RoundClock(turn.StartedAt, turn.DurationSeconds)
+			: null;
+
+	public GameCommand? ExpireRoundCommand(GameState state)
+		=> state.Forbidden?.Turn is { Phase: ForbiddenTurnPhase.Active } turn
+			? new ForbiddenExpireTurnCommand { PlayerId = turn.ClueGiverId }
+			: null;
+
 	public bool HasHiddenInformation => true;
 
 	public GameState ProjectFor(GameState state, string? playerId)
@@ -307,27 +315,5 @@ public sealed class ForbiddenFamily : IGameFamily
 			["monitor"] = Name(turn.MonitorId),
 			["actorId"] = turn.ClueGiverId,
 		});
-	}
-
-	private static string Normalize(string value)
-	{
-		var decomposed = (value ?? string.Empty).Trim().ToLowerInvariant().Normalize(NormalizationForm.FormD);
-		var builder = new StringBuilder(decomposed.Length);
-		foreach (var character in decomposed)
-		{
-			if (CharUnicodeInfo.GetUnicodeCategory(character) == UnicodeCategory.NonSpacingMark)
-			{
-				continue;
-			}
-			if (char.IsLetterOrDigit(character))
-			{
-				builder.Append(character);
-			}
-			else if (char.IsWhiteSpace(character))
-			{
-				builder.Append(' ');
-			}
-		}
-		return string.Join(' ', builder.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries));
 	}
 }

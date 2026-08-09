@@ -7,7 +7,7 @@
   "properties": {
     "format": { "const": "corro/v1", "description": "Corro package format version." },
     "gameType": {
-      "enum": ["property", "race", "track", "journey", "assembly", "draft", "shedding", "exploding", "trivia", "forbidden"],
+      "enum": ["property", "race", "track", "journey", "assembly", "draft", "shedding", "exploding", "trivia", "forbidden", "categories"],
       "description": "The engine family that owns this package's interaction model."
     },
     "engineVersion": { "type": "string", "minLength": 1 },
@@ -57,6 +57,7 @@
     "explodingRules": { "$ref": "#/$defs/explodingRules" },
     "triviaRules": { "$ref": "#/$defs/triviaRules" },
     "forbiddenRules": { "$ref": "#/$defs/forbiddenRules" },
+    "categoriesRules": { "$ref": "#/$defs/categoriesRules" },
     "ruleGroups": {
       "type": "array",
       "items": {
@@ -116,6 +117,10 @@
     {
       "if": { "properties": { "gameType": { "const": "forbidden" } }, "required": ["gameType"] },
       "then": { "required": ["forbiddenRules"] }
+    },
+    {
+      "if": { "properties": { "gameType": { "const": "categories" } }, "required": ["gameType"] },
+      "then": { "required": ["categoriesRules"] }
     }
   ],
   "additionalProperties": false,
@@ -325,6 +330,16 @@
         "passesPerTurn": { "type": "integer", "minimum": 0, "maximum": 10 },
         "correctPoints": { "type": "integer", "minimum": 1, "maximum": 10 },
         "violationPenalty": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "cycles": { "type": "integer", "minimum": 1, "maximum": 5 }
+      },
+      "additionalProperties": false
+    },
+    "categoriesRules": {
+      "type": "object",
+      "properties": {
+        "roundSeconds": { "type": "integer", "minimum": 30, "maximum": 600 },
+        "categoriesPerRound": { "type": "integer", "minimum": 3, "maximum": 12 },
+        "pointsPerAnswer": { "type": "integer", "minimum": 1, "maximum": 10 },
         "cycles": { "type": "integer", "minimum": 1, "maximum": 5 }
       },
       "additionalProperties": false

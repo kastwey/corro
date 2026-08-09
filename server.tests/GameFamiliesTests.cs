@@ -35,7 +35,7 @@ public class GameFamiliesTests
 	[Fact]
 	public void Supported_types_list_the_registered_families_in_order()
 		// The validator's "supported: …" message uses this order — keep it stable.
-		=> Assert.Equal(new[] { "property", "race", "track", "journey", "assembly", "draft", "shedding", "exploding", "trivia", "forbidden" }, GameFamilies.SupportedTypes);
+		=> Assert.Equal(new[] { "property", "race", "track", "journey", "assembly", "draft", "shedding", "exploding", "trivia", "forbidden", "categories" }, GameFamilies.SupportedTypes);
 
 	[Theory]
 	[InlineData("property", true)]

@@ -50,6 +50,21 @@ public interface IGameFamily
 	Task<ServerResponse>? ProcessRoll(Func<int> rollSingleDie, Player player, GameContext context);
 
 	/// <summary>
+	/// The authoritative countdown this state is currently running, or null when nothing is
+	/// timed. The session registry samples it on every state change and drives the one shared
+	/// <see cref="IRoundClockService"/> from the answer, so a family with a clock never needs
+	/// its own timer service, its own broadcast or its own branch in the hub.
+	/// </summary>
+	RoundClock? RoundClock(GameState state) => null;
+
+	/// <summary>
+	/// The server-issued command that resolves an expired <see cref="RoundClock"/>, or null when
+	/// the family has no clock. It travels the ordinary command pipeline, so the rules and the
+	/// spoken voice of a timeout live in a handler like every other outcome.
+	/// </summary>
+	GameCommand? ExpireRoundCommand(GameState state) => null;
+
+	/// <summary>
 	/// True when the family hides per-player information (hands, deck order…). State updates
 	/// are then projected per player and sent per connection (see <see cref="GameStateFanout"/>)
 	/// — never broadcast whole, which would hand every client the others' secrets.
@@ -109,6 +124,11 @@ public interface IGameFamily
 /// <summary>Marker for the per-family runtime (board + rules) carried by
 /// <see cref="GameContext.FamilyRuntime"/>. Each family defines its own record.</summary>
 public interface IFamilyRuntime { }
+
+/// <summary>A live authoritative countdown: when it started and how long it runs. The remaining
+/// time is never stored — it is always recomputed from these two, so a reconnecting player, a
+/// restored game and every other client agree on the same deadline.</summary>
+public readonly record struct RoundClock(DateTime? StartedAt, int DurationSeconds);
 
 /// <summary>Everything a family gets to build a new game.</summary>
 public sealed record FamilyStartContext

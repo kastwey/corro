@@ -441,7 +441,7 @@ export function attachKeyHandlers(opts: KeyHandlersOptions) {
 		const target = ev.target as HTMLElement | null;
 		const key = ev.key.toLowerCase();
 		const fullSpec = normalizeKeySpec(ev);
-		const isTextInput = !!(target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || (target as any).isContentEditable));
+		const isTextInput = !!(target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable));
 
 		// Don't hijack activation keys (Enter / Space) when focus is on a native
 		// interactive control (links, buttons, selects): let the browser activate

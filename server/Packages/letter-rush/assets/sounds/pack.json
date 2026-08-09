@@ -1,0 +1,13 @@
+{
+  "packId": "letter-rush",
+  "events": {
+    "turn.you": "turn-you.ogg",
+    "game.over": "game-over.ogg",
+    "categories.start": "turn-you.ogg",
+    "categories.tick": "timer-tick.ogg",
+    "categories.finished": "draw.ogg",
+    "categories.ruled": "discard.ogg",
+    "categories.warning": "turn-you.ogg",
+    "categories.time_up": "game-over.ogg"
+  }
+}

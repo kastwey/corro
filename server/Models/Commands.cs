@@ -27,6 +27,10 @@ namespace CorroServer.Models;
 [JsonDerivedType(typeof(ForbiddenCorrectCommand), "FORBIDDEN_CORRECT")]
 [JsonDerivedType(typeof(ForbiddenPassCommand), "FORBIDDEN_PASS")]
 [JsonDerivedType(typeof(ForbiddenViolationCommand), "FORBIDDEN_VIOLATION")]
+[JsonDerivedType(typeof(CategoriesStartRoundCommand), "CATEGORIES_START_ROUND")]
+[JsonDerivedType(typeof(CategoriesWriteCommand), "CATEGORIES_WRITE")]
+[JsonDerivedType(typeof(CategoriesFinishWritingCommand), "CATEGORIES_FINISH_WRITING")]
+[JsonDerivedType(typeof(CategoriesRulePromptCommand), "CATEGORIES_RULE_PROMPT")]
 [JsonDerivedType(typeof(JourneyDrawCommand), "JOURNEY_DRAW")]
 [JsonDerivedType(typeof(JourneyPlayCommand), "JOURNEY_PLAY")]
 [JsonDerivedType(typeof(JourneyDiscardCommand), "JOURNEY_DISCARD")]
@@ -182,6 +186,66 @@ public record ForbiddenViolationCommand : GameCommand
 public record ForbiddenExpireTurnCommand : GameCommand
 {
 	public override string Type => "FORBIDDEN_EXPIRE_TURN";
+}
+
+/// <summary>Categories family: the round's judge starts the authoritative writing clock, once
+/// the table has read the letter and the categories.</summary>
+public record CategoriesStartRoundCommand : GameCommand
+{
+	public override string Type => "CATEGORIES_START_ROUND";
+	public int RoundNumber { get; init; }
+}
+
+/// <summary>Categories family: store this writer's answers. The client sends the WHOLE sheet it
+/// currently holds, so the command is idempotent and a lost message costs nothing: the next one
+/// carries the same answers again.</summary>
+public record CategoriesWriteCommand : GameCommand
+{
+	public override string Type => "CATEGORIES_WRITE";
+	public int RoundNumber { get; init; }
+	public List<CategoriesEntry> Entries { get; init; } = new();
+}
+
+/// <summary>One answer on a written sheet.</summary>
+public record CategoriesEntry
+{
+	public required string CategoryId { get; init; }
+	public string Text { get; init; } = string.Empty;
+}
+
+/// <summary>Categories family: this writer has nothing more to add. When every writer has said
+/// so, the round moves to review without waiting the clock out.</summary>
+public record CategoriesFinishWritingCommand : GameCommand
+{
+	public override string Type => "CATEGORIES_FINISH_WRITING";
+	public int RoundNumber { get; init; }
+}
+
+/// <summary>Categories family: the judge rules on one category and moves on to the next. The
+/// ruling covers every answer at once, because that is the decision a judge actually makes:
+/// they read the category's answers together and say which ones stand.</summary>
+public record CategoriesRulePromptCommand : GameCommand
+{
+	public override string Type => "CATEGORIES_RULE_PROMPT";
+	public int RoundNumber { get; init; }
+	/// <summary>Which category is being ruled, to reject a ruling aimed at the previous one.</summary>
+	public int PromptIndex { get; init; }
+	public List<CategoriesRuling> Rulings { get; init; } = new();
+}
+
+/// <summary>One player's answer as the judge ruled it.</summary>
+public record CategoriesRuling
+{
+	public required string PlayerId { get; init; }
+	/// <summary>"accepted" | "rejected" | "duplicate".</summary>
+	public required string Verdict { get; init; }
+}
+
+/// <summary>Categories family: server-only resolution when the authoritative writing clock
+/// expires.</summary>
+public record CategoriesExpireRoundCommand : GameCommand
+{
+	public override string Type => "CATEGORIES_EXPIRE_ROUND";
 }
 
 /// <summary>Journey family: draw the top card (the start of your turn).</summary>
@@ -583,6 +647,18 @@ public record ForbiddenActionResponse : ServerResponse
 	/// <summary>"ready" | "start" | "correct" | "pass" | "violation" | "timeout".</summary>
 	public required string Action { get; init; }
 	public bool TurnEnded { get; init; }
+	public bool GameEnded { get; init; }
+}
+
+/// <summary>Categories family: outcome of a start/write/finish/ruling/timeout action.</summary>
+public record CategoriesActionResponse : ServerResponse
+{
+	public override string Type => "CATEGORIES_ACTION";
+	/// <summary>"start" | "write" | "finish" | "rule" | "timeout".</summary>
+	public required string Action { get; init; }
+	/// <summary>True when this action closed the writing phase and opened the review.</summary>
+	public bool ReviewStarted { get; init; }
+	public bool RoundEnded { get; init; }
 	public bool GameEnded { get; init; }
 }
 

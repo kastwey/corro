@@ -29,6 +29,8 @@ import { ExplodingBoard } from './explodingBoard.js';
 import { explodingStatusText } from './explodingRules.js';
 import { ForbiddenBoard } from './forbiddenBoard.js';
 import { forbiddenStatusText } from './forbiddenRules.js';
+import { CategoriesBoard } from './categoriesBoard.js';
+import { categoriesStatusText } from './categoriesRules.js';
 import { gameManager } from './gameManager.js';
 import { soundEvents } from './soundEvents.js';
 import { seatDisplayName } from './raceGeometry.js';
@@ -472,13 +474,35 @@ const forbiddenFamily = makeCardFamily('forbidden', forbiddenStatusText, deps =>
 		violation: sequence => { void gameManager.forbiddenViolation(sequence); },
 	},
 	});
-	gameManager.on('forbiddenTimerTick', ({ secondsRemaining }) => board.handleTimerTick(secondsRemaining));
+	gameManager.on('roundClockTick', ({ secondsRemaining }) => board.handleTimerTick(secondsRemaining));
+	return board;
+});
+
+// The round card IS the home surface: the letter, the job and the clock. A writer lands on
+// their sheet, a judge on the answers they are ruling — whichever exists for them right now.
+const categoriesFamily = makeCardFamily('categories', categoriesStatusText, deps => {
+	const board = new CategoriesBoard(deps.boardElement, {
+		getGameState: deps.getGameState,
+		getMyPlayerId: deps.getMyPlayerId,
+		announce: deps.announce,
+		tSync: deps.tSync,
+		sounds: soundEvents,
+		commands: {
+			startRound: round => { void gameManager.categoriesStartRound(round); },
+			write: (round, entries) => { void gameManager.categoriesWrite(round, entries); },
+			finishWriting: round => { void gameManager.categoriesFinishWriting(round); },
+			rulePrompt: (round, promptIndex, rulings) => {
+				void gameManager.categoriesRulePrompt(round, promptIndex, rulings);
+			},
+		},
+	});
+	gameManager.on('roundClockTick', ({ secondsRemaining }) => board.handleTimerTick(secondsRemaining));
 	return board;
 });
 
 const FAMILIES: readonly GameFamily[] = [
 	raceFamily, trackFamily, triviaFamily, journeyFamily, assemblyFamily, draftFamily, sheddingFamily,
-	explodingFamily, forbiddenFamily,
+	explodingFamily, forbiddenFamily, categoriesFamily,
 ];
 
 /** The registered family for a state's gameType — null for property/unknown (default surfaces). */

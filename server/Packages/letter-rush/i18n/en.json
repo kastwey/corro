@@ -1,0 +1,12 @@
+{
+  "tokens": {
+    "quill": "Quill",
+    "inkwell": "Inkwell",
+    "clock": "Clock",
+    "compass": "Compass",
+    "lantern": "Lantern",
+    "anchor": "Anchor",
+    "kite": "Kite",
+    "bell": "Bell"
+  }
+}

@@ -95,7 +95,7 @@ export interface GameClientEvents {
 	'gameEvents': AnnouncementEvent[];
 	'cardDrawn': CardDrawnNotification;
 	'auctionTimerTick': AuctionTimerTick;
-	'forbiddenTimerTick': { secondsRemaining: number };
+	'roundClockTick': { secondsRemaining: number };
 	'gameDeleted': { gameId: string };
 	'chatMessage': ChatMessageDto;
 	'chatHistory': ChatMessageDto[];
@@ -298,8 +298,8 @@ export class UnifiedGameClient {
 			this.emit('auctionTimerTick', data);
 		});
 
-		this.connection.on('ForbiddenTimerTick', (data: { secondsRemaining: number }) => {
-			this.emit('forbiddenTimerTick', data);
+		this.connection.on('RoundClockTick', (data: { secondsRemaining: number }) => {
+			this.emit('roundClockTick', data);
 		});
 
 		// A game was permanently deleted by its host.

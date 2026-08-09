@@ -59,6 +59,7 @@ decisiones ya se parezcan a tu idea; los nombres y la temática no importan.
 | `exploding` | juega acciones y después roba con riesgo de eliminación y reacciones | `cards.json` | Media |
 | `trivia` | recorre una rueda de seis categorías y responde preguntas | `questions.en.json` y `questions.es.json` | Media |
 | `forbidden` | alterna dos equipos que dan pistas habladas sin usar ciertas palabras | `words.en.json` y `words.es.json` | Media |
+| `categories` | hace que todos escriban sobre las mismas categorías con una letra y luego decide un juez | `categories.en.json` y `categories.es.json` | Media |
 
 Para un primer experimento, `track` o `shedding` ofrecen el recorrido más corto. Usa `property` solo
 si la economía, las subastas, los grupos y la construcción forman parte real de tu juego.
@@ -109,6 +110,7 @@ ayudas de autoría y se excluyen automáticamente del `.corro` final.
 | `assets/cards/*.{svg,png}` | Ilustración opcional de la carta cuyo id coincida | Más adelante |
 | `questions.en.json`, `questions.es.json` | Bancos reales de preguntas para `trivia` | Solo trivia |
 | `words.en.json`, `words.es.json` | Mazos reales de objetivos y palabras prohibidas para `forbidden` | Solo forbidden |
+| `categories.en.json`, `categories.es.json` | Mazos reales de categorías y letras para `categories` | Solo categories |
 | `i18n/en.json`, `i18n/es.json` | Nombres y textos referenciados mediante claves | Sí |
 | `assets/tokens/*.svg` | Geometría de las fichas de jugador | Más adelante |
 | `CREDITS.md` | Fuentes y licencias de redistribución de arte y sonidos | Antes de compartir |
@@ -121,14 +123,17 @@ Las familias de cartas no tienen `board.json`, y es correcto. `race` y `track` n
 
 Cuando el CONTENIDO de una familia se divide por idioma, cada archivo de locale que incluyas se
 convierte en una opción del selector de idioma del contenido al crear la partida:
-`words.<locale>.json` en `forbidden` y `questions.<locale>.json` en `trivia`. El anfitrión elige un
+`words.<locale>.json` en `forbidden`, `questions.<locale>.json` en `trivia` y
+`categories.<locale>.json` en `categories` (cuyo repertorio de letras también se divide por idioma:
+el propio alfabeto cambia). El anfitrión elige un
 solo mazo común para toda la partida —todos adivinan las mismas palabras, o responden las mismas
 preguntas— mientras cada jugador sigue leyendo la interfaz en su propio idioma. Incluye un archivo
 de locale solo cuando su contenido esté realmente traducido: un locale que aparezca en el manifiesto
 pero no tenga archivo de contenido no se ofrece.
 
 La mayoría de las plantillas comienzan con exactamente dos jugadores para ser pequeñas y comprensibles;
-`forbidden` empieza con los cuatro que necesitan sus dos equipos. Para admitir más, aumenta `players.max`, añade suficientes fichas o asientos distintos y amplía los mazos cuando
+`forbidden` empieza con los cuatro que necesitan sus dos equipos, y `categories` con los tres que
+necesita para un juez y dos jugadores que escriban. Para admitir más, aumenta `players.max`, añade suficientes fichas o asientos distintos y amplía los mazos cuando
 sea necesario. Ejecuta `validate`: indicará la capacidad exacta exigida por la familia.
 
 ## Paso 5: haz los primeros cambios seguros

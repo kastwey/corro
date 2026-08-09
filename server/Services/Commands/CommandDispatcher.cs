@@ -67,6 +67,14 @@ public class CommandDispatcher
 		RegisterHandler(new ForbiddenViolationHandler());
 		RegisterHandler(new ForbiddenExpireTurnHandler());
 
+		// Categories family: the judge starts and rules the round, the writers fill their sheets,
+		// and the authoritative clock closes the writing phase.
+		RegisterHandler(new CategoriesStartRoundHandler());
+		RegisterHandler(new CategoriesWriteHandler());
+		RegisterHandler(new CategoriesFinishWritingHandler());
+		RegisterHandler(new CategoriesRulePromptHandler());
+		RegisterHandler(new CategoriesExpireRoundHandler());
+
 		// Holding handlers
 		RegisterHandler(new PayReleaseCostHandler(rulebook));
 		RegisterHandler(new UseReleasePassHandler(rulebook));
