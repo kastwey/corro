@@ -1,0 +1,376 @@
+/* Categories — a responsive writing table. Every state that carries meaning (the letter, a
+   verdict in force, a hint about an answer) is also in words: colour and weight only ever
+   repeat what the text already says. */
+
+#board.categories-board {
+  display: block;
+  width: 100%;
+  min-height: min(72vh, 780px);
+  padding: clamp(12px, 2.2vw, 28px);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 6% 0%, var(--accent-soft), transparent 32%),
+    radial-gradient(circle at 100% 90%, var(--good-soft), transparent 36%),
+    var(--surface-2);
+  color: var(--text);
+  box-shadow: var(--shadow-md);
+  box-sizing: border-box;
+}
+
+.categories-shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 1.6fr);
+  grid-template-areas:
+    "hero title"
+    "scores now"
+    "scores work";
+  gap: clamp(14px, 2vw, 24px);
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+/* The round's letter, big. It is decoration only: the same letter is spoken in the round
+   headline, in the sheet heading and by the T key, so nothing depends on seeing it. */
+.categories-hero {
+  grid-area: hero;
+  align-self: center;
+  justify-self: center;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(92px, 13vw, 150px);
+  aspect-ratio: 1;
+}
+
+.categories-hero__halo {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--accent);
+  border-radius: 42% 58% 61% 39% / 52% 44% 56% 48%;
+  background: var(--accent-soft);
+  transform: rotate(-7deg);
+  box-shadow: var(--shadow-glow);
+}
+
+.categories-hero__letter {
+  position: relative;
+  font-size: clamp(3rem, 8vw, 6rem);
+  font-weight: 950;
+  line-height: 1;
+  color: var(--accent);
+  text-shadow: 0 3px 0 var(--surface);
+}
+
+.categories-headline {
+  grid-area: title;
+  align-self: center;
+  min-width: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.categories-title {
+  margin: 0;
+  font-size: clamp(1.65rem, 4vw, 3.25rem);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+}
+
+.categories-subtitle {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: clamp(0.95rem, 1.6vw, 1.1rem);
+  line-height: 1.45;
+}
+
+.categories-scoreboard,
+.categories-now,
+.categories-sheet,
+.categories-review {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.categories-now {
+  grid-area: now;
+  align-self: start;
+  padding: clamp(14px, 2vw, 20px);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.categories-now__line {
+  margin: 6px 0 0;
+  color: var(--text);
+  font-size: clamp(1.02rem, 1.9vw, 1.2rem);
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+/* My own job keeps full contrast; the progress line sits one step back without ever being
+   dimmed by opacity alone. */
+.categories-duty {
+  margin: 12px 0 0;
+  color: var(--text);
+  font-weight: 650;
+  line-height: 1.55;
+}
+
+.categories-progress {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.categories-scoreboard {
+  grid-area: scores;
+  align-self: start;
+  padding: clamp(14px, 2vw, 20px);
+}
+
+.categories-scoreboard h3,
+.categories-now h3,
+.categories-sheet h3,
+.categories-review h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+}
+
+.categories-score-list {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 14px 0 0;
+  list-style: none;
+}
+
+.categories-score {
+  position: relative;
+  padding: 14px 14px 14px 20px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 800;
+}
+
+.categories-score::before {
+  content: "";
+  position: absolute;
+  inset: 8px auto 8px 8px;
+  width: 5px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.categories-sheet,
+.categories-review {
+  grid-area: work;
+  min-width: 0;
+  padding: clamp(16px, 2.7vw, 30px);
+}
+
+/* Both work surfaces share one grid area and only one is ever shown, so a hidden section
+   must not keep reserving its row. */
+.categories-sheet[hidden],
+.categories-review[hidden] {
+  display: none;
+}
+
+.categories-sheet-list {
+  display: grid;
+  gap: 14px;
+  padding: 0;
+  margin: 16px 0 0;
+  list-style: none;
+}
+
+.categories-sheet-item {
+  display: grid;
+  gap: 6px;
+}
+
+.categories-sheet-label {
+  color: var(--text);
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.categories-sheet-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  caret-color: var(--accent);
+  font: 650 clamp(1rem, 1.9vw, 1.15rem)/1.4 var(--font);
+}
+
+.categories-sheet-input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+.categories-review__category {
+  margin: 14px 0 0;
+  color: var(--text);
+  font-size: clamp(1.02rem, 1.9vw, 1.2rem);
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.categories-review-list {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 16px 0 0;
+  list-style: none;
+}
+
+.categories-answer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.categories-answer:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+.categories-answer__text {
+  min-width: 0;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.categories-answer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* The verdict in force is marked by a filled shape AND a border, never by colour alone —
+   and the button itself announces "pressed", which is the copy that actually carries it. */
+.categories-verdict[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+  font-weight: 850;
+}
+
+.categories-timer {
+  display: grid;
+  width: clamp(84px, 12vw, 126px);
+  gap: 6px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  text-align: center;
+}
+
+.categories-timer[data-urgent="true"] {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.categories-timer__value {
+  color: var(--text);
+  font-size: clamp(1.3rem, 3vw, 2rem);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.categories-timer__progress {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--accent);
+}
+
+.categories-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.categories-controls .btn {
+  min-height: 46px;
+}
+
+.categories-control-hint {
+  margin: 8px 0 0;
+  padding: 9px 11px;
+  border-left: 4px solid var(--warning);
+  background: var(--surface-3);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 760px) {
+  #board.categories-board {
+    min-height: 0;
+    padding: 12px;
+  }
+
+  .categories-shell {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "hero"
+      "title"
+      "now"
+      "work"
+      "scores";
+  }
+
+  .categories-hero {
+    width: 88px;
+  }
+
+  .categories-headline {
+    text-align: center;
+  }
+
+  .categories-score-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 430px) {
+  .categories-timer {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .categories-score-list {
+    grid-template-columns: 1fr;
+  }
+
+  .categories-answer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .categories-controls,
+  .categories-controls .btn {
+    width: 100%;
+  }
+}

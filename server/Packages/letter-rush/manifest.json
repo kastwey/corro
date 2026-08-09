@@ -1,0 +1,33 @@
+{
+  "format": "corro/v1",
+  "gameType": "categories",
+  "engineVersion": "^1.0",
+  "id": "letter-rush",
+  "name": {
+    "en": "Letter Rush",
+    "es": "Carrera de letras"
+  },
+  "author": "Corro contributors",
+  "version": "1.0.0",
+  "locales": ["en", "es"],
+  "players": {
+    "min": 3,
+    "max": 8
+  },
+  "categoriesRules": {
+    "roundSeconds": 120,
+    "categoriesPerRound": 6,
+    "pointsPerAnswer": 1,
+    "cycles": 1
+  },
+  "tokens": [
+    { "id": "quill", "nameKey": "tokens.quill" },
+    { "id": "inkwell", "nameKey": "tokens.inkwell" },
+    { "id": "clock", "nameKey": "tokens.clock" },
+    { "id": "compass", "nameKey": "tokens.compass" },
+    { "id": "lantern", "nameKey": "tokens.lantern" },
+    { "id": "anchor", "nameKey": "tokens.anchor" },
+    { "id": "kite", "nameKey": "tokens.kite" },
+    { "id": "bell", "nameKey": "tokens.bell" }
+  ]
+}

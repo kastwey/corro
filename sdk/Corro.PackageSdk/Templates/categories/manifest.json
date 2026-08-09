@@ -1,0 +1,22 @@
+{
+  "format": "corro/v1",
+  "gameType": "categories",
+  "engineVersion": "^1.0",
+  "id": "starter-categories",
+  "name": { "en": "Starter Categories", "es": "Categorías inicial" },
+  "author": "Your name",
+  "version": "0.1.0",
+  "locales": ["en", "es"],
+  "players": { "min": 3, "max": 3 },
+  "categoriesRules": {
+    "roundSeconds": 120,
+    "categoriesPerRound": 4,
+    "pointsPerAnswer": 1,
+    "cycles": 1
+  },
+  "tokens": [
+    { "id": "circle", "nameKey": "tokens.circle" },
+    { "id": "diamond", "nameKey": "tokens.diamond" },
+    { "id": "triangle", "nameKey": "tokens.triangle" }
+  ]
+}

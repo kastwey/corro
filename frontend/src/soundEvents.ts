@@ -143,6 +143,16 @@ const ANNOUNCEMENT_SOUND_MAP: Readonly<Record<string, string>> = {
 	'game.forbidden_violation': 'forbidden.violation',
 	'game.forbidden_time_up': 'forbidden.time_up',
 	'game.forbidden_team_won': 'game.over',
+
+	// Categories: the clock is the whole tension of the round, so the start, the two ways it
+	// can end and each ruling get a cue. Nothing here replaces a spoken line — the ticking loop
+	// and these cues run UNDER the voice, which keeps saying what happened.
+	'game.categories_round_started': 'categories.start',
+	'game.categories_writer_finished': 'categories.finished',
+	'game.categories_all_finished': 'categories.time_up',
+	'game.categories_time_up': 'categories.time_up',
+	'game.categories_prompt_ruled': 'categories.ruled',
+	'game.categories_final_score': 'game.over',
 	// Race family: losing a piece stings — the VICTIM's targeted line carries an earcon
 	// so the loss registers even before the sentence is spoken.
 	'game.race_captured_victim': 'piece.captured',

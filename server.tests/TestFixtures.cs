@@ -112,7 +112,8 @@ internal static class TestFixtures
 		CorroServer.Models.Corro.TrackRulesConfig? trackRules = null,
 		CorroServer.Models.Corro.TriviaBoardDef? triviaBoard = null,
 		CorroServer.Models.Corro.TriviaRulesConfig? triviaRules = null,
-		CorroServer.Models.Corro.ForbiddenRulesConfig? forbiddenRules = null)
+		CorroServer.Models.Corro.ForbiddenRulesConfig? forbiddenRules = null,
+		CorroServer.Models.Corro.CategoriesRulesConfig? categoriesRules = null)
 	{
 		var helper = new GameStateHelper(state);
 		var announcer = new FakeAnnouncer();
@@ -139,6 +140,8 @@ internal static class TestFixtures
 					? new CorroServer.Services.Corro.Families.TriviaRuntime(triviaBoard, triviaRules ?? new CorroServer.Models.Corro.TriviaRulesConfig())
 				: forbiddenRules is not null
 					? new CorroServer.Services.Corro.Families.ForbiddenRuntime(forbiddenRules)
+				: categoriesRules is not null
+					? new CorroServer.Services.Corro.Families.CategoriesRuntime(categoriesRules)
 				: null,
 			// Same personalization convention the server uses (actorId -> _self).
 			Announce = (key, vars) => announcer.Announce(key, vars),

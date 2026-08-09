@@ -479,7 +479,7 @@ export async function startGame(host: Page, allPages: Page[]): Promise<void> {
 		// render hand rows, and Forbidden Words renders its role activity surface.
 		await expect(page.locator(
 			'#board .square, #board .race-cell, #board .track-cell, #board .trivia-cell, '
-			+ '#board .hand-card, #board .forbidden-shell',
+			+ '#board .hand-card, #board .forbidden-shell, #board .categories-shell',
 		).first()).toBeVisible();
 	}
 }

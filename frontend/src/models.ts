@@ -267,6 +267,76 @@ export interface ForbiddenRulesConfig {
   cycles: number;
 }
 
+// ── Categories family ───────────────────────────────────────────────────────
+
+export type CategoriesRoundPhase = 'preparing' | 'writing' | 'review' | 'finished';
+
+/** How the judge ruled one answer. 'pending' is the only value still awaiting a human. */
+export type CategoriesVerdict = 'pending' | 'accepted' | 'rejected' | 'duplicate';
+
+export interface CategoriesPlayerState {
+  playerId: string;
+  score: number;
+  roundsJudged: number;
+}
+
+export interface CategoriesAnswerState {
+  playerId: string;
+  /** Blank in every rival's projection while the writing clock is still running. */
+  text: string;
+  verdict: CategoriesVerdict;
+  /** Answers that normalize alike share a group number (-1 = unique). A hint for the judge,
+   *  never a ruling. */
+  duplicateGroup: number;
+  matchesLetter: boolean;
+}
+
+export interface CategoriesPromptState {
+  categoryId: string;
+  /** The prompt in the table's shared content language — content, not a translation key. */
+  name: string;
+  answers: CategoriesAnswerState[];
+}
+
+export interface CategoriesRoundState {
+  roundNumber: number;
+  judgeId: string;
+  letter: string;
+  phase: CategoriesRoundPhase;
+  startedAt?: string | null;
+  durationSeconds: number;
+  prompts: CategoriesPromptState[];
+  finishedWriterIds: string[];
+  reviewIndex: number;
+}
+
+export interface CategoriesState {
+  players: CategoriesPlayerState[];
+  cycle: number;
+  categoryCursor: number;
+  letterCursor: number;
+  round: CategoriesRoundState;
+}
+
+/** One answer on a written sheet, as sent to the server. */
+export interface CategoriesEntry {
+  categoryId: string;
+  text: string;
+}
+
+/** One player's answer as the judge ruled it. */
+export interface CategoriesRuling {
+  playerId: string;
+  verdict: Exclude<CategoriesVerdict, 'pending'>;
+}
+
+export interface CategoriesRulesConfig {
+  roundSeconds: number;
+  categoriesPerRound: number;
+  pointsPerAnswer: number;
+  cycles: number;
+}
+
 // ── Journey family (Mil Millas genre) ───────────────────────────────────────
 
 /** One card DEFINITION of the deck catalog (public wire data — only hand/pile CONTENTS are secret). */
@@ -782,6 +852,9 @@ export interface GameState {
   /** Forbidden-word team state (my hidden-information projection) and effective rules. */
   forbidden?: ForbiddenState | null;
   forbiddenRules?: ForbiddenRulesConfig | null;
+  /** Categories scores and the round in play (my hidden-information projection) plus its rules. */
+  categories?: CategoriesState | null;
+  categoriesRules?: CategoriesRulesConfig | null;
   /** Journey sub-state (my projected view), deck catalog and rules; journey games only. */
   journey?: JourneyState | null;
   journeyDeck?: JourneyCardDef[] | null;
@@ -1140,6 +1213,14 @@ export type GameCommand =
   | { $type: 'FORBIDDEN_CORRECT'; cardSequence: number }
   | { $type: 'FORBIDDEN_PASS'; cardSequence: number }
   | { $type: 'FORBIDDEN_VIOLATION'; cardSequence: number }
+  // Categories
+  | { $type: 'CATEGORIES_START_ROUND'; roundNumber: number }
+  | { $type: 'CATEGORIES_WRITE'; roundNumber: number; entries: CategoriesEntry[] }
+  | { $type: 'CATEGORIES_FINISH_WRITING'; roundNumber: number }
+  | {
+      $type: 'CATEGORIES_RULE_PROMPT'; roundNumber: number; promptIndex: number;
+      rulings: CategoriesRuling[];
+    }
   // Journey
   | { $type: 'JOURNEY_DRAW' }
   | { $type: 'JOURNEY_PLAY'; instanceId: string; targetId: string | null }

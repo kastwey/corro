@@ -109,6 +109,11 @@ is common to all families.
   `words.<lang>.json`; the host explicitly selects one shared word language in the lobby, and rules live in
   `forbiddenRules` — see [The forbidden-word family](#the-forbidden-word-family). This family has
   **no bots**; voice chat is optional because players may share a physical room.
+- `"gameType": "categories"` — simultaneous written play: one letter, a list of categories and
+  an authoritative clock, with a rotating judge who does not write ruling on the answers
+  afterwards. No board, no hand and no turn order; a package supplies `categories.<lang>.json`
+  and `categoriesRules` — see [The categories family](#the-categories-family). This family has
+  **no bots**, and answers are hidden information until the review opens.
 
 A package declaring a family the engine version doesn't implement is **rejected at
 upload with a clear message** listing the supported families — it is never loaded into
@@ -502,6 +507,12 @@ simply silent** — declare only what you ship.
 | `forbidden.pass` | forbidden: the clue-giver uses a pass and receives the next card |
 | `forbidden.violation` | forbidden: the opposing monitor reports a forbidden word |
 | `forbidden.warning` | forbidden: ten seconds remain (client-local, never a spoken countdown) |
+| `categories.start` | categories: the judge starts the authoritative writing clock |
+| `categories.tick` | categories: optional audible clock loop while the round is being written (client-local lifecycle, never narration) |
+| `categories.warning` | categories: ten seconds remain (client-local, never a spoken countdown) |
+| `categories.finished` | categories: a writer declares their sheet finished |
+| `categories.time_up` | categories: the writing clock expires, or the last writer finishes |
+| `categories.ruled` | categories: the judge confirms one category |
 | `forbidden.time_up` | forbidden: the authoritative turn clock expires |
 
 ---
@@ -1325,6 +1336,111 @@ variants where the listener is the actor). Card outcomes:
 Surfaces, roles, status, timer and active-rule text use `forbidden_*`; shared team names use
 `team_name` and the engine colour words.
 
+---
+
+## The categories family
+
+A `"gameType": "categories"` package is a simultaneous WRITTEN game with no turn order at all:
+one round deals a letter and a list of categories, everybody writes at the same time against an
+authoritative clock, and one rotating **judge** — who does not write that round — rules on the
+answers afterwards. It reuses the common package envelope (identity, locales, tokens, sounds and
+guides) and has **no spatial board, hand, `board.json` or `cards.json`**.
+
+The engine never decides whether an answer is good. It offers the judge two mechanical
+observations — whether an answer starts with the round's letter, and which answers coincide — and
+the human rules. Blank answers are the one exception: nobody needs a judge to rule on nothing.
+
+### categories.&lt;lang&gt;.json
+
+Each declared locale ships its own real deck: the prompts everyone writes to, and the letters that
+can be drawn. Both are language-split CONTENT, not UI translations — the alphabet itself differs by
+language. The create form defaults the shared content language to the host's interface locale, but
+the host can choose another available deck and change it while the game is still waiting. One deck
+is then used for the whole match; each player's buttons, help and announcements still use that
+player's own interface language.
+
+```jsonc
+{
+  "letters": ["A", "B", "C", "D", "E"],       // the letters this language can fairly ask for
+  "categories": [
+    { "id": "animal", "name": "An animal" }, // stable id, and the prompt the table reads
+    { "id": "city", "name": "A city" }
+  ]
+}
+```
+
+Every locale needs at least five letters and at least twice `categoriesPerRound` categories, so a
+match does not immediately repeat itself. Within one locale, category ids and normalized names are
+unique, and every letter entry is a distinct, nonblank run of letters — a package may declare a
+digraph (Spanish `"CH"`, `"LL"`) as one letter and the engine treats it as one.
+
+### manifest categoriesRules
+
+```jsonc
+"categoriesRules": {
+  "roundSeconds": 120,       // 30..600, authoritative server clock
+  "categoriesPerRound": 6,  // 3..12
+  "pointsPerAnswer": 1,     // 1..10
+  "cycles": 1               // 1..5 complete judge rotations before scoring
+}
+```
+
+Packages declare a player range from 3 through 8 and enough tokens for `players.max`. Three is the
+floor because a single writer's answer could never coincide with anybody's, which removes half the
+game. Bots and house-rule declarations are not supported in this family.
+
+### Categories rules the engine implements
+
+- The judge rotates in seat order, one round each, and never writes in the round they judge.
+- Only the judge starts the clock; they wait for the table to have read the letter and the
+  categories. Nobody can write before it runs.
+- While it runs, each writer keeps ONE answer per category. The client sends the whole sheet, so
+  the command is idempotent and a lost message costs nothing. An answer arriving after the deadline
+  does not count: the crossing closes the round instead.
+- A writer may finish early. When every writer has, the round moves to review without waiting the
+  clock out.
+- At review the engine marks each answer with its two hints and rejects the blanks, then the judge
+  rules one category at a time. Every written answer needs a verdict — `accepted`, `rejected` or
+  `duplicate` — and a ruling that leaves one out is refused rather than silently costing a point.
+- Each accepted answer scores `pointsPerAnswer`; rejected and duplicate answers score nothing.
+- After `cycles` complete judge rotations, the highest score wins. A tie adds another **complete**
+  rotation, so every player still judges the same number of times.
+- If the judge permanently leaves mid-round, the round restarts under the next judge: the answers
+  were written for a table that no longer exists. If a writer leaves, their answers leave with them.
+  Below three players the match ends and the leader takes it. A temporary disconnection retires
+  nobody.
+
+### Hidden information and accessible written surface
+
+Persistence stores the selected content language, the full shuffled deck and every answer. Every
+client state is projected: while the round is being written, an answer reaches its own writer and
+nobody else — not a rival, not the judge, not the public view — and no one receives the undealt
+deck. Once the review opens the answers become the shared subject of the table and everyone sees
+them all, which is exactly when they are read out and ruled on.
+
+The client renders the writer's sheet as one labelled text box per category. Enter walks to the next
+category and, from the last one, FOCUSES the finish button rather than pressing it. Answers save as
+they are typed (debounced, and immediately in the closing seconds), so nothing is submitted by hand
+and a clock that runs out costs at most a word. The surface's letter shortcuts never fire from a
+field somebody could be typing in.
+
+The review is a roving list: each answer is a single focus stop whose label reads as one sentence —
+who wrote it, what they wrote, and the two hints in words — and the judge's rows carry the three
+verdicts as a toolbar (Right enters, Left leaves). The verdict in force is announced as pressed
+state, never by colour alone. Each category opens pre-filled with the hints, so agreeing with all of
+them is one confirmation. R announces the latest server-fed remaining time to any player; the
+countdown is not an ARIA live stream.
+
+### Overridable voice (`game.categories_*`)
+
+Round preparation and start: `categories_round_preparing`, `categories_round_started` (with `_self`
+variants where the listener is the actor). Writing: `categories_writer_finished` (`_self`),
+`categories_all_finished`, `categories_time_up`. Review: `categories_review_prompt` (`_self`),
+`categories_prompt_ruled`, and the private per-writer lines `categories_answer_accepted`,
+`categories_answer_duplicate` and `categories_answer_rejected`. Round and match outcomes:
+`categories_round_scored` (`_self`), `categories_tie_breaker`, `categories_final_score` (`_self`),
+`categories_judge_left`, `categories_abandoned`. Surfaces, roles, status, verdicts, timer and
+active-rule text use `categories_*`.
 ---
 
 ## Design notes

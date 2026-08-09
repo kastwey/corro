@@ -622,6 +622,7 @@ frontend/sound-test.html
 !/server/Packages/the-mine/
 !/server/Packages/wheel-of-wits/
 !/server/Packages/forbidden-words/
+!/server/Packages/letter-rush/
 
 # Local Azure Storage emulator (Azurite) data
 /.azurite/

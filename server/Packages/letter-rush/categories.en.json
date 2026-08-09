@@ -1,0 +1,38 @@
+{
+  "letters": [
+    "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
+    "L", "M", "N", "O", "P", "R", "S", "T", "W"
+  ],
+  "categories": [
+    { "id": "animal", "name": "An animal" },
+    { "id": "country", "name": "A country" },
+    { "id": "city", "name": "A city" },
+    { "id": "food", "name": "Something you can eat" },
+    { "id": "drink", "name": "Something you can drink" },
+    { "id": "colour", "name": "A colour" },
+    { "id": "job", "name": "A job" },
+    { "id": "sport", "name": "A sport" },
+    { "id": "instrument", "name": "A musical instrument" },
+    { "id": "clothing", "name": "Something you wear" },
+    { "id": "kitchen", "name": "Something found in a kitchen" },
+    { "id": "beach", "name": "Something you take to the beach" },
+    { "id": "plant", "name": "A plant or a tree" },
+    { "id": "film", "name": "A film" },
+    { "id": "book", "name": "A book" },
+    { "id": "song", "name": "A song" },
+    { "id": "name", "name": "A person's first name" },
+    { "id": "surname", "name": "A surname" },
+    { "id": "vehicle", "name": "A way of getting around" },
+    { "id": "body", "name": "A part of the body" },
+    { "id": "school", "name": "A school subject" },
+    { "id": "tool", "name": "A tool" },
+    { "id": "sound", "name": "Something that makes a noise" },
+    { "id": "cold", "name": "Something cold" },
+    { "id": "round", "name": "Something round" },
+    { "id": "verb", "name": "Something you can do" },
+    { "id": "adjective", "name": "A word that describes a person" },
+    { "id": "gift", "name": "A good present" },
+    { "id": "boring", "name": "Something boring" },
+    { "id": "expensive", "name": "Something expensive" }
+  ]
+}

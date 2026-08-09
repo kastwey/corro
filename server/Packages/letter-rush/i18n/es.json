@@ -1,0 +1,12 @@
+{
+  "tokens": {
+    "quill": "Pluma",
+    "inkwell": "Tintero",
+    "clock": "Reloj",
+    "compass": "Brújula",
+    "lantern": "Farol",
+    "anchor": "Ancla",
+    "kite": "Cometa",
+    "bell": "Campana"
+  }
+}

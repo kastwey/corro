@@ -2,16 +2,16 @@ using CorroServer.Services;
 
 namespace CorroServer.Tests;
 
-public class ForbiddenTurnTimerServiceTests
+public class RoundClockServiceTests
 {
 	private static readonly DateTime Start = new(2026, 7, 24, 12, 0, 0, DateTimeKind.Utc);
 
 	[Fact]
 	public void Countdown_uses_the_authoritative_deadline_and_ceiling_seconds()
 	{
-		var beginning = ForbiddenTurnTimerService.Evaluate(Start, 60, Start);
-		var nearlyOneSecond = ForbiddenTurnTimerService.Evaluate(Start, 60, Start.AddMilliseconds(999));
-		var finalFraction = ForbiddenTurnTimerService.Evaluate(Start, 60, Start.AddMilliseconds(59_001));
+		var beginning = RoundClockService.Evaluate(Start, 60, Start);
+		var nearlyOneSecond = RoundClockService.Evaluate(Start, 60, Start.AddMilliseconds(999));
+		var finalFraction = RoundClockService.Evaluate(Start, 60, Start.AddMilliseconds(59_001));
 
 		Assert.Equal(60, beginning.RemainingSeconds);
 		Assert.Equal(60, nearlyOneSecond.RemainingSeconds);
@@ -22,9 +22,9 @@ public class ForbiddenTurnTimerServiceTests
 	[Fact]
 	public void Countdown_expires_once_and_never_reports_negative_time()
 	{
-		var exact = ForbiddenTurnTimerService.Evaluate(Start, 60, Start.AddSeconds(60));
-		var late = ForbiddenTurnTimerService.Evaluate(Start, 60, Start.AddMinutes(5));
-		var restoredLongAgo = ForbiddenTurnTimerService.Evaluate(Start, 60, Start.AddDays(90));
+		var exact = RoundClockService.Evaluate(Start, 60, Start.AddSeconds(60));
+		var late = RoundClockService.Evaluate(Start, 60, Start.AddMinutes(5));
+		var restoredLongAgo = RoundClockService.Evaluate(Start, 60, Start.AddDays(90));
 
 		Assert.True(exact.Expired);
 		Assert.Equal(0, exact.RemainingSeconds);
@@ -37,7 +37,7 @@ public class ForbiddenTurnTimerServiceTests
 	[Fact]
 	public void Countdown_never_exceeds_its_duration_when_the_host_clock_moves_backwards()
 	{
-		var skewed = ForbiddenTurnTimerService.Evaluate(Start, 60, Start.AddSeconds(-5));
+		var skewed = RoundClockService.Evaluate(Start, 60, Start.AddSeconds(-5));
 
 		Assert.False(skewed.Expired);
 		Assert.Equal(60, skewed.RemainingSeconds);

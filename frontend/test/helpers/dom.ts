@@ -28,6 +28,7 @@ export function setupDom(): JSDOM {
 	g.navigator = dom.window.navigator;
 	g.HTMLElement = dom.window.HTMLElement;
 	g.HTMLDialogElement = dom.window.HTMLDialogElement;
+	g.HTMLInputElement = dom.window.HTMLInputElement;
 	g.KeyboardEvent = dom.window.KeyboardEvent;
 	// Modules reference the bare `localStorage` global (persisted preferences); map jsdom's
 	// so those paths behave like the platform instead of silently no-opping in tests.
