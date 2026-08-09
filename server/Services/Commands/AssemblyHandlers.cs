@@ -61,7 +61,13 @@ public static class AssemblyTurnFlow
 			if (target != null)
 			{
 				await context.Announcer.ToPlayer(player.Id, card.PlayedKey + "_self", playVars);
-				await context.Announcer.ToPlayer(target.Id, card.PlayedKey + "_victim", playVars);
+				// A card aimed at your OWN rack (the exile special usually is) has no victim
+				// to tell apart from the actor — sending both lines would say it twice.
+				if (target.Id != player.Id)
+				{
+					await context.Announcer.ToPlayer(target.Id, card.PlayedKey + "_victim", playVars);
+				}
+
 				foreach (var other in context.GameState.Players.Where(p => p.Id != player.Id && p.Id != target.Id))
 				{
 					await context.Announcer.ToPlayer(other.Id, card.PlayedKey, playVars);
@@ -152,8 +158,11 @@ public static class AssemblyTurnFlow
 				["piece"] = exiled,
 			};
 			VisualNarrativeVars.Add(vars, "outcome", player.Id, target.Id);
-			await context.Announcer.ToPlayer(player.Id, "game.assembly_exiled_self", vars);
-			await context.Announcer.ToAllExcept(player.Id, "game.assembly_exiled", vars);
+			// Clearing your OWN rack is the commonest use, and "Ana lifts the damage off
+			// Ana's part" is not a sentence anyone should have to listen to.
+			var stem = target.Id == player.Id ? "game.assembly_exiled_own" : "game.assembly_exiled";
+			await context.Announcer.ToPlayer(player.Id, stem + "_self", vars);
+			await context.Announcer.ToAllExcept(player.Id, stem, vars);
 		}
 
 		if (result.Won)

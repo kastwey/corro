@@ -55,5 +55,29 @@
     "bots.iman",
     "bots.dron",
     "bots.averia"
+  ],
+  "ruleGroups": [
+    {
+      "id": "assembly",
+      "nameKey": "rules.group.assembly"
+    }
+  ],
+  "houseRules": [
+    {
+      "id": "assemblyDuelGoal",
+      "group": "assembly",
+      "type": "toggle",
+      "default": false,
+      "editableByHost": true,
+      "nameKey": "rules.assemblyDuelGoal"
+    },
+    {
+      "id": "assemblyAttritionCures",
+      "group": "assembly",
+      "type": "toggle",
+      "default": false,
+      "editableByHost": true,
+      "nameKey": "rules.assemblyAttritionCures"
+    }
   ]
 }

@@ -4,7 +4,7 @@
     "artColor": "#147A4A",
     "type": "piece",
     "color": "green",
-    "count": 5,
+    "count": 6,
     "nameKey": "cards.life_support"
   },
   {
@@ -12,7 +12,7 @@
     "artColor": "#1769AA",
     "type": "piece",
     "color": "blue",
-    "count": 5,
+    "count": 6,
     "nameKey": "cards.data_core"
   },
   {
@@ -20,7 +20,7 @@
     "artColor": "#9A6B00",
     "type": "piece",
     "color": "yellow",
-    "count": 5,
+    "count": 6,
     "nameKey": "cards.hull_frame"
   },
   {
@@ -166,7 +166,138 @@
     "artColor": "#B33434",
     "type": "piece",
     "color": "red",
-    "count": 5,
+    "count": 6,
     "nameKey": "cards.reactor"
+  },
+  {
+    "id": "armoured-module",
+    "artColor": "#5B6472",
+    "type": "piece",
+    "color": "grey",
+    "inert": true,
+    "count": 1,
+    "nameKey": "cards.armoured_module"
+  },
+  {
+    "id": "decompression-cascade",
+    "artColor": "#0E5C38",
+    "type": "attack",
+    "color": "green",
+    "resistant": true,
+    "count": 2,
+    "nameKey": "cards.decompression_cascade",
+    "playedKey": "cards.decompression_cascade_played"
+  },
+  {
+    "id": "rogue-firmware",
+    "artColor": "#114E80",
+    "type": "attack",
+    "color": "blue",
+    "resistant": true,
+    "count": 2,
+    "nameKey": "cards.rogue_firmware",
+    "playedKey": "cards.rogue_firmware_played"
+  },
+  {
+    "id": "metal-fatigue",
+    "artColor": "#7A5400",
+    "type": "attack",
+    "color": "yellow",
+    "resistant": true,
+    "count": 2,
+    "nameKey": "cards.metal_fatigue",
+    "playedKey": "cards.metal_fatigue_played"
+  },
+  {
+    "id": "core-meltdown",
+    "artColor": "#8C2626",
+    "type": "attack",
+    "color": "red",
+    "resistant": true,
+    "count": 2,
+    "nameKey": "cards.core_meltdown",
+    "playedKey": "cards.core_meltdown_played"
+  },
+  {
+    "id": "total-collapse",
+    "artColor": "#512F7D",
+    "type": "attack",
+    "color": "wild",
+    "resistant": true,
+    "count": 1,
+    "nameKey": "cards.total_collapse",
+    "playedKey": "cards.total_collapse_played"
+  },
+  {
+    "id": "bio-regenerator",
+    "artColor": "#147A4A",
+    "type": "remedy",
+    "color": "green",
+    "potent": true,
+    "count": 1,
+    "nameKey": "cards.bio_regenerator"
+  },
+  {
+    "id": "firmware-rewrite",
+    "artColor": "#1769AA",
+    "type": "remedy",
+    "color": "blue",
+    "potent": true,
+    "count": 1,
+    "nameKey": "cards.firmware_rewrite"
+  },
+  {
+    "id": "alloy-weld",
+    "artColor": "#9A6B00",
+    "type": "remedy",
+    "color": "yellow",
+    "potent": true,
+    "count": 1,
+    "nameKey": "cards.alloy_weld"
+  },
+  {
+    "id": "cryo-flush",
+    "artColor": "#B33434",
+    "type": "remedy",
+    "color": "red",
+    "potent": true,
+    "count": 1,
+    "nameKey": "cards.cryo_flush"
+  },
+  {
+    "id": "prototype-nanoforge",
+    "artColor": "#6A3FA0",
+    "type": "remedy",
+    "color": "wild",
+    "potent": true,
+    "count": 3,
+    "nameKey": "cards.prototype_nanoforge"
+  },
+  {
+    "id": "containment-field",
+    "artColor": "#2F6E6E",
+    "type": "special",
+    "specialKind": "exile",
+    "count": 4,
+    "nameKey": "cards.containment_field",
+    "playedKey": "cards.containment_field_played"
+  },
+  {
+    "id": "overtime-shift",
+    "artColor": "#7A6A2F",
+    "type": "special",
+    "specialKind": "doubleAct",
+    "count": 2,
+    "nameKey": "cards.overtime_shift",
+    "playedKey": "cards.overtime_shift_played"
+  },
+  {
+    "id": "crew-rotation",
+    "artColor": "#4A5C8A",
+    "type": "special",
+    "specialKind": "handSwap",
+    "count": 2,
+    "nameKey": "cards.crew_rotation",
+    "playedKey": "cards.crew_rotation_played"
   }
 ]

@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-	assemblyCardHelp, assemblyStatusText, attackTargets, canPlayCard, canSwapPair,
-	deckColors, functionalColors, plagueHasMoves, remedySlots, stealTargets, swapTargets,
+	assemblyCardHelp, assemblyCatalog, assemblyStatusText, attackTargets, canPlayCard, canSwapPair,
+	deckColors, exileTargets, functionalColors, isLocked, plagueHasMoves, remedySlots, stealTargets,
+	swapTargets,
 } from '../src/assemblyRules.js';
 import type { AssemblySeatState, AssemblySlot, GameState } from '../src/models.js';
 
@@ -24,6 +25,14 @@ const DECK = [
 	{ id: 's-plague', type: 'special', specialKind: 'plague', count: 2, nameKey: 'c.s-plague' },
 	{ id: 's-scrap', type: 'special', specialKind: 'scrapHands', count: 1, nameKey: 'c.s-scrap' },
 	{ id: 's-fullswap', type: 'special', specialKind: 'fullSwap', count: 1, nameKey: 'c.s-fullswap' },
+	// The expansion: resistant damage, the potent answer, an inert piece and the three
+	// treatments the engine grew for them.
+	{ id: 'p-grey', type: 'piece', color: 'grey', inert: true, count: 1, nameKey: 'c.p-grey' },
+	{ id: 'x-red', type: 'attack', color: 'red', resistant: true, count: 2, nameKey: 'c.x-red' },
+	{ id: 'e-red', type: 'remedy', color: 'red', potent: true, count: 1, nameKey: 'c.e-red' },
+	{ id: 's-exile', type: 'special', specialKind: 'exile', count: 4, nameKey: 'c.s-exile' },
+	{ id: 's-double', type: 'special', specialKind: 'doubleAct', count: 2, nameKey: 'c.s-double' },
+	{ id: 's-handswap', type: 'special', specialKind: 'handSwap', count: 2, nameKey: 'c.s-handswap' },
 ];
 
 const inst = (cardId: string, n = 0) => ({ instanceId: `${cardId}@${n}`, cardId });
@@ -52,7 +61,8 @@ const t = (key: string, vars?: Record<string, unknown>) =>
 
 test('deckColors: the distinct system colours in deck order, wilds excluded (colour-sort rank)', () => {
 	const gs = game([seat('me')]);
-	assert.deepEqual(deckColors(gs), ['red', 'green', 'blue']);
+	// The armoured piece brings a system colour of its own, and it ranks with the rest.
+	assert.deepEqual(deckColors(gs), ['red', 'green', 'blue', 'grey']);
 });
 
 test('a retired seat is out of the game: no fullSwap target, and its status says the exit', () => {
@@ -83,7 +93,9 @@ test('a remedy needs an own, non-locked, colour-matching slot', () => {
 	const gs = game([seat('me', ['r-red'], [slot('green')]), seat('r1')]);
 	assert.equal(canPlayCard(gs, 'me', 'r-red').reasonKey, 'game.assembly_nothing_to_fix');
 	assert.equal(canPlayCard(gs, 'me', 'r-wild').playable, true);
-	assert.equal(remedySlots(DECK.find(c => c.id === 'r-wild')! as never, gs.assembly!.seats[0]).length, 1);
+	assert.equal(
+		remedySlots(DECK.find(c => c.id === 'r-wild')! as never, gs.assembly!.seats[0], assemblyCatalog(gs)).length,
+		1);
 });
 
 test('swap pairs refuse locked slots and colour duplicates', () => {
@@ -187,4 +199,80 @@ test('a full hand stays silent; an empty one says so in words', () => {
 		'the normal hand size is not repeated on every status');
 	assert.ok(assemblyStatusText(gs, 'r1', t)!.endsWith('game.assembly_status_no_cards'),
 		'an emptied hand (post-scrap) is called out in words, never a bare zero');
+});
+
+// ── The expansion ────────────────────────────────────────────────────────────
+
+test('an inert piece takes neither attacks nor repairs, and is no plague destination', () => {
+	const gs = game([
+		seat('me', ['a-wild', 's-plague'], [slot('red', { afflictions: [inst('a-red', 1)] })]),
+		seat('r1', [], [slot('grey', { inert: true })]),
+	]);
+
+	assert.equal(canPlayCard(gs, 'me', 'a-wild').reasonKey, 'game.assembly_no_attackable');
+	assert.equal(plagueHasMoves(gs, 'me'), false);
+
+	const mine = game([seat('me', ['r-wild'], [slot('grey', { inert: true })]), seat('r1')]);
+	assert.equal(canPlayCard(mine, 'me', 'r-wild').reasonKey, 'game.assembly_nothing_to_fix');
+});
+
+test('resistant damage refuses an ordinary repair and yields to a potent one', () => {
+	const damaged = slot('red', { afflictions: [inst('x-red', 1)] });
+	const gs = game([seat('me', ['r-red', 'e-red'], [damaged]), seat('r1')]);
+	const catalog = assemblyCatalog(gs);
+
+	assert.equal(remedySlots(DECK.find(c => c.id === 'r-red')! as never, gs.assembly!.seats[0], catalog).length, 0);
+	assert.equal(canPlayCard(gs, 'me', 'r-red').reasonKey, 'game.assembly_nothing_to_fix');
+	assert.equal(remedySlots(DECK.find(c => c.id === 'e-red')! as never, gs.assembly!.seats[0], catalog).length, 1);
+	assert.equal(canPlayCard(gs, 'me', 'e-red').playable, true);
+});
+
+test('a sealed piece reads as locked, so nothing may be thrown at it', () => {
+	const sealed = slot('red', { shields: [inst('e-red', 2)], sealed: true });
+	assert.equal(isLocked(sealed), true);
+
+	const gs = game([seat('me', ['a-red']), seat('r1', [], [sealed])]);
+	assert.equal(attackTargets(gs, 'me', DECK.find(c => c.id === 'a-red')! as never).length, 0);
+	assert.equal(canPlayCard(gs, 'me', 'a-red').reasonKey, 'game.assembly_no_attackable');
+});
+
+test('exile reaches every damaged piece on the table, my own rack included', () => {
+	const gs = game([
+		seat('me', ['s-exile'], [slot('red', { afflictions: [inst('x-red', 1)] }), slot('green')]),
+		seat('r1', [], [slot('blue', { afflictions: [inst('a-red', 3)] })]),
+	]);
+
+	const targets = exileTargets(gs);
+	assert.deepEqual(targets.map(t2 => t2.seat.playerId), ['me', 'r1']);
+	assert.deepEqual(targets[0].slots.map(s2 => s2.color), ['red']); // the clean green one is out
+	assert.equal(canPlayCard(gs, 'me', 's-exile').playable, true);
+
+	const clean = game([seat('me', ['s-exile'], [slot('red')]), seat('r1')]);
+	assert.equal(canPlayCard(clean, 'me', 's-exile').reasonKey, 'game.assembly_nothing_to_exile');
+});
+
+test('the turn-extending treatments need something to spend and someone to trade with', () => {
+	const alone = game([seat('me', ['s-double']), seat('r1')]);
+	assert.equal(canPlayCard(alone, 'me', 's-double').reasonKey, 'game.assembly_nothing_left_to_play');
+
+	const stocked = game([seat('me', ['s-double', 'p-red']), seat('r1')]);
+	assert.equal(canPlayCard(stocked, 'me', 's-double').playable, true);
+
+	// A hand trade only needs a live rival to trade with — an empty hand is still a trade.
+	assert.equal(canPlayCard(stocked, 'me', 's-handswap').playable, true);
+	const ghost = seat('r1');
+	(ghost as { retired?: boolean }).retired = true;
+	assert.equal(
+		canPlayCard(game([seat('me', ['s-handswap']), ghost]), 'me', 's-handswap').reasonKey,
+		'game.assembly_needs_target');
+});
+
+test('card help describes what the expansion changed, not the plain card', () => {
+	const gs = game([seat('me')]);
+	assert.equal(assemblyCardHelp(gs, 'x-red', t), 'game.assembly_help_attack_resistant(c.p-red)');
+	assert.equal(assemblyCardHelp(gs, 'e-red', t), 'game.assembly_help_remedy_potent(c.p-red)');
+	assert.equal(assemblyCardHelp(gs, 'p-grey', t), 'game.assembly_help_piece_inert');
+	assert.equal(assemblyCardHelp(gs, 's-exile', t), 'game.assembly_help_exile');
+	assert.equal(assemblyCardHelp(gs, 's-double', t), 'game.assembly_help_doubleact');
+	assert.equal(assemblyCardHelp(gs, 's-handswap', t), 'game.assembly_help_handswap');
 });

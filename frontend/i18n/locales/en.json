@@ -1201,6 +1201,8 @@
     "assembly_swapped_victim": "{{player}} takes your $t({{piece}}) and leaves you their $t({{given}})!",
     "assembly_exiled": "{{player}} lifts the damage off {{target}}'s $t({{piece}}) and takes it out of the game for good",
     "assembly_exiled_self": "You lift the damage off {{target}}'s $t({{piece}}) and take it out of the game for good",
+    "assembly_exiled_own": "{{player}} lifts the damage off their own $t({{piece}}) and takes it out of the game for good",
+    "assembly_exiled_own_self": "You lift the damage off your own $t({{piece}}) and take it out of the game for good",
     "assembly_play_again": "{{player}} keeps the turn, with {{count}} more card(s) to play",
     "assembly_play_again_self": "You keep your turn: {{count}} more card(s) to play",
     "assembly_color_taken": "You already have a piece of that type",

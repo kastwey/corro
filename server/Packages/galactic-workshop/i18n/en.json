@@ -51,7 +51,18 @@
     "assembly_help_swap": "Swap one of your modules for a rival's, breakdowns and shields included. Certified modules can't move, and no workshop may end with two modules of one system.",
     "assembly_help_steal": "Take a rival's (non-certified) module into a system you are missing, state included.",
     "assembly_help_plague": "Your breakdowns jump onto rivals' clean modules, system by system. You need at least one breakdown of your own with a valid destination.",
-    "assembly_help_fullswap": "Swap your entire workshop with a rival of your choice, certified modules included."
+    "assembly_help_fullswap": "Swap your entire workshop with a rival of your choice, certified modules included.",
+    "assembly_piece_inert": "Nothing can be bolted onto that module",
+    "assembly_affliction_resistant": "That breakdown shrugs off ordinary maintenance: it takes an experimental fix",
+    "assembly_nothing_to_exile": "That module has no breakdown to haul away",
+    "assembly_state_sealed": "certified",
+    "assembly_remedy_sealed": "{{player}} certifies their $t({{piece}}) for good with a single experimental fix!",
+    "assembly_remedy_sealed_self": "You certify your $t({{piece}}) for good with a single experimental fix!",
+    "assembly_exiled": "{{player}} hauls the breakdown off {{target}}'s $t({{piece}}) and out of the workshop for good",
+    "assembly_exiled_self": "You haul the breakdown off {{target}}'s $t({{piece}}) and out of the workshop for good",
+    "assembly_exiled_own": "{{player}} hauls the breakdown off their own $t({{piece}}) and out of the workshop for good",
+    "assembly_exiled_own_self": "You haul the breakdown off your own $t({{piece}}) and out of the workshop for good",
+    "assembly_help_piece_inert": "Armoured module: install it like any other. It is solid plating — no breakdown can touch it and no maintenance can be done on it — so it stays operational for as long as you keep it. Only the crane, a requisition or a total trade-in can take it off you."
   },
   "tokens": {
     "wrench": "Wrench",
@@ -109,7 +120,44 @@
     "total_trade_in": "Total trade-in",
     "total_trade_in_played": "{{player}} trades their whole workshop with {{target}}'s!",
     "total_trade_in_played_self": "You trade your whole workshop with {{target}}'s!",
-    "total_trade_in_played_victim": "{{player}} trades their whole workshop with yours!"
+    "total_trade_in_played_victim": "{{player}} trades their whole workshop with yours!",
+    "armoured_module": "Armoured module",
+    "decompression_cascade": "Cascade decompression",
+    "decompression_cascade_played": "{{player}} sets off a cascade decompression in {{target}}'s life support! No ordinary sealant will hold it",
+    "decompression_cascade_played_self": "You set off a cascade decompression in {{target}}'s life support! No ordinary sealant will hold it",
+    "decompression_cascade_played_victim": "{{player}} sets off a cascade decompression in your life support! Your sealant is useless against it",
+    "rogue_firmware": "Rogue firmware",
+    "rogue_firmware_played": "{{player}} burns rogue firmware into {{target}}'s data core! A debugger won't touch it",
+    "rogue_firmware_played_self": "You burn rogue firmware into {{target}}'s data core! A debugger won't touch it",
+    "rogue_firmware_played_victim": "{{player}} burns rogue firmware into your data core! Your debugger just bounces off it",
+    "metal_fatigue": "Metal fatigue",
+    "metal_fatigue_played": "{{player}} works metal fatigue deep into {{target}}'s hull frame! Bracing won't save it",
+    "metal_fatigue_played_self": "You work metal fatigue deep into {{target}}'s hull frame! Bracing won't save it",
+    "metal_fatigue_played_victim": "{{player}} works metal fatigue deep into your hull frame! Bracing won't save it",
+    "core_meltdown": "Core meltdown",
+    "core_meltdown_played": "{{player}} starts a core meltdown in {{target}}'s reactor! Coolant only makes it hiss",
+    "core_meltdown_played_self": "You start a core meltdown in {{target}}'s reactor! Coolant only makes it hiss",
+    "core_meltdown_played_victim": "{{player}} starts a core meltdown in your reactor! Your coolant only makes it hiss",
+    "total_collapse": "Total collapse",
+    "total_collapse_played": "{{player}} throws a total collapse at {{target}}! It ruins anything, and shrugs off ordinary maintenance",
+    "total_collapse_played_self": "You throw a total collapse at {{target}}! It ruins anything, and shrugs off ordinary maintenance",
+    "total_collapse_played_victim": "{{player}} throws a total collapse at you! It ruins anything, and shrugs off ordinary maintenance",
+    "bio_regenerator": "Bio-regenerator",
+    "firmware_rewrite": "Firmware rewrite",
+    "alloy_weld": "Alloy weld",
+    "cryo_flush": "Cryogenic flush",
+    "prototype_nanoforge": "Prototype nanoforge",
+    "containment_field": "Containment field",
+    "containment_field_played": "{{player}} drops a containment field over {{target}}'s breakdown and hauls it out of the workshop for good",
+    "containment_field_played_self": "You drop a containment field over {{target}}'s breakdown and haul it out of the workshop for good",
+    "containment_field_played_victim": "{{player}} drops a containment field over your breakdown and hauls it out of the workshop for good!",
+    "overtime_shift": "Overtime shift",
+    "overtime_shift_played": "{{player}} works an overtime shift and keeps building!",
+    "overtime_shift_played_self": "You work an overtime shift and keep building!",
+    "crew_rotation": "Crew rotation",
+    "crew_rotation_played": "{{player}} rotates crews with {{target}} and takes over their toolbox",
+    "crew_rotation_played_self": "You rotate crews with {{target}} and take over their toolbox",
+    "crew_rotation_played_victim": "{{player}} rotates crews with you and takes over your toolbox!"
   },
   "bots": {
     "chatarrin": "Rustbucket",
@@ -118,5 +166,12 @@
     "iman": "Magnet Mia",
     "dron": "Drone 7",
     "averia": "Minor Fault"
+  },
+  "rules": {
+    "group": {
+      "assembly": "Workshop rules"
+    },
+    "assemblyDuelGoal": "Head to head: with two workshops, one more system to win",
+    "assemblyAttritionCures": "Scrapyard: breakdowns cleared by an experimental fix leave the game"
   }
 }

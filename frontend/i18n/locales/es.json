@@ -1201,6 +1201,8 @@
     "assembly_swapped_victim": "¡{{player}} se lleva tu pieza $t({{piece}}) y te deja su pieza $t({{given}})!",
     "assembly_exiled": "{{player}} retira el daño de la pieza $t({{piece}}) de {{target}} y lo saca de la partida para siempre",
     "assembly_exiled_self": "Retiras el daño de la pieza $t({{piece}}) de {{target}} y lo sacas de la partida para siempre",
+    "assembly_exiled_own": "{{player}} retira el daño de su propia pieza $t({{piece}}) y lo saca de la partida para siempre",
+    "assembly_exiled_own_self": "Retiras el daño de tu propia pieza $t({{piece}}) y lo sacas de la partida para siempre",
     "assembly_play_again": "{{player}} sigue en su turno, con {{count}} carta(s) más por jugar",
     "assembly_play_again_self": "Sigues en tu turno: te quedan {{count}} carta(s) por jugar",
     "assembly_color_taken": "Ya tienes una pieza de ese tipo",

@@ -39,6 +39,43 @@ If you have no cards and nothing to do, your turn is a "pass" and you still refi
   - **Imperial inspection**: everyone else discards their whole hand.
   - **Total trade-in**: swap your entire workshop with a rival's, certified modules included.
 
+## The workshop expansion
+
+The deck includes an expansion of tougher material, and an answer to match it.
+
+- **Resistant breakdowns** (cascade decompression, rogue firmware, metal fatigue, core
+  meltdown and **total collapse**, which hits any system): they behave like any breakdown —
+  the module goes down, a second one destroys it, and on a shielded module they burn the
+  shielding — but **no ordinary maintenance clears them**. You need an experimental fix, or
+  you haul them out of the workshop with a containment field.
+- **Experimental fixes** (bio-regenerator, firmware rewrite, alloy weld, cryogenic flush
+  and the **prototype nanoforge**, which works on any system): they clear any breakdown,
+  resistant included. And on a module with nothing wrong with it they do what no ordinary
+  repair manages alone: they **certify it with a single card**, leaving it untouchable
+  forever.
+- **Armoured module**: a grey module in a system of its own. Nothing can be bolted onto it
+  — no breakdowns, no maintenance — so it stays operational for as long as you keep it and
+  **counts as one more system** toward winning. The only thing that can cost you it is
+  someone taking it with the crane, a requisition or a total trade-in.
+- **Containment field**: lifts one breakdown off **any module on the table, your own
+  included**, and takes it out of the game for good — that card doesn't come back even when
+  the deck is reshuffled. It is the one repair that resistant damage cannot shrug off.
+- **Overtime shift**: instead of ending your turn on a single card, you play **the rest of
+  your hand**. You draw back up to 3 at the end.
+- **Crew rotation**: you trade hands with a rival and then play **one** of the cards you
+  receive. Those cards can't be discarded, and the rival starts their next turn on what you
+  handed over.
+
+With the expansion your workshop can hold **six different modules**, and you still win as
+soon as **four are operational** (or five, if the host turns on head to head).
+
+### Workshop rules the host can turn on
+
+- **Head to head**: with two workshops it takes **one more system** to win, so a duel isn't
+  decided by the opening hand.
+- **Scrapyard**: breakdowns cleared by an experimental fix **leave the game** instead of
+  returning to the deck, so a crowded table slowly runs out of ways to hurt each other.
+
 ## Fine print
 
 - The discard pile is **face-down**: nobody knows what you threw, and when the draw pile
