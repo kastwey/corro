@@ -24,7 +24,7 @@ public sealed class AssemblyFamily : IGameFamily
 
 	private static readonly HashSet<string> CardTypes = new() { "piece", "attack", "remedy", "special" };
 	private static readonly HashSet<string> SpecialKinds = new()
-		{ "swapPiece", "stealPiece", "plague", "scrapHands", "fullSwap" };
+		{ "swapPiece", "stealPiece", "plague", "scrapHands", "fullSwap", "exile", "doubleAct", "handSwap" };
 
 	public async Task<GameDefinition> LoadDefinitionAsync(string packageDir, Manifest manifest,
 		Dictionary<string, Dictionary<string, string>> i18n)
@@ -45,6 +45,16 @@ public sealed class AssemblyFamily : IGameFamily
 			.Where(c => c.Type == "piece" && c.Color is { } col && col != AssemblyRulebook.Wild)
 			.Select(c => c.Color!).ToHashSet();
 
+		// An INERT piece is untouchable by definition, so its colour answers nothing: attacks
+		// and remedies in that colour would be dead cards. Such colours are excluded from the
+		// set an attack/remedy may legally answer.
+		var inertOnlyColors = deck
+			.Where(c => c.Type == "piece" && c.Color is { } col && col != AssemblyRulebook.Wild)
+			.GroupBy(c => c.Color!)
+			.Where(g => g.All(c => c.Inert))
+			.Select(g => g.Key)
+			.ToHashSet();
+
 		foreach (var card in deck)
 		{
 			switch (card.Type)
@@ -54,10 +64,47 @@ public sealed class AssemblyFamily : IGameFamily
 				case "attack" or "remedy" when card.Color != AssemblyRulebook.Wild && !pieceColors.Contains(card.Color!):
 					throw new InvalidOperationException(
 						$"assembly card '{card.Id}' answers colour '{card.Color}', which no piece comes in.");
+				case "attack" or "remedy" when inertOnlyColors.Contains(card.Color!):
+					throw new InvalidOperationException(
+						$"assembly card '{card.Id}' answers colour '{card.Color}', whose pieces are all inert and cannot be touched.");
 				case "special" when card.SpecialKind is null || !SpecialKinds.Contains(card.SpecialKind):
 					throw new InvalidOperationException(
 						$"assembly card '{card.Id}' needs a known specialKind ({string.Join(", ", SpecialKinds)}).");
 			}
+
+			// Each trait belongs to exactly one card type; anywhere else it would silently
+			// do nothing, which is how a package ends up shipping a card that lies.
+			if (card.Resistant && card.Type != "attack")
+			{
+				throw new InvalidOperationException($"assembly card '{card.Id}' is resistant, which only attacks can be.");
+			}
+
+			if (card.Potent && card.Type != "remedy")
+			{
+				throw new InvalidOperationException($"assembly card '{card.Id}' is potent, which only remedies can be.");
+			}
+
+			if (card.Inert && card.Type != "piece")
+			{
+				throw new InvalidOperationException($"assembly card '{card.Id}' is inert, which only pieces can be.");
+			}
+
+			// An inert WILD piece would be an untouchable joker: it fills any missing colour
+			// and nothing can ever take it out of play.
+			if (card.Inert && card.Color == AssemblyRulebook.Wild)
+			{
+				throw new InvalidOperationException($"assembly card '{card.Id}' cannot be both inert and wild.");
+			}
+		}
+
+		// A resistant attack that no remedy in the deck can lift is a permanent kill: only a
+		// POTENT remedy (or an exile special) ever clears one.
+		if (deck.Any(c => c.Type == "attack" && c.Resistant)
+			&& !deck.Any(c => c.Type == "remedy" && c.Potent)
+			&& !deck.Any(c => c.Type == "special" && c.SpecialKind == "exile"))
+		{
+			throw new InvalidOperationException(
+				"the deck has resistant attacks but nothing that lifts them (a potent remedy or an exile special).");
 		}
 
 		var rules = d.Manifest.AssemblyRules ?? new AssemblyRulesConfig();
@@ -76,16 +123,24 @@ public sealed class AssemblyFamily : IGameFamily
 			throw new InvalidOperationException("assemblyRules.maxDiscard must be positive.");
 		}
 
-		if (pieceColors.Count < rules.SlotsToWin)
+		// The duel house rule raises the goal by one at a two-player table, so the deck must
+		// carry enough colours for the HIGHEST goal it can ever be played at.
+		var topGoal = Math.Max(rules.SlotsToWin,
+			d.Manifest.HouseRules.Any(r => r.Id == "assemblyDuelGoal") ? rules.SlotsToWin + 1 : rules.SlotsToWin);
+		if (pieceColors.Count < topGoal)
 		{
 			throw new InvalidOperationException(
-				$"the deck's pieces come in {pieceColors.Count} colours but slotsToWin needs {rules.SlotsToWin}.");
+				$"the deck's pieces come in {pieceColors.Count} colours but the goal can reach {topGoal}.");
 		}
 
-		// No host-customizable rules in this family yet: a manifest declaring one is a bug.
-		if (d.Manifest.HouseRules.Count > 0)
+		// House rules must reference ASSEMBLY codes the engine implements (same doctrine as
+		// every family: a package can't invent mechanics, only expose known codes).
+		foreach (var rule in d.Manifest.HouseRules)
 		{
-			throw new InvalidOperationException("the assembly family declares no house rules yet.");
+			if (!HouseRuleCatalog.IsKnownAssembly(rule.Id))
+			{
+				throw new InvalidOperationException($"assembly rule '{rule.Id}' is not a known assembly rule code.");
+			}
 		}
 
 		var players = d.Manifest.Players;
@@ -119,6 +174,15 @@ public sealed class AssemblyFamily : IGameFamily
 		var deck = definition.AssemblyDeck
 			?? throw new InvalidOperationException("assembly package has no deck (cards.json).");
 		var rules = definition.Manifest.AssemblyRules ?? new AssemblyRulesConfig();
+		// The host's lobby choices override the package defaults. The EFFECTIVE rules ride
+		// the state (State.AssemblyRules) so a restore reads them back — see SnapshotCarriesRules.
+		if (start.RuleValues is { Count: > 0 } chosen)
+		{
+			foreach (var (id, value) in chosen)
+			{
+				rules = HouseRuleCatalog.ApplyAssembly(rules, id, value);
+			}
+		}
 
 		var random = start.Random ?? new SystemRandomSource();
 		var state = new GameState
@@ -209,6 +273,9 @@ public sealed class AssemblyFamily : IGameFamily
 		{
 			DrawPile = new List<AssemblyCardInstance>(),
 			DiscardPile = new List<AssemblyCardInstance>(),
+			// Out of the game, but WHAT left is still a secret worth keeping: the counts are
+			// public (SyncCounts), the identities never leave the server.
+			ExiledPile = new List<AssemblyCardInstance>(),
 			Seats = assembly.Seats.Select(seat => seat.PlayerId == playerId
 				? seat
 				: seat with { Hand = new List<AssemblyCardInstance>() }).ToList(),

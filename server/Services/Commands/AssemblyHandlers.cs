@@ -141,10 +141,42 @@ public static class AssemblyTurnFlow
 			}
 		}
 
+		// An exile lifts an affliction off someone's rack for good — the actor chose the
+		// rack, so the table needs to hear whose part was cleared.
+		if (result.ExiledPieceKey is { } exiled && target != null)
+		{
+			var vars = new Dictionary<string, object>
+			{
+				["player"] = player.Name,
+				["target"] = target.Name,
+				["piece"] = exiled,
+			};
+			VisualNarrativeVars.Add(vars, "outcome", player.Id, target.Id);
+			await context.Announcer.ToPlayer(player.Id, "game.assembly_exiled_self", vars);
+			await context.Announcer.ToAllExcept(player.Id, "game.assembly_exiled", vars);
+		}
+
 		if (result.Won)
 		{
 			await EndGameAsync(context, player);
 			return new AssemblyActionResponse { Action = "play", GameEnded = true, TurnEnded = true };
+		}
+
+		// A doubleAct or handSwap buys more cards in the same turn. The turn only really
+		// continues while the hand still has a legal play — otherwise the grant would leave
+		// the player with nothing to do and no way to end their turn.
+		var assemblyState = context.GameState.Assembly!;
+		if (assemblyState.ExtraPlays > 0
+			&& AssemblyRulebook.HasAnyLegalPlay(assemblyState, player.Id, runtime.Catalog))
+		{
+			await context.Announcer.ToPlayer(player.Id, "game.assembly_play_again_self",
+				new() { ["count"] = assemblyState.ExtraPlays });
+			await context.Announcer.ToAllExcept(player.Id, "game.assembly_play_again", new()
+			{
+				["player"] = player.Name,
+				["count"] = assemblyState.ExtraPlays,
+			});
+			return new AssemblyActionResponse { Action = "play", TurnEnded = false };
 		}
 
 		await EndAssemblyTurnAsync(context, player, random);
@@ -193,6 +225,8 @@ public static class AssemblyTurnFlow
 	/// followed by that player's normal refill.</summary>
 	private static async Task EndAssemblyTurnAsync(GameContext context, Player player, IRandomSource random)
 	{
+		// Extra plays and the borrowed-hand discard block belong to the turn that bought them.
+		AssemblyRulebook.ClearTurnGrants(context.GameState.Assembly!);
 		await RefillAndAnnounceAsync(context, player, random);
 		await AdvanceTurnAsync(context, random);
 	}
@@ -308,15 +342,10 @@ public static class AssemblyTurnFlow
 		var assembly = context.GameState.Assembly!;
 		var runtime = context.Family<AssemblyRuntime>();
 
-		int FunctionalColors(AssemblySeatState seat)
-		{
-			var functional = seat.Slots.Where(AssemblyRulebook.IsFunctional).Select(s => s.Color).ToList();
-			return functional.Where(c => c != AssemblyRulebook.Wild).Distinct().Count()
-				+ functional.Count(c => c == AssemblyRulebook.Wild);
-		}
-
 		var ordered = assembly.Seats
-			.OrderByDescending(s => s.PlayerId == winner.Id ? int.MaxValue : FunctionalColors(s))
+			.OrderByDescending(s => s.PlayerId == winner.Id
+				? int.MaxValue
+				: AssemblyRulebook.FunctionalColors(s))
 			.ThenByDescending(s => s.Slots.Count)
 			.ToList();
 		foreach (var (seat, index) in ordered.Select((s, i) => (s, i)))

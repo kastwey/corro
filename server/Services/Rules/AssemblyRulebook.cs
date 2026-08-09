@@ -34,26 +34,43 @@ public static class AssemblyRulebook
 
 	// ── Slot state ────────────────────────────────────────────────────────────
 
-	/// <summary>Locked (two shields): untouchable by attacks and specials, forever functional.</summary>
-	public static bool IsLocked(AssemblySlot slot) => slot.Shields.Count >= 2;
+	/// <summary>Locked: two shields, or one POTENT remedy that sealed the piece by itself.
+	/// Untouchable by attacks and specials, forever functional.</summary>
+	public static bool IsLocked(AssemblySlot slot) => slot.Sealed || slot.Shields.Count >= 2;
 
-	/// <summary>Functional = not afflicted: counts toward the winning rack.</summary>
+	/// <summary>Functional = not afflicted: counts toward the winning rack. An inert piece
+	/// never carries an affliction, so it is functional for as long as it is held.</summary>
 	public static bool IsFunctional(AssemblySlot slot) => slot.Afflictions.Count == 0;
 
 	/// <summary>Completely clean: no afflictions AND no shields (the plague's only target).</summary>
 	public static bool IsClean(AssemblySlot slot) => slot.Afflictions.Count == 0 && slot.Shields.Count == 0;
 
-	/// <summary>
-	/// The rack wins when its distinct FUNCTIONAL real colours plus its functional wild
-	/// jokers (each fills one missing colour) reach the goal.
-	/// </summary>
-	public static bool HasWon(AssemblySeatState seat, AssemblyRulesConfig rules)
+	/// <summary>The affliction stuck to this slot cannot be lifted by an ORDINARY remedy: it
+	/// takes a potent one (or an effect that removes it outright).</summary>
+	public static bool HasResistantAffliction(
+		AssemblySlot slot, IReadOnlyDictionary<string, AssemblyCardDef> catalog)
+		=> slot.Afflictions.Count > 0
+			&& catalog.GetValueOrDefault(slot.Afflictions[0].CardId)?.Resistant == true;
+
+	/// <summary>How many colours this rack needs to win at this table (the duel house rule
+	/// raises it by one when only two players sat down).</summary>
+	public static int Goal(AssemblyState state, AssemblyRulesConfig rules)
+		=> rules.GoalFor(state.Seats.Count);
+
+	/// <summary>Distinct FUNCTIONAL real colours on a rack, plus its functional wild jokers
+	/// (each of which fills one missing colour).</summary>
+	public static int FunctionalColors(AssemblySeatState seat)
 	{
 		var functional = seat.Slots.Where(IsFunctional).Select(s => s.Color).ToList();
-		var wilds = functional.Count(c => c == Wild);
-		var distinctReal = functional.Where(c => c != Wild).Distinct().Count();
-		return distinctReal + wilds >= rules.SlotsToWin;
+		return functional.Where(c => c != Wild).Distinct().Count() + functional.Count(c => c == Wild);
 	}
+
+	/// <summary>
+	/// The rack wins when its distinct FUNCTIONAL real colours plus its functional wild
+	/// jokers (each fills one missing colour) reach the table's goal.
+	/// </summary>
+	public static bool HasWon(AssemblyState state, AssemblySeatState seat, AssemblyRulesConfig rules)
+		=> FunctionalColors(seat) >= Goal(state, rules);
 
 	public static AssemblySeatState SeatOf(AssemblyState state, string playerId)
 		=> state.Seats.First(s => s.PlayerId == playerId);
@@ -110,6 +127,7 @@ public static class AssemblyRulebook
 	{
 		state.DrawCount = state.DrawPile.Count;
 		state.DiscardCount = state.DiscardPile.Count;
+		state.ExiledCount = state.ExiledPile.Count;
 		foreach (var seat in state.Seats)
 		{
 			seat.HandCount = seat.Hand.Count;
@@ -163,6 +181,11 @@ public static class AssemblyRulebook
 						return PlayCheck.No("game.assembly_no_such_slot");
 					}
 
+					if (slot.Inert)
+					{
+						return PlayCheck.No("game.assembly_piece_inert");
+					}
+
 					if (IsLocked(slot))
 					{
 						return PlayCheck.No("game.assembly_slot_locked");
@@ -184,6 +207,11 @@ public static class AssemblyRulebook
 						return PlayCheck.No("game.assembly_no_such_slot");
 					}
 
+					if (slot.Inert)
+					{
+						return PlayCheck.No("game.assembly_piece_inert");
+					}
+
 					if (IsLocked(slot))
 					{
 						return PlayCheck.No("game.assembly_already_locked");
@@ -192,6 +220,13 @@ public static class AssemblyRulebook
 					if (!ColorMatches(card.Color, slot.Color))
 					{
 						return PlayCheck.No("game.assembly_color_mismatch");
+					}
+
+					// A resistant affliction shrugs off ordinary treatment: only a potent
+					// remedy lifts it (an exile special is the other way out).
+					if (!card.Potent && HasResistantAffliction(slot, catalog))
+					{
+						return PlayCheck.No("game.assembly_affliction_resistant");
 					}
 
 					return PlayCheck.Yes;
@@ -294,6 +329,39 @@ public static class AssemblyRulebook
 					? PlayCheck.No("game.assembly_needs_target")
 					: PlayCheck.Yes;
 
+			case "exile":
+				{
+					// Lifts an affliction off ANY rack — your own included, which is usually
+					// the point: it is the one cure that no resistance can shrug off.
+					if (target == null)
+					{
+						return PlayCheck.No("game.assembly_needs_target");
+					}
+
+					var slot = SlotAt(target, targetColor);
+					if (slot == null)
+					{
+						return PlayCheck.No("game.assembly_no_such_slot");
+					}
+
+					return slot.Afflictions.Count > 0
+						? PlayCheck.Yes
+						: PlayCheck.No("game.assembly_nothing_to_exile");
+				}
+
+			case "doubleAct":
+				// Spends the turn buying the REST of the hand: worthless with nothing left.
+				return seat.Hand.Count > 1
+					? PlayCheck.Yes
+					: PlayCheck.No("game.assembly_nothing_left_to_play");
+
+			case "handSwap":
+				// Legal against any live rival — even an empty hand is a trade worth making
+				// (you hand them your leftovers and start again on theirs).
+				return target == null || target.PlayerId == seat.PlayerId || target.Retired
+					? PlayCheck.No("game.assembly_needs_target")
+					: PlayCheck.Yes;
+
 			default:
 				return PlayCheck.No("game.assembly_unknown_card");
 		}
@@ -325,7 +393,7 @@ public static class AssemblyRulebook
 			foreach (var rival in state.Seats.Where(s => s.PlayerId != seat.PlayerId))
 			{
 				var to = rival.Slots.FirstOrDefault(s =>
-					IsClean(s) && !claimed.Contains(s) && ColorMatches(afflictionColor, s.Color));
+					IsClean(s) && !s.Inert && !claimed.Contains(s) && ColorMatches(afflictionColor, s.Color));
 				if (to != null)
 				{
 					moves.Add((mine, rival, to));
@@ -361,7 +429,13 @@ public static class AssemblyRulebook
 		/// "plays a remedy" line said nothing, and locking a piece is a game-deciding event.</summary>
 		string? RemedyOutcome = null,
 		/// <summary>Remedies only — the treated piece's NameKey (the client resolves it).</summary>
-		string? RemediedPieceKey = null);
+		string? RemediedPieceKey = null,
+		/// <summary>Exile specials only — the NameKey of the piece the affliction was lifted
+		/// off, so the voice can say whose part was cleared and by what.</summary>
+		string? ExiledPieceKey = null,
+		/// <summary>The play bought MORE plays this turn (doubleAct / handSwap): how many the
+		/// player now owes before the turn ends. Zero means this card ended the turn.</summary>
+		int ExtraPlays = 0);
 
 	/// <summary>Play a card from the hand (authoritative re-check of legality).</summary>
 	public static PlayResult Play(
@@ -401,16 +475,29 @@ public static class AssemblyRulebook
 
 		seat.Hand.Remove(instance);
 
+		// This card settles one of the plays the turn owes (normally none: a plain turn is a
+		// single card). Whatever it grants below is added on top of what is left.
+		if (state.ExtraPlays > 0)
+		{
+			state.ExtraPlays--;
+		}
+
 		string? attackOutcome = null;
 		string? attackedPieceKey = null;
 		string? takenPieceKey = null;
 		string? givenPieceKey = null;
 		string? remedyOutcome = null;
 		string? remediedPieceKey = null;
+		string? exiledPieceKey = null;
 		switch (card.Type)
 		{
 			case "piece":
-				seat.Slots.Add(new AssemblySlot { Color = card.Color ?? Wild, Piece = instance });
+				seat.Slots.Add(new AssemblySlot
+				{
+					Color = card.Color ?? Wild,
+					Piece = instance,
+					Inert = card.Inert,
+				});
 				break;
 
 			case "attack":
@@ -448,16 +535,36 @@ public static class AssemblyRulebook
 					remediedPieceKey = catalog.GetValueOrDefault(slot.Piece.CardId)?.NameKey;
 					if (slot.Afflictions.Count > 0)
 					{
-						// The fix removes one affliction: both burn.
-						state.DiscardPile.Add(slot.Afflictions[0]);
+						// The fix removes one affliction: the remedy always burns, and the
+						// attack burns with it — unless attrition is on and the remedy was
+						// potent, which takes that attack out of the game for good.
+						var lifted = slot.Afflictions[0];
 						slot.Afflictions.RemoveAt(0);
+						if (rules.AttritionCures && card.Potent)
+						{
+							state.ExiledPile.Add(lifted);
+						}
+						else
+						{
+							state.DiscardPile.Add(lifted);
+						}
+
 						state.DiscardPile.Add(instance);
 						remedyOutcome = "cured";
 					}
 					else
 					{
-						slot.Shields.Add(instance); // first = shielded, second = locked
-						remedyOutcome = IsLocked(slot) ? "locked" : "shielded";
+						slot.Shields.Add(instance);
+						if (card.Potent)
+						{
+							// A potent remedy seals the piece on its own — no second shield.
+							slot.Sealed = true;
+							remedyOutcome = "sealed";
+						}
+						else
+						{
+							remedyOutcome = IsLocked(slot) ? "locked" : "shielded"; // first, then second
+						}
 					}
 					break;
 				}
@@ -473,15 +580,21 @@ public static class AssemblyRulebook
 						givenPieceKey = PieceKeyAt(seat, giveColor, catalog);
 					}
 				}
+				else if (card.SpecialKind == "exile")
+				{
+					exiledPieceKey = PieceKeyAt(target!, targetColor, catalog);
+				}
+
 				ApplySpecial(card, seat, target, targetColor, giveColor, state, instance, catalog);
 				break;
 		}
 
 		SyncCounts(state);
-		return new PlayResult(true, Card: card, Won: HasWon(seat, rules),
+		return new PlayResult(true, Card: card, Won: HasWon(state, seat, rules),
 			AttackOutcome: attackOutcome, AttackedPieceKey: attackedPieceKey,
 			TakenPieceKey: takenPieceKey, GivenPieceKey: givenPieceKey,
-			RemedyOutcome: remedyOutcome, RemediedPieceKey: remediedPieceKey);
+			RemedyOutcome: remedyOutcome, RemediedPieceKey: remediedPieceKey,
+			ExiledPieceKey: exiledPieceKey, ExtraPlays: state.ExtraPlays);
 	}
 
 	private static void ApplySpecial(
@@ -537,8 +650,132 @@ public static class AssemblyRulebook
 					target.Slots.Clear(); target.Slots.AddRange(mine);
 					break;
 				}
+
+			case "exile":
+				{
+					// The affliction leaves the game entirely — it never comes back through
+					// the refill reshuffle, unlike everything on the discards.
+					var slot = target!.Slots.First(s => s.Color == targetColor);
+					state.ExiledPile.Add(slot.Afflictions[0]);
+					slot.Afflictions.RemoveAt(0);
+					break;
+				}
+
+			case "doubleAct":
+				// Buy the rest of the hand instead of ending the turn on this card.
+				state.ExtraPlays += seat.Hand.Count;
+				break;
+
+			case "handSwap":
+				{
+					// Trade hands, then play ONE of the cards you received. They are not
+					// yours to throw away, so the turn's discard option closes.
+					var mine = seat.Hand.ToList();
+					var theirs = target!.Hand.ToList();
+					seat.Hand.Clear(); seat.Hand.AddRange(theirs);
+					target.Hand.Clear(); target.Hand.AddRange(mine);
+					state.ExtraPlays += 1;
+					state.DiscardBlocked = true;
+					break;
+				}
 		}
 		state.DiscardPile.Add(instance);
+	}
+
+	/// <summary>One fully-specified way to play a card: who it is aimed at, which of their
+	/// slots, and (swaps only) which of mine goes the other way.</summary>
+	public sealed record Targeting(string? TargetPlayerId, string? TargetColor, string? GiveColor);
+
+	/// <summary>
+	/// Every legal way to play this card right now, each one re-checked through
+	/// <see cref="CanPlay"/> so this can never drift from the authoritative legality. The
+	/// pickers, the bots and the "can this turn continue?" check all read the same list.
+	/// </summary>
+	public static List<Targeting> LegalTargetings(
+		AssemblyCardDef card,
+		AssemblySeatState seat,
+		AssemblyState state,
+		IReadOnlyDictionary<string, AssemblyCardDef> catalog)
+	{
+		var rivals = state.Seats.Where(s => s.PlayerId != seat.PlayerId).ToList();
+		var candidates = new List<Targeting>();
+
+		switch (card.Type)
+		{
+			case "piece":
+				candidates.Add(new Targeting(null, null, null));
+				break;
+
+			case "attack":
+				candidates.AddRange(from rival in rivals
+									from slot in rival.Slots
+									select new Targeting(rival.PlayerId, slot.Color, null));
+				break;
+
+			case "remedy":
+				candidates.AddRange(seat.Slots.Select(slot => new Targeting(seat.PlayerId, slot.Color, null)));
+				break;
+
+			case "special":
+				switch (card.SpecialKind)
+				{
+					case "swapPiece":
+						candidates.AddRange(from rival in rivals
+											from theirs in rival.Slots
+											from mine in seat.Slots
+											select new Targeting(rival.PlayerId, theirs.Color, mine.Color));
+						break;
+					case "stealPiece":
+						candidates.AddRange(from rival in rivals
+											from slot in rival.Slots
+											select new Targeting(rival.PlayerId, slot.Color, null));
+						break;
+					case "exile":
+						// Own rack included: clearing your own resistant affliction is the
+						// commonest use of the card.
+						candidates.AddRange(from any in state.Seats
+											from slot in any.Slots
+											select new Targeting(any.PlayerId, slot.Color, null));
+						break;
+					case "fullSwap" or "handSwap":
+						candidates.AddRange(rivals.Select(rival => new Targeting(rival.PlayerId, null, null)));
+						break;
+					default:
+						candidates.Add(new Targeting(null, null, null));
+						break;
+				}
+				break;
+		}
+
+		return candidates
+			.Where(t =>
+			{
+				var target = t.TargetPlayerId == null
+					? null
+					: state.Seats.FirstOrDefault(s => s.PlayerId == t.TargetPlayerId);
+				return CanPlay(card, seat, target, t.TargetColor, t.GiveColor, state, catalog).Ok;
+			})
+			.ToList();
+	}
+
+	/// <summary>Could this player play ANY card in hand right now? An extended turn ends the
+	/// moment the answer is no, so a granted play the hand cannot spend never wedges the table.</summary>
+	public static bool HasAnyLegalPlay(
+		AssemblyState state, string playerId,
+		IReadOnlyDictionary<string, AssemblyCardDef> catalog)
+	{
+		var seat = SeatOf(state, playerId);
+		return seat.Hand.Any(instance =>
+			catalog.GetValueOrDefault(instance.CardId) is { } card
+			&& LegalTargetings(card, seat, state, catalog).Count > 0);
+	}
+
+	/// <summary>The turn is over: the plays it owed and the borrowed-hand discard block are
+	/// personal to it and never survive into the next player's turn.</summary>
+	public static void ClearTurnGrants(AssemblyState state)
+	{
+		state.ExtraPlays = 0;
+		state.DiscardBlocked = false;
 	}
 
 	public sealed record DiscardResult(bool Ok, string? ReasonKey = null, int Count = 0);
@@ -553,9 +790,17 @@ public static class AssemblyRulebook
 		var seat = SeatOf(state, playerId);
 		if (instanceIds.Count == 0)
 		{
-			return seat.Hand.Count == 0
+			// An empty hand always passes; so does a borrowed one with nothing playable left,
+			// which would otherwise have no way to end its turn.
+			return seat.Hand.Count == 0 || state.ExtraPlays > 0
 				? new DiscardResult(true, Count: 0)
 				: new DiscardResult(false, "game.assembly_must_act");
+		}
+
+		// Cards taken from someone else's hand are to be PLAYED, not thrown away.
+		if (state.DiscardBlocked)
+		{
+			return new DiscardResult(false, "game.assembly_discard_blocked");
 		}
 
 		if (instanceIds.Count > rules.MaxDiscard)

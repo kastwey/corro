@@ -34,9 +34,34 @@ public sealed record AssemblyCardDef : IPackageCardDef
 	/// "stealPiece" (take a rival's non-locked piece into my free colour),
 	/// "plague" (move each of my afflictions onto rivals' CLEAN matching slots),
 	/// "scrapHands" (every rival discards their whole hand),
-	/// "fullSwap" (my whole rack ↔ a rival's, locked included).
+	/// "fullSwap" (my whole rack ↔ a rival's, locked included),
+	/// "exile" (lift one affliction off ANY rack and take it out of the game for good),
+	/// "doubleAct" (play the rest of your hand this turn instead of ending it),
+	/// "handSwap" (trade hands with a rival, then play one of the cards you received),
+	/// "guard" (REACTIVE, off-turn: cancel a card aimed at you; the attacker re-aims).
 	/// </summary>
 	public string? SpecialKind { get; init; }
+
+	/// <summary>
+	/// Attacks only — a RESISTANT attack no ordinary remedy can lift: only a
+	/// <see cref="Potent"/> remedy (or an effect that removes it outright) clears it. It
+	/// afflicts, destroys and burns shields exactly like an ordinary attack.
+	/// </summary>
+	public bool Resistant { get; init; }
+
+	/// <summary>
+	/// Remedies only — a POTENT remedy: it cures resistant afflictions, and protecting with
+	/// one locks the piece on its own (no second remedy needed), which also puts it beyond
+	/// every attack. Ordinary remedies still need two to lock.
+	/// </summary>
+	public bool Potent { get; init; }
+
+	/// <summary>
+	/// Pieces only — an INERT piece: nothing sticks to it. No attack may hit it and no remedy
+	/// may treat it, so it is always functional; it can still be stolen, swapped or traded
+	/// away, which is the only way to lose it. Its colour is its own (no attack answers it).
+	/// </summary>
+	public bool Inert { get; init; }
 
 	/// <summary>Copies of this card in the deck.</summary>
 	public int Count { get; init; } = 1;
@@ -64,4 +89,22 @@ public sealed record AssemblyRulesConfig
 
 	/// <summary>Max cards discardable in one turn (the turn's alternative to playing).</summary>
 	public int MaxDiscard { get; init; } = 3;
+
+	/// <summary>
+	/// House rule — the short table: with exactly two seats the rack needs ONE more colour
+	/// than <see cref="SlotsToWin"/>, so a duel does not end on a lucky opening hand. Off by
+	/// default; the goal never changes at three seats or more.
+	/// </summary>
+	public bool DuelGoal { get; init; }
+
+	/// <summary>
+	/// House rule — the long table: an attack lifted by a POTENT remedy leaves the game
+	/// instead of returning to the discards, so a crowded table slowly runs out of ways to
+	/// hurt each other. Off by default (cured attacks recirculate as usual).
+	/// </summary>
+	public bool AttritionCures { get; init; }
+
+	/// <summary>The rack size that wins at this table: <see cref="SlotsToWin"/>, plus one when
+	/// <see cref="DuelGoal"/> is on and exactly two players sat down.</summary>
+	public int GoalFor(int seatCount) => SlotsToWin + (DuelGoal && seatCount == 2 ? 1 : 0);
 }

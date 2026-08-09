@@ -203,10 +203,11 @@ public class AssemblyRulebookTests
 	public void Four_functional_distinct_colours_win_and_a_wild_fills_a_missing_one()
 	{
 		var seat = Seat("a", slots: new[] { Slot("red"), Slot("green"), Slot("blue") });
-		Assert.False(AssemblyRulebook.HasWon(seat, Rules));
+		var state = State(seat);
+		Assert.False(AssemblyRulebook.HasWon(state, seat, Rules));
 
 		seat.Slots.Add(Slot("wild"));
-		Assert.True(AssemblyRulebook.HasWon(seat, Rules));
+		Assert.True(AssemblyRulebook.HasWon(state, seat, Rules));
 	}
 
 	[Fact]
@@ -217,7 +218,7 @@ public class AssemblyRulebookTests
 			Slot("red"), Slot("green"), Slot("blue"),
 			Slot("yellow", afflictions: new[] { "a-red" }),
 		});
-		Assert.False(AssemblyRulebook.HasWon(seat, Rules));
+		Assert.False(AssemblyRulebook.HasWon(State(seat), seat, Rules));
 	}
 
 	[Fact]

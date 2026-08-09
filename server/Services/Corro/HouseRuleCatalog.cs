@@ -92,6 +92,23 @@ public static class HouseRuleCatalog
 	/// <summary>Whether the engine knows this SHEDDING rule code.</summary>
 	public static bool IsKnownShedding(string id) => SheddingAppliers.ContainsKey(id);
 
+	// ── Assembly family ───────────────────────────────────────────────────────
+
+	private static readonly Dictionary<string, Func<AssemblyRulesConfig, JsonElement, AssemblyRulesConfig>> AssemblyAppliers = new()
+	{
+		// The short table: a two-player rack needs one colour more than the printed goal.
+		["assemblyDuelGoal"] = (r, v) => r with { DuelGoal = v.GetBoolean() },
+		// The long table: attacks lifted by a potent remedy leave the game for good.
+		["assemblyAttritionCures"] = (r, v) => r with { AttritionCures = v.GetBoolean() },
+	};
+
+	/// <summary>Whether the engine knows this ASSEMBLY rule code.</summary>
+	public static bool IsKnownAssembly(string id) => AssemblyAppliers.ContainsKey(id);
+
+	/// <summary>Returns assembly rules with the rule applied; unknown ids are left unchanged.</summary>
+	public static AssemblyRulesConfig ApplyAssembly(AssemblyRulesConfig rules, string id, JsonElement value)
+		=> AssemblyAppliers.TryGetValue(id, out var apply) ? apply(rules, value) : rules;
+
 	// ── Choice rules: the values the engine actually accepts ──────────────────
 
 	/// <summary>The value set each CHOICE rule code accepts. A package declares its own options
