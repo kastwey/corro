@@ -47,6 +47,13 @@ public sealed class AssemblyBotPolicy : IBotPolicy
 			return play;
 		}
 
+		// A borrowed hand may not be thrown away: with nothing left to play, the only way out
+		// of the turn is the pass. Discarding here would be refused on every retry.
+		if (assembly.DiscardBlocked)
+		{
+			return new AssemblyDiscardCommand { PlayerId = botId, InstanceIds = new List<string>() };
+		}
+
 		return new AssemblyDiscardCommand
 		{
 			PlayerId = botId,
@@ -82,14 +89,48 @@ public sealed class AssemblyBotPolicy : IBotPolicy
 			.Select(x => (x.Instance, Def: x.Def!))
 			.ToList();
 
+		// 0. BUY THE REST OF THE TURN, while there is still a turn worth buying: only when at
+		// least two OTHER cards can actually be played, so the plays it grants are not spent
+		// on a hand that has nothing to do with them.
+		foreach (var (instance, def) in handDefs.Where(x => x.Def.SpecialKind == "doubleAct"))
+		{
+			var playableOthers = handDefs.Count(other =>
+				other.Instance.InstanceId != instance.InstanceId
+				&& AssemblyRulebook.LegalTargetings(other.Def, seat, assembly, catalog).Count > 0);
+			if (playableOthers >= 2 && Legal(def, null, null, null))
+			{
+				return Play(instance, def);
+			}
+		}
+
+		// Remedies are spent weakest-first: a POTENT one is the only answer to a resistant
+		// affliction and seals a piece by itself, so it is never burnt on work an ordinary
+		// remedy could have done.
+		var remedies = handDefs.Where(x => x.Def.Type == "remedy")
+			.OrderBy(x => x.Def.Potent ? 1 : 0).ToList();
+
 		// 1. FIX an afflicted slot (functionality back — possibly the winning move).
-		foreach (var (instance, def) in handDefs.Where(x => x.Def.Type == "remedy"))
+		foreach (var (instance, def) in remedies)
 		{
 			var afflicted = seat.Slots.FirstOrDefault(s =>
 				s.Afflictions.Count > 0 && AssemblyRulebook.ColorMatches(def.Color, s.Color));
 			if (afflicted != null && Legal(def, null, afflicted.Color, null))
 			{
 				return Play(instance, def, targetColor: afflicted.Color);
+			}
+		}
+
+		// 1b. EXILE an affliction off my OWN rack — the one cure nothing can resist. Aimed at
+		// a resistant affliction first, since an ordinary one has cheaper answers.
+		foreach (var (instance, def) in handDefs.Where(x => x.Def.SpecialKind == "exile"))
+		{
+			var stuck = seat.Slots
+				.Where(s => s.Afflictions.Count > 0)
+				.OrderByDescending(s => AssemblyRulebook.HasResistantAffliction(s, catalog) ? 1 : 0)
+				.FirstOrDefault(s => Legal(def, seat, s.Color, null));
+			if (stuck != null)
+			{
+				return Play(instance, def, seat.PlayerId, stuck.Color);
 			}
 		}
 
@@ -135,7 +176,7 @@ public sealed class AssemblyBotPolicy : IBotPolicy
 		}
 
 		// 5. SHIELD / LOCK own slots (lock a shielded one first: untouchable forever).
-		foreach (var (instance, def) in handDefs.Where(x => x.Def.Type == "remedy"))
+		foreach (var (instance, def) in remedies)
 		{
 			var slot = seat.Slots
 				.Where(s => AssemblyRulebook.IsFunctional(s) && !AssemblyRulebook.IsLocked(s))
@@ -182,6 +223,17 @@ public sealed class AssemblyBotPolicy : IBotPolicy
 			if (better != null && Legal(def, better, null, null))
 			{
 				return Play(instance, def, better.PlayerId);
+			}
+		}
+
+		// 10. TRADE HANDS as the last resort: this hand had nothing to offer, so someone
+		// else's is worth the gamble — better than throwing cards away for nothing.
+		foreach (var (instance, def) in handDefs.Where(x => x.Def.SpecialKind == "handSwap"))
+		{
+			var richest = leaderFirst.OrderByDescending(r => r.HandCount).FirstOrDefault();
+			if (richest != null && Legal(def, richest, null, null))
+			{
+				return Play(instance, def, richest.PlayerId);
 			}
 		}
 

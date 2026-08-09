@@ -11,7 +11,8 @@ import { popupMenu } from './popupMenu.js';
 import { escapeHtml } from './escapeHtml.js';
 import {
 	assemblyCardHelp, assemblyCatalog, assemblySeat, assemblyStatusText, attackTargets,
-	canPlayCard, canSwapPair, deckColors, isFunctional, isLocked, remedySlots, stealTargets, swapTargets,
+	canPlayCard, canSwapPair, deckColors, exileTargets, isFunctional, isLocked, remedySlots,
+	stealTargets, swapTargets,
 } from './assemblyRules.js';
 import {
 	cardBoardHelpShortcuts, playerName, registerPileStatusKey, registerStatusKeys, resetCardBoard,
@@ -284,7 +285,7 @@ export class AssemblyBoard {
 			}
 
 			case 'remedy': {
-				const slots = remedySlots(def, seat);
+				const slots = remedySlots(def, seat, catalog);
 				this.pick(slots, s => this.slotLabel(s, catalog),
 					this.deps.tSync('game.assembly_pick_own_slot', { card: card.label }),
 					s => play({ targetColor: s.color }));
@@ -321,15 +322,28 @@ export class AssemblyBoard {
 								}));
 						return;
 					}
-					case 'fullSwap': {
+					case 'fullSwap':
+					case 'handSwap': {
 						const rivals = (gs.assembly?.seats ?? []).filter(s => s.playerId !== myId && !s.retired);
 						this.pick(rivals, nameOf,
 							this.deps.tSync('game.assembly_pick_victim', { card: card.label }),
 							rival => play({ targetPlayerId: rival.playerId }));
 						return;
 					}
+					case 'exile': {
+						// Any damaged piece on the table, MINE included — so the chain offers
+						// every rack, not only the rivals'.
+						const targets = exileTargets(gs);
+						this.pick(targets, t => nameOf(t.seat),
+							this.deps.tSync('game.assembly_pick_victim', { card: card.label }),
+							t => this.pick(t.slots, s => this.slotLabel(s, catalog),
+								this.deps.tSync('game.assembly_pick_slot', { player: nameOf(t.seat) }),
+								s => play({ targetPlayerId: t.seat.playerId, targetColor: s.color })));
+						return;
+					}
 					default:
-						// plague / scrapHands: no targeting — the effect is deterministic.
+						// plague / scrapHands / doubleAct: no targeting — the effect is
+						// deterministic, so the card resolves the moment it is played.
 						play();
 						return;
 				}

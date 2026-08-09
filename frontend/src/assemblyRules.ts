@@ -35,8 +35,21 @@ export function deckColors(gs: GameState): string[] {
 	return seen;
 }
 
-/** Locked (two shields): untouchable forever. */
-export function isLocked(slot: AssemblySlot): boolean { return slot.shields.length >= 2; }
+/** Locked: two shields, or one potent remedy that sealed the piece by itself. */
+export function isLocked(slot: AssemblySlot): boolean {
+	return slot.sealed === true || slot.shields.length >= 2;
+}
+
+/** Nothing sticks to an inert piece: no attack may hit it, no remedy may treat it. */
+export function isInert(slot: AssemblySlot): boolean { return slot.inert === true; }
+
+/** The damage on this slot resists ordinary repair: only a potent remedy lifts it. */
+export function hasResistantAffliction(
+	slot: AssemblySlot, catalog: Map<string, AssemblyCardDef>,
+): boolean {
+	return slot.afflictions.length > 0
+		&& catalog.get(slot.afflictions[0].cardId)?.resistant === true;
+}
 
 /** Functional = not afflicted: counts toward the winning rack. */
 export function isFunctional(slot: AssemblySlot): boolean { return slot.afflictions.length === 0; }
@@ -59,7 +72,7 @@ export function functionalColors(seat: AssemblySeatState): number {
 
 /** The slots of `target` this attack could hit right now. */
 export function attackableSlots(card: AssemblyCardDef, target: AssemblySeatState): AssemblySlot[] {
-	return target.slots.filter(s => !isLocked(s) && colorMatches(card.color, s.color));
+	return target.slots.filter(s => !isInert(s) && !isLocked(s) && colorMatches(card.color, s.color));
 }
 
 /** Rivals holding at least one hittable slot, with those slots (empty = unplayable). */
@@ -72,9 +85,24 @@ export function attackTargets(
 		.filter(t => t.slots.length > 0);
 }
 
-/** My own slots this remedy could touch (cure, shield or lock — locked ones are done). */
-export function remedySlots(card: AssemblyCardDef, seat: AssemblySeatState): AssemblySlot[] {
-	return seat.slots.filter(s => !isLocked(s) && colorMatches(card.color, s.color));
+/** My own slots this remedy could touch (cure, shield or lock — locked ones are done).
+ *  Resistant damage only yields to a POTENT remedy, so the catalog decides too. */
+export function remedySlots(
+	card: AssemblyCardDef, seat: AssemblySeatState, catalog: Map<string, AssemblyCardDef>,
+): AssemblySlot[] {
+	return seat.slots.filter(s =>
+		!isInert(s) && !isLocked(s) && colorMatches(card.color, s.color)
+		&& (card.potent === true || !hasResistantAffliction(s, catalog)));
+}
+
+/** Every slot on the table carrying damage an exile special could take out of the game —
+ *  the caster's own rack included, which is usually where it is aimed. */
+export function exileTargets(
+	gs: GameState,
+): { seat: AssemblySeatState; slots: AssemblySlot[] }[] {
+	return (gs.assembly?.seats ?? [])
+		.map(seat => ({ seat, slots: seat.slots.filter(s => s.afflictions.length > 0) }))
+		.filter(t => t.slots.length > 0);
 }
 
 /** May this my-slot ↔ their-slot pair swap without duplicating a colour on either rack? */
@@ -129,7 +157,8 @@ export function plagueHasMoves(gs: GameState, myId: string): boolean {
 	return mine.slots.some(slot => {
 		if (slot.afflictions.length === 0) return false;
 		const color = catalog.get(slot.afflictions[0].cardId)?.color ?? WILD;
-		return rivals.some(r => r.slots.some(s => isClean(s) && colorMatches(color, s.color)));
+		return rivals.some(r => r.slots.some(s =>
+			isClean(s) && !isInert(s) && colorMatches(color, s.color)));
 	});
 }
 
@@ -155,7 +184,7 @@ export function canPlayCard(gs: GameState, myId: string, cardId: string): Assemb
 				: { playable: false, reasonKey: 'game.assembly_no_attackable' };
 
 		case 'remedy':
-			return remedySlots(card, seat).length > 0
+			return remedySlots(card, seat, catalog).length > 0
 				? { playable: true }
 				: { playable: false, reasonKey: 'game.assembly_nothing_to_fix' };
 
@@ -178,10 +207,20 @@ export function canPlayCard(gs: GameState, myId: string, cardId: string): Assemb
 						? { playable: true }
 						: { playable: false, reasonKey: 'game.assembly_no_hands_to_scrap' };
 				case 'fullSwap':
+				case 'handSwap':
 					// Retired seats are not targets (swapping with an empty ghost).
 					return (gs.assembly?.seats ?? []).some(s => s.playerId !== myId && !s.retired)
 						? { playable: true }
 						: { playable: false, reasonKey: 'game.assembly_needs_target' };
+				case 'exile':
+					return exileTargets(gs).length > 0
+						? { playable: true }
+						: { playable: false, reasonKey: 'game.assembly_nothing_to_exile' };
+				case 'doubleAct':
+					// It buys the REST of the hand: worthless with nothing left to spend.
+					return seat.hand.length > 1
+						? { playable: true }
+						: { playable: false, reasonKey: 'game.assembly_nothing_left_to_play' };
 				default:
 					return { playable: false, reasonKey: 'game.assembly_unknown_card' };
 			}
@@ -216,15 +255,18 @@ export function assemblyCardHelp(
 
 	switch (def.type) {
 		case 'piece':
+			if (def.inert) return tSync('game.assembly_help_piece_inert');
 			return def.color === WILD
 				? tSync('game.assembly_help_piece_wild', { goal })
 				: tSync('game.assembly_help_piece', { goal });
 
 		case 'attack':
-			return tSync('game.assembly_help_attack', { system: systemOf(def.color) });
+			return tSync(def.resistant ? 'game.assembly_help_attack_resistant' : 'game.assembly_help_attack',
+				{ system: systemOf(def.color) });
 
 		case 'remedy':
-			return tSync('game.assembly_help_remedy', { system: systemOf(def.color) });
+			return tSync(def.potent ? 'game.assembly_help_remedy_potent' : 'game.assembly_help_remedy',
+				{ system: systemOf(def.color) });
 
 		case 'special':
 			switch (def.specialKind) {
@@ -233,6 +275,9 @@ export function assemblyCardHelp(
 				case 'plague': return tSync('game.assembly_help_plague');
 				case 'scrapHands': return tSync('game.assembly_help_scrap');
 				case 'fullSwap': return tSync('game.assembly_help_fullswap');
+				case 'exile': return tSync('game.assembly_help_exile');
+				case 'doubleAct': return tSync('game.assembly_help_doubleact');
+				case 'handSwap': return tSync('game.assembly_help_handswap');
 				default: return null;
 			}
 

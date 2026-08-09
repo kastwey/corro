@@ -462,11 +462,18 @@ export interface AssemblyCardDef {
   type: string;
   /** Colour id; "wild" matches any. Null for specials. */
   color?: string | null;
-  /** Specials: "swapPiece" | "stealPiece" | "plague" | "scrapHands" | "fullSwap". */
+  /** Specials: "swapPiece" | "stealPiece" | "plague" | "scrapHands" | "fullSwap"
+   *  | "exile" | "doubleAct" | "handSwap". */
   specialKind?: string | null;
   count: number;
   nameKey: string;
   playedKey?: string | null;
+  /** Attacks: damage no ordinary remedy lifts — it takes a potent one. */
+  resistant?: boolean;
+  /** Remedies: lifts resistant damage, and secures an undamaged piece on its own. */
+  potent?: boolean;
+  /** Pieces: nothing sticks to it — no attack, no remedy — so it is always functional. */
+  inert?: boolean;
 }
 
 /** One physical card instance (my own hand only — rival hands arrive as counts). */
@@ -480,6 +487,10 @@ export interface AssemblySlot {
   piece: AssemblyCardInstance;
   afflictions: AssemblyCardInstance[];
   shields: AssemblyCardInstance[];
+  /** A potent remedy secured this piece on its own, so the lock is not two shields. */
+  sealed?: boolean;
+  /** The piece is inert: untouchable by attacks and remedies alike. */
+  inert?: boolean;
 }
 
 export interface AssemblySeatState {
@@ -499,6 +510,10 @@ export interface AssemblyRulesConfig {
   handSize: number;
   slotsToWin: number;
   maxDiscard: number;
+  /** House rule: two players need one colour more than slotsToWin. */
+  duelGoal?: boolean;
+  /** House rule: attacks lifted by a potent remedy leave the game for good. */
+  attritionCures?: boolean;
 }
 
 export interface AssemblyState {
@@ -509,6 +524,13 @@ export interface AssemblyState {
   /** Face-DOWN discards in this genre: projected away too; the count is what travels. */
   discardPile: AssemblyCardInstance[];
   discardCount: number;
+  /** Cards out of the game for good; projected away, the count is what travels. */
+  exiledPile: AssemblyCardInstance[];
+  exiledCount: number;
+  /** Plays the current player still owes before the turn ends (0 = one card ends it). */
+  extraPlays: number;
+  /** The current player traded hands and may no longer discard this turn. */
+  discardBlocked: boolean;
 }
 
 // ── Draft family (simultaneous pick-and-pass) ────────────────────────────────
