@@ -152,6 +152,29 @@ test('the sheet is one labelled text box per category, and the judge is given no
 	assert.equal(visible('.categories-start', writer), false);
 });
 
+test('the letter die shows the round letter and re-rolls only when a new round deals one', () => {
+	const h = harness('p1');
+	const die = h.element.querySelector<HTMLElement>('.categories-die')!;
+
+	assert.equal(die.getAttribute('aria-hidden'), 'true', 'the die is decoration, never the only copy');
+	assert.equal(h.element.querySelector('.categories-die__letter')!.textContent, 'R');
+	assert.equal(die.classList.contains('categories-die--rolling'), true);
+
+	// A repaint for any other reason must not re-roll a die that is already sitting there.
+	die.classList.remove('categories-die--rolling');
+	h.render();
+	assert.equal(die.classList.contains('categories-die--rolling'), false);
+
+	h.state.categories!.round = {
+		...h.state.categories!.round,
+		roundNumber: 2,
+		letter: 'M',
+	};
+	h.render();
+	assert.equal(h.element.querySelector('.categories-die__letter')!.textContent, 'M');
+	assert.equal(die.classList.contains('categories-die--rolling'), true);
+});
+
 test('the round heading names the letter every answer has to start with', () => {
 	const writer = harness('p1');
 
