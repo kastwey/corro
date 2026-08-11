@@ -7,8 +7,8 @@ namespace CorroServer.Tests;
 
 /// <summary>
 /// Pins the SHIPPED "Galactic Workshop" assembly deck (the dangling-key net in
-/// KeyIntegrityTests also covers it, like every board under server/Packages): the 93-card
-/// composition — the classic 68 plus the 25-card expansion — the structural + content
+/// KeyIntegrityTests also covers it, like every board under server/Packages): the 97-card
+/// composition — the classic 68 plus the 29-card expansion — the structural + content
 /// validations, and the rules configuration.
 /// </summary>
 public class GalacticWorkshopPackageTests
@@ -17,20 +17,20 @@ public class GalacticWorkshopPackageTests
 		new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("galactic-workshop"));
 
 	[Fact]
-	public async Task The_deck_has_the_93_card_composition()
+	public async Task The_deck_has_the_97_card_composition()
 	{
 		var def = await Loaded;
 		var deck = def.AssemblyDeck!;
 
-		// 68 classic cards + 25 expansion ones: the armoured module, 9 resistant breakdowns,
-		// 7 experimental fixes and 8 treatments.
-		Assert.Equal(93, deck.Sum(c => c.Count));
+		// 68 classic cards + 29 expansion ones: the armoured module, 9 resistant breakdowns,
+		// 7 experimental fixes and 12 treatments.
+		Assert.Equal(97, deck.Sum(c => c.Count));
 		Assert.Equal(22, deck.Where(c => c.Type == "piece").Sum(c => c.Count));
 		Assert.Equal(26, deck.Where(c => c.Type == "attack").Sum(c => c.Count));
 		Assert.Equal(27, deck.Where(c => c.Type == "remedy").Sum(c => c.Count));
 		// The classic tail the E2E deal reads from must stay last, in this order.
 		Assert.Equal(new[] { "coolant", "overload", "reactor" }, deck.TakeLast(3).Select(c => c.Id));
-		Assert.Equal(18, deck.Where(c => c.Type == "special").Sum(c => c.Count));
+		Assert.Equal(22, deck.Where(c => c.Type == "special").Sum(c => c.Count));
 
 		// One wild joker piece, one wild attack; the wild remedy comes in four copies.
 		Assert.Equal(1, deck.Single(c => c.Id == "universal-module").Count);
@@ -73,6 +73,7 @@ public class GalacticWorkshopPackageTests
 		Assert.Equal(4, deck.Single(c => c.SpecialKind == "exile").Count);
 		Assert.Equal(2, deck.Single(c => c.SpecialKind == "doubleAct").Count);
 		Assert.Equal(2, deck.Single(c => c.SpecialKind == "handSwap").Count);
+		Assert.Equal(4, deck.Single(c => c.SpecialKind == "guard").Count);
 	}
 
 	[Fact]

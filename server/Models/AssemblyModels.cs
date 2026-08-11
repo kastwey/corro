@@ -74,6 +74,44 @@ public record AssemblySeatState
 	public bool Retired { get; set; }
 }
 
+/// <summary>
+/// A card that has been played but has NOT resolved yet: it is on the table waiting for the
+/// players it threatens to say whether they shield themselves. PUBLIC — everyone can see what
+/// is hanging over the table, and that is the whole point of the pause.
+///
+/// Two shapes, one record. A TARGETED card waits on its single victim; if they shield, the
+/// actor must re-aim it at somebody else (themselves included) and that new target gets no
+/// shield of their own. A card that hits EVERYONE waits on each threatened player in turn
+/// order, and each one who shields is simply skipped when it resolves.
+/// </summary>
+public record PendingAssemblyPlay
+{
+	/// <summary>Who played the card being answered.</summary>
+	public required string ActorId { get; init; }
+
+	/// <summary>The physical card, held OUT of the hand: it is spent whatever happens.</summary>
+	public required AssemblyCardInstance Card { get; init; }
+
+	/// <summary>Its catalog definition, so resolution knows what to do.</summary>
+	public required string CardId { get; init; }
+
+	/// <summary>Current targeting. A re-aim rewrites all three.</summary>
+	public string? TargetPlayerId { get; set; }
+	public string? TargetColor { get; set; }
+	public string? GiveColor { get; set; }
+
+	/// <summary>Players who still owe an answer, in turn order. The head of the list is the
+	/// one being asked right now; the pause ends when this empties.</summary>
+	public List<string> AwaitingGuard { get; init; } = new();
+
+	/// <summary>Players who shielded: a card that hits everyone skips them when it lands.</summary>
+	public List<string> Shielded { get; init; } = new();
+
+	/// <summary>A shield sent a TARGETED card looking for a new victim, and the actor has yet
+	/// to name one. Nobody may shield against the re-aimed card — one shield per card.</summary>
+	public bool AwaitingRetarget { get; set; }
+}
+
 /// <summary>Everything assembly-specific inside GameState (null in other families).</summary>
 public record AssemblyState
 {
@@ -116,4 +154,11 @@ public record AssemblyState
 	/// theirs to throw away, only to play. Cleared when the turn ends. PUBLIC.
 	/// </summary>
 	public bool DiscardBlocked { get; set; }
+
+	/// <summary>
+	/// The card waiting on its shield answers, if any. Only ONE is ever open at a time — the
+	/// turn cannot advance while it is — so it is never ambiguous which card is being answered.
+	/// PUBLIC.
+	/// </summary>
+	public PendingAssemblyPlay? PendingPlay { get; set; }
 }

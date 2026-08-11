@@ -11,9 +11,10 @@ import { popupMenu } from './popupMenu.js';
 import { escapeHtml } from './escapeHtml.js';
 import {
 	assemblyCardHelp, assemblyCatalog, assemblySeat, assemblyStatusText, attackTargets,
-	canPlayCard, canSwapPair, deckColors, exileTargets, isFunctional, isLocked, remedySlots,
-	stealTargets, swapTargets,
+	awaitedShieldFrom, canPlayCard, canSwapPair, deckColors, exileTargets, isFunctional, isLocked,
+	mustRetarget, myShieldCards, remedySlots, retargetOptions, stealTargets, swapTargets,
 } from './assemblyRules.js';
+import { dialogManager } from './dialogManager.js';
 import {
 	cardBoardHelpShortcuts, playerName, registerPileStatusKey, registerStatusKeys, resetCardBoard,
 } from './cardBoardShell.js';
@@ -31,6 +32,10 @@ export interface AssemblyBoardDeps {
 	commands: {
 		play: (instanceId: string, targeting?: { targetPlayerId?: string | null; targetColor?: string | null; giveColor?: string | null }) => void;
 		discard: (instanceIds: string[]) => void;
+		/** Answer a card played against me: spend a shield, or let it through (null). */
+		guard: (instanceId: string | null) => void;
+		/** Name the new victim of a card a shield deflected. */
+		retarget: (targeting?: { targetPlayerId?: string | null; targetColor?: string | null; giveColor?: string | null }) => void;
 	};
 }
 
@@ -43,6 +48,9 @@ const SLOT_COLORS: Record<string, string> = {
 
 export class AssemblyBoard {
 	private built = false;
+	/** Which pending card (and phase) I have already been prompted about, so a repaint
+	 *  does not reopen the question under the player's fingers. */
+	private answeringKey: string | null = null;
 	private readonly hand = new HandPanel();
 	private piles!: HTMLElement;
 	private racks!: HTMLElement;
@@ -62,6 +70,95 @@ export class AssemblyBoard {
 		this.renderRacks(gs);
 		this.hand.update();
 		if (firstBuild && document.activeElement === this.element) this.hand.focus();
+		this.maybeAnswerPendingCard(gs);
+	}
+
+	/**
+	 * A card is hanging over the table and the answer is MINE: either I may shield myself
+	 * against it, or a shield deflected mine and I must aim it somewhere else. Prompted once
+	 * per pending card — every later state update finds the same key and stays quiet.
+	 */
+	private maybeAnswerPendingCard(gs: GameState): void {
+		const myId = this.deps.getMyPlayerId();
+		const pending = gs.assembly?.pendingPlay ?? null;
+		if (!myId || !pending) { this.answeringKey = null; return; }
+
+		const key = `${pending.card.instanceId}:${pending.awaitingRetarget ? 'retarget' : 'guard'}`;
+		if (this.answeringKey === key) return;
+
+		if (awaitedShieldFrom(gs) === myId) {
+			const shields = myShieldCards(gs, myId);
+			if (shields.length === 0) return; // the server only asks players who can answer
+			this.answeringKey = key;
+			this.askShield(gs, pending.actorId, pending.cardId, shields[0]);
+		} else if (mustRetarget(gs, myId)) {
+			this.answeringKey = key;
+			this.pickNewVictim(gs, myId, pending.cardId);
+		}
+	}
+
+	/** The blocking question, as a native dialog: shield myself, or let the card through.
+	 *  Both buttons are real answers — dismissing it lets the card through, which is a
+	 *  legitimate choice rather than a dead end the table would hang on. */
+	private askShield(gs: GameState, actorId: string, cardId: string, shieldInstanceId: string): void {
+		const actor = gs.players.find(p => p.id === actorId);
+		const cardKey = assemblyCatalog(gs).get(cardId)?.nameKey ?? cardId;
+		dialogManager.showConfirm({
+			title: this.deps.tSync('game.assembly_answer_title'),
+			message: '',
+			messageI18nKey: 'game.assembly_answer_question',
+			messageI18nVars: { player: actor?.name ?? '', card: cardKey },
+			confirmI18nKey: 'game.assembly_answer_shield',
+			cancelI18nKey: 'game.assembly_answer_let_through',
+			// The dialog exists because there is something worth blocking: land on the shield.
+			focusConfirm: true,
+			onConfirm: () => { this.hand.focus(); this.deps.commands.guard(shieldInstanceId); },
+			onCancel: () => { this.hand.focus(); this.deps.commands.guard(null); },
+		});
+	}
+
+	/** My card was shielded: aim it at somebody else. The chain matches the card's shape,
+	 *  and a single remaining option resolves itself — the rules leave no choice there. */
+	private pickNewVictim(gs: GameState, myId: string, cardId: string): void {
+		const catalog = assemblyCatalog(gs);
+		const def = catalog.get(cardId);
+		const targets = retargetOptions(gs, myId);
+		const nameOf = (s: AssemblySeatState) =>
+			gs.players.find(p => p.id === s.playerId)?.name ?? s.playerId;
+		const cardLabel = def ? this.deps.tSync(def.nameKey) : cardId;
+		const send = (targeting: { targetPlayerId?: string | null; targetColor?: string | null; giveColor?: string | null }) =>
+			this.deps.commands.retarget(targeting);
+
+		if (targets.length === 0) return; // the server bins the card on its own
+
+		this.pick(targets, t => nameOf(t.seat),
+			this.deps.tSync('game.assembly_pick_retarget', { card: cardLabel }),
+			t => {
+				if (def?.specialKind === 'fullSwap' || def?.specialKind === 'handSwap') {
+					send({ targetPlayerId: t.seat.playerId });
+					return;
+				}
+
+				this.pick(t.slots, s => this.slotLabel(s, catalog),
+					this.deps.tSync('game.assembly_pick_slot', { player: nameOf(t.seat) }),
+					theirSlot => {
+						if (def?.specialKind !== 'swapPiece') {
+							send({ targetPlayerId: t.seat.playerId, targetColor: theirSlot.color });
+							return;
+						}
+
+						const mine = assemblySeat(gs, myId);
+						const mySlots = (mine?.slots ?? []).filter(m =>
+							mine && canSwapPair(mine, m, t.seat, theirSlot));
+						this.pick(mySlots, s => this.slotLabel(s, catalog),
+							this.deps.tSync('game.assembly_pick_give_slot'),
+							mySlot => send({
+								targetPlayerId: t.seat.playerId,
+								targetColor: theirSlot.color,
+								giveColor: mySlot.color,
+							}));
+					});
+			});
 	}
 
 	/** The hand is this family's home surface: board focus lands here. */

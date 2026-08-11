@@ -705,6 +705,23 @@ export class GameManager {
 		await this.send({ $type: 'ASSEMBLY_DISCARD', instanceIds }, { requireTurn: true });
 	}
 
+	/** Assembly family: answer a card played against you — spend a shield, or let it
+	 *  through (null). OFF-TURN by definition: it is played on somebody else's turn, so
+	 *  the turn guard must stay off. */
+	async assemblyGuard(instanceId: string | null): Promise<void> {
+		await this.send({ $type: 'ASSEMBLY_GUARD', instanceId });
+	}
+
+	/** Assembly family: a shield deflected my card — name its new victim. Still my turn. */
+	async assemblyRetarget(targeting: { targetPlayerId?: string | null; targetColor?: string | null; giveColor?: string | null } = {}): Promise<void> {
+		await this.send({
+			$type: 'ASSEMBLY_RETARGET',
+			targetPlayerId: targeting.targetPlayerId ?? null,
+			targetColor: targeting.targetColor ?? null,
+			giveColor: targeting.giveColor ?? null,
+		}, { requireTurn: true });
+	}
+
 	/** Draft family: commit (or replace) this trick's secret pick — optionally two
 	 *  cards riding a table "extra". The family is SIMULTANEOUS — there is no turn to
 	 *  guard (currentTurn stays null all game). */

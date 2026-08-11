@@ -27,13 +27,38 @@ public sealed class AssemblyBotPolicy : IBotPolicy
 			return null;
 		}
 
+		var catalog = AssemblyRulebook.Catalog(view.AssemblyDeck ?? new List<AssemblyCardDef>());
+		var rules = view.AssemblyRules ?? new AssemblyRulesConfig();
+
+		// A card hanging over the table freezes the turn, so answering it comes BEFORE the
+		// turn check: the bot being asked is usually not the one whose turn it is, and a bot
+		// that never answered would leave the table waiting for it forever.
+		if (assembly.PendingPlay is { } pending)
+		{
+			if (AssemblyRulebook.AwaitedShieldFrom(assembly) == botId)
+			{
+				return new AssemblyGuardCommand
+				{
+					PlayerId = botId,
+					InstanceId = WorthShielding(assembly, pending, botId, catalog)
+						? ShieldInHand(assembly, botId, catalog)
+						: null,
+				};
+			}
+
+			if (pending.AwaitingRetarget && pending.ActorId == botId)
+			{
+				return ChooseNewVictim(assembly, botId, catalog);
+			}
+
+			return null; // somebody else owes the answer
+		}
+
 		if (view.CurrentTurn != botId)
 		{
 			return null;
 		}
 
-		var catalog = AssemblyRulebook.Catalog(view.AssemblyDeck ?? new List<AssemblyCardDef>());
-		var rules = view.AssemblyRules ?? new AssemblyRulesConfig();
 		var seat = AssemblyRulebook.SeatOf(assembly, botId);
 
 		if (seat.Hand.Count == 0)
@@ -63,6 +88,80 @@ public sealed class AssemblyBotPolicy : IBotPolicy
 
 	private sealed record Option(AssemblyCardInstance Instance, AssemblyCardDef Def,
 		string? TargetPlayerId = null, string? TargetColor = null, string? GiveColor = null);
+
+	// ── Answering somebody else's card ────────────────────────────────────────
+
+	private static string? ShieldInHand(
+		AssemblyState assembly, string botId, IReadOnlyDictionary<string, AssemblyCardDef> catalog)
+		=> AssemblyRulebook.SeatOf(assembly, botId).Hand
+			.FirstOrDefault(i => catalog.GetValueOrDefault(i.CardId)?.SpecialKind == "guard")?.InstanceId;
+
+	/// <summary>
+	/// Is this card worth a shield? A shield is scarce, so it is kept for damage that would
+	/// actually cost something: a hit that sticks (rather than one an existing protection would
+	/// absorb), anything that takes a piece or a hand away, and a table-wide effect with
+	/// something of the bot's to ruin.
+	/// </summary>
+	private static bool WorthShielding(
+		AssemblyState assembly, PendingAssemblyPlay pending, string botId,
+		IReadOnlyDictionary<string, AssemblyCardDef> catalog)
+	{
+		var card = catalog.GetValueOrDefault(pending.CardId);
+		if (card == null)
+		{
+			return false;
+		}
+
+		var seat = AssemblyRulebook.SeatOf(assembly, botId);
+		switch (card.SpecialKind)
+		{
+			case "scrapHands":
+				// Only worth it if the shield saves more than itself.
+				return seat.Hand.Count > 2;
+			case "plague":
+				return seat.Slots.Any(s => AssemblyRulebook.IsClean(s) && !s.Inert);
+			case "stealPiece" or "swapPiece" or "fullSwap" or "handSwap":
+				return true;
+		}
+
+		if (card.Type != "attack")
+		{
+			return false;
+		}
+
+		// A protected piece would merely lose its protection; a bare one takes real damage,
+		// and an already damaged one is about to be destroyed outright.
+		var slot = seat.Slots.FirstOrDefault(s => s.Color == pending.TargetColor);
+		return slot != null && slot.Shields.Count == 0;
+	}
+
+	/// <summary>A shield sent the bot's own card looking for a new victim: aim it at the
+	/// strongest rack it can still reach, and only at the bot's own as a last resort.</summary>
+	private static AssemblyRetargetCommand? ChooseNewVictim(
+		AssemblyState assembly, string botId, IReadOnlyDictionary<string, AssemblyCardDef> catalog)
+	{
+		var options = AssemblyRulebook.RetargetOptions(assembly, catalog);
+		if (options.Count == 0)
+		{
+			return null; // the server bins the card on its own
+		}
+
+		var best = options
+			.OrderBy(t => t.TargetPlayerId == botId ? 1 : 0) // never volunteer my own rack
+			.ThenByDescending(t => t.TargetPlayerId is { } id
+				&& assembly.Seats.FirstOrDefault(s => s.PlayerId == id) is { } victim
+				? AssemblyRulebook.FunctionalColors(victim)
+				: 0)
+			.First();
+
+		return new AssemblyRetargetCommand
+		{
+			PlayerId = botId,
+			TargetPlayerId = best.TargetPlayerId,
+			TargetColor = best.TargetColor,
+			GiveColor = best.GiveColor,
+		};
+	}
 
 	private AssemblyPlayCommand? ChoosePlay(
 		AssemblyState assembly,

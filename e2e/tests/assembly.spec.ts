@@ -43,7 +43,7 @@ test('assembly: install, auto-targeted breakdown, refusal, face-down discard, re
 	await expect(anaCards.locator('[data-card-art="package"]')).toHaveCount(3);
 	await expect(anaCards.first()).toHaveAttribute('aria-label', /Reactor/);
 	await expect(ana.locator('.hand-card--info')).toHaveCount(0);
-	await expect(ana.locator('.assembly-piles [data-pile="deck"] .gcard__back-label')).toHaveText('87');
+	await expect(ana.locator('.assembly-piles [data-pile="deck"] .gcard__back-label')).toHaveText('91');
 	await expect(ana.locator('.assembly-piles [data-pile="discard"] .gcard__back-label')).toHaveText('0');
 	await expect(ana.locator('#board .assembly-rack')).toHaveCount(2);
 	const pileSize = await ana.locator('.assembly-piles [data-pile="deck"] .gcard').evaluate(element => {
@@ -56,7 +56,7 @@ test('assembly: install, auto-targeted breakdown, refusal, face-down discard, re
 	await expect(ana.locator('.dice-control')).toBeHidden();
 	await anaCards.first().focus();
 	await ana.keyboard.press('d');
-	await expectAnnouncement(ana, /Mazo: 87\. Descartes: 0\./);
+	await expectAnnouncement(ana, /Mazo: 91\. Descartes: 0\./);
 	await expect(anaCards.first()).toBeFocused();
 
 	// ── Per-card HELP (live-play request): the row's Ayuda opens a reading dialog with
@@ -211,6 +211,14 @@ test('assembly: a scrapped empty hand passes and refills automatically instead o
 	await inspection.focus();
 	await ana.keyboard.press('Enter');
 
+	// By now Berto is holding a deflector shield, so a card that hits the whole table stops
+	// to ask him first. He waves it through — the scrap is what this scenario is about.
+	const question = berto.locator('.game-dialog', { hasText: /Una carta contra tu taller/ });
+	await expect(question).toBeVisible();
+	await question.getByRole('button', { name: /Dejarla pasar/ }).click();
+	await expect(question).toBeHidden();
+	await expectAnnouncement(berto, /La dejas pasar/i);
+
 	// Berto has no decision to make: the server passes his empty turn, gives him three
 	// private cards and returns play to Ana. No draw/pass button or client rescue is needed.
 	await expectAnnouncement(berto, /Pasas \(sin cartas\)/i);
@@ -218,4 +226,119 @@ test('assembly: a scrapped empty hand passes and refills automatically instead o
 	await expect(berto.locator('.hand-card:not(.hand-card--info)')).toHaveCount(3);
 	await expect(berto.locator('.visual-narrative')).toContainText(/Robas 3:/i);
 	await expect(ana.locator('#turn-indicator .turn-indicator__name')).toHaveText('Ana');
+});
+
+// The deflector shield is the family's only OFF-TURN card, so it is also the only one whose
+// question interrupts somebody else's turn. Each turn draws exactly one card, so with the
+// E2E deal the eighth draw of the game is the first shield — and it is Berto's.
+test('assembly: a deflector shield bounces a breakdown back onto the workshop that threw it', async ({ browser }) => {
+	const ana = await newPlayerPage(browser);
+	const berto = await newPlayerPage(browser);
+
+	const code = await createGame(ana, 'Ana', BOARD);
+	await joinGame(berto, code, 'Berto');
+	await startGame(ana, [ana, berto]);
+
+	// Every step hands the turn over, so each one waits for the table to actually be on the
+	// next player before touching it: the deal is deterministic, the round trip is not.
+	const turnIs = async (name: string) => {
+		await expect(ana.locator('.turn-indicator')).toContainText(name);
+		await expect(berto.locator('.turn-indicator')).toContainText(name);
+		// The hand repaint trails the announcement on purpose (the narration lead), so the
+		// rows are replaced AFTER the turn flips. Acting before that settles would aim at a
+		// row the panel is about to throw away.
+		for (const page of [ana, berto]) {
+			await expect(page.locator('.hand-card:not(.hand-card--info)')).toHaveCount(3);
+			await page.waitForTimeout(500);
+		}
+	};
+	const focusCard = async (page: typeof ana, label: RegExp) => {
+		await page.locator('#board').focus();
+		const card = page.locator('.hand-card:not(.hand-card--info)', { hasText: label }).first();
+		await card.focus();
+		await expect(card).toBeFocused();
+		return card;
+	};
+	const play = async (page: typeof ana, label: RegExp) => {
+		await focusCard(page, label);
+		await page.keyboard.press('Enter');
+	};
+	// A second module of a system is refused, and the panel offers the discard in the same
+	// breath — the family's own way of throwing a card away.
+	const discardSpare = async (page: typeof ana) => {
+		await focusCard(page, /Reactor/);
+		await page.keyboard.press('Enter');
+		const offer = page.locator('.game-dialog', { hasText: /Ya tienes un módulo de ese sistema/ });
+		await expect(offer).toBeVisible();
+		await offer.locator('.btn-primary').click();
+		await expect(offer).toBeHidden();
+	};
+
+	// ── Both install a Reactor, then trade blows until Berto draws a shield. With this
+	// deal the shields arrive on the tenth draw of the game, which is Berto's fifth. ──
+	await play(ana, /Reactor/);
+	await expectAnnouncement(berto, /Ana instala un módulo/);
+	await turnIs('Berto');
+	await play(berto, /Reactor/);
+	await turnIs('Ana');
+
+	await discardSpare(ana);
+	await turnIs('Berto');
+	await discardSpare(berto);
+	await turnIs('Ana');
+	await discardSpare(ana);
+	await turnIs('Berto');
+
+	// Berto breaks Ana's reactor; she repairs it right back (single targets: no pickers).
+	await play(berto, /Sobrecarga/);
+	await expectAnnouncement(ana, /sobrecarga tu reactor/i);
+	await turnIs('Ana');
+	await play(ana, /Refrigerante/);
+	await expectAnnouncement(ana, /Reparas tu Reactor/);
+	await turnIs('Berto');
+	// Berto armours his own; Ana burns that armour off again.
+	await play(berto, /Refrigerante/);
+	await expectAnnouncement(berto, /Blindas tu Reactor/);
+	await turnIs('Ana');
+	await play(ana, /Sobrecarga/);
+	await expectAnnouncement(berto, /absorbe el golpe/);
+	await turnIs('Berto');
+	// Berto armours it once more, and the draw that follows is the first deflector shield.
+	await play(berto, /Refrigerante/);
+	await expectAnnouncement(berto, /Blindas tu Reactor/);
+	await turnIs('Ana');
+
+	const shield = berto.locator('.hand-card:not(.hand-card--info)', { hasText: /Escudo deflector/ });
+	await expect(shield).toHaveCount(1);
+	// It is never a move of Berto's own turn: the panel says so instead of offering it.
+	await expect(shield).toContainText(/no jugable/);
+
+	// ── Ana throws a breakdown at Berto's reactor. It does NOT land: the table stops on
+	// Berto's answer, and he is the only one asked. ──
+	await play(ana, /Sobrecarga/);
+	await expectAnnouncement(berto, /¿Levantas un escudo o la dejas pasar\?/);
+	await expectAnnouncement(ana, /puede levantar un escudo/);
+
+	// ── The question is a real dialog, and it is audited BEFORE it disappears. ──
+	const question = berto.locator('.game-dialog', { hasText: /Una carta contra tu taller/ });
+	await expect(question).toBeVisible();
+	await expect(question).toContainText(/Ana juega Sobrecarga contra ti/);
+	await flushAxeAudit(berto);
+
+	await question.locator('.btn-primary').click();
+	await expect(question).toBeHidden();
+	await expectAnnouncement(berto, /Levantas el escudo deflector/);
+	await expectAnnouncement(ana, /Berto levanta un escudo deflector/);
+
+	// ── Ana is the only workshop left with a red module, so the rules make her wear it:
+	// the breakdown bounces onto her own reactor, with no choice left to make. ──
+	await expectAnnouncement(ana, /Tu Reactor queda averiado/);
+	// The racks render in seat order on every page, so Berto's is the second one.
+	await expect(ana.locator('#board .assembly-rack').first()).toContainText('0/4');
+	const bertoRack = berto.locator('#board .assembly-rack').nth(1);
+	await expect(bertoRack).toContainText('1/4');
+	await expect(bertoRack.locator('.assembly-module--afflicted')).toHaveCount(0);
+
+	// Spending a shield off turn is not replaced: Berto starts his next turn a card short.
+	await expect(berto.locator('.hand-card:not(.hand-card--info)')).toHaveCount(2);
 });

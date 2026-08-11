@@ -258,6 +258,14 @@
     "playedKey": "cards.chain_leak_played"
   },
   {
+    "id": "deflector-shield",
+    "artColor": "#3C6E9B",
+    "type": "special",
+    "specialKind": "guard",
+    "count": 4,
+    "nameKey": "cards.deflector_shield"
+  },
+  {
     "id": "imperial-inspection",
     "artColor": "#596373",
     "type": "special",

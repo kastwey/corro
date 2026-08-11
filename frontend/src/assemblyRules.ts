@@ -95,6 +95,69 @@ export function remedySlots(
 		&& (card.potent === true || !hasResistantAffliction(s, catalog)));
 }
 
+/** Whose shield answer the table is waiting for right now, if anyone's. */
+export function awaitedShieldFrom(gs: GameState): string | null {
+	const pending = gs.assembly?.pendingPlay;
+	if (!pending || pending.awaitingRetarget) return null;
+	return pending.awaitingGuard[0] ?? null;
+}
+
+/** The shield cards in my hand — what I could answer a card against me with. */
+export function myShieldCards(gs: GameState, myId: string): string[] {
+	const catalog = assemblyCatalog(gs);
+	return (assemblySeat(gs, myId)?.hand ?? [])
+		.filter(c => catalog.get(c.cardId)?.specialKind === 'guard')
+		.map(c => c.instanceId);
+}
+
+/** Am I the one who must re-aim a card a shield just deflected? */
+export function mustRetarget(gs: GameState, myId: string): boolean {
+	const pending = gs.assembly?.pendingPlay;
+	return pending?.awaitingRetarget === true && pending.actorId === myId;
+}
+
+/**
+ * Where a deflected card may be re-aimed: the same enumeration the server runs, minus the
+ * players who already shielded. My OWN rack is in there for attacks — not a move I would
+ * choose, but the one the rules force when no rival is left to take it.
+ */
+export function retargetOptions(
+	gs: GameState, myId: string,
+): { seat: AssemblySeatState; slots: AssemblySlot[] }[] {
+	const pending = gs.assembly?.pendingPlay;
+	if (!pending) return [];
+	const card = assemblyCatalog(gs).get(pending.cardId);
+	if (!card) return [];
+	const mine = assemblySeat(gs, myId);
+	const shielded = new Set(pending.shielded);
+
+	return (gs.assembly?.seats ?? [])
+		.filter(s => !s.retired && !shielded.has(s.playerId))
+		// Only an attack may be forced back onto my own rack; taking a piece from myself or
+		// trading hands with myself is not a target, it is a no-op.
+		.filter(s => s.playerId !== myId || card.type === 'attack')
+		.map(seat => {
+			if (card.type === 'attack') return { seat, slots: attackableSlots(card, seat) };
+			if (card.specialKind === 'stealPiece') {
+				const myColors = new Set((mine?.slots ?? []).map(s => s.color));
+				return { seat, slots: seat.slots.filter(s => !isLocked(s) && !myColors.has(s.color)) };
+			}
+			if (card.specialKind === 'swapPiece') {
+				return {
+					seat,
+					slots: mine
+						? seat.slots.filter(theirs => mine.slots.some(m => canSwapPair(mine, m, seat, theirs)))
+						: [],
+				};
+			}
+			// fullSwap / handSwap take the whole seat: no slot step at all.
+			return { seat, slots: [] };
+		})
+		.filter(t => t.slots.length > 0
+			|| assemblyCatalog(gs).get(pending.cardId)?.specialKind === 'fullSwap'
+			|| assemblyCatalog(gs).get(pending.cardId)?.specialKind === 'handSwap');
+}
+
 /** Every slot on the table carrying damage an exile special could take out of the game —
  *  the caster's own rack included, which is usually where it is aimed. */
 export function exileTargets(
@@ -221,6 +284,9 @@ export function canPlayCard(gs: GameState, myId: string, cardId: string): Assemb
 					return seat.hand.length > 1
 						? { playable: true }
 						: { playable: false, reasonKey: 'game.assembly_nothing_left_to_play' };
+				case 'guard':
+					// Never a move of your own: it answers somebody else's card, off turn.
+					return { playable: false, reasonKey: 'game.assembly_guard_off_turn' };
 				default:
 					return { playable: false, reasonKey: 'game.assembly_unknown_card' };
 			}
@@ -278,6 +344,7 @@ export function assemblyCardHelp(
 				case 'exile': return tSync('game.assembly_help_exile');
 				case 'doubleAct': return tSync('game.assembly_help_doubleact');
 				case 'handSwap': return tSync('game.assembly_help_handswap');
+				case 'guard': return tSync('game.assembly_help_guard');
 				default: return null;
 			}
 

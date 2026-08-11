@@ -41,6 +41,8 @@ public class AssemblyExpansionTests
 		new() { Id = "s-exile", Type = "special", SpecialKind = "exile", Count = 4, NameKey = "c.s-exile" },
 		new() { Id = "s-double", Type = "special", SpecialKind = "doubleAct", Count = 2, NameKey = "c.s-double" },
 		new() { Id = "s-handswap", Type = "special", SpecialKind = "handSwap", Count = 2, NameKey = "c.s-handswap" },
+		new() { Id = "s-guard", Type = "special", SpecialKind = "guard", Count = 4, NameKey = "c.s-guard" },
+		new() { Id = "s-scrap", Type = "special", SpecialKind = "scrapHands", Count = 1, NameKey = "c.s-scrap" },
 	};
 
 	private static readonly Dictionary<string, AssemblyCardDef> Catalog = AssemblyRulebook.Catalog(Deck);
@@ -425,5 +427,212 @@ public class AssemblyExpansionTests
 
 		var withPiece = Seat("a", hand: new[] { "a-red", "p-red" });
 		Assert.True(AssemblyRulebook.HasAnyLegalPlay(State(withPiece, b), "a", Catalog));
+	}
+
+	// ── The shield ────────────────────────────────────────────────────────────
+
+	[Fact]
+	public void A_shield_is_never_a_move_of_your_own()
+	{
+		var a = Seat("a", hand: new[] { "s-guard" });
+		Assert.Equal("game.assembly_guard_off_turn",
+			Play(State(a, Seat("b")), "a", "s-guard").ReasonKey);
+	}
+
+	[Fact]
+	public void A_card_aimed_at_someone_holding_a_shield_waits_for_their_answer()
+	{
+		var a = Seat("a", hand: new[] { "a-red" });
+		var b = Seat("b", hand: new[] { "s-guard" }, Slot("red"));
+		var state = State(a, b);
+		var result = Play(state, "a", "a-red", targetPlayer: "b", targetColor: "red");
+
+		Assert.True(result.Ok);
+		Assert.True(result.Suspended);
+		Assert.Equal("b", AssemblyRulebook.AwaitedShieldFrom(state));
+		Assert.Empty(b.Slots[0].Afflictions);           // nothing has landed yet
+		Assert.DoesNotContain(a.Hand, c => c.CardId == "a-red"); // but the card is spent
+		Assert.Null(AssemblyRulebook.TryResolvePending(state, Rules, Catalog));
+	}
+
+	[Fact]
+	public void Nobody_is_asked_who_could_not_answer_anyway()
+	{
+		var a = Seat("a", hand: new[] { "a-red" });
+		var b = Seat("b", null, Slot("red"));
+		var state = State(a, b);
+
+		Assert.False(Play(state, "a", "a-red", targetPlayer: "b", targetColor: "red").Suspended);
+		Assert.Null(state.PendingPlay);
+		Assert.Single(b.Slots[0].Afflictions);
+	}
+
+	[Fact]
+	public void Letting_it_through_lands_the_card_unchanged()
+	{
+		var a = Seat("a", hand: new[] { "a-red" });
+		var b = Seat("b", hand: new[] { "s-guard" }, Slot("red"));
+		var state = State(a, b);
+		Play(state, "a", "a-red", targetPlayer: "b", targetColor: "red");
+
+		Assert.True(AssemblyRulebook.Guard(state, "b", null, Catalog).Ok);
+		var resolved = AssemblyRulebook.TryResolvePending(state, Rules, Catalog);
+
+		Assert.NotNull(resolved);
+		Assert.Equal("afflicted", resolved!.AttackOutcome);
+		Assert.Single(b.Slots[0].Afflictions);
+		Assert.Single(b.Hand); // the shield is still there, unspent
+		Assert.Null(state.PendingPlay);
+	}
+
+	[Fact]
+	public void Shielding_deflects_the_card_onto_the_only_rival_left()
+	{
+		var a = Seat("a", hand: new[] { "a-red" });
+		var b = Seat("b", hand: new[] { "s-guard" }, Slot("red"));
+		var c = Seat("c", null, Slot("red"));
+		var state = State(a, b, c);
+		Play(state, "a", "a-red", targetPlayer: "b", targetColor: "red");
+
+		var guard = AssemblyRulebook.Guard(state, "b", b.Hand[0].InstanceId, Catalog);
+		Assert.True(guard.Shielded);
+		Assert.Empty(b.Hand); // spent, and no replacement is drawn off turn
+
+		// One rival left who can take it: no choice to make, so it lands by itself.
+		var resolved = AssemblyRulebook.TryResolvePending(state, Rules, Catalog);
+		Assert.NotNull(resolved);
+		Assert.Empty(b.Slots[0].Afflictions);
+		Assert.Single(c.Slots[0].Afflictions);
+	}
+
+	[Fact]
+	public void A_shielded_card_with_several_victims_left_waits_for_the_actor_to_re_aim()
+	{
+		var a = Seat("a", hand: new[] { "a-wild" });
+		var b = Seat("b", hand: new[] { "s-guard" }, Slot("red"));
+		var c = Seat("c", null, Slot("green"));
+		var d = Seat("d", null, Slot("blue"));
+		var state = State(a, b, c, d);
+		Play(state, "a", "a-wild", targetPlayer: "b", targetColor: "red");
+		AssemblyRulebook.Guard(state, "b", b.Hand[0].InstanceId, Catalog);
+
+		Assert.True(state.PendingPlay!.AwaitingRetarget);
+		Assert.Null(AssemblyRulebook.TryResolvePending(state, Rules, Catalog));
+
+		// The player who shielded is off the list; everyone else is fair game.
+		var options = AssemblyRulebook.RetargetOptions(state, Catalog);
+		Assert.DoesNotContain(options, o => o.TargetPlayerId == "b");
+		Assert.Contains(options, o => o.TargetPlayerId == "c");
+		Assert.Contains(options, o => o.TargetPlayerId == "d");
+
+		Assert.True(AssemblyRulebook.Retarget(state, "a", "d", "blue", null, Catalog).Ok);
+		AssemblyRulebook.TryResolvePending(state, Rules, Catalog);
+		Assert.Single(d.Slots[0].Afflictions);
+	}
+
+	[Fact]
+	public void A_shielded_attack_with_nowhere_else_to_go_falls_on_the_actors_own_rack()
+	{
+		// Only the actor has a red piece left, so the rules make them wear it.
+		var a = Seat("a", hand: new[] { "a-red" }, Slot("red"));
+		var b = Seat("b", hand: new[] { "s-guard" }, Slot("red"));
+		var state = State(a, b);
+		Play(state, "a", "a-red", targetPlayer: "b", targetColor: "red");
+		AssemblyRulebook.Guard(state, "b", b.Hand[0].InstanceId, Catalog);
+
+		var resolved = AssemblyRulebook.TryResolvePending(state, Rules, Catalog);
+
+		Assert.NotNull(resolved);
+		Assert.Single(a.Slots[0].Afflictions);
+		Assert.Empty(b.Slots[0].Afflictions);
+	}
+
+	[Fact]
+	public void A_shielded_card_with_no_target_at_all_is_spent_for_nothing()
+	{
+		var a = Seat("a", hand: new[] { "s-steal" });
+		var b = Seat("b", hand: new[] { "s-guard" }, Slot("red"));
+		var state = State(a, b);
+		Play(state, "a", "s-steal", targetPlayer: "b", targetColor: "red");
+		AssemblyRulebook.Guard(state, "b", b.Hand[0].InstanceId, Catalog);
+
+		var resolved = AssemblyRulebook.TryResolvePending(state, Rules, Catalog);
+
+		Assert.NotNull(resolved);
+		Assert.True(resolved!.Fizzled);
+		Assert.Null(state.PendingPlay);
+		Assert.Single(b.Slots);                  // they keep their piece
+		Assert.Empty(a.Slots);
+		Assert.Contains(state.DiscardPile, c => c.CardId == "s-steal");
+	}
+
+	[Fact]
+	public void A_shield_cannot_be_answered_with_another_shield()
+	{
+		var a = Seat("a", hand: new[] { "a-red" });
+		var b = Seat("b", hand: new[] { "s-guard" }, Slot("red"));
+		var c = Seat("c", hand: new[] { "s-guard" }, Slot("red"));
+		var state = State(a, b, c);
+		Play(state, "a", "a-red", targetPlayer: "b", targetColor: "red");
+		AssemblyRulebook.Guard(state, "b", b.Hand[0].InstanceId, Catalog);
+
+		// c is the only one left and holds a shield too — but the re-aimed card lands anyway.
+		Assert.Null(AssemblyRulebook.AwaitedShieldFrom(state));
+		AssemblyRulebook.TryResolvePending(state, Rules, Catalog);
+		Assert.Single(c.Slots[0].Afflictions);
+		Assert.Single(c.Hand); // their shield was never spent
+	}
+
+	[Fact]
+	public void A_card_that_hits_everyone_asks_each_holder_and_skips_only_them()
+	{
+		var a = Seat("a", hand: new[] { "s-scrap" });
+		var b = Seat("b", hand: new[] { "s-guard", "p-red" });
+		var c = Seat("c", hand: new[] { "p-green", "p-blue" });
+		var state = State(a, b, c);
+		var result = Play(state, "a", "s-scrap");
+
+		// Only b can answer: c holds no shield, so the table is not stopped on its behalf.
+		Assert.True(result.Suspended);
+		Assert.Equal(new[] { "b" }, state.PendingPlay!.AwaitingGuard);
+
+		AssemblyRulebook.Guard(state, "b", b.Hand[0].InstanceId, Catalog);
+		var resolved = AssemblyRulebook.TryResolvePending(state, Rules, Catalog);
+
+		Assert.NotNull(resolved);
+		Assert.Equal(new[] { "p-red" }, b.Hand.Select(h => h.CardId)); // shielded: hand kept
+		Assert.Empty(c.Hand);                                          // scrapped as usual
+	}
+
+	[Fact]
+	public void The_answer_belongs_to_the_player_being_asked_and_to_no_one_else()
+	{
+		var a = Seat("a", hand: new[] { "a-red" });
+		var b = Seat("b", hand: new[] { "s-guard", "p-green" }, Slot("red"));
+		var c = Seat("c", hand: new[] { "s-guard" }, Slot("red"));
+		var state = State(a, b, c);
+		Play(state, "a", "a-red", targetPlayer: "b", targetColor: "red");
+
+		// c holds a shield too, but the table is not waiting on them.
+		Assert.Equal("game.assembly_not_your_answer",
+			AssemblyRulebook.Guard(state, "c", c.Hand[0].InstanceId, Catalog).ReasonKey);
+		// b must answer with a SHIELD, not with whatever else is in their hand.
+		Assert.Equal("game.assembly_not_a_guard",
+			AssemblyRulebook.Guard(state, "b", b.Hand[1].InstanceId, Catalog).ReasonKey);
+	}
+
+	[Fact]
+	public void A_player_who_leaves_stops_being_waited_on()
+	{
+		var a = Seat("a", hand: new[] { "a-red" });
+		var b = Seat("b", hand: new[] { "s-guard" }, Slot("red"));
+		var state = State(a, b);
+		Play(state, "a", "a-red", targetPlayer: "b", targetColor: "red");
+
+		AssemblyRulebook.Retire(state, "b");
+
+		Assert.Null(AssemblyRulebook.AwaitedShieldFrom(state));
+		Assert.NotNull(AssemblyRulebook.TryResolvePending(state, Rules, Catalog));
+		Assert.Null(state.PendingPlay);
 	}
 }

@@ -24,7 +24,7 @@ public sealed class AssemblyFamily : IGameFamily
 
 	private static readonly HashSet<string> CardTypes = new() { "piece", "attack", "remedy", "special" };
 	private static readonly HashSet<string> SpecialKinds = new()
-		{ "swapPiece", "stealPiece", "plague", "scrapHands", "fullSwap", "exile", "doubleAct", "handSwap" };
+		{ "swapPiece", "stealPiece", "plague", "scrapHands", "fullSwap", "exile", "doubleAct", "handSwap", "guard" };
 
 	public async Task<GameDefinition> LoadDefinitionAsync(string packageDir, Manifest manifest,
 		Dictionary<string, Dictionary<string, string>> i18n)

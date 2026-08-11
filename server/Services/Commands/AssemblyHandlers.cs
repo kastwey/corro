@@ -31,7 +31,40 @@ public static class AssemblyTurnFlow
 		}
 
 		var card = result.Card!;
-		var target = command.TargetPlayerId is { } tid
+		if (result.Suspended)
+		{
+			await AnnounceSuspensionAsync(context, player, card);
+			return new AssemblyActionResponse { Action = "play", TurnEnded = false, AwaitingAnswer = true };
+		}
+
+		return await ResolvePlayAsync(context, player, result, command.TargetPlayerId, random);
+	}
+
+	/// <summary>
+	/// A card has landed: say what it did (the package's voice or the engine's), then close the
+	/// turn — or keep it open when the card bought more plays. Shared by the ordinary path and
+	/// by a card that had to wait for the table's shield answers first.
+	/// </summary>
+	private static async Task<ServerResponse> ResolvePlayAsync(
+		GameContext context, Player player, AssemblyRulebook.PlayResult result,
+		string? targetPlayerId, IRandomSource random)
+	{
+		var runtime = context.Family<AssemblyRuntime>();
+		var card = result.Card!;
+		if (result.Fizzled)
+		{
+			// Everyone it could have reached shielded themselves: the card is spent for nothing.
+			await context.Announce("game.assembly_play_fizzled", new()
+			{
+				["player"] = player.Name,
+				["actorId"] = player.Id,
+				["card"] = card.NameKey,
+			});
+			await EndAssemblyTurnAsync(context, player, random);
+			return new AssemblyActionResponse { Action = "play", TurnEnded = true };
+		}
+
+		var target = targetPlayerId is { } tid
 			? context.GameState.Players.FirstOrDefault(p => p.Id == tid)
 			: null;
 		var visualTargetId = target?.Id ?? (card.Type is "piece" or "remedy" ? player.Id : null);
@@ -219,13 +252,145 @@ public static class AssemblyTurnFlow
 		return new AssemblyActionResponse { Action = result.Count == 0 ? "pass" : "discard", TurnEnded = true };
 	}
 
+	// ── The shield: answering somebody else's card ────────────────────────────
+
+	/// <summary>Answer the card hanging over the table: spend a shield, or let it through.</summary>
+	public static async Task<ServerResponse> GuardAsync(AssemblyGuardCommand command, Player player,
+		GameContext context, IRandomSource random)
+	{
+		if (Gate(context, out var assembly, allowPending: true) is { } gateError)
+		{
+			return gateError;
+		}
+
+		var runtime = context.Family<AssemblyRuntime>();
+		var pending = assembly.PendingPlay;
+		var result = AssemblyRulebook.Guard(assembly, player.Id, command.InstanceId, runtime.Catalog);
+		if (!result.Ok)
+		{
+			return new ErrorResponse { Message = result.ReasonKey ?? "illegal", Code = "ASSEMBLY_ILLEGAL_PLAY" };
+		}
+
+		var cardKey = pending is { } p ? runtime.Catalog.GetValueOrDefault(p.CardId)?.NameKey : null;
+		var vars = new Dictionary<string, object>
+		{
+			["player"] = player.Name,
+			["actorId"] = player.Id,
+			["card"] = cardKey ?? string.Empty,
+		};
+		if (result.Shielded)
+		{
+			VisualNarrativeVars.Add(vars, "card-play-discard", player.Id);
+			await context.Announcer.ToPlayer(player.Id, "game.assembly_shielded_self", vars);
+			await context.Announcer.ToAllExcept(player.Id, "game.assembly_shielded", vars);
+		}
+		else
+		{
+			await context.Announcer.ToPlayer(player.Id, "game.assembly_let_through_self", vars);
+			await context.Announcer.ToAllExcept(player.Id, "game.assembly_let_through", vars);
+		}
+
+		return await AdvancePendingAsync(context, random);
+	}
+
+	/// <summary>A shield left the card looking for a new victim: the actor names one.</summary>
+	public static async Task<ServerResponse> RetargetAsync(AssemblyRetargetCommand command, Player player,
+		GameContext context, IRandomSource random)
+	{
+		if (Gate(context, out var assembly, allowPending: true) is { } gateError)
+		{
+			return gateError;
+		}
+
+		var runtime = context.Family<AssemblyRuntime>();
+		var result = AssemblyRulebook.Retarget(assembly, player.Id, command.TargetPlayerId,
+			command.TargetColor, command.GiveColor, runtime.Catalog);
+		if (!result.Ok)
+		{
+			return new ErrorResponse { Message = result.ReasonKey ?? "illegal", Code = "ASSEMBLY_ILLEGAL_PLAY" };
+		}
+
+		return await AdvancePendingAsync(context, random);
+	}
+
+	/// <summary>
+	/// Move a waiting card one step on: resolve it if nobody owes an answer any more, otherwise
+	/// ask the next player (or tell the actor to re-aim) and leave the turn where it is.
+	/// </summary>
+	private static async Task<ServerResponse> AdvancePendingAsync(GameContext context, IRandomSource random)
+	{
+		var assembly = context.GameState.Assembly!;
+		var runtime = context.Family<AssemblyRuntime>();
+		var pending = assembly.PendingPlay;
+		var resolved = AssemblyRulebook.TryResolvePending(assembly, runtime.Rules, runtime.Catalog);
+		if (resolved == null)
+		{
+			// Still open: either the next player owes an answer, or the actor must re-aim.
+			if (assembly.PendingPlay is { } still)
+			{
+				var actor = context.GameState.Players.FirstOrDefault(p => p.Id == still.ActorId);
+				var cardKey = runtime.Catalog.GetValueOrDefault(still.CardId)?.NameKey ?? string.Empty;
+				if (still.AwaitingRetarget)
+				{
+					await context.Announcer.ToPlayer(still.ActorId, "game.assembly_retarget_needed_self",
+						new() { ["card"] = cardKey });
+					await context.Announcer.ToAllExcept(still.ActorId, "game.assembly_retarget_needed",
+						new() { ["player"] = actor?.Name ?? string.Empty, ["card"] = cardKey });
+				}
+				else
+				{
+					await AskNextAnswerAsync(context, still, cardKey, actor);
+				}
+			}
+
+			return new AssemblyActionResponse { Action = "guard", TurnEnded = false, AwaitingAnswer = true };
+		}
+
+		var owner = context.GameState.Players.FirstOrDefault(p => p.Id == pending!.ActorId)!;
+		return await ResolvePlayAsync(context, owner, resolved, pending!.TargetPlayerId, random);
+	}
+
+	/// <summary>Ask the player at the head of the queue whether they shield themselves. Only
+	/// they can act until they answer, so the ask is a first-person prompt for them and news
+	/// for everyone else.</summary>
+	private static async Task AskNextAnswerAsync(
+		GameContext context, PendingAssemblyPlay pending, string cardKey, Player? actor)
+	{
+		var asked = pending.AwaitingGuard[0];
+		var askedPlayer = context.GameState.Players.FirstOrDefault(p => p.Id == asked);
+		var vars = new Dictionary<string, object>
+		{
+			["player"] = actor?.Name ?? string.Empty,
+			["target"] = askedPlayer?.Name ?? string.Empty,
+			["card"] = cardKey,
+		};
+		await context.Announcer.ToPlayer(asked, "game.assembly_awaiting_answer_self", vars);
+		await context.Announcer.ToAllExcept(asked, "game.assembly_awaiting_answer", vars);
+	}
+
+	/// <summary>A card was played and immediately paused: tell the table it is hanging there,
+	/// and ask the first player who can answer it.</summary>
+	private static async Task AnnounceSuspensionAsync(GameContext context, Player player, AssemblyCardDef card)
+	{
+		var pending = context.GameState.Assembly!.PendingPlay!;
+		await AskNextAnswerAsync(context, pending, card.NameKey, player);
+	}
+
 	// ── Shared pieces ─────────────────────────────────────────────────────────
 
-	private static ErrorResponse? Gate(GameContext context, out AssemblyState assembly)
+	/// <summary>Refuse anything that is not an answer while a card waits on the table: the
+	/// turn is frozen until it resolves, so an ordinary play would jump the queue.</summary>
+	private static ErrorResponse? Gate(GameContext context, out AssemblyState assembly,
+		bool allowPending = false)
 	{
 		assembly = context.GameState.Assembly!;
-		return context.GameState.Assembly == null
-			? new ErrorResponse { Message = "Not an assembly game", Code = "WRONG_FAMILY" }
+		if (context.GameState.Assembly == null)
+		{
+			return new ErrorResponse { Message = "Not an assembly game", Code = "WRONG_FAMILY" };
+		}
+
+		return !allowPending && assembly.PendingPlay != null
+			? new ErrorResponse { Message = "game.assembly_answer_pending", Code = "ASSEMBLY_ILLEGAL_PLAY" }
 			: null;
 	}
 
@@ -387,4 +552,18 @@ public class AssemblyDiscardHandler : PlayerCommandHandler<AssemblyDiscardComman
 {
 	protected override Task<ServerResponse> HandleAsync(AssemblyDiscardCommand command, Player player, GameContext context)
 		=> AssemblyTurnFlow.DiscardAsync(command, player, context, context.Random);
+}
+
+/// <summary>Assembly: answer a card played against you (off-turn) — shield or let it through.</summary>
+public class AssemblyGuardHandler : PlayerCommandHandler<AssemblyGuardCommand>
+{
+	protected override Task<ServerResponse> HandleAsync(AssemblyGuardCommand command, Player player, GameContext context)
+		=> AssemblyTurnFlow.GuardAsync(command, player, context, context.Random);
+}
+
+/// <summary>Assembly: name the new victim of a card a shield deflected.</summary>
+public class AssemblyRetargetHandler : PlayerCommandHandler<AssemblyRetargetCommand>
+{
+	protected override Task<ServerResponse> HandleAsync(AssemblyRetargetCommand command, Player player, GameContext context)
+		=> AssemblyTurnFlow.RetargetAsync(command, player, context, context.Random);
 }

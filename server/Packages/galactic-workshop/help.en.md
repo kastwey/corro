@@ -65,6 +65,11 @@ The deck includes an expansion of tougher material, and an answer to match it.
 - **Crew rotation**: you trade hands with a rival and then play **one** of the cards you
   receive. Those cards can't be discarded, and the rival starts their next turn on what you
   handed over.
+- **Deflector shield**: the only card played **on somebody else's turn**. It cancels a card
+  aimed at your workshop; your rival must then aim it at another workshop, **their own
+  included**, and if none is left it goes to the scrap with no effect. A shield can't be
+  bounced with another shield. If the card hit the whole table, it still hits everyone else
+  — just not you. You don't draw to replace it: you start your next turn one card short.
 
 With the expansion your workshop can hold **six different modules**, and you still win as
 soon as **four are operational** (or five, if the host turns on head to head).

@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-	assemblyCardHelp, assemblyCatalog, assemblyStatusText, attackTargets, canPlayCard, canSwapPair,
-	deckColors, exileTargets, functionalColors, isLocked, plagueHasMoves, remedySlots, stealTargets,
-	swapTargets,
+	assemblyCardHelp, assemblyCatalog, assemblyStatusText, attackTargets, awaitedShieldFrom,
+	canPlayCard, canSwapPair, deckColors, exileTargets, functionalColors, isLocked, mustRetarget,
+	myShieldCards, plagueHasMoves, remedySlots, retargetOptions, stealTargets, swapTargets,
 } from '../src/assemblyRules.js';
 import type { AssemblySeatState, AssemblySlot, GameState } from '../src/models.js';
 
@@ -33,6 +33,7 @@ const DECK = [
 	{ id: 's-exile', type: 'special', specialKind: 'exile', count: 4, nameKey: 'c.s-exile' },
 	{ id: 's-double', type: 'special', specialKind: 'doubleAct', count: 2, nameKey: 'c.s-double' },
 	{ id: 's-handswap', type: 'special', specialKind: 'handSwap', count: 2, nameKey: 'c.s-handswap' },
+	{ id: 's-guard', type: 'special', specialKind: 'guard', count: 4, nameKey: 'c.s-guard' },
 ];
 
 const inst = (cardId: string, n = 0) => ({ instanceId: `${cardId}@${n}`, cardId });
@@ -290,4 +291,75 @@ test('the status line counts each slot state, sealed pieces included', () => {
 	assert.match(line, /game\.assembly_state_locked/);   // the sealed piece reads as secured
 	assert.match(line, /game\.assembly_state_afflicted/);
 	assert.equal(functionalColors(gs.assembly!.seats[0]), 2);
+});
+
+// ── The shield ───────────────────────────────────────────────────────────────
+
+/** A game with a card hanging over the table, waiting on `awaiting` to answer. */
+function pendingGame(
+	seats: AssemblySeatState[],
+	pending: Record<string, unknown>,
+): GameState {
+	const gs = game(seats);
+	gs.assembly!.pendingPlay = {
+		actorId: 'me',
+		card: inst('a-red', 7),
+		cardId: 'a-red',
+		targetPlayerId: null,
+		targetColor: null,
+		giveColor: null,
+		awaitingGuard: [],
+		shielded: [],
+		awaitingRetarget: false,
+		...pending,
+	} as never;
+	return gs;
+}
+
+test('a shield is never a move of my own turn', () => {
+	const gs = game([seat('me', ['s-guard']), seat('r1')]);
+	assert.equal(canPlayCard(gs, 'me', 's-guard').reasonKey, 'game.assembly_guard_off_turn');
+	assert.equal(assemblyCardHelp(gs, 's-guard', t), 'game.assembly_help_guard');
+});
+
+test('the shield prompt is offered to the player being asked, and to nobody else', () => {
+	const gs = pendingGame(
+		[seat('me', ['a-red']), seat('r1', ['s-guard', 'p-red'], [slot('red')])],
+		{ targetPlayerId: 'r1', targetColor: 'red', awaitingGuard: ['r1'] });
+
+	assert.equal(awaitedShieldFrom(gs), 'r1');
+	assert.deepEqual(myShieldCards(gs, 'r1'), ['s-guard@0']);
+	assert.deepEqual(myShieldCards(gs, 'me'), []);
+	assert.equal(mustRetarget(gs, 'me'), false);
+});
+
+test('while the actor must re-aim, nobody is being asked to shield', () => {
+	const gs = pendingGame(
+		[seat('me'), seat('r1', [], [slot('red')]), seat('r2', [], [slot('red')])],
+		{ awaitingRetarget: true, shielded: ['r1'] });
+
+	assert.equal(awaitedShieldFrom(gs), null);
+	assert.equal(mustRetarget(gs, 'me'), true);
+	assert.equal(mustRetarget(gs, 'r1'), false);
+});
+
+test('re-aiming skips whoever shielded and offers my own rack only for an attack', () => {
+	const gs = pendingGame([
+		seat('me', [], [slot('red')]),
+		seat('r1', [], [slot('red')]),
+		seat('r2', [], [slot('red')]),
+	], { cardId: 'a-red', awaitingRetarget: true, shielded: ['r1'] });
+
+	const options = retargetOptions(gs, 'me');
+	const seats = options.map(o => o.seat.playerId);
+	assert.equal(seats.includes('r1'), false); // they already shielded
+	assert.equal(seats.includes('r2'), true);
+	assert.equal(seats.includes('me'), true);  // the rules force this when nothing else is left
+
+	// A steal is a no-op against myself, so my own rack is not an option for it.
+	const steal = pendingGame([
+		seat('me', [], [slot('red')]),
+		seat('r1', [], [slot('green')]),
+	], { cardId: 's-steal', awaitingRetarget: true, shielded: [] });
+	assert.deepEqual(retargetOptions(steal, 'me').map(o => o.seat.playerId), ['r1']);
 });

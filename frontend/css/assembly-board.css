@@ -90,15 +90,18 @@
   background: repeating-linear-gradient(45deg, rgba(198, 40, 40, 0.32) 0 6px, transparent 6px 12px);
   pointer-events: none;
 }
-.assembly-module--afflicted .assembly-module__tag { color: #c62828; }
+/* The state tags sit on the module's own SYSTEM-coloured soft background, so each colour has
+ * to clear 4.5:1 against every system a package may ship — the lightest of them (a warm red)
+ * is what these are tuned to, not the neutral card face. */
+.assembly-module--afflicted .assembly-module__tag { color: #a01818; }
 /* A white separator ring sits between the system-colour border and the state ring, so the state
  * reads clearly even when its colour matches the system's (blue shield on a blue system, etc.). */
 .assembly-module--shielded { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #1565c0, 0 1px 3px rgba(0, 0, 0, 0.25); }
-.assembly-module--shielded .assembly-module__tag { color: #1565c0; }
+.assembly-module--shielded .assembly-module__tag { color: #0d47a1; }
 .assembly-module--locked {
   box-shadow: 0 0 0 2px #fff, 0 0 0 5px #c99700, 0 0 10px rgba(201, 151, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.25);
 }
-.assembly-module--locked .assembly-module__tag { color: #8a6d00; }
+.assembly-module--locked .assembly-module__tag { color: #6d5500; }
 
 /* An empty bay: a dashed placeholder, so progress toward the goal (assemble N systems) shows. */
 .assembly-bay {

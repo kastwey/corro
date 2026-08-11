@@ -30,9 +30,11 @@ public class CommandDispatcher
 		RegisterHandler(new JourneyDiscardHandler());
 		RegisterHandler(new JourneyCoupHandler());
 
-		// Assembly family handlers (play/discard).
+		// Assembly family handlers (play/discard, and the off-turn shield answer).
 		RegisterHandler(new AssemblyPlayHandler());
 		RegisterHandler(new AssemblyDiscardHandler());
+		RegisterHandler(new AssemblyGuardHandler());
+		RegisterHandler(new AssemblyRetargetHandler());
 
 		// Draft family handler (the simultaneous pick; reveal/pass/scoring cascade from it).
 		RegisterHandler(new DraftPickHandler());

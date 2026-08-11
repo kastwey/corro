@@ -531,6 +531,24 @@ export interface AssemblyState {
   extraPlays: number;
   /** The current player traded hands and may no longer discard this turn. */
   discardBlocked: boolean;
+  /** A card on the table waiting for the players it threatens to answer it. */
+  pendingPlay?: PendingAssemblyPlay | null;
+}
+
+/** A played card that has NOT resolved: someone it threatens may still shield themselves. */
+export interface PendingAssemblyPlay {
+  actorId: string;
+  card: AssemblyCardInstance;
+  cardId: string;
+  targetPlayerId?: string | null;
+  targetColor?: string | null;
+  giveColor?: string | null;
+  /** Who still owes an answer, in turn order; the head is being asked right now. */
+  awaitingGuard: string[];
+  /** Who shielded: a card that hits everyone skips them. */
+  shielded: string[];
+  /** A shield deflected a targeted card and the actor must name a new victim. */
+  awaitingRetarget: boolean;
 }
 
 // ── Draft family (simultaneous pick-and-pass) ────────────────────────────────
@@ -1254,6 +1272,8 @@ export type GameCommand =
       targetColor: string | null; giveColor: string | null;
     }
   | { $type: 'ASSEMBLY_DISCARD'; instanceIds: string[] }
+  | { $type: 'ASSEMBLY_GUARD'; instanceId: string | null }
+  | { $type: 'ASSEMBLY_RETARGET'; targetPlayerId: string | null; targetColor: string | null; giveColor: string | null }
   // Draft
   | { $type: 'DRAFT_PICK'; instanceId: string; secondInstanceId: string | null }
   // Shedding

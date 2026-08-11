@@ -397,6 +397,8 @@ const assemblyFamily = makeCardFamily('assembly', assemblyStatusText, deps =>
 	commands: {
 		play: (instanceId, targeting) => { void gameManager.assemblyPlay(instanceId, targeting ?? {}); },
 		discard: (instanceIds) => { void gameManager.assemblyDiscard(instanceIds); },
+		guard: (instanceId) => { void gameManager.assemblyGuard(instanceId); },
+		retarget: (targeting) => { void gameManager.assemblyRetarget(targeting ?? {}); },
 	},
 	}));
 

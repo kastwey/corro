@@ -37,6 +37,8 @@ namespace CorroServer.Models;
 [JsonDerivedType(typeof(JourneyCoupCommand), "JOURNEY_COUP")]
 [JsonDerivedType(typeof(AssemblyPlayCommand), "ASSEMBLY_PLAY")]
 [JsonDerivedType(typeof(AssemblyDiscardCommand), "ASSEMBLY_DISCARD")]
+[JsonDerivedType(typeof(AssemblyGuardCommand), "ASSEMBLY_GUARD")]
+[JsonDerivedType(typeof(AssemblyRetargetCommand), "ASSEMBLY_RETARGET")]
 [JsonDerivedType(typeof(DraftPickCommand), "DRAFT_PICK")]
 [JsonDerivedType(typeof(SheddingPlayCommand), "SHEDDING_PLAY")]
 [JsonDerivedType(typeof(SheddingDrawCommand), "SHEDDING_DRAW")]
@@ -300,6 +302,29 @@ public record AssemblyDiscardCommand : GameCommand
 	public override string Type => "ASSEMBLY_DISCARD";
 	public override bool RequiresTurn => true;
 	public List<string> InstanceIds { get; init; } = new();
+}
+
+/// <summary>Assembly family: answer a card played against you — spend a shield
+/// (<see cref="InstanceId"/>) or let it through (null). OFF-TURN by definition: it is played
+/// during somebody else's turn, and only the player the table is currently waiting on may
+/// send it.</summary>
+public record AssemblyGuardCommand : GameCommand
+{
+	public override string Type => "ASSEMBLY_GUARD";
+	public override bool RequiresTurn => false;
+	/// <summary>The shield card being spent, or null to let the card through.</summary>
+	public string? InstanceId { get; init; }
+}
+
+/// <summary>Assembly family: a shield left your card looking for a new victim — name one.
+/// Turn-bound: it is still your turn, and the card is still yours to place.</summary>
+public record AssemblyRetargetCommand : GameCommand
+{
+	public override string Type => "ASSEMBLY_RETARGET";
+	public override bool RequiresTurn => true;
+	public string? TargetPlayerId { get; init; }
+	public string? TargetColor { get; init; }
+	public string? GiveColor { get; init; }
 }
 
 /// <summary>Draft family: commit (or replace) THIS trick's secret pick. NOT turn-bound —
@@ -677,8 +702,11 @@ public record JourneyActionResponse : ServerResponse
 public record AssemblyActionResponse : ServerResponse
 {
 	public override string Type => "ASSEMBLY_ACTION";
-	/// <summary>"play" | "discard" | "pass".</summary>
+	/// <summary>"play" | "discard" | "pass" | "guard" | "retarget".</summary>
 	public required string Action { get; init; }
+	/// <summary>The card is on the table waiting for somebody to answer it: the turn has
+	/// not advanced and the usual actions are closed until it resolves.</summary>
+	public bool AwaitingAnswer { get; init; }
 	/// <summary>True when the play completed the rack and ended the game.</summary>
 	public bool GameEnded { get; init; }
 	public bool TurnEnded { get; init; }

@@ -155,7 +155,8 @@ public static class AssemblyRulebook
 		string? targetColor,
 		string? giveColor,
 		AssemblyState state,
-		IReadOnlyDictionary<string, AssemblyCardDef> catalog)
+		IReadOnlyDictionary<string, AssemblyCardDef> catalog,
+		bool selfAttackAllowed = false)
 	{
 		switch (card.Type)
 		{
@@ -170,7 +171,9 @@ public static class AssemblyRulebook
 
 			case "attack":
 				{
-					if (target == null || target.PlayerId == seat.PlayerId)
+					// You never CHOOSE to attack your own rack; a shielded attack with no rival
+					// left to hit is forced onto it, which is the only way this opens.
+					if (target == null || (target.PlayerId == seat.PlayerId && !selfAttackAllowed))
 					{
 						return PlayCheck.No("game.assembly_needs_target");
 					}
@@ -362,6 +365,11 @@ public static class AssemblyRulebook
 					? PlayCheck.No("game.assembly_needs_target")
 					: PlayCheck.Yes;
 
+			case "guard":
+				// A shield answers somebody ELSE's card; it is never something you spend your
+				// own turn on. The off-turn command is the only way to play it.
+				return PlayCheck.No("game.assembly_guard_off_turn");
+
 			default:
 				return PlayCheck.No("game.assembly_unknown_card");
 		}
@@ -383,14 +391,16 @@ public static class AssemblyRulebook
 	/// same everywhere (server truth, client previews, bots).
 	/// </summary>
 	public static List<(AssemblySlot From, AssemblySeatState VictimSeat, AssemblySlot To)> PlagueMoves(
-		AssemblySeatState seat, AssemblyState state, IReadOnlyDictionary<string, AssemblyCardDef> catalog)
+		AssemblySeatState seat, AssemblyState state, IReadOnlyDictionary<string, AssemblyCardDef> catalog,
+		IReadOnlyCollection<string>? shielded = null)
 	{
 		var moves = new List<(AssemblySlot, AssemblySeatState, AssemblySlot)>();
 		var claimed = new HashSet<AssemblySlot>();
 		foreach (var mine in seat.Slots.Where(s => s.Afflictions.Count > 0))
 		{
 			var afflictionColor = catalog.GetValueOrDefault(mine.Afflictions[0].CardId)?.Color ?? Wild;
-			foreach (var rival in state.Seats.Where(s => s.PlayerId != seat.PlayerId))
+			foreach (var rival in state.Seats.Where(s => s.PlayerId != seat.PlayerId
+				&& shielded?.Contains(s.PlayerId) != true))
 			{
 				var to = rival.Slots.FirstOrDefault(s =>
 					IsClean(s) && !s.Inert && !claimed.Contains(s) && ColorMatches(afflictionColor, s.Color));
@@ -435,7 +445,15 @@ public static class AssemblyRulebook
 		string? ExiledPieceKey = null,
 		/// <summary>The play bought MORE plays this turn (doubleAct / handSwap): how many the
 		/// player now owes before the turn ends. Zero means this card ended the turn.</summary>
-		int ExtraPlays = 0);
+		int ExtraPlays = 0,
+		/// <summary>The card is on the table but has NOT resolved: somebody it threatens is
+		/// holding a shield and owes an answer. The turn does not advance yet.</summary>
+		bool Suspended = false,
+		/// <summary>A shield sent the card looking for a new victim and there was none left:
+		/// it was discarded without ever connecting.</summary>
+		bool Fizzled = false,
+		/// <summary>Players who shielded themselves out of this card's way.</summary>
+		IReadOnlyList<string>? Shielded = null);
 
 	/// <summary>Play a card from the hand (authoritative re-check of legality).</summary>
 	public static PlayResult Play(
@@ -481,6 +499,94 @@ public static class AssemblyRulebook
 		{
 			state.ExtraPlays--;
 		}
+
+		// Anyone this card threatens who is holding a shield gets to answer before it lands.
+		// The card is already out of the hand: it is spent whether or not it ever connects.
+		var awaiting = ShieldAnswersOwed(card, seat, target, state, catalog);
+		if (awaiting.Count > 0)
+		{
+			state.PendingPlay = new PendingAssemblyPlay
+			{
+				ActorId = playerId,
+				Card = instance,
+				CardId = card.Id,
+				TargetPlayerId = targetPlayerId,
+				TargetColor = targetColor,
+				GiveColor = giveColor,
+				AwaitingGuard = awaiting,
+			};
+			SyncCounts(state);
+			return new PlayResult(true, Card: card, Suspended: true);
+		}
+
+		return ApplyPlay(state, seat, card, instance, targetPlayerId, targetColor, giveColor,
+			Array.Empty<string>(), rules, catalog);
+	}
+
+	/// <summary>
+	/// Who may shield themselves against this card, in the order they will be asked (starting
+	/// after the actor). A card aimed at ONE rival waits on that rival; one that hits the whole
+	/// table waits on each rival in turn. Only players actually HOLDING a shield are asked —
+	/// pausing the game to ask someone who cannot answer would be pure friction.
+	/// </summary>
+	public static List<string> ShieldAnswersOwed(
+		AssemblyCardDef card,
+		AssemblySeatState seat,
+		AssemblySeatState? target,
+		AssemblyState state,
+		IReadOnlyDictionary<string, AssemblyCardDef> catalog)
+	{
+		bool HoldsShield(AssemblySeatState s)
+			=> s.Hand.Any(i => catalog.GetValueOrDefault(i.CardId)?.SpecialKind == "guard");
+
+		// Aimed at one rival. An exile is left out on purpose: it LIFTS damage off the target's
+		// rack, and stopping the table to ask whether you would rather keep being damaged is
+		// not protection, it is noise.
+		if (target != null && target.PlayerId != seat.PlayerId
+			&& (card.Type == "attack"
+				|| card.SpecialKind is "stealPiece" or "swapPiece" or "fullSwap" or "handSwap"))
+		{
+			return HoldsShield(target) ? new List<string> { target.PlayerId } : new List<string>();
+		}
+
+		// Hits the whole table: each rival answers for themselves, and the card still lands on
+		// everyone who did not shield.
+		if (card.SpecialKind is "scrapHands" or "plague")
+		{
+			return RivalsInTurnOrder(state, seat.PlayerId)
+				.Where(s => !s.Retired && HoldsShield(s))
+				.Select(s => s.PlayerId)
+				.ToList();
+		}
+
+		return new List<string>();
+	}
+
+	/// <summary>The other seats starting after <paramref name="actorId"/>, so answers are asked
+	/// in the order the table plays rather than in storage order.</summary>
+	private static List<AssemblySeatState> RivalsInTurnOrder(AssemblyState state, string actorId)
+	{
+		var start = state.Seats.FindIndex(s => s.PlayerId == actorId);
+		return Enumerable.Range(1, state.Seats.Count - 1)
+			.Select(offset => state.Seats[(start + offset) % state.Seats.Count])
+			.ToList();
+	}
+
+	/// <summary>Land a card that has finished waiting: apply its effect, skipping everyone in
+	/// <paramref name="shielded"/>, and report what happened for the voice.</summary>
+	private static PlayResult ApplyPlay(
+		AssemblyState state,
+		AssemblySeatState seat,
+		AssemblyCardDef card,
+		AssemblyCardInstance instance,
+		string? targetPlayerId,
+		string? targetColor,
+		string? giveColor,
+		IReadOnlyCollection<string> shielded,
+		AssemblyRulesConfig rules,
+		IReadOnlyDictionary<string, AssemblyCardDef> catalog)
+	{
+		var target = targetPlayerId == null ? null : state.Seats.FirstOrDefault(s => s.PlayerId == targetPlayerId);
 
 		string? attackOutcome = null;
 		string? attackedPieceKey = null;
@@ -585,7 +691,7 @@ public static class AssemblyRulebook
 					exiledPieceKey = PieceKeyAt(target!, targetColor, catalog);
 				}
 
-				ApplySpecial(card, seat, target, targetColor, giveColor, state, instance, catalog);
+				ApplySpecial(card, seat, target, targetColor, giveColor, state, instance, shielded, catalog);
 				break;
 		}
 
@@ -594,7 +700,8 @@ public static class AssemblyRulebook
 			AttackOutcome: attackOutcome, AttackedPieceKey: attackedPieceKey,
 			TakenPieceKey: takenPieceKey, GivenPieceKey: givenPieceKey,
 			RemedyOutcome: remedyOutcome, RemediedPieceKey: remediedPieceKey,
-			ExiledPieceKey: exiledPieceKey, ExtraPlays: state.ExtraPlays);
+			ExiledPieceKey: exiledPieceKey, ExtraPlays: state.ExtraPlays,
+			Shielded: shielded.Count > 0 ? shielded.ToList() : null);
 	}
 
 	private static void ApplySpecial(
@@ -605,6 +712,7 @@ public static class AssemblyRulebook
 		string? giveColor,
 		AssemblyState state,
 		AssemblyCardInstance instance,
+		IReadOnlyCollection<string> shielded,
 		IReadOnlyDictionary<string, AssemblyCardDef> catalog)
 	{
 		switch (card.SpecialKind)
@@ -627,7 +735,7 @@ public static class AssemblyRulebook
 				}
 
 			case "plague":
-				foreach (var (from, _, to) in PlagueMoves(seat, state, catalog))
+				foreach (var (from, _, to) in PlagueMoves(seat, state, catalog, shielded))
 				{
 					to.Afflictions.Add(from.Afflictions[0]);
 					from.Afflictions.RemoveAt(0);
@@ -635,7 +743,8 @@ public static class AssemblyRulebook
 				break;
 
 			case "scrapHands":
-				foreach (var rival in state.Seats.Where(s => s.PlayerId != seat.PlayerId))
+				foreach (var rival in state.Seats.Where(s =>
+					s.PlayerId != seat.PlayerId && !shielded.Contains(s.PlayerId)))
 				{
 					state.DiscardPile.AddRange(rival.Hand);
 					rival.Hand.Clear();
@@ -682,6 +791,192 @@ public static class AssemblyRulebook
 		state.DiscardPile.Add(instance);
 	}
 
+	// ── The shield: answering somebody else's card ────────────────────────────
+
+	public sealed record GuardResult(bool Ok, string? ReasonKey = null, bool Shielded = false);
+
+	/// <summary>Whose answer the table is waiting for right now, if anyone's.</summary>
+	public static string? AwaitedShieldFrom(AssemblyState state)
+		=> state.PendingPlay is { AwaitingRetarget: false, AwaitingGuard.Count: > 0 } pending
+			? pending.AwaitingGuard[0]
+			: null;
+
+	/// <summary>
+	/// Answer the card hanging over the table: play a shield (<paramref name="instanceId"/>) or
+	/// let it through (null). A shield spends the card, takes its owner out of this card's way,
+	/// and — when the card was aimed at them alone — sends the actor looking for a new victim.
+	/// Nobody may shield the re-aimed card: one shield per card, so this cannot loop.
+	/// </summary>
+	public static GuardResult Guard(
+		AssemblyState state,
+		string playerId,
+		string? instanceId,
+		IReadOnlyDictionary<string, AssemblyCardDef> catalog)
+	{
+		if (state.PendingPlay is not { } pending)
+		{
+			return new GuardResult(false, "game.assembly_nothing_to_answer");
+		}
+
+		if (AwaitedShieldFrom(state) != playerId)
+		{
+			return new GuardResult(false, "game.assembly_not_your_answer");
+		}
+
+		var seat = SeatOf(state, playerId);
+		if (instanceId == null)
+		{
+			// Waved through: this player simply stops being asked.
+			pending.AwaitingGuard.Remove(playerId);
+			return new GuardResult(true);
+		}
+
+		var instance = seat.Hand.FirstOrDefault(c => c.InstanceId == instanceId);
+		if (instance == null)
+		{
+			return new GuardResult(false, "game.assembly_card_not_in_hand");
+		}
+
+		if (catalog.GetValueOrDefault(instance.CardId)?.SpecialKind != "guard")
+		{
+			return new GuardResult(false, "game.assembly_not_a_guard");
+		}
+
+		seat.Hand.Remove(instance);
+		state.DiscardPile.Add(instance);
+		pending.AwaitingGuard.Remove(playerId);
+		pending.Shielded.Add(playerId);
+
+		// A card aimed at ONE rival now has nobody to hit: the actor must find another victim
+		// among the seats left, their own included.
+		if (pending.TargetPlayerId == playerId)
+		{
+			pending.TargetPlayerId = null;
+			pending.TargetColor = null;
+			pending.GiveColor = null;
+			pending.AwaitingGuard.Clear();
+			pending.AwaitingRetarget = true;
+		}
+
+		SyncCounts(state);
+		return new GuardResult(true, Shielded: true);
+	}
+
+	/// <summary>
+	/// Where a shielded card may be re-aimed: every legal targeting that does not point at
+	/// somebody who already shielded. The actor is deliberately included — the rules make you
+	/// play it against your own rack when nobody else can take it.
+	/// </summary>
+	public static List<Targeting> RetargetOptions(
+		AssemblyState state, IReadOnlyDictionary<string, AssemblyCardDef> catalog)
+	{
+		if (state.PendingPlay is not { } pending
+			|| catalog.GetValueOrDefault(pending.CardId) is not { } card)
+		{
+			return new List<Targeting>();
+		}
+
+		var seat = SeatOf(state, pending.ActorId);
+		return AllTargetings(card, seat, state, includeSelf: true)
+			.Where(t => t.TargetPlayerId != null && !pending.Shielded.Contains(t.TargetPlayerId))
+			.Where(t => Legal(card, seat, t, state, catalog))
+			.ToList();
+	}
+
+	/// <summary>Point a shielded card at its new victim (the actor's choice).</summary>
+	public static GuardResult Retarget(
+		AssemblyState state,
+		string playerId,
+		string? targetPlayerId,
+		string? targetColor,
+		string? giveColor,
+		IReadOnlyDictionary<string, AssemblyCardDef> catalog)
+	{
+		if (state.PendingPlay is not { AwaitingRetarget: true } pending)
+		{
+			return new GuardResult(false, "game.assembly_nothing_to_answer");
+		}
+
+		if (pending.ActorId != playerId)
+		{
+			return new GuardResult(false, "game.assembly_not_your_answer");
+		}
+
+		var chosen = new Targeting(targetPlayerId, targetColor, giveColor);
+		if (!RetargetOptions(state, catalog).Contains(chosen))
+		{
+			return new GuardResult(false, "game.assembly_no_such_slot");
+		}
+
+		pending.TargetPlayerId = targetPlayerId;
+		pending.TargetColor = targetColor;
+		pending.GiveColor = giveColor;
+		pending.AwaitingRetarget = false;
+		return new GuardResult(true);
+	}
+
+	/// <summary>
+	/// Land the pending card once nobody owes an answer any more — or bin it unplayed when a
+	/// shield left it with nowhere to go. Returns null while the table is still answering.
+	/// </summary>
+	public static PlayResult? TryResolvePending(
+		AssemblyState state,
+		AssemblyRulesConfig rules,
+		IReadOnlyDictionary<string, AssemblyCardDef> catalog)
+	{
+		if (state.PendingPlay is not { } pending || pending.AwaitingGuard.Count > 0)
+		{
+			return null;
+		}
+
+		var card = catalog.GetValueOrDefault(pending.CardId);
+		var seat = SeatOf(state, pending.ActorId);
+
+		// The card must still be aimed somewhere legal. A shield clears the targeting outright,
+		// and a target can also simply STOP being one while the table answers — they leave the
+		// game, and the rack the card was pointing at goes with them.
+		var stillAimed = card != null
+			&& pending.TargetPlayerId != null
+			&& Legal(card, seat, new Targeting(pending.TargetPlayerId, pending.TargetColor, pending.GiveColor),
+				state, catalog);
+		if (pending.AwaitingRetarget || (pending.TargetPlayerId != null && !stillAimed))
+		{
+			pending.AwaitingRetarget = true;
+			// Auto-resolve the choice the actor does not really have: one option, or none at
+			// all — in which case the card is spent for nothing, which is the printed outcome.
+			var options = card == null ? new List<Targeting>() : RetargetOptions(state, catalog);
+			if (options.Count > 1)
+			{
+				return null;
+			}
+
+			if (options.Count == 0)
+			{
+				state.PendingPlay = null;
+				state.DiscardPile.Add(pending.Card);
+				SyncCounts(state);
+				return new PlayResult(true, Card: card, Fizzled: true,
+					Shielded: pending.Shielded.ToList());
+			}
+
+			pending.TargetPlayerId = options[0].TargetPlayerId;
+			pending.TargetColor = options[0].TargetColor;
+			pending.GiveColor = options[0].GiveColor;
+			pending.AwaitingRetarget = false;
+		}
+
+		state.PendingPlay = null;
+		if (card == null)
+		{
+			state.DiscardPile.Add(pending.Card);
+			SyncCounts(state);
+			return new PlayResult(false, "game.assembly_unknown_card");
+		}
+
+		return ApplyPlay(state, seat, card, pending.Card, pending.TargetPlayerId, pending.TargetColor,
+			pending.GiveColor, pending.Shielded.ToList(), rules, catalog);
+	}
+
 	/// <summary>One fully-specified way to play a card: who it is aimed at, which of their
 	/// slots, and (swaps only) which of mine goes the other way.</summary>
 	public sealed record Targeting(string? TargetPlayerId, string? TargetColor, string? GiveColor);
@@ -696,8 +991,37 @@ public static class AssemblyRulebook
 		AssemblySeatState seat,
 		AssemblyState state,
 		IReadOnlyDictionary<string, AssemblyCardDef> catalog)
+		=> AllTargetings(card, seat, state, includeSelf: false)
+			.Where(t => Legal(card, seat, t, state, catalog))
+			.ToList();
+
+	/// <summary>Re-check one targeting through the authoritative legality.</summary>
+	private static bool Legal(
+		AssemblyCardDef card, AssemblySeatState seat, Targeting t, AssemblyState state,
+		IReadOnlyDictionary<string, AssemblyCardDef> catalog)
+	{
+		var target = t.TargetPlayerId == null
+			? null
+			: state.Seats.FirstOrDefault(s => s.PlayerId == t.TargetPlayerId);
+		return CanPlay(card, seat, target, t.TargetColor, t.GiveColor, state, catalog,
+			selfAttackAllowed: t.TargetPlayerId == seat.PlayerId && card.Type == "attack").Ok;
+	}
+
+	/// <summary>
+	/// Every targeting this card's SHAPE allows, legal or not. <paramref name="includeSelf"/>
+	/// adds the actor's own rack for attacks: not a move you may choose, but the one a shielded
+	/// attack is forced into when no rival is left to take it.
+	/// </summary>
+	private static List<Targeting> AllTargetings(
+		AssemblyCardDef card,
+		AssemblySeatState seat,
+		AssemblyState state,
+		bool includeSelf)
 	{
 		var rivals = state.Seats.Where(s => s.PlayerId != seat.PlayerId).ToList();
+		var attackable = includeSelf && card.Type == "attack"
+			? state.Seats.ToList()
+			: rivals;
 		var candidates = new List<Targeting>();
 
 		switch (card.Type)
@@ -707,7 +1031,7 @@ public static class AssemblyRulebook
 				break;
 
 			case "attack":
-				candidates.AddRange(from rival in rivals
+				candidates.AddRange(from rival in attackable
 									from slot in rival.Slots
 									select new Targeting(rival.PlayerId, slot.Color, null));
 				break;
@@ -747,15 +1071,7 @@ public static class AssemblyRulebook
 				break;
 		}
 
-		return candidates
-			.Where(t =>
-			{
-				var target = t.TargetPlayerId == null
-					? null
-					: state.Seats.FirstOrDefault(s => s.PlayerId == t.TargetPlayerId);
-				return CanPlay(card, seat, target, t.TargetColor, t.GiveColor, state, catalog).Ok;
-			})
-			.ToList();
+		return candidates;
 	}
 
 	/// <summary>Could this player play ANY card in hand right now? An extended turn ends the
@@ -848,6 +1164,9 @@ public static class AssemblyRulebook
 		}
 
 		seat.Retired = true;
+		// A leaver owes nobody an answer: leaving them in the queue would freeze the table on
+		// a player who can never reply. Their cards go with them, shield included.
+		state.PendingPlay?.AwaitingGuard.Remove(playerId);
 		state.DiscardPile.AddRange(seat.Hand);
 		seat.Hand.Clear();
 		foreach (var slot in seat.Slots)

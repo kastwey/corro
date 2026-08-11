@@ -66,6 +66,12 @@ El mazo incluye una ampliación con material más duro, y una respuesta a su alt
 - **Relevo de turno**: intercambias tu mano con la de un rival y juegas después **una** de
   las cartas que recibes. Esas cartas no se pueden descartar, y el rival empezará su
   próximo turno con las que le hayas entregado.
+- **Escudo deflector**: la única carta que se juega **en el turno de otra persona**. Anula
+  una carta dirigida contra tu taller; tu rival tendrá entonces que dirigirla contra otro
+  taller, **el suyo incluido**, y si no queda ninguno válido, la carta va a la chatarra sin
+  efecto. Un escudo no se puede rebotar con otro escudo. Si la carta afectaba a toda la
+  mesa, sigue afectando a los demás pero no a ti. No robas para reponerlo: empezarás tu
+  próximo turno con una carta menos.
 
 Con la ampliación, tu taller puede llegar a tener **seis módulos distintos**, y sigues
 ganando en cuanto tengas **cuatro operativos** (o cinco, si el anfitrión activa el mano a mano).

@@ -63,7 +63,19 @@
     "assembly_exiled_own": "{{player}} retira la avería de su propio $t({{piece}}) y la saca del taller para siempre",
     "assembly_exiled_own_self": "Retiras la avería de tu propio $t({{piece}}) y la sacas del taller para siempre",
     "assembly_help_piece_inert": "Módulo blindado: instálalo como cualquier otro. Es plancha maciza: ninguna avería lo toca y no se le puede hacer mantenimiento, así que sigue operativo mientras lo conserves. Solo la grúa, una requisa o un cambio total pueden quitártelo.",
-    "assembly_status_exiled": "Fuera del taller: {{count}}."
+    "assembly_status_exiled": "Fuera del taller: {{count}}.",
+    "assembly_answer_title": "Una carta contra tu taller",
+    "assembly_answer_question": "{{player}} juega $t({{card}}) contra ti. ¿Levantas el escudo deflector?",
+    "assembly_answer_shield": "Levantar el escudo",
+    "assembly_answer_let_through": "Dejarla pasar",
+    "assembly_shielded": "{{player}} levanta un escudo deflector: la carta rebota",
+    "assembly_shielded_self": "Levantas el escudo deflector: la carta rebota",
+    "assembly_awaiting_answer": "{{player}} juega $t({{card}}) contra {{target}}, que puede levantar un escudo",
+    "assembly_awaiting_answer_self": "{{player}} juega $t({{card}}) contra ti. ¿Levantas un escudo o la dejas pasar?",
+    "assembly_retarget_needed_self": "Tu carta $t({{card}}) ha rebotado: dirígela contra otro taller, el tuyo incluido",
+    "assembly_play_fizzled": "La carta $t({{card}}) de {{player}} se queda sin taller al que ir y acaba en la chatarra",
+    "assembly_play_fizzled_self": "Tu carta $t({{card}}) se queda sin taller al que ir y acaba en la chatarra",
+    "assembly_help_guard": "Escudo deflector: juégalo en el turno de OTRA persona para hacer rebotar una carta dirigida a tu taller. Tu rival tendrá que dirigirla contra otro taller, el suyo incluido; si no queda ninguno, va a la chatarra sin efecto. Un escudo no se puede rebotar con otro escudo, y no robas para reponerlo: empezarás tu próximo turno con una carta menos."
   },
   "tokens": {
     "wrench": "Llave inglesa",
@@ -158,7 +170,8 @@
     "crew_rotation": "Relevo de turno",
     "crew_rotation_played": "{{player}} hace un relevo de turno con {{target}} y se queda con su caja de herramientas",
     "crew_rotation_played_self": "Haces un relevo de turno con {{target}} y te quedas con su caja de herramientas",
-    "crew_rotation_played_victim": "¡{{player}} hace un relevo de turno contigo y se queda con tu caja de herramientas!"
+    "crew_rotation_played_victim": "¡{{player}} hace un relevo de turno contigo y se queda con tu caja de herramientas!",
+    "deflector_shield": "Escudo deflector"
   },
   "bots": {
     "chatarrin": "Chatarrín",

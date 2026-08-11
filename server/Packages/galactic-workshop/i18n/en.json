@@ -63,7 +63,19 @@
     "assembly_exiled_own": "{{player}} hauls the breakdown off their own $t({{piece}}) and out of the workshop for good",
     "assembly_exiled_own_self": "You haul the breakdown off your own $t({{piece}}) and out of the workshop for good",
     "assembly_help_piece_inert": "Armoured module: install it like any other. It is solid plating — no breakdown can touch it and no maintenance can be done on it — so it stays operational for as long as you keep it. Only the crane, a requisition or a total trade-in can take it off you.",
-    "assembly_status_exiled": "Hauled out of the workshop: {{count}}."
+    "assembly_status_exiled": "Hauled out of the workshop: {{count}}.",
+    "assembly_answer_title": "A card against your workshop",
+    "assembly_answer_question": "{{player}} plays $t({{card}}) against you. Raise the deflector shield?",
+    "assembly_answer_shield": "Raise the shield",
+    "assembly_answer_let_through": "Let it through",
+    "assembly_shielded": "{{player}} raises a deflector shield: the card bounces off",
+    "assembly_shielded_self": "You raise the deflector shield: the card bounces off",
+    "assembly_awaiting_answer": "{{player}} plays $t({{card}}) against {{target}}, who may raise a shield",
+    "assembly_awaiting_answer_self": "{{player}} plays $t({{card}}) against you. Raise a shield, or let it through?",
+    "assembly_retarget_needed_self": "Your $t({{card}}) bounced off: aim it at another workshop, your own included",
+    "assembly_play_fizzled": "{{player}}'s $t({{card}}) finds no workshop left to hit and goes to the scrap",
+    "assembly_play_fizzled_self": "Your $t({{card}}) finds no workshop left to hit and goes to the scrap",
+    "assembly_help_guard": "Deflector shield: play it on ANOTHER player's turn to bounce off a card aimed at your workshop. Your rival must then aim it at somebody else, themselves included; if no workshop is left, it goes to the scrap with no effect. A shield can't be bounced with another shield, and you don't draw to replace it — you start your next turn one card short."
   },
   "tokens": {
     "wrench": "Wrench",
@@ -158,7 +170,8 @@
     "crew_rotation": "Crew rotation",
     "crew_rotation_played": "{{player}} rotates crews with {{target}} and takes over their toolbox",
     "crew_rotation_played_self": "You rotate crews with {{target}} and take over their toolbox",
-    "crew_rotation_played_victim": "{{player}} rotates crews with you and takes over your toolbox!"
+    "crew_rotation_played_victim": "{{player}} rotates crews with you and takes over your toolbox!",
+    "deflector_shield": "Deflector shield"
   },
   "bots": {
     "chatarrin": "Rustbucket",

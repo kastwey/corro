@@ -331,7 +331,7 @@ public class CorroPackageLoaderTests
 	[InlineData("galactic-empire", 32)]
 	[InlineData("great-route", 19)]
 	[InlineData("the-mine", 13)]
-	[InlineData("galactic-workshop", 34)]
+	[InlineData("galactic-workshop", 35)]
 	public async Task Shipped_card_packages_have_complete_credited_art(string packageId, int expectedCards)
 	{
 		var packagePath = CorroTestPaths.PackageDir(packageId);
