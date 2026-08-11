@@ -55,7 +55,6 @@
     "assembly_piece_inert": "Nothing can be bolted onto that module",
     "assembly_affliction_resistant": "That breakdown shrugs off ordinary maintenance: it takes an experimental fix",
     "assembly_nothing_to_exile": "That module has no breakdown to haul away",
-    "assembly_state_sealed": "certified",
     "assembly_remedy_sealed": "{{player}} certifies their $t({{piece}}) for good with a single experimental fix!",
     "assembly_remedy_sealed_self": "You certify your $t({{piece}}) for good with a single experimental fix!",
     "assembly_exiled": "{{player}} hauls the breakdown off {{target}}'s $t({{piece}}) and out of the workshop for good",

@@ -55,7 +55,6 @@
     "assembly_piece_inert": "A ese módulo no se le puede acoplar nada",
     "assembly_affliction_resistant": "Esa avería aguanta el mantenimiento normal: hace falta un arreglo experimental",
     "assembly_nothing_to_exile": "Ese módulo no tiene ninguna avería que retirar",
-    "assembly_state_sealed": "certificado",
     "assembly_remedy_sealed": "¡{{player}} certifica su $t({{piece}}) para siempre con un solo arreglo experimental!",
     "assembly_remedy_sealed_self": "¡Certificas tu $t({{piece}}) para siempre con un solo arreglo experimental!",
     "assembly_exiled": "{{player}} retira la avería del $t({{piece}}) de {{target}} y la saca del taller para siempre",
