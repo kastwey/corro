@@ -1,6 +1,6 @@
 # Letter Rush
 
-Everyone writes at the same time. A round deals one letter and six categories, and every answer you write must start with that letter. The round's judge does not write: once the clock runs out, they rule on what everybody else wrote.
+Everyone writes at the same time. A round deals one letter and twelve categories, and every answer you write must start with that letter. You get three minutes. The round's judge does not write: once the clock runs out, they rule on what everybody else wrote.
 
 ## The round's judge
 

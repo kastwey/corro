@@ -37,6 +37,13 @@ export interface PlayerDetailData {
 	releasePasses: number;
 	isBankrupt: boolean;
 	properties: PlayerPropertyItem[];
+	/**
+	 * Already-translated lines describing this player in the family being played, replacing the
+	 * property economy (money, board position, holding, release passes) and its owned-square
+	 * list. Absent for the property family, which IS that economy — everywhere else the money
+	 * line read "0" and the property list read "none", in a game that has neither.
+	 */
+	familyLines?: string[] | null;
 }
 
 export interface PlayerDetailDeps {
@@ -178,35 +185,21 @@ class PlayerDetailDialog {
 		};
 		addLine(t('player_detail_token', { token: data.tokenName }));
 		if (data.isBankrupt) addLine(t('player_detail_bankrupt'));
-		addLine(t('player_detail_money', { amount: data.money }));
-		if (data.positionName) addLine(t('player_detail_position', { square: data.positionName }));
-		if (data.held) addLine(t('player_detail_held'));
-		if (data.releasePasses > 0) addLine(t('player_detail_release_passes', { count: data.releasePasses }));
+		const familyLines = data.familyLines ?? null;
+		if (familyLines) {
+			familyLines.filter(Boolean).forEach(addLine);
+		} else {
+			addLine(t('player_detail_money', { amount: data.money }));
+			if (data.positionName) addLine(t('player_detail_position', { square: data.positionName }));
+			if (data.held) addLine(t('player_detail_held'));
+			if (data.releasePasses > 0) {
+				addLine(t('player_detail_release_passes', { count: data.releasePasses }));
+			}
+		}
 		surface.appendChild(summary);
 
-		const propsHeading = document.createElement('h3');
-		propsHeading.className = 'player-detail-panel__subtitle';
-		propsHeading.id = 'player-detail-props-title';
-		propsHeading.textContent = t('player_detail_properties_label');
-		surface.appendChild(propsHeading);
-
-		let listEl: HTMLElement | null = null;
-		if (data.properties.length === 0) {
-			const empty = document.createElement('p');
-			empty.className = 'player-detail-panel__empty';
-			// Focusable so it is reachable under role="application" (no virtual cursor).
-			empty.tabIndex = 0;
-			empty.textContent = t('player_detail_no_properties');
-			surface.appendChild(empty);
-		} else {
-			const list = document.createElement('ul');
-			list.className = 'player-detail-list';
-			list.setAttribute('role', 'list');
-			list.setAttribute('aria-labelledby', 'player-detail-props-title');
-			data.properties.forEach(p => list.appendChild(this.renderProperty(p)));
-			surface.appendChild(list);
-			listEl = list;
-		}
+		// The owned-square list is the property economy's other half, so it travels with it.
+		const listEl = familyLines ? null : this.renderProperties(surface, data, t);
 
 		const footer = document.createElement('div');
 		footer.className = 'player-detail-panel__footer';
@@ -278,6 +271,37 @@ class PlayerDetailDialog {
 		this.summaryNav.focusItem(0);
 
 		this.deps.announce?.(t('player_detail_title', { name: data.name }));
+	}
+
+	/** The property family's owned-square list, or null when the player owns nothing. */
+	private renderProperties(
+		surface: HTMLElement,
+		data: PlayerDetailData,
+		t: (key: string, vars?: Record<string, unknown>) => string,
+	): HTMLElement | null {
+		const propsHeading = document.createElement('h3');
+		propsHeading.className = 'player-detail-panel__subtitle';
+		propsHeading.id = 'player-detail-props-title';
+		propsHeading.textContent = t('player_detail_properties_label');
+		surface.appendChild(propsHeading);
+
+		if (data.properties.length === 0) {
+			const empty = document.createElement('p');
+			empty.className = 'player-detail-panel__empty';
+			// Focusable so it is reachable under role="application" (no virtual cursor).
+			empty.tabIndex = 0;
+			empty.textContent = t('player_detail_no_properties');
+			surface.appendChild(empty);
+			return null;
+		}
+
+		const list = document.createElement('ul');
+		list.className = 'player-detail-list';
+		list.setAttribute('role', 'list');
+		list.setAttribute('aria-labelledby', 'player-detail-props-title');
+		data.properties.forEach(property => list.appendChild(this.renderProperty(property)));
+		surface.appendChild(list);
+		return list;
 	}
 
 	private renderProperty(p: PlayerPropertyItem): HTMLLIElement {

@@ -383,13 +383,18 @@ public sealed class CategoriesRulePromptHandler : PlayerCommandHandler<Categorie
 		CategoriesPromptState prompt,
 		CategoriesRulesConfig rules)
 	{
-		await context.Announce("game.categories_prompt_ruled", new()
+		var accepted = prompt.Answers.Count(answer => answer.Verdict == CategoriesVerdict.Accepted);
+		// The ruling is the moment of the round, and a player who is not reading the live region
+		// has no other way to learn it: the surface moves straight on to the next category. It
+		// therefore carries visual metadata, so the shared narrative shows it like any other
+		// family's authoritative outcome.
+		await context.Announce("game.categories_prompt_ruled", VisualNarrativeVars.Add(new()
 		{
 			["category"] = prompt.Name,
-			["accepted"] = prompt.Answers.Count(answer => answer.Verdict == CategoriesVerdict.Accepted),
+			["accepted"] = accepted,
 			["duplicates"] = prompt.Answers.Count(answer => answer.Verdict == CategoriesVerdict.Duplicate),
 			["rejected"] = prompt.Answers.Count(answer => answer.Verdict == CategoriesVerdict.Rejected),
-		});
+		}, "outcome", count: accepted, tone: accepted > 0 ? "gain" : "neutral"));
 
 		foreach (var answer in prompt.Answers)
 		{
@@ -403,12 +408,14 @@ public sealed class CategoriesRulePromptHandler : PlayerCommandHandler<Categorie
 				CategoriesVerdict.Duplicate => "game.categories_answer_duplicate",
 				_ => "game.categories_answer_rejected",
 			};
-			await context.Announcer.ToPlayer(answer.PlayerId, key, new()
+			// Targeted at its writer, so their own seat is the one the narrative emphasises.
+			await context.Announcer.ToPlayer(answer.PlayerId, key, VisualNarrativeVars.Add(new()
 			{
 				["category"] = prompt.Name,
 				["answer"] = answer.Text,
 				["points"] = rules.PointsPerAnswer,
-			});
+			}, "outcome", targetPlayerId: answer.PlayerId,
+				tone: answer.Verdict == CategoriesVerdict.Accepted ? "gain" : "loss"));
 		}
 	}
 

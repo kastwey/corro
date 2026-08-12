@@ -30,7 +30,7 @@ import { explodingStatusText } from './explodingRules.js';
 import { ForbiddenBoard } from './forbiddenBoard.js';
 import { forbiddenStatusText } from './forbiddenRules.js';
 import { CategoriesBoard } from './categoriesBoard.js';
-import { categoriesStatusText } from './categoriesRules.js';
+import { categoriesRole, categoriesRoleLabel, categoriesStatusText } from './categoriesRules.js';
 import { gameManager } from './gameManager.js';
 import { soundEvents } from './soundEvents.js';
 import { seatDisplayName } from './raceGeometry.js';
@@ -114,6 +114,10 @@ export interface GameFamily extends FamilyTraits {
 	boardIdentity(gs: GameState, playerId: string, getPlayer: (id: string) => Player | null | undefined): string | null;
 	/** The C-key identity announcement ("you are the red squadron"); null = not handled. */
 	identityAnnouncement(gs: GameState, myId: string, getPlayer: (id: string) => Player | null | undefined): FamilyIdentityAnnouncement | null;
+	/** Already-translated lines for the read-only "player info" dialog, replacing the property
+	*  economy (money, board position, holding, release passes and owned squares) that no other
+	*  family has. Defaults to this family's own identity line. */
+	playerDetailLines?(gs: GameState, playerId: string, getPlayer: (id: string) => Player | null | undefined): string[];
 	/** Build the family's board + animator (called lazily, once, when its state first arrives). */
 	createView(deps: FamilyDeps): FamilyView;
 }
@@ -480,7 +484,26 @@ const forbiddenFamily = makeCardFamily('forbidden', forbiddenStatusText, deps =>
 
 // The round card IS the home surface: the letter, the job and the clock. A writer lands on
 // their sheet, a judge on the answers they are ruling — whichever exists for them right now.
-const categoriesFamily = makeCardFamily('categories', categoriesStatusText, deps => {
+const categoriesFamily: GameFamily = {
+	...makeCardFamily('categories', categoriesStatusText, deps => buildCategoriesBoard(deps)),
+
+	/** Score, this round's job and how many rounds they have judged — the three things this
+	*  family actually keeps about a player. */
+	playerDetailLines(gs, playerId) {
+		const state = gs.categories;
+		const entry = state?.players.find(player => player.playerId === playerId);
+		if (!state || !entry) return [];
+		return [
+			i18nBinder.tSync('game.categories_detail_score', { score: entry.score }),
+			i18nBinder.tSync('game.categories_detail_role', {
+				role: categoriesRoleLabel(categoriesRole(state.round, playerId), k => i18nBinder.tSync(k)),
+			}),
+			i18nBinder.tSync('game.categories_detail_judged', { count: entry.roundsJudged }),
+		];
+	},
+};
+
+function buildCategoriesBoard(deps: FamilyDeps) {
 	const board = new CategoriesBoard(deps.boardElement, {
 		getGameState: deps.getGameState,
 		getMyPlayerId: deps.getMyPlayerId,
@@ -498,7 +521,7 @@ const categoriesFamily = makeCardFamily('categories', categoriesStatusText, deps
 	});
 	gameManager.on('roundClockTick', ({ secondsRemaining }) => board.handleTimerTick(secondsRemaining));
 	return board;
-});
+}
 
 const FAMILIES: readonly GameFamily[] = [
 	raceFamily, trackFamily, triviaFamily, journeyFamily, assemblyFamily, draftFamily, sheddingFamily,

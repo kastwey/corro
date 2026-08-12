@@ -59,7 +59,7 @@ test('a shared Spanish deck, per-player interfaces and one full judged round', a
 	// Ana judges the first round, so she has no sheet at all and the others do.
 	await expect(ana.locator('.categories-sheet')).toBeHidden();
 	await expect(ana.locator('.categories-start')).toBeVisible();
-	await expect(berto.locator('.categories-sheet-input')).toHaveCount(6);
+	await expect(berto.locator('.categories-sheet-input')).toHaveCount(12);
 	await expect(berto.locator('.categories-start')).toBeHidden();
 	await expect(ana.locator('.categories-duty')).toHaveText(/do not write this round/i);
 	await expect(berto.locator('.categories-duty')).toContainText('Ana');
@@ -86,6 +86,12 @@ test('a shared Spanish deck, per-player interfaces and one full judged round', a
 	await flushAxeAudit(ana);
 
 	// ── Writing ───────────────────────────────────────────────────────────────
+	// Every field sits in a group naming its category AND the round's letter, so arriving at
+	// the tenth box still says which letter the answer has to start with.
+	const firstGroup = berto.locator('.categories-sheet-group').first();
+	await expect(firstGroup).toHaveAttribute('role', 'group');
+	await expect(firstGroup).toHaveAttribute('aria-label', new RegExp(`Un animal.*letra ${LETTER}`));
+
 	// Enter walks the sheet and stops ON the finish button rather than pressing it.
 	await sheetInput(berto, 0).focus();
 	await berto.keyboard.type('avestruz');
@@ -97,6 +103,7 @@ test('a shared Spanish deck, per-player interfaces and one full judged round', a
 
 	await writeSheet(berto, ['avestruz', 'Argentina', 'Ávila', 'arroz', 'agua', 'azul']);
 	await writeSheet(carla, ['araña', 'Argentina', 'Alicante', '', 'anís', 'cereza']);
+	// Twelve categories are dealt; the six left blank exercise the "nothing to rule" path.
 
 	// Hidden information: while the clock runs, an answer is in its writer's page and nowhere
 	// else — not in a rival's DOM, and not in the judge's.
@@ -129,6 +136,9 @@ test('a shared Spanish deck, per-player interfaces and one full judged round', a
 	await expect(berto.locator('.categories-verdict')).toHaveCount(0);
 	await expect(berto.locator('.categories-confirm')).toBeHidden();
 	await expect(answerRows(ana).first()).toHaveAttribute('aria-label', /Berto wrote avestruz\./);
+	// A hint is not a ruling: a writer is never told a verdict the judge has not made.
+	await expect(answerRows(berto).first())
+		.not.toHaveAttribute('aria-label', /marcada como/i);
 	await flushAxeAudit(ana);
 	await flushAxeAudit(berto);
 
@@ -153,17 +163,28 @@ test('a shared Spanish deck, per-player interfaces and one full judged round', a
 	await expectAnnouncement(berto, /avestruz/);
 	await expectAnnouncement(carla, /araña/);
 	await expect(ana.locator('.categories-review__category')).toContainText('Un país');
+
+	// …and every player SEES what was just decided, which is the part a watcher would otherwise
+	// miss entirely: the review moves straight on to the next category.
+	for (const page of [ana, berto, carla]) {
+		const strip = page.locator('.categories-last-ruling');
+		await expect(strip).toBeVisible();
+		await expect(strip).toHaveAttribute('aria-hidden', 'true');
+		await expect(strip).toContainText('Un animal');
+		await expect(strip).toContainText('avestruz');
+		await expect(strip).toContainText('araña');
+	}
 	await flushAxeAudit(ana);
 
 	// ── The rest of the round, and the rotation ───────────────────────────────
-	for (let category = 1; category < 6; category++) {
+	for (let category = 1; category < 12; category++) {
 		await ana.locator('.categories-confirm').click();
 	}
 
 	// Scoring is announced per writer, and the judge moves on to the next player.
 	await expectAnnouncement(berto, /Ronda 1/);
 	await expect(berto.locator('.categories-start')).toBeVisible();
-	await expect(ana.locator('.categories-sheet-input')).toHaveCount(6);
+	await expect(ana.locator('.categories-sheet-input')).toHaveCount(12);
 	await expect(ana.locator('.categories-duty')).toContainText('Berto');
 	await expect(berto.locator('.categories-review')).toBeHidden();
 	await flushAxeAudit(ana);

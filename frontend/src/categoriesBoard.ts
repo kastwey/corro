@@ -16,7 +16,8 @@ import {
 } from './categoriesRules.js';
 import { isTypingTarget } from './typingTarget.js';
 import type {
-	CategoriesEntry, CategoriesPromptState, CategoriesRuling, CategoriesVerdict, GameState,
+	CategoriesEntry, CategoriesPromptState, CategoriesRoundState, CategoriesRuling,
+	CategoriesVerdict, GameState,
 } from './models.js';
 import type { HelpShortcut } from './shortcuts.js';
 
@@ -75,6 +76,7 @@ export class CategoriesBoard {
 	private readonly reviewCategory: HTMLElement;
 	private readonly reviewList: HTMLOListElement;
 	private readonly confirmButton: HTMLButtonElement;
+	private readonly lastRuling: HTMLElement;
 	private readonly reviewNav: RovingToolbarList;
 
 	/** The sheet as this player has typed it, keyed by category id. It is the client's own copy:
@@ -150,6 +152,11 @@ export class CategoriesBoard {
 				<div class="categories-controls">
 					<button type="button" class="btn btn--primary categories-confirm"></button>
 				</div>
+				<!-- What the judge just decided, for players who are watching rather than
+				     listening. Purely visual and aria-hidden on purpose: the ruling is already
+				     spoken to the table as a summary and to each writer as their own result, and
+				     this must never read a third time over the next category. -->
+				<div class="categories-last-ruling" aria-hidden="true" hidden></div>
 			</section>
 		`;
 		element.appendChild(this.shell);
@@ -172,6 +179,7 @@ export class CategoriesBoard {
 		this.reviewCategory = this.required('.categories-review__category');
 		this.reviewList = this.required('.categories-review-list');
 		this.confirmButton = this.required('.categories-confirm');
+		this.lastRuling = this.required('.categories-last-ruling');
 
 		this.reviewNav = new RovingToolbarList({
 			list: this.reviewList,
@@ -408,6 +416,16 @@ export class CategoriesBoard {
 
 			const item = document.createElement('li');
 			item.className = 'categories-sheet-item';
+			// A named group around each field. Arriving at it announces the category AND the
+			// letter, so the one fact every answer depends on is repeated at every box instead
+			// of being read once at the top of a sheet with twelve of them.
+			const group = document.createElement('div');
+			group.className = 'categories-sheet-group';
+			group.setAttribute('role', 'group');
+			group.setAttribute('aria-label', this.t('categories_sheet_group', {
+				category: prompt.name,
+				letter: round.letter,
+			}));
 			const inputId = `categories-answer-${prompt.categoryId}`;
 			const label = document.createElement('label');
 			label.className = 'categories-sheet-label';
@@ -422,7 +440,8 @@ export class CategoriesBoard {
 			input.autocomplete = 'off';
 			input.spellcheck = false;
 			input.maxLength = 60;
-			item.append(label, input);
+			group.append(label, input);
+			item.appendChild(group);
 			this.sheetList.appendChild(item);
 		}
 	}
@@ -447,6 +466,7 @@ export class CategoriesBoard {
 		});
 		this.confirmButton.hidden = !judging;
 		this.confirmButton.textContent = this.t('categories_confirm_button');
+		this.renderLastRuling(gs, round);
 
 		// The answers themselves are part of the key. They are frozen when the review opens, but
 		// a surface that keyed on the category alone would keep the verdicts it worked out from
@@ -457,9 +477,11 @@ export class CategoriesBoard {
 			prompt.answers.map(entry => `${entry.playerId}=${entry.text}`).join('|'),
 		].join(':');
 		if (this.verdictsForPrompt !== key) {
-			// Open the category pre-filled with the hints, so agreeing with all of them is one
-			// confirmation and disagreeing with one is one button.
-			this.verdicts = categoriesSuggestedVerdicts(prompt);
+			// The judge opens the category pre-filled with the hints, so agreeing with all of
+			// them is one confirmation and disagreeing with one is one button. Nobody ELSE is
+			// given a verdict to read: a suggestion is not a ruling, and telling a writer their
+			// answer is "invalid" before the judge has said so is simply wrong.
+			this.verdicts = judging ? categoriesSuggestedVerdicts(prompt) : new Map();
 			this.verdictsForPrompt = key;
 		}
 		if (this.reviewKey === key) {
@@ -508,6 +530,38 @@ export class CategoriesBoard {
 		}
 		this.refreshVerdictButtons(gs, prompt, round.letter);
 		this.reviewNav.refreshRovingTabindex();
+	}
+
+	/**
+	 * The category the judge has just closed, laid out answer by answer with the verdict each
+	 * one got. The review moves on the instant it is confirmed, so without this a player who is
+	 * watching the screen sees the next category appear and never learns what happened to the
+	 * last one.
+	 */
+	private renderLastRuling(gs: GameState, round: CategoriesRoundState): void {
+		const previous = round.prompts[round.reviewIndex - 1];
+		this.lastRuling.hidden = !previous;
+		this.lastRuling.innerHTML = '';
+		if (!previous) return;
+
+		const heading = document.createElement('p');
+		heading.className = 'categories-last-ruling__title';
+		heading.textContent = this.t('categories_last_ruling', { category: previous.name });
+		this.lastRuling.appendChild(heading);
+
+		const list = document.createElement('ul');
+		list.className = 'categories-last-ruling__list';
+		for (const answer of previous.answers) {
+			const item = document.createElement('li');
+			item.className = `categories-last-ruling__item categories-last-ruling__item--${answer.verdict}`;
+			item.textContent = this.t('categories_last_ruling_line', {
+				player: categoriesPlayerName(gs, answer.playerId),
+				answer: answer.text.trim() || this.t('categories_last_ruling_blank'),
+				verdict: categoriesVerdictLabel(answer.verdict, this.deps.tSync),
+			});
+			list.appendChild(item);
+		}
+		this.lastRuling.appendChild(list);
 	}
 
 	/** Each row says its own verdict, and each verdict button says whether it is the one in

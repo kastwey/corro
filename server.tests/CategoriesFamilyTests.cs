@@ -131,7 +131,7 @@ public class CategoriesFamilyTests
 
 		var problem = Assert.Throws<InvalidOperationException>(
 			() => new CategoriesFamily().ValidateDefinition(thin));
-		Assert.Contains("at least 12 categories", problem.Message);
+		Assert.Contains("at least 24 categories", problem.Message);
 	}
 
 	[Fact]

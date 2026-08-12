@@ -15,8 +15,8 @@
     "max": 8
   },
   "categoriesRules": {
-    "roundSeconds": 120,
-    "categoriesPerRound": 6,
+    "roundSeconds": 180,
+    "categoriesPerRound": 12,
     "pointsPerAnswer": 1,
     "cycles": 1
   },

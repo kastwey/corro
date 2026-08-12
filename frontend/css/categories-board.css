@@ -209,6 +209,12 @@
 
 .categories-sheet-item {
   display: grid;
+}
+
+/* The named group around each field. It exists for the accessible name — the category and the
+   round's letter — so it must not add a box of its own to the layout. */
+.categories-sheet-group {
+  display: grid;
   gap: 6px;
 }
 
@@ -290,6 +296,50 @@
   background: var(--accent-soft);
   color: var(--text);
   font-weight: 850;
+}
+
+/* The category the judge has just closed. Purely visual (aria-hidden), so the outcome is on
+   screen for players who are watching rather than listening. Each verdict is carried by a WORD
+   as well as by its colour, because the strip is read at a glance and colour alone is not a
+   reading. */
+.categories-last-ruling {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.categories-last-ruling__title {
+  margin: 0 0 8px;
+  font-weight: 800;
+}
+
+.categories-last-ruling__list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.categories-last-ruling__item {
+  padding-left: 12px;
+  border-left: 4px solid var(--border-strong);
+  line-height: 1.45;
+}
+
+.categories-last-ruling__item--accepted {
+  border-left-color: var(--good);
+}
+
+.categories-last-ruling__item--duplicate {
+  border-left-color: var(--warning);
+}
+
+.categories-last-ruling__item--rejected {
+  border-left-color: var(--danger);
 }
 
 .categories-timer {

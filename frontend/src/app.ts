@@ -975,6 +975,14 @@ async function initBoard() {
 			releasePasses: p.releasePasses ?? 0,
 			isBankrupt: !!p.isBankrupt,
 			properties: projectPlayerProperties(squares, p.properties),
+			// A family that is not the property economy describes its own players: money,
+			// board position and owned squares mean nothing in a game that has none of them.
+			familyLines: familyFor(gameManager.getCurrentGameState()?.gameType)
+				?.playerDetailLines?.(
+					gameManager.getCurrentGameState()!,
+					playerId,
+					id => gameManager.getPlayer(id),
+				) ?? null,
 		};
 		},
 		canProposeTrade: isMyTurn() && playerId !== gameManager.getMyPlayerId(),
