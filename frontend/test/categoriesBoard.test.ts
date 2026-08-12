@@ -175,6 +175,21 @@ test('the letter die shows the round letter and re-rolls only when a new round d
 	assert.equal(die.classList.contains('categories-die--rolling'), true);
 });
 
+test('each answer field sits in a group naming its category AND the round letter', () => {
+	const h = harness('p1');
+
+	const groups = Array.from(h.element.querySelectorAll<HTMLElement>('.categories-sheet-group'));
+
+	assert.equal(groups.length, 2, 'one group per category, not one for the whole sheet');
+	assert.equal(groups[0].getAttribute('role'), 'group');
+	// Arriving at the field announces the group: the letter is repeated at every box instead of
+	// being read once at the top of a long sheet.
+	assert.match(groups[0].getAttribute('aria-label')!, /An animal/);
+	assert.match(groups[0].getAttribute('aria-label')!, /\bR\b/);
+	assert.ok(groups[0].querySelector('input.categories-sheet-input'), 'the field is inside its group');
+	assert.ok(groups[0].querySelector('label'), 'and so is its label');
+});
+
 test('the round heading names the letter every answer has to start with', () => {
 	const writer = harness('p1');
 
@@ -349,6 +364,34 @@ test('a writer reads the same answers under review but is given no verdict to pr
 	assert.equal(h.element.querySelectorAll('.categories-verdict').length, 0);
 	assert.equal(visible('.categories-confirm', h), false);
 	assert.equal(visible('.categories-sheet', h), false);
+	// A hint is not a ruling: nobody but the judge is told a verdict the judge has not made.
+	for (const row of rows(h)) {
+		assert.doesNotMatch(row.getAttribute('aria-label')!, /Currently marked/i);
+	}
+});
+
+test('the category just ruled stays on screen, visual-only, with each verdict in words', () => {
+	const h = harness('p0', 'review');
+	const round = h.state.categories!.round;
+	round.prompts[0].answers = [
+		{ ...answer('p1', 'rabbit'), verdict: 'accepted' },
+		{ ...answer('p2', 'rat'), verdict: 'duplicate' },
+	];
+	round.prompts[1].answers = [answer('p1', 'Rome'), answer('p2', 'Reus')];
+	round.reviewIndex = 1;
+	h.render();
+
+	const strip = h.element.querySelector<HTMLElement>('.categories-last-ruling')!;
+	assert.equal(strip.hidden, false);
+	// It never speaks: the ruling is already announced to the table and to each writer.
+	assert.equal(strip.getAttribute('aria-hidden'), 'true');
+	assert.match(strip.textContent!, /An animal/);
+	assert.match(strip.textContent!, /Berto wrote rabbit: Valid\./);
+	assert.match(strip.textContent!, /Cora wrote rat: Repeated\./);
+
+	// Nothing has been ruled yet in a fresh review, so there is nothing to show.
+	const fresh = harness('p0', 'review');
+	assert.equal(fresh.element.querySelector<HTMLElement>('.categories-last-ruling')!.hidden, true);
 });
 
 test('a blank answer carries no verdict buttons and never reaches the ruling', () => {

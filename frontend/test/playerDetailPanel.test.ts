@@ -112,6 +112,29 @@ function open(over: Partial<{ data: PlayerDetailData; canProposeTrade: boolean }
 	return calls;
 }
 
+test('a family with its own lines replaces the property economy instead of showing zeroes', () => {
+	open({
+		data: {
+			...DATA,
+			money: 0,
+			positionName: '',
+			held: false,
+			releasePasses: 0,
+			properties: [],
+			familyLines: ['Score: 4 points.', 'This round they are the judge.'],
+		},
+	});
+	const dialog = document.getElementById('player-detail-dialog')!;
+	const lines = Array.from(dialog.querySelectorAll('.player-detail-summary__line'))
+		.map(line => line.getAttribute('aria-label'));
+
+	assert.deepEqual(lines, ['Token: Disc', 'Score: 4 points.', 'This round they are the judge.']);
+	// No money line, and no owned-square section, in a game that has neither.
+	assert.equal(dialog.querySelector('#player-detail-props-title'), null);
+	assert.equal(dialog.querySelector('.player-detail-panel__empty'), null);
+	assert.equal(dialog.querySelector('.player-detail-list'), null);
+});
+
 test('renders a summary and one navigable row per property', () => {
 	open();
 	const dialog = document.getElementById('player-detail-dialog')!;

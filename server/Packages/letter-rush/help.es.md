@@ -1,6 +1,6 @@
 # Carrera de letras
 
-Todo el mundo escribe a la vez. Cada ronda reparte una letra y seis categorías, y todas tus respuestas tienen que empezar por esa letra. El juez de la ronda no escribe: cuando se acaba el tiempo, decide sobre lo que han escrito los demás.
+Todo el mundo escribe a la vez. Cada ronda reparte una letra y doce categorías, y todas tus respuestas tienen que empezar por esa letra. Tienes tres minutos. El juez de la ronda no escribe: cuando se acaba el tiempo, decide sobre lo que han escrito los demás.
 
 ## El juez de la ronda
 
