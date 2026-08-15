@@ -20,7 +20,8 @@ Your sheet is one text box per category, each labelled with its category. Type o
 
 - Your answers are saved as you type them; you never have to send them.
 - **I have finished** ends your writing early. When everybody has finished, the round moves on without waiting for the clock.
-- Press **R** at any time to hear how much time is left. Nothing counts down out loud.
+- Press **L** for the round's letter and **R** for the time left. Nothing counts down out loud.
+- Inside an answer box those letters type themselves, so there they are **Ctrl+Shift+L** and **Ctrl+Shift+X**. The shortcut list (**Ctrl+F1**) shows both forms side by side.
 
 ## Judging
 
@@ -45,7 +46,7 @@ Focus enters whatever this round has given you: your sheet while the clock runs,
 - **Right** enters the three verdicts for the answer you are on — valid, invalid, repeated — and **Left** or **Escape** comes back out. The verdict in force says so when you reach it, so the marking never depends on seeing a colour.
 - Each category opens already marked with what Corro could work out on its own. Change anything you disagree with; only your ruling counts.
 - Press **S** on the game surface to hear your score and your role, and **Shift+S** to hear the other players' scores.
-- Press **R** to hear how many seconds remain. Before the round starts, it confirms that the clock is not running.
+- Press **L** for the round's letter and **R** for the seconds remaining; inside an answer box use **Ctrl+Shift+L** and **Ctrl+Shift+X**, which do the same from exactly there. What you asked for is also shown, quietly, so a player who is watching rather than listening gets the answer too.
 - Press **T** to hear which round this is, its letter and what you should be doing.
 - **Tab** and **Shift+Tab** still move through the surface's controls. Controls that cannot act remain focusable and explain what is missing.
 - An audible clock ticks while the round is being written and follows the normal sound mute and volume setting. It never announces every second, and the visual progress bar is hidden from assistive technology so it cannot beep its way through the round; use **R** whenever you need the exact time.

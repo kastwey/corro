@@ -86,11 +86,11 @@ test('a shared Spanish deck, per-player interfaces and one full judged round', a
 	await flushAxeAudit(ana);
 
 	// ── Writing ───────────────────────────────────────────────────────────────
-	// Every field sits in a group naming its category AND the round's letter, so arriving at
-	// the tenth box still says which letter the answer has to start with.
-	const firstGroup = berto.locator('.categories-sheet-group').first();
-	await expect(firstGroup).toHaveAttribute('role', 'group');
-	await expect(firstGroup).toHaveAttribute('aria-label', new RegExp(`Un animal.*letra ${LETTER}`));
+	// ONE named group holds the whole sheet, and its name carries the round's letter.
+	const sheetGroup = berto.locator('.categories-sheet-group');
+	await expect(sheetGroup).toHaveAttribute('role', 'group');
+	await expect(sheetGroup).toHaveAttribute('aria-label', new RegExp(`empezando por ${LETTER}`));
+	await expect(berto.locator('[role="group"]')).toHaveCount(1);
 
 	// Enter walks the sheet and stops ON the finish button rather than pressing it.
 	await sheetInput(berto, 0).focus();
@@ -219,6 +219,39 @@ test('the surface answers the reading keys without a screen reader having to hun
 	await expect(ana.locator('.categories-timer')).toBeVisible();
 	await ana.keyboard.press('r');
 	await expectAnnouncement(ana, /seconds remaining/i);
+
+	// L says the round's letter, and what you asked for is also shown — quietly, and hidden
+	// from assistive technology, because the live region has already said it.
+	await ana.keyboard.press('l');
+	await expectAnnouncement(ana, new RegExp(`letter is ${LETTER}`, 'i'));
+	const echo = ana.locator('.categories-echo');
+	await expect(echo).toBeVisible();
+	await expect(echo).toHaveAttribute('aria-hidden', 'true');
+	await expect(echo).toContainText(LETTER);
+
+	// Inside an answer box the bare letters type themselves, so the chords do the job there.
+	const field = berto.locator('.categories-sheet-input').first();
+	await field.focus();
+	await berto.keyboard.type('l');
+	await expect(field).toHaveValue('l');
+	await berto.keyboard.press('Control+Shift+KeyL');
+	await expectAnnouncement(berto, new RegExp(`letter is ${LETTER}`, 'i'));
+	await berto.keyboard.press('Control+Shift+KeyX');
+	await expectAnnouncement(berto, /seconds remaining/i);
+	await expect(field).toHaveValue('l', 'the chords act without typing anything');
+
+	// The shortcut list grows its third column, and no row of it is left silent.
+	await berto.keyboard.press('Control+F1');
+	const help = berto.locator('.help-shortcuts');
+	await expect(help).toBeVisible();
+	await expect(help.locator('thead th')).toHaveCount(3);
+	const typingCells = help.locator('.help-shortcuts__typing');
+	expect(await typingCells.count()).toBeGreaterThan(1);
+	for (const cell of await typingCells.all()) {
+		await expect(cell).not.toBeEmpty();
+	}
+	await flushAxeAudit(berto);
+	await berto.keyboard.press('Escape');
 	await flushAxeAudit(ana);
 	await flushAxeAudit(berto);
 	await flushAxeAudit(carla);

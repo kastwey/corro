@@ -133,9 +133,19 @@ function escapeHtml(s: string): string {
 		({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
 }
 
-/** One shortcut row: an already-humanized key label and its localized description. */
-function shortcutRow(keyLabel: string, desc: string): string {
-	return `<tr><th scope="row" class="help-shortcuts__key"><kbd>${escapeHtml(keyLabel)}</kbd></th><td>${escapeHtml(desc)}</td></tr>`;
+/**
+ * One shortcut row: an already-humanized key label, its localized description, and — when the
+ * table has a third column at all — what to press instead while typing in a text box.
+ *
+ * A row that needs no alias says so in words rather than leaving the cell empty: a screen
+ * reader reads a table cell by cell, and silence there is indistinguishable from a bug.
+ */
+function shortcutRow(keyLabel: string, desc: string, typing: string | null): string {
+	const typingCell = typing === null
+		? ''
+		: `<td class="help-shortcuts__typing"><kbd>${escapeHtml(typing)}</kbd></td>`;
+	return `<tr><th scope="row" class="help-shortcuts__key"><kbd>${escapeHtml(keyLabel)}</kbd></th>`
+		+ `<td>${escapeHtml(desc)}</td>${typingCell}</tr>`;
 }
 
 export function showHelpDialog(keyMap: Record<string, any>, opts?: {
@@ -149,9 +159,17 @@ export function showHelpDialog(keyMap: Record<string, any>, opts?: {
 	showNumberNav?: boolean;
 }): void {
 	const activeFamily = opts?.activeFamily ?? 'property';
+	// The third column only exists when this game actually has a shortcut that changes inside a
+	// text box. Adding it to every table would put an empty cell on every row of every game.
+	const extras = opts?.extraShortcuts ?? [];
+	const hasTypingColumn = extras.some(shortcut => !!shortcut.typingKeys);
+	const sameWhileTyping = () => (hasTypingColumn ? tSync('game.help_typing_same') : null);
 	// The family's own keys (hand/status) lead the table — they are the primary actions.
-	const extraRows = (opts?.extraShortcuts ?? [])
-		.map(s => shortcutRow(humanizeKey(s.keys), tSync(s.descKey)))
+	const extraRows = extras
+		.map(s => shortcutRow(
+			humanizeKey(s.keys),
+			tSync(s.descKey),
+			s.typingKeys ? humanizeKey(s.typingKeys) : sameWhileTyping()))
 		.join('');
 	// Two bindings of the same command can collapse into one description in a family (e.g.
 	// M and Shift+M both mean "go to your token" with a single piece): keep the first row,
@@ -171,12 +189,12 @@ export function showHelpDialog(keyMap: Record<string, any>, opts?: {
 		const dedupeKey = `${cmd}::${desc}`;
 		if (seen.has(dedupeKey)) return '';
 		seen.add(dedupeKey);
-		return shortcutRow(keyLabel, desc);
+		return shortcutRow(keyLabel, desc, sameWhileTyping());
 	}).filter(Boolean).join('');
 
 	// Only spatial boards have squares to jump to by number; the card families drop the row.
 	const numberNavRow = (opts?.showNumberNav ?? true)
-		? `<tr><th scope="row" class="help-shortcuts__key"><kbd>0 – 9</kbd></th><td>${escapeHtml(tSync('game.help_cmd_number_nav'))}</td></tr>`
+		? shortcutRow('0 – 9', tSync('game.help_cmd_number_nav'), sameWhileTyping())
 		: '';
 
 	const content = `
@@ -185,6 +203,7 @@ export function showHelpDialog(keyMap: Record<string, any>, opts?: {
 				<tr>
 					<th scope="col">${tSync('game.help_col_key')}</th>
 					<th scope="col">${tSync('game.help_col_action')}</th>
+					${hasTypingColumn ? `<th scope="col">${tSync('game.help_col_typing')}</th>` : ''}
 				</tr>
 			</thead>
 			<tbody>${extraRows}${rows}${numberNavRow}</tbody>

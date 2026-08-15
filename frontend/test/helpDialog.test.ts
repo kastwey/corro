@@ -86,6 +86,45 @@ for (const lang of ['en', 'es'] as const) {
 // Live-play confusion: in a single-piece family the multi-piece phrasing ("your NEXT
 // piece") read as if M cycled your properties — that cycle lives on H/Shift+H. Only the
 // race family fields several pieces, so only it keeps the next/previous wording.
+test('the "in a text box" column appears only for a game that needs it', async () => {
+	installFakeI18next('en');
+	const { dialogManager } = await import('../src/dialogManager.js');
+	dialogManager.init();
+	showHelpDialog(keyMap, {
+		activeFamily: 'shedding',
+		extraShortcuts: SHEDDING_SHORTCUTS,
+		showNumberNav: false,
+	});
+
+	const headers = [...document.querySelectorAll('.help-shortcuts thead th')].map(h => h.textContent);
+	assert.equal(headers.length, 2, 'a game with no text box gets no third column');
+	assert.equal(document.querySelectorAll('.help-shortcuts__typing').length, 0);
+});
+
+test('a game with a text box gets the column, and every row says what to press there', async () => {
+	installFakeI18next('en');
+	const { dialogManager } = await import('../src/dialogManager.js');
+	dialogManager.init();
+	showHelpDialog(keyMap, {
+		activeFamily: 'categories',
+		extraShortcuts: [
+			{ keys: 'l', typingKeys: 'ctrl+shift+l', descKey: 'game.help_cmd_status_mine' },
+			{ keys: 'escape', descKey: 'game.help_cmd_status_rivals' },
+		],
+		showNumberNav: false,
+	});
+
+	const headers = [...document.querySelectorAll('.help-shortcuts thead th')].map(h => h.textContent);
+	assert.equal(headers.length, 3);
+	const typingCells = [...document.querySelectorAll('.help-shortcuts__typing')].map(c => c.textContent);
+	// Never an empty cell: a screen reader reads a table cell by cell, and silence there is
+	// indistinguishable from a bug.
+	assert.ok(typingCells.length > 1);
+	assert.ok(typingCells.every(text => (text ?? '').trim().length > 0), typingCells.join(' | '));
+	assert.ok(typingCells.some(text => /Ctrl/i.test(text ?? '')), 'the alias is shown as a chord');
+});
+
+
 test('GoToMe reads singular off the race family, next/previous on it', () => {
 	installFakeI18next('en');
 	const single = describeCommand('GoToMe', { forward: true }, 'property');

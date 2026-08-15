@@ -62,12 +62,14 @@ export class CategoriesBoard {
 	private readonly nowLine: HTMLElement;
 	private readonly dutyLine: HTMLElement;
 	private readonly progressLine: HTMLElement;
+	private readonly echo: HTMLElement;
 	private readonly timerPanel: HTMLElement;
 	private readonly timerValue: HTMLElement;
 	private readonly timerProgress: HTMLProgressElement;
 	private readonly sheetSection: HTMLElement;
 	private readonly sheetHeading: HTMLElement;
 	private readonly sheetList: HTMLOListElement;
+	private readonly sheetGroup: HTMLElement;
 	private readonly startButton: HTMLButtonElement;
 	private readonly finishButton: HTMLButtonElement;
 	private readonly finishHint: HTMLElement;
@@ -136,10 +138,17 @@ export class CategoriesBoard {
 				<div class="categories-controls">
 					<button type="button" class="btn btn--primary categories-start"></button>
 				</div>
+				<!-- The answer to a shortcut this player pressed. Personal (it never leaves this
+				     browser), aria-hidden (the live region already said it) and self-replacing. -->
+				<p class="categories-echo" aria-hidden="true" hidden></p>
 			</section>
 			<section class="categories-sheet" aria-labelledby="categories-sheet-title" hidden>
 				<h3 id="categories-sheet-title"></h3>
-				<ol class="categories-sheet-list"></ol>
+				<!-- The group WRAPS the list rather than replacing it: role="group" on the <ol>
+				     would strip its list semantics and orphan every <li> inside it. -->
+				<div class="categories-sheet-group" role="group">
+					<ol class="categories-sheet-list"></ol>
+				</div>
 				<div class="categories-controls">
 					<button type="button" class="btn categories-finish"></button>
 				</div>
@@ -165,12 +174,14 @@ export class CategoriesBoard {
 		this.nowLine = this.required('.categories-now__line');
 		this.dutyLine = this.required('.categories-duty');
 		this.progressLine = this.required('.categories-progress');
+		this.echo = this.required('.categories-echo');
 		this.timerPanel = this.required('.categories-timer');
 		this.timerValue = this.required('.categories-timer__value');
 		this.timerProgress = this.required('.categories-timer__progress');
 		this.sheetSection = this.required('.categories-sheet');
 		this.sheetHeading = this.required('#categories-sheet-title');
 		this.sheetList = this.required('.categories-sheet-list');
+		this.sheetGroup = this.required('.categories-sheet-group');
 		this.startButton = this.required('.categories-start');
 		this.finishButton = this.required('.categories-finish');
 		this.finishHint = this.required('#categories-finish-hint');
@@ -199,7 +210,7 @@ export class CategoriesBoard {
 		});
 		this.finishButton.addEventListener('click', () => {
 			if (this.finishButton.getAttribute('aria-disabled') === 'true') {
-				this.deps.announce(this.finishHint.textContent ?? '');
+				this.say(this.finishHint.textContent ?? '');
 				return;
 			}
 			this.finishWriting();
@@ -247,29 +258,60 @@ export class CategoriesBoard {
 		else if (visible(this.finishButton)) this.finishButton.focus();
 	}
 
+	/**
+	 * The surface's two queries, each with a form that survives a text box.
+	 *
+	 * A bare letter cannot fire while somebody is typing an answer — it would type itself — so
+	 * every query has a chord alias that works anywhere, including inside a field. The aliases
+	 * live in the one modifier space that is clean on both Chrome and Firefox AND harmless
+	 * inside an edit box: Ctrl+Shift+L and Ctrl+Shift+X. Ctrl+Alt is AltGr on Windows, Alt is
+	 * Option (and types accents) on macOS, and Ctrl+Shift+V and +Z are paste and redo.
+	 */
 	private onSurfaceKeydown(event: KeyboardEvent): void {
-		if (event.ctrlKey || event.altKey || event.metaKey || event.shiftKey || event.repeat) return;
+		if (event.altKey || event.metaKey || event.repeat) return;
 		const key = event.key.toLowerCase();
+		const typing = isTypingTarget(event.target);
+		const chord = event.ctrlKey && event.shiftKey;
 
 		// Escape comes back to whatever this player's job is, the way Escape leaves a menu and
 		// lands where the menu was opened from.
-		if (event.key === 'Escape' && !isTypingTarget(event.target)) {
+		if (event.key === 'Escape' && !typing && !event.ctrlKey && !event.shiftKey) {
 			event.preventDefault();
 			event.stopPropagation();
 			this.focusHand();
 			return;
 		}
-		if (key !== 'r' || isTypingTarget(event.target)) return;
 
-		// R is family-local: "reloj" in Spanish, "remaining" in English. The value comes from the
-		// server clock tick, so asking never starts a client-side spoken countdown.
+		const query = chord
+			? (key === 'l' ? 'letter' : key === 'x' ? 'time' : null)
+			: (event.ctrlKey || event.shiftKey || typing
+				? null
+				: key === 'l' ? 'letter' : key === 'r' ? 'time' : null);
+		if (!query) return;
+
 		const round = this.round();
 		if (!round) return;
 		event.preventDefault();
 		event.stopPropagation();
-		this.deps.announce(round.phase === 'writing'
+		if (query === 'letter') {
+			this.say(this.t('categories_letter_label', { letter: round.letter }));
+			return;
+		}
+		this.say(round.phase === 'writing'
 			? this.t('categories_timer_label', { seconds: this.secondsRemaining })
 			: this.t('categories_timer_not_running'));
+	}
+
+	/**
+	 * Speak a personal answer, and show it too. The spoken half already reaches whoever pressed
+	 * the key; the visible half exists because a sighted player pressing the same shortcut got
+	 * nothing at all. It is aria-hidden and replaces itself: the live region has already said
+	 * this, and hearing it twice would be worse than not seeing it.
+	 */
+	private say(text: string): void {
+		this.deps.announce(text);
+		this.echo.textContent = text;
+		this.echo.hidden = false;
 	}
 
 	// ── Commands ──────────────────────────────────────────────────────────────
@@ -404,6 +446,12 @@ export class CategoriesBoard {
 	private renderSheet(gs: GameState): void {
 		const round = gs.categories!.round;
 		this.sheetHeading.textContent = this.t('categories_sheet_title', { letter: round.letter });
+		// ONE named group for the whole sheet: these twelve boxes are one set of related
+		// controls with one name, not twelve sets of one. Repeating the name at every field
+		// would be a toll paid on every Tab.
+		this.sheetGroup.setAttribute('aria-label', this.t('categories_sheet_group', {
+			letter: round.letter,
+		}));
 		if (this.sheetRound === round.roundNumber) return;
 
 		this.sheetRound = round.roundNumber;
@@ -416,16 +464,6 @@ export class CategoriesBoard {
 
 			const item = document.createElement('li');
 			item.className = 'categories-sheet-item';
-			// A named group around each field. Arriving at it announces the category AND the
-			// letter, so the one fact every answer depends on is repeated at every box instead
-			// of being read once at the top of a sheet with twelve of them.
-			const group = document.createElement('div');
-			group.className = 'categories-sheet-group';
-			group.setAttribute('role', 'group');
-			group.setAttribute('aria-label', this.t('categories_sheet_group', {
-				category: prompt.name,
-				letter: round.letter,
-			}));
 			const inputId = `categories-answer-${prompt.categoryId}`;
 			const label = document.createElement('label');
 			label.className = 'categories-sheet-label';
@@ -440,8 +478,7 @@ export class CategoriesBoard {
 			input.autocomplete = 'off';
 			input.spellcheck = false;
 			input.maxLength = 60;
-			group.append(label, input);
-			item.appendChild(group);
+			item.append(label, input);
 			this.sheetList.appendChild(item);
 		}
 	}
@@ -517,7 +554,7 @@ export class CategoriesBoard {
 					button.addEventListener('click', () => {
 						this.verdicts.set(answer.playerId, verdict);
 						this.refreshVerdictButtons(gs, prompt, round.letter);
-						this.deps.announce(this.t('categories_verdict_set', {
+						this.say(this.t('categories_verdict_set', {
 							player: categoriesPlayerName(gs, answer.playerId),
 							verdict: categoriesVerdictLabel(verdict, this.deps.tSync),
 						}));
@@ -689,7 +726,8 @@ export class CategoriesBoard {
 			...CARD_STATUS_SHORTCUTS,
 			{ keys: 'enter', descKey: 'game.help_cmd_categories_next_field' },
 			{ keys: 'escape', descKey: 'game.help_cmd_categories_home' },
-			{ keys: 'r', descKey: 'game.help_cmd_categories_timer' },
+			{ keys: 'l', typingKeys: 'ctrl+shift+l', descKey: 'game.help_cmd_categories_letter' },
+			{ keys: 'r', typingKeys: 'ctrl+shift+x', descKey: 'game.help_cmd_categories_timer' },
 			{ keys: 'up/down', descKey: 'game.help_cmd_categories_answers' },
 			{ keys: 'right/left', descKey: 'game.help_cmd_categories_verdicts' },
 		];

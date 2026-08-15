@@ -175,19 +175,82 @@ test('the letter die shows the round letter and re-rolls only when a new round d
 	assert.equal(die.classList.contains('categories-die--rolling'), true);
 });
 
-test('each answer field sits in a group naming its category AND the round letter', () => {
+test('the whole sheet is ONE named group, carrying the round letter', () => {
 	const h = harness('p1');
 
-	const groups = Array.from(h.element.querySelectorAll<HTMLElement>('.categories-sheet-group'));
+	const group = h.element.querySelector<HTMLElement>('.categories-sheet-group')!;
 
-	assert.equal(groups.length, 2, 'one group per category, not one for the whole sheet');
-	assert.equal(groups[0].getAttribute('role'), 'group');
-	// Arriving at the field announces the group: the letter is repeated at every box instead of
-	// being read once at the top of a long sheet.
-	assert.match(groups[0].getAttribute('aria-label')!, /An animal/);
-	assert.match(groups[0].getAttribute('aria-label')!, /\bR\b/);
-	assert.ok(groups[0].querySelector('input.categories-sheet-input'), 'the field is inside its group');
-	assert.ok(groups[0].querySelector('label'), 'and so is its label');
+	assert.equal(group.getAttribute('role'), 'group');
+	assert.match(group.getAttribute('aria-label')!, /\bR\b/);
+	// One group for twelve related fields, not twelve groups of one.
+	assert.equal(h.element.querySelectorAll('[role="group"]').length, 1);
+	// It WRAPS the list: role="group" on the <ol> itself would orphan every <li> inside it.
+	assert.ok(group.querySelector('ol.categories-sheet-list'), 'the list keeps its own semantics');
+	assert.equal(inputs(h).length, 2, 'and the fields still live inside it');
+});
+
+test('L says the letter and R the clock, each with a chord that survives a text box', () => {
+	const h = harness('p1', 'writing');
+	h.board.handleTimerTick(42);
+	const [first] = inputs(h);
+
+	const press = (target: EventTarget, key: string, chord = false) => {
+		const event = new window.KeyboardEvent('keydown', {
+			key, ctrlKey: chord, shiftKey: chord, bubbles: true, cancelable: true,
+		});
+		target.dispatchEvent(event);
+		return event;
+	};
+
+	// Bare letters, from anywhere that is not a text box.
+	press(h.element, 'l');
+	assert.match(h.announced.at(-1)!, /\bR\b/);
+	press(h.element, 'r');
+	assert.match(h.announced.at(-1)!, /42/);
+
+	// Inside a field they type instead of acting…
+	h.announced.length = 0;
+	first.focus();
+	for (const key of ['l', 'r']) {
+		assert.equal(press(first, key).defaultPrevented, false, key);
+	}
+	assert.deepEqual(h.announced, []);
+
+	// …and the chords do the same job from exactly there.
+	assert.equal(press(first, 'L', true).defaultPrevented, true);
+	assert.match(h.announced.at(-1)!, /\bR\b/);
+	assert.equal(press(first, 'X', true).defaultPrevented, true);
+	assert.match(h.announced.at(-1)!, /42/);
+});
+
+test('a personal answer is also shown, quietly, and never twice to a screen reader', () => {
+	const h = harness('p1', 'writing');
+	const echo = h.element.querySelector<HTMLElement>('.categories-echo')!;
+
+	assert.equal(echo.hidden, true, 'nothing to echo before anything is asked');
+
+	h.element.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'l', bubbles: true, cancelable: true }));
+
+	assert.equal(echo.hidden, false);
+	assert.equal(echo.textContent, h.announced.at(-1));
+	// The live region already said it; showing it must not make it speak again.
+	assert.equal(echo.getAttribute('aria-hidden'), 'true');
+
+	h.element.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'r', bubbles: true, cancelable: true }));
+	assert.equal(echo.textContent, h.announced.at(-1), 'it replaces itself instead of stacking');
+});
+
+test('the two letter queries declare the chord that replaces them while typing', () => {
+	const h = harness('p1');
+
+	const shortcuts = h.board.helpShortcuts();
+	const letter = shortcuts.find(s => s.keys === 'l')!;
+	const clock = shortcuts.find(s => s.keys === 'r')!;
+
+	assert.equal(letter.typingKeys, 'ctrl+shift+l');
+	assert.equal(clock.typingKeys, 'ctrl+shift+x');
+	// Escape and Enter already survive a text box, so they claim no alias.
+	assert.equal(shortcuts.find(s => s.keys === 'escape')!.typingKeys, undefined);
 });
 
 test('the round heading names the letter every answer has to start with', () => {
