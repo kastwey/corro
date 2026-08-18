@@ -194,7 +194,7 @@ export class ForbiddenBoard {
 				<div class="forbidden-controls">
 					<button type="button" class="btn btn--primary forbidden-start"></button>
 					<button type="button" class="btn forbidden-correct"></button>
-					<button type="button" class="btn forbidden-pass"></button>
+					<button type="button" class="btn forbidden-pass" aria-keyshortcuts="P"></button>
 					<button type="button" class="btn forbidden-violation" aria-keyshortcuts="V"></button>
 				</div>
 				<p id="forbidden-pass-hint" class="forbidden-control-hint" hidden></p>
@@ -274,6 +274,16 @@ export class ForbiddenBoard {
 				this.deps.announce(turn.phase === 'active'
 					? this.t('forbidden_timer_label', { seconds: this.secondsRemaining })
 					: this.t('forbidden_timer_not_running'));
+				return;
+			}
+			if (key === 'p' && visible(this.passButton)) {
+				// P is "pasar" and "pass", the same bilingual mnemonic R and V already use. Pass was
+				// the only clue-giver action without a key: Enter banks a guessed word, so skipping
+				// one meant tabbing away from the card with the clock running. Going through the
+				// button keeps the out-of-passes case spoken instead of silently ignored.
+				event.preventDefault();
+				event.stopPropagation();
+				this.passButton.click();
 				return;
 			}
 			if (key !== 'v' || !visible(this.violationButton)) return;
@@ -453,6 +463,7 @@ export class ForbiddenBoard {
 			...CARD_STATUS_SHORTCUTS,
 			{ keys: 'enter', descKey: 'game.help_cmd_forbidden_enter' },
 			{ keys: 'escape', descKey: 'game.help_cmd_forbidden_card' },
+			{ keys: 'p', descKey: 'game.help_cmd_forbidden_pass' },
 			{ keys: 'r', descKey: 'game.help_cmd_forbidden_timer' },
 			{ keys: 'v', descKey: 'game.help_cmd_forbidden_violation' },
 			{ keys: 'tab', descKey: 'game.help_cmd_forbidden_controls' },

@@ -1024,6 +1024,7 @@
     "forbidden_rules_cycles": "Rotaciones completas de portavoces antes del recuento: {{count}}",
     "help_cmd_forbidden_enter": "Desde las palabras, iniciar el temporizador o marcar la palabra como adivinada",
     "help_cmd_forbidden_card": "Volver a las palabras",
+    "help_cmd_forbidden_pass": "Pasar la palabra actual cuando eres quien da las pistas",
     "help_cmd_forbidden_timer": "Anunciar el tiempo que queda en el temporizador",
     "help_cmd_forbidden_violation": "Señalar el objetivo o una palabra prohibida cuando eres el supervisor",
     "help_cmd_forbidden_controls": "Moverte entre tu carta privada y las acciones de tu función",

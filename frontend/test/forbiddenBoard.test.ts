@@ -301,6 +301,25 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 	// word — the only thing they need — sat behind them. The words ARE the board here.
 	assert.equal(document.activeElement, card, 'acting comes back to the words');
 
+	// P is the clue-giver's other key. Before it existed, a word they could not get out was the
+	// one action that forced them to tab off the words with the clock running.
+	card.focus();
+	let passKeyLeakedToDocument = 0;
+	const documentPassKey = () => { passKeyLeakedToDocument++; };
+	document.addEventListener('keydown', documentPassKey);
+	const passKey = new window.KeyboardEvent('keydown', { key: 'p', bubbles: true, cancelable: true });
+	card.dispatchEvent(passKey);
+	document.removeEventListener('keydown', documentPassKey);
+	assert.equal(passKey.defaultPrevented, true);
+	assert.equal(passKeyLeakedToDocument, 0, 'family-local P never reaches document shortcuts');
+	assert.deepEqual(commands.pass, [1, 1]);
+	assert.equal(document.activeElement, card, 'passing comes back to the words too');
+	assert.equal(pass.getAttribute('aria-keyshortcuts'), 'P');
+	assert.deepEqual(
+		board.helpShortcuts().find(shortcut => shortcut.descKey === 'game.help_cmd_forbidden_pass'),
+		{ keys: 'p', descKey: 'game.help_cmd_forbidden_pass' },
+	);
+
 	board.handleTimerTick(42);
 	const timerPanel = root.querySelector<HTMLElement>('.forbidden-timer')!;
 	const progress = root.querySelector<HTMLProgressElement>('.forbidden-timer__progress')!;
@@ -331,7 +350,15 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 	assert.equal(pass.getAttribute('aria-disabled'), 'true');
 	assert.ok(pass.getAttribute('aria-describedby'));
 	pass.click();
-	assert.deepEqual(commands.pass, [1]);
+	assert.deepEqual(commands.pass, [1, 1]);
+	assert.equal(announced.at(-1), 'No passes remain in this turn.');
+
+	// Out of passes, the key says why instead of going quiet: the control is never `disabled`,
+	// so its shortcut must not be the one route that silently does nothing.
+	announced.length = 0;
+	card.focus();
+	card.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'p', bubbles: true, cancelable: true }));
+	assert.deepEqual(commands.pass, [1, 1], 'a spent pass sends no command');
 	assert.equal(announced.at(-1), 'No passes remain in this turn.');
 
 	card.focus();
@@ -377,6 +404,10 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 	card.focus();
 	card.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
 	assert.deepEqual(commands.violation, [1, 1]);
+	// P belongs to the clue-giver. The monitor's card is not theirs to skip. (The keystroke is
+	// still cancelled, but by the protected card that refuses every character, not by the board.)
+	card.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'p', bubbles: true, cancelable: true }));
+	assert.deepEqual(commands.pass, [1, 1], 'P cannot pass a word for the monitor');
 	assert.deepEqual(
 		board.helpShortcuts().find(shortcut => shortcut.descKey === 'game.help_cmd_forbidden_violation'),
 		{ keys: 'v', descKey: 'game.help_cmd_forbidden_violation' },

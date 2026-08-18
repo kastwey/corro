@@ -309,10 +309,14 @@ test('shared Spanish cards, per-player UI and authoritative role actions', async
 	await expect(ana.locator('.forbidden-score').first()).toContainText('1');
 	await flushAxeAudit(carla);
 
+	// P skips the word from the words themselves. Passing used to be the one clue-giver action
+	// that needed a tab away from the card, with the clock running.
 	const beforePass = await anaCard.inputValue();
-	await ana.locator('.forbidden-pass').click();
+	await anaCard.focus();
+	await ana.keyboard.press('p');
 	await expectAnnouncement(berto, /Ana pasa/);
 	await expect(anaCard).not.toHaveValue(beforePass);
+	await expect(anaCard).toBeFocused();
 	await expect(ana.locator('.forbidden-score').first()).toContainText('1');
 
 	// Reach a narrow, dark rendering of the live monitor state and verify it neither clips

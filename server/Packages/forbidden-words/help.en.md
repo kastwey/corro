@@ -39,6 +39,7 @@ The score is allowed to fall below zero. After every player has given clues once
 Focus enters the role table. The private card is this family's board: **Enter** does the one thing that is yours to do from there, **Escape** always comes back to it, and focus returns to the words after every action.
 
 - Press **Enter** on the private card to start the timer; once it is running, **Enter** marks the word guessed and deals the next one.
+- As clue-giver, press **P** to pass a word you cannot get out; the next one arrives without stopping the clock. If you have spent every pass in the turn, the key says so.
 - Press **Escape** from anywhere on the surface to come back to the words.
 - Press **S** on the game surface to hear your team, score and role.
 - Press **Shift+S** to hear the opposing team's score.
