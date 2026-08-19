@@ -117,7 +117,7 @@ public class ForbiddenFamilyTests
 	}
 
 	[Fact]
-	public async Task Projection_reveals_the_private_card_only_to_clue_giver_and_monitor()
+	public async Task Projection_reveals_the_private_card_only_to_clue_giver_and_monitor_and_only_once_the_clock_runs()
 	{
 		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
 		var family = new ForbiddenFamily();
@@ -126,22 +126,57 @@ public class ForbiddenFamilyTests
 			Players = Players(), Definition = definition, Lang = "en", Teams = Teams(),
 		}).State;
 		var turn = full.Forbidden!.Turn;
+		Assert.Equal(ForbiddenTurnPhase.Preparing, turn.Phase);
 
-		var giver = family.ProjectFor(full, turn.ClueGiverId);
-		var monitor = family.ProjectFor(full, turn.MonitorId);
-		var guesser = family.ProjectFor(full, turn.GuesserId);
-		var spectator = family.ProjectFor(full, "p3");
-		var publicView = family.ProjectFor(full, null);
+		// Reported from play: the card was dealt with the turn, so the clue-giver could plan
+		// clues for as long as they liked before starting the clock and the monitor could learn
+		// the forbidden list by heart. Role alone never authorised the words — the turn has to
+		// be running too, and it is the SERVER that withholds them, not the screen.
+		foreach (var everyone in new[]
+		{
+			family.ProjectFor(full, turn.ClueGiverId),
+			family.ProjectFor(full, turn.MonitorId),
+			family.ProjectFor(full, turn.GuesserId),
+			family.ProjectFor(full, "p3"),
+			family.ProjectFor(full, null),
+		})
+		{
+			Assert.Null(everyone.Forbidden!.Turn.Target);
+			Assert.Null(everyone.Forbidden.Turn.CardId);
+			Assert.Empty(everyone.Forbidden.Turn.ForbiddenWords);
+			Assert.Null(everyone.ForbiddenDeck);
+		}
+
+		var running = full with
+		{
+			Forbidden = full.Forbidden with { Turn = turn with { Phase = ForbiddenTurnPhase.Active } },
+		};
+		var giver = family.ProjectFor(running, turn.ClueGiverId);
+		var monitor = family.ProjectFor(running, turn.MonitorId);
 
 		Assert.Equal("lighthouse", giver.Forbidden!.Turn.Target);
 		Assert.Equal("lighthouse", monitor.Forbidden!.Turn.Target);
-		foreach (var hidden in new[] { guesser, spectator, publicView })
+		Assert.NotEmpty(giver.Forbidden.Turn.ForbiddenWords);
+		foreach (var hidden in new[]
+		{
+			family.ProjectFor(running, turn.GuesserId),
+			family.ProjectFor(running, "p3"),
+			family.ProjectFor(running, null),
+		})
 		{
 			Assert.Null(hidden.Forbidden!.Turn.Target);
 			Assert.Null(hidden.Forbidden.Turn.CardId);
 			Assert.Empty(hidden.Forbidden.Turn.ForbiddenWords);
 			Assert.Null(hidden.ForbiddenDeck);
 		}
+
+		// A finished turn takes the words back: the deck never becomes public by expiring.
+		var over = full with
+		{
+			Forbidden = full.Forbidden with { Turn = turn with { Phase = ForbiddenTurnPhase.Finished } },
+		};
+		Assert.Null(family.ProjectFor(over, turn.ClueGiverId).Forbidden!.Turn.Target);
+
 		Assert.NotNull(full.ForbiddenDeck); // projection never mutates persistence state
 		Assert.Equal("lighthouse", full.Forbidden.Turn.Target);
 	}

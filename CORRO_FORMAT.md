@@ -1315,8 +1315,11 @@ not supported in this family.
 ### Hidden information and accessible card surface
 
 Persistence stores the selected word language, the full matching deck and the current card. Every client state is projected:
-only the clue-giver and monitor receive `target` and `forbiddenWords`; all other players and the public
-view receive null/empty fields, and nobody receives the remaining deck.
+`target`, `forbiddenWords` and `cardId` reach the clue-giver and monitor **only while the turn is
+active**; every other player, the public view, and those same two roles before the clock starts or
+after it stops, receive null/empty fields, and nobody receives the remaining deck. Role alone is not
+authorisation: a card dealt during the preparing phase would give the clue-giver unlimited time to
+plan and the monitor a free reading of the forbidden list.
 
 The client renders the authorized card as one flowing sentence in a protected multiline text box. It
 uses `aria-readonly="true"` without native `readonly`: cursor movement, screen-reader reading commands,

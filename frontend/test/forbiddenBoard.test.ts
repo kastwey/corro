@@ -70,12 +70,22 @@ function gameState(): GameState {
 				correctCount: 0,
 				violationCount: 0,
 				cardSequence: 1,
-				cardId: 'lighthouse',
-				target: 'lighthouse',
-				forbiddenWords: ['tower', 'coast', 'beam', 'ship', 'sea'],
+				// A preparing turn carries no card: the server withholds the words until the
+				// clock is running, so this is what the two authorised roles really receive.
+				cardId: null,
+				target: null,
+				forbiddenWords: [],
 			},
 		},
 	};
+}
+
+/** What the server sends those two roles once the turn goes live. */
+function dealCard(state: GameState): void {
+	const turn = state.forbidden!.turn;
+	turn.cardId = 'lighthouse';
+	turn.target = 'lighthouse';
+	turn.forbiddenWords = ['tower', 'coast', 'beam', 'ship', 'sea'];
 }
 
 const translate = (key: string, vars?: Record<string, unknown>) =>
@@ -214,8 +224,10 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 	assert.equal(root.querySelector('.forbidden-now__line')!.textContent,
 		'Your Red team is about to play.');
 	assert.equal(card.rows, 7);
-	assert.equal(card.value,
-		'Target word: lighthouse.\nForbidden words:\ntower,\ncoast,\nbeam,\nship,\nsea.');
+	// Before the clock starts there is nothing to read. The card itself stays: hiding the panel
+	// would drop focus and rebuild it under a screen-reader user on every single turn.
+	assert.equal(cardPanel.hidden, false);
+	assert.equal(card.value, 'The word appears when the turn starts.');
 	assert.equal(card.hasAttribute('readonly'), false);
 	assert.equal(start.hidden, false);
 	assert.equal(start.hasAttribute('aria-disabled'), false);
@@ -260,11 +272,16 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 
 	state.forbidden!.turn.phase = 'active';
 	state.forbidden!.turn.startedAt = new Date(Date.now() - 5_000).toISOString();
+	dealCard(state);
 	board.update(state);
 	assert.equal(start.hidden, true);
 	assert.equal(correct.hidden, false);
 	assert.equal(pass.hidden, false);
 	assert.equal(violation.hidden, true);
+	// And now, with the clock running, the words are there — same card, no focus move.
+	assert.equal(card.value,
+		'Target word: lighthouse.\nForbidden words:\ntower,\ncoast,\nbeam,\nship,\nsea.');
+	assert.equal(document.activeElement, card);
 	// Enter is the ONE key of this surface: it starts the clock while there is a clock to start,
 	// and from then on it banks each word as it is guessed. No hunting for a button between cards.
 	card.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));

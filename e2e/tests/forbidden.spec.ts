@@ -142,10 +142,10 @@ test('shared Spanish cards, per-player UI and authoritative role actions', async
 	await expect(carlaCard).toHaveAccessibleName('Palabras');
 	await expect(ana.locator('#forbidden-card-hint')).toHaveCount(0);
 	await expect(anaCard).not.toHaveAttribute('aria-describedby', /.*/);
-	await expect(anaCard).toHaveValue(
-		'Target word: faro.\nForbidden words:\nluz,\ncosta,\ntorre,\nmar,\nbarco.');
-	await expect(carlaCard).toHaveValue(
-		'Palabra objetivo: faro.\nPalabras prohibidas:\nluz,\ncosta,\ntorre,\nmar,\nbarco.');
+	// The turn has not started, so not even those two hold the words yet — the server keeps
+	// them until the clock runs. The card is there, saying so in each player's own language.
+	await expect(anaCard).toHaveValue('The word appears when the turn starts.');
+	await expect(carlaCard).toHaveValue('La palabra aparece al empezar el turno.');
 	await expect(bertoCard).toHaveValue('');
 	await expect(davidCard).toHaveValue('');
 
@@ -229,6 +229,15 @@ test('shared Spanish cards, per-player UI and authoritative role actions', async
 	await anaCard.focus();
 	await ana.keyboard.press('Enter');
 	await expect(anaCard).toBeFocused();
+
+	// Starting the clock is what delivers the card, to the clue-giver and the monitor alike,
+	// in the one shared deck language. Nobody else's projection gains anything.
+	await expect(anaCard).toHaveValue(
+		'Target word: faro.\nForbidden words:\nluz,\ncosta,\ntorre,\nmar,\nbarco.');
+	await expect(carlaCard).toHaveValue(
+		'Palabra objetivo: faro.\nPalabras prohibidas:\nluz,\ncosta,\ntorre,\nmar,\nbarco.');
+	await expect(bertoCard).toHaveValue('');
+	await expect(davidCard).toHaveValue('');
 
 	await expect(ana.locator('.forbidden-correct')).toBeVisible();
 	await expect(ana.locator('.forbidden-pass')).toBeVisible();
