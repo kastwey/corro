@@ -1506,7 +1506,7 @@
     "help_cmd_last_card_catch": "Pillar a un rival que no declaró",
     "help_cmd_last_card_watch": "Leer quién va a ganar (la lista de vigilancia)",
     "help_cmd_shedding_piles": "Leer el mazo, la carta de arriba y el color en vigor",
-    "help_cmd_shedding_top": "Leer sólo la carta de arriba y el color en vigor",
+    "help_cmd_shedding_top": "Leer la carta de arriba, con el color que manda si es un comodín",
     "help_cmd_shedding_colour_jump": "Ir a la siguiente carta de un color: r rojo, g verde, b azul, y amarillo",
     "help_cmd_shedding_colour_jump_back": "Ir a la carta anterior de ese color",
     "help_cmd_shedding_number_jump": "Ir a la siguiente carta con ese número (0 a 9)",

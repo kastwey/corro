@@ -1506,7 +1506,7 @@
     "help_cmd_last_card_catch": "Catch a rival who forgot to declare",
     "help_cmd_last_card_watch": "Read who is about to win (the watch list)",
     "help_cmd_shedding_piles": "Read the deck, top card and colour in force",
-    "help_cmd_shedding_top": "Read just the top card and the colour in force",
+    "help_cmd_shedding_top": "Read the top card, plus the ruling colour after a wild",
     "help_cmd_shedding_colour_jump": "Jump to the next card of a colour: r red, g green, b blue, y yellow",
     "help_cmd_shedding_colour_jump_back": "Jump to the previous card of that colour",
     "help_cmd_shedding_number_jump": "Jump to the next card with that number (0 to 9)",
