@@ -1253,7 +1253,10 @@ public partial class GameHub
 				raceTeams: game.RaceTeams,
 				// Families whose rules live outside GameSettings (journey) apply these themselves.
 				ruleValues: game.RuleValues,
-				teams: arrangedTeams);
+				teams: arrangedTeams,
+				// What this table has already been dealt from this deck, so a group playing several
+				// matches in a row is dealt what it has not seen before it meets a repeat.
+				alreadyDealt: game.DealtFrom(definition.Manifest.GameType, game.Language));
 			if (gameService.GameState is { } packageState)
 			{
 				packageState.PackageToken = packageToken; // released with the table; the client's sound pack id

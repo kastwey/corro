@@ -99,7 +99,7 @@ public interface IGameLifecycle
 	/// <paramref name="ruleValues"/> carries the host's house-rule choices for families whose
 	/// rules live outside <see cref="GameSettings"/> (journey); <paramref name="teams"/> the
 	/// journey team seating (each inner list one team, in turn order).</summary>
-	Task InitializeFromDefinitionAsync(List<Player> players, Models.Corro.GameDefinition definition, string lang = "en", GameSettings? settings = null, bool raceTeams = false, Dictionary<string, System.Text.Json.JsonElement>? ruleValues = null, List<List<string>>? teams = null);
+	Task InitializeFromDefinitionAsync(List<Player> players, Models.Corro.GameDefinition definition, string lang = "en", GameSettings? settings = null, bool raceTeams = false, Dictionary<string, System.Text.Json.JsonElement>? ruleValues = null, List<List<string>>? teams = null, IReadOnlyCollection<string>? alreadyDealt = null);
 	void ConfigureSettings(GameSettings settings);
 	Task EndGameAsync();
 

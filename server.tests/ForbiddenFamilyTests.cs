@@ -213,4 +213,106 @@ public class ForbiddenFamilyTests
 		Assert.True(finish.GameOver);
 		Assert.Equal(0, finish.WinnerTeamIndex);
 	}
+
+	private static List<ForbiddenWordDef> Deck(int count)
+		=> Enumerable.Range(0, count)
+			.Select(index => new ForbiddenWordDef
+			{
+				Id = $"w{index}",
+				Target = $"target{index}",
+				Forbidden = new List<string> { "a", "b", "c" },
+			})
+			.ToList();
+
+	[Fact]
+	public void A_table_is_dealt_what_it_has_never_seen_before_it_meets_a_repeat()
+	{
+		var deck = Deck(10);
+		var seen = new[] { "w0", "w1", "w2" };
+
+		var ordered = ForbiddenFamily.OrderDeck(deck, seen, random: null);
+
+		// Same cards, none lost or duplicated — only the priority changes.
+		Assert.Equal(deck.Select(word => word.Id).OrderBy(id => id), ordered.Select(word => word.Id).OrderBy(id => id));
+		// The seven unseen ones come first; the three already dealt wait at the back.
+		Assert.DoesNotContain(ordered.Take(7).Select(word => word.Id), id => seen.Contains(id));
+		Assert.Equal(seen.OrderBy(id => id), ordered.Skip(7).Select(word => word.Id).OrderBy(id => id));
+	}
+
+	[Fact]
+	public void A_table_that_has_seen_the_whole_deck_starts_a_clean_cycle()
+	{
+		var deck = Deck(5);
+
+		var ordered = ForbiddenFamily.OrderDeck(deck, deck.Select(word => word.Id).ToList(), random: null);
+
+		// Nothing unseen is left, so the deck is dealt again rather than the match starting empty.
+		Assert.Equal(5, ordered.Count);
+		Assert.Equal(deck.Select(word => word.Id).OrderBy(id => id), ordered.Select(word => word.Id).OrderBy(id => id));
+	}
+
+	[Fact]
+	public void A_table_with_no_memory_is_dealt_the_whole_deck()
+	{
+		var deck = Deck(4);
+
+		var ordered = ForbiddenFamily.OrderDeck(deck, Array.Empty<string>(), random: null);
+
+		Assert.Equal(deck.Select(word => word.Id), ordered.Select(word => word.Id));
+	}
+
+	[Fact]
+	public async Task A_match_reports_the_cards_it_dealt_not_the_deck_it_shuffled()
+	{
+		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+		var family = new ForbiddenFamily();
+		var state = family.CreateGame(new FamilyStartContext
+		{
+			Players = Players(), Definition = definition, Lang = "en", Teams = Teams(),
+		}).State;
+
+		// One card is dealt with the opening turn.
+		Assert.Equal(new[] { state.ForbiddenDeck![0].Id }, family.DealtCardIds(state));
+
+		ForbiddenRulebook.DealNextCard(state.Forbidden!, state.ForbiddenDeck!);
+		ForbiddenRulebook.DealNextCard(state.Forbidden!, state.ForbiddenDeck!);
+		Assert.Equal(state.ForbiddenDeck!.Take(3).Select(word => word.Id), family.DealtCardIds(state));
+		// The rest of the deck was shuffled, not seen: remembering it would burn the whole deck
+		// on a table's first evening.
+		Assert.True(state.ForbiddenDeck!.Count > 3);
+	}
+
+	[Fact]
+	public async Task The_second_match_at_a_table_deals_words_the_first_one_did_not()
+	{
+		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+		var family = new ForbiddenFamily();
+		var random = new SystemRandomSource(seed: 7);
+
+		var first = family.CreateGame(new FamilyStartContext
+		{
+			Players = Players(), Definition = definition, Lang = "es", Teams = Teams(), Random = random,
+		}).State;
+		// Play through twenty cards, roughly a short match.
+		for (var card = 1; card < 20; card++)
+		{
+			ForbiddenRulebook.DealNextCard(first.Forbidden!, first.ForbiddenDeck!);
+		}
+		var dealtFirst = family.DealtCardIds(first);
+		Assert.Equal(20, dealtFirst.Count);
+
+		var second = family.CreateGame(new FamilyStartContext
+		{
+			Players = Players(), Definition = definition, Lang = "es", Teams = Teams(),
+			Random = random, AlreadyDealt = dealtFirst.ToList(),
+		}).State;
+		for (var card = 1; card < 20; card++)
+		{
+			ForbiddenRulebook.DealNextCard(second.Forbidden!, second.ForbiddenDeck!);
+		}
+
+		// Reported from play: reshuffling the whole deck for every match made a group of four meet
+		// words they had just had. With 556 cards and twenty a match, that was about even odds.
+		Assert.Empty(family.DealtCardIds(second).Intersect(dealtFirst));
+	}
 }

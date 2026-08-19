@@ -17,6 +17,11 @@ Playwright's `webServer` launches the server with `ASPNETCORE_ENVIRONMENT=E2E`
   first).
 - **In-memory persistence** (never Cosmos) and `reducedMotion` (tokens snap, no races
   against animations).
+- **Round clocks can be aged**: `expireRoundClock(gameId)` (`POST
+  /e2e/games/{id}/round-clock/expire`) moves a running turn's clock past its deadline and
+  then drives the server's OWN timeout path — command, broadcast and match retirement. The
+  rules are not bypassed (the server still refuses to end a turn with time left); a
+  scenario that needs a FINISHED timed match simply stops waiting a real minute per turn.
 
 Hence `workers: 1`: the dice queue lives in the server process and is shared by every game
 in it, so two tests rolling at once would eat each other's script.

@@ -519,6 +519,7 @@ public sealed class GameSessionRegistry
 			GameState = null,
 			LastMatch = finalState,
 			MatchesPlayed = document.MatchesPlayed + 1,
+			DealtCards = RememberDealtCards(document, finalState),
 		});
 		_persistedDocuments[gameId] = saved;
 
@@ -539,6 +540,34 @@ public sealed class GameSessionRegistry
 		_logger?.LogInformation(
 			"Match {Number} retired for table {GameId}; the table remains", saved.MatchesPlayed, gameId);
 		return saved;
+	}
+
+	/// <summary>
+	/// The table's deck memory with this match's dealt cards added. Families that keep no memory
+	/// answer nothing and the document is left exactly as it was — including its absent field, so
+	/// a table that never plays a card game never grows one.
+	/// </summary>
+	internal static Dictionary<string, List<string>>? RememberDealtCards(GameDocument document, GameState finalState)
+	{
+		var dealt = GameFamilies.For(finalState.GameType).DealtCardIds(finalState);
+		if (dealt.Count == 0)
+		{
+			return document.DealtCards;
+		}
+
+		var key = GameDocument.DeckMemoryKey(finalState.GameType ?? string.Empty, document.Language);
+		var memory = document.DealtCards is null
+			? new Dictionary<string, List<string>>(StringComparer.Ordinal)
+			: new Dictionary<string, List<string>>(document.DealtCards, StringComparer.Ordinal);
+		var seen = memory.TryGetValue(key, out var existing)
+			? new List<string>(existing)
+			: new List<string>();
+		// A card already remembered is not remembered twice: the memory is a set of ids, and its
+		// size is what a table's document carries forever.
+		var known = new HashSet<string>(seen, StringComparer.Ordinal);
+		seen.AddRange(dealt.Where(id => known.Add(id)));
+		memory[key] = seen;
+		return memory;
 	}
 
 	// ── Wiring (moved verbatim from the Hub's static callbacks) ───────────────
@@ -703,7 +732,9 @@ public sealed class GameSessionRegistry
 		}
 	}
 
-	private async Task ExpireRoundViaCommand(string gameId)
+	/// <summary>Internal so the E2E clock endpoint drives the SAME path a real timeout takes —
+	/// command, broadcast and retirement — instead of a lookalike that could drift from it.</summary>
+	internal async Task ExpireRoundViaCommand(string gameId)
 	{
 		try
 		{

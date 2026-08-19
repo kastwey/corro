@@ -93,6 +93,17 @@ public interface IGameFamily
 	IReadOnlyList<string> ContentLanguages(GameDefinition definition) => Array.Empty<string>();
 
 	/// <summary>
+	/// The cards this match actually DEALT, by their package id — not the whole deck it shuffled.
+	/// The table remembers them (see <see cref="FamilyStartContext.AlreadyDealt"/>) so the next
+	/// match on the same table deals what nobody has seen yet.
+	///
+	/// Empty — the default — opts a family out entirely: no memory is kept and nothing changes.
+	/// A family whose content is language-split keeps one memory per content language, because
+	/// two decks share no cards.
+	/// </summary>
+	IReadOnlyList<string> DealtCardIds(GameState state) => Array.Empty<string>();
+
+	/// <summary>
 	/// The number of teams this family REQUIRES the lobby to arrange, or null (the default) when
 	/// team play is optional and the host picks. A family that answers N is only playable as N
 	/// equal teams: the lobby rejects any other team count, and any table size that cannot split
@@ -158,6 +169,13 @@ public sealed record FamilyStartContext
 	/// (journey decks). Null falls back to real randomness; the E2E environment's scripted
 	/// source shuffles as the identity, keeping decks in cards.json order there.</summary>
 	public Services.Rules.IRandomSource? Random { get; init; }
+
+	/// <summary>
+	/// Card ids this TABLE has already been dealt from this deck, across earlier matches. A family
+	/// that shuffles a content deck deals the unseen ones first, so a group playing several matches
+	/// in a row stops meeting the same cards. Empty for a table that has never played this deck.
+	/// </summary>
+	public IReadOnlyCollection<string> AlreadyDealt { get; init; } = Array.Empty<string>();
 }
 
 /// <summary>What a family hands back at game start. Null members keep the service defaults.</summary>
