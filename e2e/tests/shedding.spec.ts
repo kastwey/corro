@@ -49,6 +49,12 @@ test('shedding: matches, the drawn-card pause, a penalty and the on-demand count
 	await ana.keyboard.press('d');
 	await expectAnnouncement(ana, /Mazo: 93\. Arriba: Amarillo 0, color en vigor amarillo\./);
 	await expect(anaCards.first()).toBeFocused();
+	// C is the same question without the preamble: what is on the table, and what may be
+	// played on it. The engine's own C repeats S word for word here, so the board takes it.
+	await ana.keyboard.press('c');
+	// Just the card: no label, and no colour — yellow on yellow would only repeat itself.
+	await expectAnnouncement(ana, /^Amarillo 0\.$/);
+	await expect(anaCards.first()).toBeFocused();
 
 	const cardOf = (page: typeof ana, name: RegExp) =>
 		page.locator('.hand-card:not(.hand-card--info)', { hasText: name }).first();
