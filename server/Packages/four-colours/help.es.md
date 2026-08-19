@@ -16,7 +16,7 @@ puedes jugarla al momento (Intro) o quedártela y pasar (Espacio otra vez).
 
 - **Números (0–9)**: valen su número al recuento.
 - **Salto**: el siguiente jugador pierde su turno.
-- **Reversa**: el sentido de juego se invierte (con dos jugadores actúa como un salto).
+- **Revertir**: el sentido de juego se invierte (con dos jugadores actúa como un salto).
 - **Roba dos**: el siguiente roba 2 cartas y pierde su turno.
 - **Comodín**: siempre se puede jugar; eliges el color que queda en vigor.
 - **Comodín roba cuatro**: como el comodín, y el siguiente roba 4 y pierde su turno.

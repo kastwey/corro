@@ -2,8 +2,8 @@
 //
 // Two real browsers, Spanish, real SignalR. The E2E identity shuffle keeps the deck in
 // cards.json order and DEALS from its tail: both openers hold the MIRRORED hand
-// [Rojo 5, Salto rojo, Azul 5, Verde 7, Roba dos azul, Verde 2, Amarillo 7], the flip is
-// Amarillo 0 (`yellow` in force) and the first draws are the blue-2 pair, then red-1.
+// [5 rojo, Salto rojo, 5 azul, 7 verde, Roba dos azul, 2 verde, 7 amarillo], the flip is
+// 0 amarillo (`yellow` in force) and the first draws are the blue-2 pair, then red-1.
 // Reordering that tail breaks this spec (pinned in FourColoursPackageTests).
 //
 // The story: colour and VALUE matches, the drawn-card pause (draw with Space, play the
@@ -47,7 +47,7 @@ test('shedding: matches, the drawn-card pause, a penalty and the on-demand count
 	await expect(ana.locator('.dice-control')).toBeHidden();
 	await anaCards.first().focus();
 	await ana.keyboard.press('d');
-	await expectAnnouncement(ana, /Mazo: 93\. Arriba: Amarillo 0, color en vigor amarillo\./);
+	await expectAnnouncement(ana, /Mazo: 93\. Arriba: 0 amarillo, color en vigor amarillo\./);
 	await expect(anaCards.first()).toBeFocused();
 
 	const cardOf = (page: typeof ana, name: RegExp) =>
@@ -55,31 +55,31 @@ test('shedding: matches, the drawn-card pause, a penalty and the on-demand count
 
 	// ── Ana opens on the colour; Berto answers ACROSS colours by VALUE (7 on 7). ──
 	await ana.locator('#board').focus();
-	await cardOf(ana, /Amarillo 7/).focus();
+	await cardOf(ana, /7 amarillo/).focus();
 	await ana.keyboard.press('Enter');
-	await expectAnnouncement(berto, /Ana juega Amarillo 7/);
-	await expectAnnouncement(ana, /Juegas Amarillo 7/);
-	await expect(ana.locator('.visual-narrative--shedding')).toContainText(/Juegas Amarillo 7/i);
+	await expectAnnouncement(berto, /Ana juega un 7 amarillo/);
+	await expectAnnouncement(ana, /Juegas un 7 amarillo/);
+	await expect(ana.locator('.visual-narrative--shedding')).toContainText(/Juegas un 7 amarillo/i);
 	await expect(ana.locator('.visual-narrative--shedding')).toHaveAttribute('data-kind', 'card-play-discard');
 
 	await berto.locator('#board').focus();
-	await cardOf(berto, /Verde 7/).focus();
+	await cardOf(berto, /7 verde/).focus();
 	await berto.keyboard.press('Enter');
-	await expectAnnouncement(ana, /Berto juega Verde 7/);
+	await expectAnnouncement(ana, /Berto juega un 7 verde/);
 
-	// ── Two more colour plays leave Verde 2 on top with Berto stranded. ──
+	// ── Two more colour plays leave 2 verde on top with Berto stranded. ──
 	await ana.locator('#board').focus();
-	await cardOf(ana, /Verde 7/).focus();
+	await cardOf(ana, /7 verde/).focus();
 	await ana.keyboard.press('Enter');
-	await expectAnnouncement(berto, /Ana juega Verde 7/);
+	await expectAnnouncement(berto, /Ana juega un 7 verde/);
 	await berto.locator('#board').focus();
-	await cardOf(berto, /Verde 2/).focus();
+	await cardOf(berto, /2 verde/).focus();
 	await berto.keyboard.press('Enter');
-	await expectAnnouncement(ana, /Berto juega Verde 2/);
+	await expectAnnouncement(ana, /Berto juega un 2 verde/);
 	await ana.locator('#board').focus();
-	await cardOf(ana, /Verde 2/).focus();
+	await cardOf(ana, /2 verde/).focus();
 	await ana.keyboard.press('Enter');
-	await expectAnnouncement(berto, /Ana juega Verde 2/);
+	await expectAnnouncement(berto, /Ana juega un 2 verde/);
 
 	// ── Berto has nothing green and no 2. Filtering therefore leaves a real zero-item
 	// list: its name and item count are sufficient, with no extra "all filtered" phrase.
@@ -92,44 +92,44 @@ test('shedding: matches, the drawn-card pause, a penalty and the on-demand count
 	await flushAxeAudit(berto);
 	await berto.locator('.hand-panel__list-actions [data-focus-id="show-all-cards"]').click();
 
-	// Berto DRAWS (Space) — and the drawn Azul 2
+	// Berto DRAWS (Space) — and the drawn 2 azul
 	// matches by value, so the game pauses on his play-it-or-keep-it choice. ──
 	await berto.locator('#board').focus();
 	await berto.keyboard.press(' ');
 	await expectAnnouncement(ana, /Berto roba una carta/);
-	await expectAnnouncement(berto, /Robas Azul 2: Intro la juega, Espacio te la quedas/);
-	await expect(berto.locator('.visual-narrative--shedding')).toContainText(/Robas Azul 2/i);
+	await expectAnnouncement(berto, /Robas un 2 azul: Intro la juega, Espacio te la quedas/);
+	await expect(berto.locator('.visual-narrative--shedding')).toContainText(/Robas un 2 azul/i);
 	const drawnRow = berto.locator('.hand-card:not(.hand-card--info)', { hasText: /recién robada/ });
 	await expect(drawnRow).toHaveCount(1);
 	await drawnRow.focus();
 	await berto.keyboard.press('Enter');
-	await expectAnnouncement(ana, /Berto juega Azul 2/);
+	await expectAnnouncement(ana, /Berto juega un 2 azul/);
 
 	// ── Ana follows the new colour; Berto lands the Roba dos: Ana suffers BEFORE the
 	// lost turn — two known cards, their identities hers alone. ──
 	await ana.locator('#board').focus();
-	await cardOf(ana, /Azul 5/).focus();
+	await cardOf(ana, /5 azul/).focus();
 	await ana.keyboard.press('Enter');
-	await expectAnnouncement(berto, /Ana juega Azul 5/);
+	await expectAnnouncement(berto, /Ana juega un 5 azul/);
 
 	await berto.locator('#board').focus();
 	await cardOf(berto, /Roba dos azul/).focus();
 	await berto.keyboard.press('Enter');
 	await expectAnnouncement(ana, /Robas 2 cartas de castigo/);
-	await expectAnnouncement(ana, /Te llevas Azul 2 y Rojo 1\./);
+	await expectAnnouncement(ana, /Te llevas 2 azul y 1 rojo\./);
 	await expectAnnouncement(ana, /Pierdes el turno/);
 	await expectAnnouncement(berto, /Ana pierde el turno/);
 
 	// Berto keeps the turn after the penalty and plays on the colour in force.
-	await cardOf(berto, /Azul 5/).focus();
+	await cardOf(berto, /5 azul/).focus();
 	await berto.keyboard.press('Enter');
-	await expectAnnouncement(ana, /Berto juega Azul 5/);
+	await expectAnnouncement(ana, /Berto juega un 5 azul/);
 
 	// ── The on-demand counts (the deliberate replacement of the shout): S = my story,
 	// Shift+S = the rivals' cards and points. ──
 	await ana.locator('#board').focus();
 	await ana.keyboard.press('s');
-	await expectAnnouncement(ana, /5 cartas, arriba Azul 5, color en vigor azul, 0 puntos/);
+	await expectAnnouncement(ana, /5 cartas, arriba 5 azul, color en vigor azul, 0 puntos/);
 
 	await ana.keyboard.press('Shift+S');
 	await expectAnnouncement(ana, /Berto: 3 cartas, 0 puntos/);
