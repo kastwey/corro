@@ -67,24 +67,73 @@ export function renderMarkdown(md: string, contentsLabel = 'Contents'): string {
 	const sections = headings.filter(h => h.level === 2);
 	const out: string[] = [];
 	let para: string[] = [];
-	let list: { type: 'ul' | 'ol'; items: string[] } | null = null;
+	// Open lists, outermost first. Each level remembers the indent that opened it, so a deeper
+	// bullet nests inside the current item instead of starting a sibling list.
+	const lists: OpenList[] = [];
 	let headingIndex = 0;
 	let contentsRendered = false;
 
 	const flushPara = () => {
 		if (para.length) { out.push(`<p>${inline(para.join(' '))}</p>`); para = []; }
 	};
-	const flushList = () => {
-		if (list) {
-			out.push(`<${list.type}>${list.items.map(i => `<li>${inline(i)}</li>`).join('')}</${list.type}>`);
-			list = null;
+	/** Close every open list deeper than `indent`, folding each into its parent's last item. */
+	const closeListsDeeperThan = (indent: number) => {
+		while (lists.length && lists[lists.length - 1].indent > indent) {
+			const done = lists.pop()!;
+			const html = `<${done.type}>${done.items.map(i => `<li>${i}</li>`).join('')}</${done.type}>`;
+			const parent = lists[lists.length - 1];
+			if (parent) parent.items[parent.items.length - 1] += html;
+			else out.push(html);
 		}
 	};
+	const flushList = () => closeListsDeeperThan(-1);
 	const flushAll = () => { flushPara(); flushList(); };
 
-	for (const raw of lines) {
+	/** Add a list item at this indent, opening or closing levels to reach it. */
+	const addItem = (type: 'ul' | 'ol', indent: number, text: string) => {
+		flushPara();
+		closeListsDeeperThan(indent);
+		const current = lists[lists.length - 1];
+		if (!current || indent > current.indent) {
+			lists.push({ type, indent, items: [inline(text)] });
+			return;
+		}
+		// Same level: a different marker starts a new list, as in Markdown.
+		if (current.type !== type) {
+			closeListsDeeperThan(indent - 1);
+			lists.push({ type, indent, items: [inline(text)] });
+			return;
+		}
+		current.items.push(inline(text));
+	};
+
+	for (let index = 0; index < lines.length; index++) {
+		const raw = lines[index];
 		const line = raw.trim();
 		if (line === '') { flushAll(); continue; }
+
+		// A Markdown table: a header row, its |---|---| separator, then the body. The guide
+		// renderer used to know nothing about them, so every row landed in one run-on paragraph
+		// of pipes — which a screen reader reads out, bar by bar, as prose.
+		if (line.startsWith('|') && /^\|[\s:|-]+\|$/.test((lines[index + 1] ?? '').trim())) {
+			flushAll();
+			const header = tableCells(line);
+			const body: string[][] = [];
+			index += 2;
+			while (index < lines.length && lines[index].trim().startsWith('|')) {
+				body.push(tableCells(lines[index].trim()));
+				index++;
+			}
+			index--;
+			out.push(
+				'<table class="board-help__table">'
+				+ `<thead><tr>${header.map(cell => `<th scope="col">${inline(cell)}</th>`).join('')}</tr></thead>`
+				+ `<tbody>${body.map(row =>
+					`<tr>${row.map(cell => `<td>${inline(cell)}</td>`).join('')}</tr>`).join('')}</tbody>`
+				+ '</table>',
+			);
+			continue;
+		}
 
 		const heading = /^(#{1,4})\s+(.*)$/.exec(line);
 		if (heading) {
@@ -108,18 +157,20 @@ export function renderMarkdown(md: string, contentsLabel = 'Contents'): string {
 
 		if (/^([-*_])\1{2,}$/.test(line)) { flushAll(); out.push('<hr>'); continue; }
 
+		const indent = raw.length - raw.trimStart().length;
 		const bullet = /^[-*]\s+(.*)$/.exec(line);
-		if (bullet) {
-			flushPara();
-			if (list?.type !== 'ul') { flushList(); list = { type: 'ul', items: [] }; }
-			list.items.push(bullet[1]);
-			continue;
-		}
+		if (bullet) { addItem('ul', indent, bullet[1]); continue; }
 		const ordered = /^\d+\.\s+(.*)$/.exec(line);
-		if (ordered) {
-			flushPara();
-			if (list?.type !== 'ol') { flushList(); list = { type: 'ol', items: [] }; }
-			list.items.push(ordered[1]);
+		if (ordered) { addItem('ol', indent, ordered[1]); continue; }
+
+		// An indented line under an open list continues that item. Guide authors wrap long
+		// bullets over several lines — ordinary Markdown — and every one of those used to be
+		// cut mid-sentence, with the tail left as a stray paragraph and the list closed early.
+		// Only INDENTED lines continue: an unindented one still starts a paragraph, so a list
+		// followed directly by prose keeps rendering the way this guide's authors expect.
+		const open = lists[lists.length - 1];
+		if (open && indent > 0 && !para.length) {
+			open.items[open.items.length - 1] += ` ${inline(line)}`;
 			continue;
 		}
 
@@ -128,6 +179,19 @@ export function renderMarkdown(md: string, contentsLabel = 'Contents'): string {
 	}
 	flushAll();
 	return out.join('\n');
+}
+
+interface OpenList {
+	type: 'ul' | 'ol';
+	/** Source indent of the item that opened this level. */
+	indent: number;
+	/** Items as finished HTML: a nested list is appended to its parent item when it closes. */
+	items: string[];
+}
+
+/** The cells of one table row, without the leading and trailing pipes. */
+function tableCells(line: string): string[] {
+	return line.replace(/^\|/, '').replace(/\|$/, '').split('|').map(cell => cell.trim());
 }
 
 /** Inline formatting on already-escaped text: safe fragment/http(s) links, bold, italic, code. */
