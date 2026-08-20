@@ -9,7 +9,10 @@
   },
   "author": "Corro contributors",
   "version": "1.1.0",
-  "locales": ["en", "es"],
+  "locales": [
+    "en",
+    "es"
+  ],
   "players": {
     "min": 4,
     "max": 8
@@ -22,13 +25,85 @@
     "cycles": 1
   },
   "tokens": [
-    { "id": "spark", "nameKey": "tokens.spark" },
-    { "id": "orbit", "nameKey": "tokens.orbit" },
-    { "id": "prism", "nameKey": "tokens.prism" },
-    { "id": "wave", "nameKey": "tokens.wave" },
-    { "id": "leaf", "nameKey": "tokens.leaf" },
-    { "id": "comet", "nameKey": "tokens.comet" },
-    { "id": "pulse", "nameKey": "tokens.pulse" },
-    { "id": "knot", "nameKey": "tokens.knot" }
+    {
+      "id": "spark",
+      "nameKey": "tokens.spark"
+    },
+    {
+      "id": "orbit",
+      "nameKey": "tokens.orbit"
+    },
+    {
+      "id": "prism",
+      "nameKey": "tokens.prism"
+    },
+    {
+      "id": "wave",
+      "nameKey": "tokens.wave"
+    },
+    {
+      "id": "leaf",
+      "nameKey": "tokens.leaf"
+    },
+    {
+      "id": "comet",
+      "nameKey": "tokens.comet"
+    },
+    {
+      "id": "pulse",
+      "nameKey": "tokens.pulse"
+    },
+    {
+      "id": "knot",
+      "nameKey": "tokens.knot"
+    }
+  ],
+  "houseRules": [
+    {
+      "id": "forbiddenEndMode",
+      "group": "forbidden",
+      "type": "choice",
+      "default": "rounds",
+      "options": [
+        {
+          "id": "rounds",
+          "nameKey": "rules.forbiddenEndModeRounds"
+        },
+        {
+          "id": "score",
+          "nameKey": "rules.forbiddenEndModeScore"
+        }
+      ],
+      "editableByHost": true,
+      "nameKey": "rules.forbiddenEndMode"
+    },
+    {
+      "id": "forbiddenCycles",
+      "group": "forbidden",
+      "type": "number",
+      "default": 5,
+      "min": 1,
+      "step": 1,
+      "editableByHost": true,
+      "nameKey": "rules.forbiddenCycles",
+      "showWhen": {
+        "rule": "forbiddenEndMode",
+        "is": "rounds"
+      }
+    },
+    {
+      "id": "forbiddenTargetScore",
+      "group": "forbidden",
+      "type": "number",
+      "default": 30,
+      "min": 1,
+      "step": 1,
+      "editableByHost": true,
+      "nameKey": "rules.forbiddenTargetScore",
+      "showWhen": {
+        "rule": "forbiddenEndMode",
+        "is": "score"
+      }
+    }
   ]
 }

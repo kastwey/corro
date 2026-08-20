@@ -101,6 +101,19 @@ public sealed class SheddingFamily : IGameFamily
 				$"sheddingRules.scoring must be one of {string.Join(", ", HouseRuleCatalog.SheddingScoringModes)}.");
 		}
 
+		if (!HouseRuleCatalog.SheddingEndModes.Contains(rules.EndMode))
+		{
+			throw new InvalidOperationException(
+				$"sheddingRules.endMode must be one of {string.Join(", ", HouseRuleCatalog.SheddingEndModes)}.");
+		}
+
+		// One round is the floor, not zero: a match of no rounds has nothing to decide. There is
+		// deliberately no ceiling — a table that wants a long evening is not the engine's business.
+		if (rules.Rounds < 1)
+		{
+			throw new InvalidOperationException("sheddingRules.rounds must be at least 1.");
+		}
+
 		// House rules must reference SHEDDING codes the engine implements (same doctrine as
 		// every family: a package can't invent mechanics, only expose known codes).
 		foreach (var rule in d.Manifest.HouseRules)

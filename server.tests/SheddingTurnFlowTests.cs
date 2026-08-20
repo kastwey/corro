@@ -331,6 +331,22 @@ public class SheddingTurnFlowTests
 	}
 
 	[Fact]
+	public async Task A_one_round_match_ends_and_the_table_can_play_again()
+	{
+		// Reported from play: a host who chose a single round finished it and then could not
+		// start another match — the table still believed a game was running.
+		var (state, context) = Game(
+			rules: new SheddingRulesConfig { EndMode = "rounds", Rounds = 1, TargetScore = 500 },
+			hands: new[] { ("a", new[] { "red-7" }), ("b", new[] { "blue-7" }) });
+
+		var response = await Play(context, state, "a", "red-7#0");
+
+		Assert.True(Assert.IsType<SheddingActionResponse>(response).GameEnded);
+		Assert.True(state.IsGameOver);
+		Assert.Equal("a", state.WinnerId);
+	}
+
+	[Fact]
 	public async Task A_single_round_worth_no_points_still_goes_to_the_hand_that_emptied()
 	{
 		// Everyone ends on zero: the loser was left holding a nil-value card. The match must

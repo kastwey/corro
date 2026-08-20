@@ -34,8 +34,12 @@ when the game is created:
 - **Penalties**: everyone keeps the points left in their own hand and the round winner banks
   nothing. Reaching **500** loses the match, so the lowest score wins.
 
+The table also decides **when it ends**: on reaching the points — 500 to start with, though the
+host sets any figure — or after a fixed number of rounds, when the best score wins, which is the
+highest or the lowest depending on the count in force.
+
 Each round's winner leads the next either way, and **Ctrl+Shift+F1** tells you which count is
-in force.
+in force and how the match ends.
 
 Nobody shouts here: every player's card count is **yours to check whenever you want** —
 **S** tells your own story (cards, colour in force, top card and points) and **Shift+S**

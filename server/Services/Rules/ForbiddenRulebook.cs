@@ -84,12 +84,32 @@ public static class ForbiddenRulebook
 		completedTeam.TurnsTaken++;
 		state.Turn.Phase = ForbiddenTurnPhase.Finished;
 
+		// Ending on a target score: the first team there wins — but only once BOTH have taken the
+		// same number of turns. Stopping the moment a team crosses would hand the match to
+		// whoever happened to play first, and equal opportunity is the rule this family is built
+		// on (it is why a tie adds a WHOLE rotation rather than one turn). Level on the target,
+		// nobody has won yet and play continues.
+		if (rules.EndMode == "score")
+		{
+			var levelTurns = state.Teams.Select(team => team.TurnsTaken).Distinct().Count() == 1;
+			var ranked = state.Teams.OrderByDescending(team => team.Score).ToList();
+			if (levelTurns && ranked[0].Score >= rules.TargetScore && ranked[0].Score != ranked[1].Score)
+			{
+				return new TurnAdvance(
+					GameOver: true,
+					WinnerTeamIndex: ranked[0].TeamIndex,
+					TieBreakerStarted: false);
+			}
+		}
+
 		var cycleComplete = state.Teams.All(team =>
 			team.TurnsTaken >= state.Cycle * team.MemberIds.Count);
 		var tieBreaker = false;
 		if (cycleComplete)
 		{
-			if (state.Cycle >= rules.Cycles)
+			// Rotations decide the match only when the host asked for a fixed length; on a target
+			// score they just keep dealing turns until somebody gets there.
+			if (rules.EndMode != "score" && state.Cycle >= rules.Cycles)
 			{
 				var first = state.Teams[0].Score;
 				var second = state.Teams[1].Score;

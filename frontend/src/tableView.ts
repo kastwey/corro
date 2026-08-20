@@ -16,7 +16,10 @@ import {
 } from './lobby/contentLanguage.js';
 import { familyHasBots } from './familyTraits.js';
 import { winningSide } from './endScreen.js';
-import { applyHouseRuleValues, readHouseRuleValues, renderHouseRules } from './houseRules.js';
+import {
+	applyHouseRuleValues, readHouseRuleValues, renderHouseRules, syncHouseRuleVisibility,
+	watchHouseRuleVisibility,
+} from './houseRules.js';
 import { RovingToolbar, type ToolbarItem } from './rovingToolbar.js';
 import { RovingToolbarList } from './accessibleList.js';
 import type { GameInfo, GameState, PackageUploadResponse } from './models.js';
@@ -259,6 +262,7 @@ export class TableView {
 			this.rulesFields.innerHTML = renderHouseRules(
 				pkg!.ruleGroups ?? [], rules, key => this.deps!.t(key));
 			this.rulesFields.addEventListener('change', () => void this.saveRules());
+			watchHouseRuleVisibility(this.rulesFields);
 			this.rulesBox.hidden = false;
 		}
 		// The labels carry their own keys, so the translation pass resolves them wherever the
@@ -269,6 +273,8 @@ export class TableView {
 		// whose own change was refused — sees what the server actually holds.
 		if (!this.rulesBox.hidden) {
 			applyHouseRuleValues(this.rulesFields, table.ruleValues);
+			// After restoring, because which conditional rules apply depends on the values just put back.
+			syncHouseRuleVisibility(this.rulesFields);
 		}
 	}
 

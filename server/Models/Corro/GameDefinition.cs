@@ -245,6 +245,20 @@ public sealed record HouseRuleDef
 	public List<HouseRuleOption>? Options { get; init; }
 	public bool EditableByHost { get; init; } = true;
 	public string? NameKey { get; init; }
+
+	/// <summary>Optional: this rule only applies while another CHOICE rule sits on a given option,
+	/// and the lobby shows it only then. A number that belongs to one branch of a choice — the
+	/// points of a "play to a score" ending, the rounds of a "play N rounds" one — is noise on the
+	/// form and one more control to walk past for every host who chose the other branch.</summary>
+	public HouseRuleCondition? ShowWhen { get; init; }
+}
+
+/// <summary>"Show this rule while &lt;Rule&gt; is on option &lt;Is&gt;" (see
+/// <see cref="HouseRuleDef.ShowWhen"/>).</summary>
+public sealed record HouseRuleCondition
+{
+	public string Rule { get; init; } = string.Empty;
+	public string Is { get; init; } = string.Empty;
 }
 
 /// <summary>One option of a "choice" house rule: the id stored/applied and its i18n label.</summary>

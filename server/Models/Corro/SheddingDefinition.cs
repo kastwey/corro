@@ -98,4 +98,17 @@ public sealed record SheddingRulesConfig
 
 	/// <summary>Cards drawn when caught without declaring the last card.</summary>
 	public int LastCardPenalty { get; init; } = 2;
+
+	/// <summary>House rule: what ends the match. "score" = rounds repeat until somebody crosses
+	/// <see cref="TargetScore"/> (the classic count, and what this family always did); "rounds" =
+	/// exactly <see cref="Rounds"/> rounds are played and the best score then wins — best meaning
+	/// the highest under "collect" and the lowest under "penalty", the same reading
+	/// <see cref="Scoring"/> already gives every other number.
+	///
+	/// A table that wants a game of known length asks for rounds; one that wants a race to a
+	/// number asks for score. Both were reachable before only by editing the package.</summary>
+	public string EndMode { get; init; } = "score";
+
+	/// <summary>Rounds played when <see cref="EndMode"/> is "rounds". Ignored otherwise.</summary>
+	public int Rounds { get; init; } = 15;
 }

@@ -48,6 +48,23 @@ test('shedding: penalty scoring says so AND flips the target line, which would o
 		'game.shedding_rules_target(500)');
 });
 
+test('shedding: a rounds ending replaces the target line, never sits beside it', () => {
+	// Only one of the two numbers decides the match. Reading both would leave the table working
+	// out which — and the target is deliberately kept, so switching back needs no retyping.
+	const lines = buildSheddingRulesLines(
+		{ ...sheddingBase, endMode: 'rounds', rounds: 15, targetScore: 500 }, t);
+	assert.equal(lines[2], 'game.shedding_rules_rounds(15)');
+	assert.ok(!lines.some(l => l.startsWith('game.shedding_rules_target')));
+	// Under penalty scoring the winner is the LOWEST score, which the scoring line already says;
+	// the ending line stays the same either way.
+	assert.equal(
+		buildSheddingRulesLines({ ...sheddingBase, endMode: 'rounds', rounds: 3, scoring: 'penalty' }, t)[2],
+		'game.shedding_rules_rounds(3)');
+	// The classic ending is what an unset or unknown mode keeps.
+	assert.equal(buildSheddingRulesLines({ ...sheddingBase, endMode: 'whenever' }, t)[2],
+		'game.shedding_rules_target(500)');
+});
+
 test('shedding: a zero target is a single round; missing rules fall back to defaults', () => {
 	assert.equal(buildSheddingRulesLines({ ...sheddingBase, targetScore: 0 }, t)[2],
 		'game.shedding_rules_target_single');
@@ -116,6 +133,20 @@ test('forbidden: reads the authoritative clock, pass, score and cycle rules', ()
 		'game.forbidden_rules_cycles(4)',
 	]);
 	assert.equal(buildForbiddenRulesLines(null, t)[0], 'game.forbidden_rules_time(60)');
+});
+
+test('forbidden: a target-score ending replaces the rotation line, never sits beside it', () => {
+	const rules: ForbiddenRulesConfig = {
+		turnSeconds: 60, passesPerTurn: 3, correctPoints: 1, violationPenalty: 1,
+		cycles: 5, endMode: 'score', targetScore: 30,
+	};
+	const lines = buildForbiddenRulesLines(rules, t);
+	assert.equal(lines[4], 'game.forbidden_rules_target(30)');
+	assert.ok(!lines.some(l => l.startsWith('game.forbidden_rules_cycles')));
+	// The rotation count is kept, simply not what ends this match — switching back needs no
+	// retyping. And an unknown mode keeps the classic ending.
+	assert.equal(buildForbiddenRulesLines({ ...rules, endMode: 'whenever' }, t)[4],
+		'game.forbidden_rules_cycles(5)');
 });
 
 // ── Journey / Assembly / Draft ─────────────────────────────────────────────────

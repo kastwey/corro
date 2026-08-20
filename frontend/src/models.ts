@@ -265,6 +265,11 @@ export interface ForbiddenRulesConfig {
   correctPoints: number;
   violationPenalty: number;
   cycles: number;
+  /** House rule: what ends the match ("rounds" = complete rotations, the classic;
+   *  "score" = first team to targetScore, once turns are level). */
+  endMode?: string;
+  /** Points that win the match when endMode is "score". */
+  targetScore?: number;
 }
 
 // ── Categories family ───────────────────────────────────────────────────────
@@ -645,6 +650,11 @@ export interface SheddingRulesConfig {
   lastCardCall?: boolean;
   /** Cards drawn when caught without declaring the last card. */
   lastCardPenalty?: number;
+  /** House rule: what ends the match ("score" = reach targetScore, the classic;
+   *  "rounds" = play `rounds` rounds and read the scores). */
+  endMode?: string;
+  /** Rounds played when endMode is "rounds". */
+  rounds?: number;
 }
 
 /** A draw penalty piling up (the "stacking" house rule): the current player must stack
@@ -1043,6 +1053,8 @@ export interface HouseRuleDef {
   options?: HouseRuleOption[];
   editableByHost: boolean;
   nameKey?: string;
+  /** Optional: show this rule only while another choice rule sits on a given option. */
+  showWhen?: { rule: string; is: string };
 }
 
 /** Returned by POST /api/packages after a .corro upload is staged. */

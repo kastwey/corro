@@ -518,6 +518,42 @@ public class SheddingRulebookTests
 	}
 
 	[Fact]
+	public void A_match_of_known_length_ends_on_its_last_round_whatever_the_scores()
+	{
+		// The host's other ending: not a race to a number but a fixed number of rounds, after
+		// which the scores are read the way this table's scoring already reads them.
+		var a = Seat("a");
+		var b = Seat("b");
+		var state = State("red-5", seats: new[] { a, b });
+		var threeRounds = Rules with { EndMode = "rounds", Rounds = 3, TargetScore = 500 };
+
+		state.Round = 1;
+		Assert.False(SheddingRulebook.MatchOver(state, threeRounds));
+		// The target is IGNORED in this mode: crossing it decides nothing.
+		a.Score = 900;
+		Assert.False(SheddingRulebook.MatchOver(state, threeRounds));
+
+		state.Round = 3;
+		Assert.True(SheddingRulebook.MatchOver(state, threeRounds));
+
+		// And the winner is whoever the scoring says: highest collecting, lowest under penalty.
+		b.Score = 40;
+		Assert.Equal("a", SheddingRulebook.Placings(state, threeRounds).First().PlayerId);
+		Assert.Equal("b", SheddingRulebook.Placings(state, threeRounds with { Scoring = "penalty" })
+			.First().PlayerId);
+	}
+
+	[Fact]
+	public void A_rounds_match_of_one_round_is_over_as_soon_as_that_round_is()
+	{
+		var state = State("red-5", seats: new[] { Seat("a"), Seat("b") });
+		state.Round = 1;
+		Assert.True(SheddingRulebook.MatchOver(state, Rules with { EndMode = "rounds", Rounds = 1 }));
+		// A nonsense value cannot make a match that never ends; the floor is one round.
+		Assert.True(SheddingRulebook.MatchOver(state, Rules with { EndMode = "rounds", Rounds = 0 }));
+	}
+
+	[Fact]
 	public void A_package_may_override_a_card_s_points()
 	{
 		var custom = new SheddingCardDef { Id = "x", Type = "skip", Color = "red", Points = 5 };

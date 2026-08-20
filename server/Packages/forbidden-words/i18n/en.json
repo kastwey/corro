@@ -8,5 +8,12 @@
     "comet": "Comet",
     "pulse": "Pulse",
     "knot": "Knot"
+  },
+  "rules": {
+    "forbiddenEndMode": "When the match ends",
+    "forbiddenEndModeRounds": "After the rounds are played",
+    "forbiddenEndModeScore": "On reaching the points",
+    "forbiddenCycles": "Rounds played",
+    "forbiddenTargetScore": "Points that win"
   }
 }

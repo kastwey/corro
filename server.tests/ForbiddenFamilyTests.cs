@@ -213,4 +213,56 @@ public class ForbiddenFamilyTests
 		Assert.True(finish.GameOver);
 		Assert.Equal(0, finish.WinnerTeamIndex);
 	}
+
+	[Fact]
+	public void A_target_score_ends_the_match_only_once_both_teams_have_played_the_same_turns()
+	{
+		// The host's other ending. Stopping the instant a team crosses would hand the match to
+		// whoever happens to play first, so the crossing waits for the turns to be level — the
+		// same equal-opportunity rule that makes a tie add a WHOLE rotation.
+		var deck = Enumerable.Range(0, 12).Select(index => new ForbiddenWordDef
+		{
+			Id = $"w{index}", Target = $"word {index}", Forbidden = new() { "a", "b", "c" },
+		}).ToList();
+		var rules = new ForbiddenRulesConfig { EndMode = "score", TargetScore = 3, Cycles = 1 };
+		var teams = Teams().Select(team => (IReadOnlyList<string>)team).ToList();
+		var state = ForbiddenRulebook.CreateInitialState(teams, deck, rules);
+
+		state.Teams[0].Score = 3; // the opening team is already there…
+		Assert.False(ForbiddenRulebook.CompleteTurn(state, deck, rules).GameOver); // …but is one turn up
+		var finish = ForbiddenRulebook.CompleteTurn(state, deck, rules);
+		Assert.True(finish.GameOver);
+		Assert.Equal(0, finish.WinnerTeamIndex);
+	}
+
+	[Fact]
+	public void A_target_score_match_ignores_the_rotation_count_and_plays_on_through_a_tie()
+	{
+		var deck = Enumerable.Range(0, 12).Select(index => new ForbiddenWordDef
+		{
+			Id = $"w{index}", Target = $"word {index}", Forbidden = new() { "a", "b", "c" },
+		}).ToList();
+		var rules = new ForbiddenRulesConfig { EndMode = "score", TargetScore = 5, Cycles = 1 };
+		var teams = Teams().Select(team => (IReadOnlyList<string>)team).ToList();
+		var state = ForbiddenRulebook.CreateInitialState(teams, deck, rules);
+
+		// A complete rotation with nobody at the target decides nothing here: the rotation count
+		// is what the OTHER ending uses.
+		for (var turn = 0; turn < 4; turn++)
+		{
+			Assert.False(ForbiddenRulebook.CompleteTurn(state, deck, rules).GameOver);
+		}
+
+		// Level ON the target is not a win either — there is no winner to name yet.
+		state.Teams[0].Score = 5;
+		state.Teams[1].Score = 5;
+		Assert.False(ForbiddenRulebook.CompleteTurn(state, deck, rules).GameOver);
+		Assert.False(ForbiddenRulebook.CompleteTurn(state, deck, rules).GameOver);
+
+		state.Teams[1].Score = 7;
+		Assert.False(ForbiddenRulebook.CompleteTurn(state, deck, rules).GameOver); // turns uneven
+		var finish = ForbiddenRulebook.CompleteTurn(state, deck, rules);
+		Assert.True(finish.GameOver);
+		Assert.Equal(1, finish.WinnerTeamIndex);
+	}
 }

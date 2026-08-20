@@ -539,7 +539,12 @@ public static class SheddingRulebook
 	/// it: a leaver's score froze when their hand slid under the discards. A target of 0 means
 	/// the single round just played decided everything.</summary>
 	public static bool MatchOver(SheddingState state, SheddingRulesConfig rules)
-		=> rules.TargetScore <= 0 || ActiveSeats(state).Any(s => s.Score >= rules.TargetScore);
+		=> rules.EndMode == "rounds"
+			// A game of KNOWN length: the round that just finished is state.Round (it counts from
+			// one and only advances when the match continues), so the last one ends it whatever
+			// the scores are. Placings then reads them the way Scoring already says.
+			? state.Round >= Math.Max(1, rules.Rounds)
+			: rules.TargetScore <= 0 || ActiveSeats(state).Any(s => s.Score >= rules.TargetScore);
 
 	/// <summary>Final placings among the seats that finished: the best score first — the HIGHEST
 	/// under "collect" scoring, the LOWEST under "penalty". Emptying your hand breaks a level

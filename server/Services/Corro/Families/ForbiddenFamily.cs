@@ -72,9 +72,14 @@ public sealed class ForbiddenFamily : IGameFamily
 			throw new InvalidOperationException(
 				$"players.max ({players.Max}) cannot exceed the number of tokens the package provides ({definition.Manifest.Tokens.Count}).");
 		}
-		if (definition.Manifest.HouseRules.Count > 0)
+		// House rules must reference FORBIDDEN codes the engine implements — the same doctrine as
+		// every other family. A package can expose choices, never invent mechanics.
+		foreach (var rule in definition.Manifest.HouseRules)
 		{
-			throw new InvalidOperationException("forbidden packages do not support houseRules yet.");
+			if (!HouseRuleCatalog.IsKnownForbidden(rule.Id))
+			{
+				throw new InvalidOperationException($"forbidden rule '{rule.Id}' is not a known forbidden rule code.");
+			}
 		}
 
 		var rules = definition.Manifest.ForbiddenRules ?? new ForbiddenRulesConfig();
@@ -94,9 +99,21 @@ public sealed class ForbiddenFamily : IGameFamily
 		{
 			throw new InvalidOperationException("forbiddenRules.violationPenalty must be between 0 and 10.");
 		}
-		if (rules.Cycles is < 1 or > 5)
+		// One rotation is the floor: a match of none has nothing to decide. The former ceiling of
+		// five was a package-authoring guardrail, and it became the host's business the moment
+		// the length was theirs to choose — a table that wants a long evening may have one.
+		if (rules.Cycles < 1)
 		{
-			throw new InvalidOperationException("forbiddenRules.cycles must be between 1 and 5.");
+			throw new InvalidOperationException("forbiddenRules.cycles must be at least 1.");
+		}
+		if (!HouseRuleCatalog.ForbiddenEndModes.Contains(rules.EndMode))
+		{
+			throw new InvalidOperationException(
+				$"forbiddenRules.endMode must be one of {string.Join(", ", HouseRuleCatalog.ForbiddenEndModes)}.");
+		}
+		if (rules.TargetScore < 1)
+		{
+			throw new InvalidOperationException("forbiddenRules.targetScore must be at least 1.");
 		}
 
 		if (definition.ForbiddenWords is not { Count: > 0 })
@@ -167,6 +184,15 @@ public sealed class ForbiddenFamily : IGameFamily
 
 		var definition = start.Definition;
 		var rules = definition.Manifest.ForbiddenRules ?? new ForbiddenRulesConfig();
+		// The host's lobby choices override the package defaults. The EFFECTIVE rules are stored
+		// on the state, so a restored match keeps the length the table agreed on.
+		if (start.RuleValues is { Count: > 0 } chosen)
+		{
+			foreach (var (id, value) in chosen)
+			{
+				rules = HouseRuleCatalog.ApplyForbidden(rules, id, value);
+			}
+		}
 		var resolved = definition.ForbiddenWords?.GetValueOrDefault(start.Lang)
 			?? throw new InvalidOperationException(
 				$"forbidden word deck does not provide the selected language '{start.Lang}'.");

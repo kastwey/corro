@@ -108,12 +108,17 @@ export function buildForbiddenRulesLines(rules: ForbiddenRulesConfig | null | un
 		violationPenalty: 1,
 		cycles: 1,
 	};
+	// Only the ending in force is read: hearing both numbers would leave the table working out
+	// which one decides the match.
+	const ending = r.endMode === 'score'
+		? t('game.forbidden_rules_target', { score: r.targetScore ?? 30 })
+		: t('game.forbidden_rules_cycles', { count: r.cycles });
 	return [
 		t('game.forbidden_rules_time', { seconds: r.turnSeconds }),
 		t('game.forbidden_rules_passes', { count: r.passesPerTurn }),
 		t('game.forbidden_rules_correct', { points: r.correctPoints }),
 		t('game.forbidden_rules_violation', { points: r.violationPenalty }),
-		t('game.forbidden_rules_cycles', { count: r.cycles }),
+		ending,
 	];
 }
 
@@ -185,12 +190,17 @@ export function buildSheddingRulesLines(rules: SheddingRulesConfig | null | unde
 	const targetKey = r.scoring === 'penalty'
 		? 'game.shedding_rules_target_penalty'
 		: 'game.shedding_rules_target';
+	// Only ONE of the two endings is in force, so only that one is read: a table hearing both
+	// numbers would have to work out which of them decides the match.
+	const ending = r.endMode === 'rounds'
+		? t('game.shedding_rules_rounds', { count: r.rounds ?? 15 })
+		: r.targetScore > 0
+			? t(targetKey, { score: r.targetScore })
+			: t('game.shedding_rules_target_single');
 	return [
 		t('game.shedding_rules_hand_size', { count: r.handSize }),
 		t('game.shedding_rules_scoring', { mode: scoringLabel(r.scoring, t) }),
-		r.targetScore > 0
-			? t(targetKey, { score: r.targetScore })
-			: t('game.shedding_rules_target_single'),
+		ending,
 		t('game.shedding_rules_draw_play', { state: onOff(t, r.drawnCardPlayable) }),
 		t('game.shedding_rules_honest_wild', { state: onOff(t, r.wildDrawRequiresNoMatch) }),
 		t('game.shedding_rules_doubles', { state: onOff(t, !!r.allowDoubles) }),
