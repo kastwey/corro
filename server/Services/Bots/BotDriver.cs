@@ -34,6 +34,9 @@ public sealed class BotDriver
 		public required IGameService Service { get; init; }
 		public required IReadOnlyList<string> Bots { get; init; }
 		public required IBotPolicy Policy { get; init; }
+		/// <summary>What the caller does after a bot's command lands — the hub's own after-command
+		/// work, which a bot move needs just as much as a human one.</summary>
+		public Func<Task>? AfterCommand { get; init; }
 		public Func<GameState, Task>? StateHandler { get; set; }
 		public Func<IReadOnlyList<AnnouncementDispatch>, Task>? EventsHandler { get; set; }
 		public int Scheduled; // 0/1 (Interlocked): at most one pending pass per game
@@ -53,7 +56,7 @@ public sealed class BotDriver
 	/// Watch a live game (fresh start or restore). A no-op when the game has no bot seats
 	/// or its family has no policy — attaching is always safe to call.
 	/// </summary>
-	public void Attach(string gameId, IGameService service)
+	public void Attach(string gameId, IGameService service, Func<Task>? afterCommand = null)
 	{
 		var state = service.GameState;
 		if (state == null || state.IsGameOver)
@@ -74,7 +77,10 @@ public sealed class BotDriver
 			return;
 		}
 
-		var attachment = new Attachment { Service = service, Bots = bots, Policy = policy };
+		var attachment = new Attachment
+		{
+			Service = service, Bots = bots, Policy = policy, AfterCommand = afterCommand,
+		};
 		if (!_games.TryAdd(gameId, attachment))
 		{
 			return; // already attached
@@ -182,6 +188,14 @@ public sealed class BotDriver
 				// gate waits forever for a state that never arrives — and the bot's move
 				// would never be saved.
 				await attachment.Service.NotifyStateChangedAsync();
+				// …and then the hub retires a finished match. Copying only the broadcast left the
+				// TABLE believing a game was still running whenever a bot played the last card:
+				// its status never returned to waiting, so the group could not start another.
+				// Reported from play — a one-round game of Four Colours won by the bot.
+				if (attachment.AfterCommand is { } afterCommand)
+				{
+					await afterCommand();
+				}
 			}
 			return; // one action per pass; the resulting state change drives the next
 		}

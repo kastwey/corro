@@ -374,7 +374,8 @@ public partial class GameHub : Hub
 
 				_registry.RegisterService(gameId, gameService);
 				// Bot seats survive restarts like any player: re-attach their driver.
-				_botDriver?.Attach(gameId, gameService);
+				_botDriver?.Attach(gameId, gameService,
+					() => _registry.CleanupIfGameOverAsync(gameId, gameService));
 				// Seed the persistence cache with the loaded document so per-command writes
 				// reuse it instead of re-reading from Cosmos every turn.
 				_registry.CacheDocument(gameId, game);

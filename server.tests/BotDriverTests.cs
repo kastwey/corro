@@ -83,6 +83,26 @@ public class BotDriverTests
 	}
 
 	[Fact]
+	public async Task A_bot_move_runs_the_callers_after_command_work_exactly_like_a_human_one()
+	{
+		// Reported from play: a one-round game of Four Colours won by the BOT left the table
+		// believing a match was still running, so the group could not start another. The driver
+		// broadcast the new state — copied from the hub — but not what the hub does next, which is
+		// where a finished match is retired. Anything the caller does after a command must run for
+		// a bot's command too; the engine cannot tell the two apart, and neither should the table.
+		var svc = await StartHumanVsBotAsync();
+		var afterCommand = 0;
+		var driver = new BotDriver(new BotOptions { ActionDelay = TimeSpan.Zero });
+		driver.Attach("g1", svc, () => { Interlocked.Increment(ref afterCommand); return Task.CompletedTask; });
+
+		await svc.ExecuteCommandAsync(new JourneyDrawCommand { PlayerId = "a" });
+		var myCard = JourneyRulebook.MemberOf(svc.GameState!.Journey!, "a").Hand[0].InstanceId;
+		await svc.ExecuteCommandAsync(new JourneyDiscardCommand { PlayerId = "a", InstanceId = myCard });
+
+		await WaitUntilAsync(() => Volatile.Read(ref afterCommand) > 0, "the bot's move to run the after-command work");
+	}
+
+	[Fact]
 	public async Task The_exploding_bot_pays_a_pending_favor_through_the_command_pipeline()
 	{
 		var svc = await StartHumanVsExplodingBotAsync();

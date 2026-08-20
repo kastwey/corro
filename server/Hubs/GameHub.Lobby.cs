@@ -1261,8 +1261,10 @@ public partial class GameHub
 			}
 
 			_registry.RegisterService(request.GameId, gameService);
-			// Bot seats (if any) come alive: the driver observes from OUTSIDE the engine.
-			_botDriver?.Attach(request.GameId, gameService);
+			// Bot seats (if any) come alive: the driver observes from OUTSIDE the engine — and its
+			// moves end a match exactly like a human's, so it retires the table the same way.
+			_botDriver?.Attach(request.GameId, gameService,
+				() => _registry.CleanupIfGameOverAsync(request.GameId, gameService));
 
 			var updatedGame = game with
 			{
