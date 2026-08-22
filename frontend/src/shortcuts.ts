@@ -7,13 +7,24 @@
 export interface HelpShortcut {
 	readonly keys: string;
 	readonly descKey: string;
-	/**
-	 * The chord that does the same thing while the player is typing in a text box, where a bare
-	 * letter would type itself instead of acting. Absent when `keys` already survives a text box
-	 * (a chord, Escape, Enter, an arrow), which is most of them.
-	 */
-	readonly typingKeys?: string;
 }
+
+/**
+ * How a shortcut is reached from inside a text box, where a bare letter types itself instead
+ * of acting: press this FIRST, and the next keystroke is a command.
+ *
+ * One prefix rather than an alias per shortcut, deliberately. An alias per shortcut means a
+ * second vocabulary to learn, a second chord to find for every key added from now on, and a
+ * help table that has to claim something per row — which is how it came to claim things that
+ * were not true. A prefix is one thing to learn, it covers every key in every family for free,
+ * and the help has nothing to assert per row.
+ *
+ * Ctrl+Shift+Space specifically: the thumb is already on the bar, so it does not break typing
+ * posture; Space is the one key that means the same on every keyboard layout, unlike any
+ * letter; Chrome and Firefox both leave it alone; and neither NVDA (NVDA+Space) nor JAWS
+ * (Insert+Space, its layered keystrokes) claims it.
+ */
+export const TYPING_COMMAND_PREFIX = 'ctrl+shift+space';
 
 /**
  * Key combinations the BROWSER answers before the page ever sees them, or that mean something

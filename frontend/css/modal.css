@@ -576,6 +576,17 @@
 	overflow-y: auto;
 }
 
+/* How to reach a shortcut from inside a text box: said once, above the table, instead of a
+   third column repeating a claim on every row. */
+.help-typing-hint {
+	margin: 0 0 14px;
+	padding: 10px 12px;
+	border-left: 4px solid var(--accent);
+	background: var(--surface-2);
+	color: var(--text);
+	line-height: 1.45;
+}
+
 .help-shortcuts {
 	width: 100%;
 	border-collapse: collapse;

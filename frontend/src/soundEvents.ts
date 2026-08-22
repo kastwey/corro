@@ -604,6 +604,29 @@ export class SoundEventPlayer {
 		if (!bufferId) return;
 		playSound(bufferId, { volume: this.pref.volume * scale, overlap: true }).catch(() => {});
 	}
+
+	/**
+	 * The two-tone cue for entering and leaving a keyboard mode (the typing command prefix).
+	 * Honours mute like every other sound — which is precisely why the mode ALSO announces
+	 * itself in words: a muted player, or one reading a braille display, must not be the only
+	 * one who cannot tell which mode the keyboard is in.
+	 */
+	playModeCue(rising: boolean): void {
+		if (this.pref.muted) return;
+		// Quieter than a game event: it fires on a keystroke, next to speech, and must not
+		// talk over the live region it is accompanying.
+		soundManager.playTones(modeCueTones(rising), { volume: this.pref.volume * 0.4 })
+			.catch(() => {});
+	}
+}
+
+/**
+ * Rising means a mode was entered, falling means it ended — the direction carries the meaning,
+ * so it is worth a pure function with a test rather than two literals inline.
+ */
+export function modeCueTones(rising: boolean): number[] {
+	const [low, high] = [660, 990];
+	return rising ? [low, high] : [high, low];
 }
 
 export const soundEvents = new SoundEventPlayer();

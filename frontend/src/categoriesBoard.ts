@@ -259,34 +259,28 @@ export class CategoriesBoard {
 	}
 
 	/**
-	 * The surface's two queries, each with a form that survives a text box.
+	 * The surface's two queries: L for the round's letter, R for the clock ("reloj" in Spanish,
+	 * "remaining" in English).
 	 *
-	 * A bare letter cannot fire while somebody is typing an answer — it would type itself — so
-	 * every query has a chord alias that works anywhere, including inside a field. The aliases
-	 * live in the one modifier space that is clean on both Chrome and Firefox AND harmless
-	 * inside an edit box: Ctrl+Shift+L and Ctrl+Shift+X. Ctrl+Alt is AltGr on Windows, Alt is
-	 * Option (and types accents) on macOS, and Ctrl+Shift+V and +Z are paste and redo.
+	 * Both are bare letters, which inside an answer box type themselves — that is what the
+	 * command prefix is for (Ctrl+Shift+Space, then the letter), and it arrives here as a
+	 * replay on the surface, so this handler needs no second form of its own.
 	 */
 	private onSurfaceKeydown(event: KeyboardEvent): void {
-		if (event.altKey || event.metaKey || event.repeat) return;
+		if (event.ctrlKey || event.altKey || event.metaKey || event.shiftKey || event.repeat) return;
 		const key = event.key.toLowerCase();
-		const typing = isTypingTarget(event.target);
-		const chord = event.ctrlKey && event.shiftKey;
+		if (isTypingTarget(event.target)) return;
 
 		// Escape comes back to whatever this player's job is, the way Escape leaves a menu and
 		// lands where the menu was opened from.
-		if (event.key === 'Escape' && !typing && !event.ctrlKey && !event.shiftKey) {
+		if (event.key === 'Escape') {
 			event.preventDefault();
 			event.stopPropagation();
 			this.focusHand();
 			return;
 		}
 
-		const query = chord
-			? (key === 'l' ? 'letter' : key === 'x' ? 'time' : null)
-			: (event.ctrlKey || event.shiftKey || typing
-				? null
-				: key === 'l' ? 'letter' : key === 'r' ? 'time' : null);
+		const query = key === 'l' ? 'letter' : key === 'r' ? 'time' : null;
 		if (!query) return;
 
 		const round = this.round();
@@ -726,8 +720,8 @@ export class CategoriesBoard {
 			...CARD_STATUS_SHORTCUTS,
 			{ keys: 'enter', descKey: 'game.help_cmd_categories_next_field' },
 			{ keys: 'escape', descKey: 'game.help_cmd_categories_home' },
-			{ keys: 'l', typingKeys: 'ctrl+shift+l', descKey: 'game.help_cmd_categories_letter' },
-			{ keys: 'r', typingKeys: 'ctrl+shift+x', descKey: 'game.help_cmd_categories_timer' },
+			{ keys: 'l', descKey: 'game.help_cmd_categories_letter' },
+			{ keys: 'r', descKey: 'game.help_cmd_categories_timer' },
 			{ keys: 'up/down', descKey: 'game.help_cmd_categories_answers' },
 			{ keys: 'right/left', descKey: 'game.help_cmd_categories_verdicts' },
 		];

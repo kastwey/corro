@@ -6,33 +6,8 @@
 
 import { dialogManager } from './dialogManager.js';
 import { tSync } from './i18nBinder.js';
-import type { HelpShortcut } from './shortcuts.js';
-
-/** Turns a key spec like "ctrl+p" or "arrowleft" into a readable label. */
-function humanizeKeyPart(part: string): string {
-	switch (part) {
-		case 'ctrl': return tSync('game.key_ctrl');
-		case 'shift': return tSync('game.key_shift');
-		case 'alt': return tSync('game.key_alt');
-		case 'meta': return tSync('game.key_meta');
-		case 'enter': return tSync('game.key_enter');
-		case 'space': return tSync('game.key_space');
-		case 'delete': return tSync('game.key_delete');
-		case 'home': return tSync('game.key_home');
-		case 'arrowup': return tSync('game.key_arrowup');
-		case 'arrowdown': return tSync('game.key_arrowdown');
-		case 'arrowleft': return tSync('game.key_arrowleft');
-		case 'arrowright': return tSync('game.key_arrowright');
-		case 'end': return tSync('game.key_end');
-		default:
-			if (/^f\d+$/.test(part)) return part.toUpperCase(); // F1, F2...
-			return part.length === 1 ? part.toUpperCase() : part;
-	}
-}
-
-function humanizeKey(spec: string): string {
-	return spec.split('+').map(humanizeKeyPart).join(' + ');
-}
+import { TYPING_COMMAND_PREFIX, type HelpShortcut } from './shortcuts.js';
+import { humanizeKey } from './keyLabels.js';
 
 /** Maps a command (and optional args) to its localized description. `family` picks the
  *  phrasing where the same key means something different per family (e.g. GoToMe). */
@@ -133,19 +108,10 @@ function escapeHtml(s: string): string {
 		({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
 }
 
-/**
- * One shortcut row: an already-humanized key label, its localized description, and — when the
- * table has a third column at all — what to press instead while typing in a text box.
- *
- * A row that needs no alias says so in words rather than leaving the cell empty: a screen
- * reader reads a table cell by cell, and silence there is indistinguishable from a bug.
- */
-function shortcutRow(keyLabel: string, desc: string, typing: string | null): string {
-	const typingCell = typing === null
-		? ''
-		: `<td class="help-shortcuts__typing"><kbd>${escapeHtml(typing)}</kbd></td>`;
+/** One shortcut row: an already-humanized key label and its localized description. */
+function shortcutRow(keyLabel: string, desc: string): string {
 	return `<tr><th scope="row" class="help-shortcuts__key"><kbd>${escapeHtml(keyLabel)}</kbd></th>`
-		+ `<td>${escapeHtml(desc)}</td>${typingCell}</tr>`;
+		+ `<td>${escapeHtml(desc)}</td></tr>`;
 }
 
 export function showHelpDialog(keyMap: Record<string, any>, opts?: {
@@ -159,17 +125,9 @@ export function showHelpDialog(keyMap: Record<string, any>, opts?: {
 	showNumberNav?: boolean;
 }): void {
 	const activeFamily = opts?.activeFamily ?? 'property';
-	// The third column only exists when this game actually has a shortcut that changes inside a
-	// text box. Adding it to every table would put an empty cell on every row of every game.
-	const extras = opts?.extraShortcuts ?? [];
-	const hasTypingColumn = extras.some(shortcut => !!shortcut.typingKeys);
-	const sameWhileTyping = () => (hasTypingColumn ? tSync('game.help_typing_same') : null);
 	// The family's own keys (hand/status) lead the table — they are the primary actions.
-	const extraRows = extras
-		.map(s => shortcutRow(
-			humanizeKey(s.keys),
-			tSync(s.descKey),
-			s.typingKeys ? humanizeKey(s.typingKeys) : sameWhileTyping()))
+	const extraRows = (opts?.extraShortcuts ?? [])
+		.map(s => shortcutRow(humanizeKey(s.keys), tSync(s.descKey)))
 		.join('');
 	// Two bindings of the same command can collapse into one description in a family (e.g.
 	// M and Shift+M both mean "go to your token" with a single piece): keep the first row,
@@ -189,21 +147,28 @@ export function showHelpDialog(keyMap: Record<string, any>, opts?: {
 		const dedupeKey = `${cmd}::${desc}`;
 		if (seen.has(dedupeKey)) return '';
 		seen.add(dedupeKey);
-		return shortcutRow(keyLabel, desc, sameWhileTyping());
+		return shortcutRow(keyLabel, desc);
 	}).filter(Boolean).join('');
 
 	// Only spatial boards have squares to jump to by number; the card families drop the row.
 	const numberNavRow = (opts?.showNumberNav ?? true)
-		? shortcutRow('0 – 9', tSync('game.help_cmd_number_nav'), sameWhileTyping())
+		? shortcutRow('0 – 9', tSync('game.help_cmd_number_nav'))
 		: '';
 
+	// How to reach any of these from inside a text box, said ONCE above the table. Every game
+	// has at least the chat box, so it always applies — and stating it once is what keeps the
+	// table itself free of per-row claims about what survives a text field.
+	const typingHint = escapeHtml(tSync('game.help_typing_prefix', {
+		keys: humanizeKey(TYPING_COMMAND_PREFIX),
+	}));
+
 	const content = `
+		<p class="help-typing-hint">${typingHint}</p>
 		<table class="help-shortcuts">
 			<thead>
 				<tr>
 					<th scope="col">${tSync('game.help_col_key')}</th>
 					<th scope="col">${tSync('game.help_col_action')}</th>
-					${hasTypingColumn ? `<th scope="col">${tSync('game.help_col_typing')}</th>` : ''}
 				</tr>
 			</thead>
 			<tbody>${extraRows}${rows}${numberNavRow}</tbody>

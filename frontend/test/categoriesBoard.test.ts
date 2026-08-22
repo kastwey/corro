@@ -189,15 +189,13 @@ test('the whole sheet is ONE named group, carrying the round letter', () => {
 	assert.equal(inputs(h).length, 2, 'and the fields still live inside it');
 });
 
-test('L says the letter and R the clock, each with a chord that survives a text box', () => {
+test('L says the letter and R the clock, and neither steals a keystroke from an answer', () => {
 	const h = harness('p1', 'writing');
 	h.board.handleTimerTick(42);
 	const [first] = inputs(h);
 
-	const press = (target: EventTarget, key: string, chord = false) => {
-		const event = new window.KeyboardEvent('keydown', {
-			key, ctrlKey: chord, shiftKey: chord, bubbles: true, cancelable: true,
-		});
+	const press = (target: EventTarget, key: string) => {
+		const event = new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
 		target.dispatchEvent(event);
 		return event;
 	};
@@ -208,19 +206,15 @@ test('L says the letter and R the clock, each with a chord that survives a text 
 	press(h.element, 'r');
 	assert.match(h.announced.at(-1)!, /42/);
 
-	// Inside a field they type instead of acting…
+	// Inside a field they type instead of acting. Reaching them from there is the command
+	// prefix's job (Ctrl+Shift+Space, then the letter), which replays the keystroke on the
+	// surface — the very case covered above — so this handler needs no form of its own.
 	h.announced.length = 0;
 	first.focus();
 	for (const key of ['l', 'r']) {
 		assert.equal(press(first, key).defaultPrevented, false, key);
 	}
 	assert.deepEqual(h.announced, []);
-
-	// …and the chords do the same job from exactly there.
-	assert.equal(press(first, 'L', true).defaultPrevented, true);
-	assert.match(h.announced.at(-1)!, /\bR\b/);
-	assert.equal(press(first, 'X', true).defaultPrevented, true);
-	assert.match(h.announced.at(-1)!, /42/);
 });
 
 test('a personal answer is also shown, quietly, and never twice to a screen reader', () => {
@@ -240,17 +234,13 @@ test('a personal answer is also shown, quietly, and never twice to a screen read
 	assert.equal(echo.textContent, h.announced.at(-1), 'it replaces itself instead of stacking');
 });
 
-test('the two letter queries declare the chord that replaces them while typing', () => {
+test('the surface declares both queries to the shortcuts help', () => {
 	const h = harness('p1');
 
 	const shortcuts = h.board.helpShortcuts();
-	const letter = shortcuts.find(s => s.keys === 'l')!;
-	const clock = shortcuts.find(s => s.keys === 'r')!;
 
-	assert.equal(letter.typingKeys, 'ctrl+shift+l');
-	assert.equal(clock.typingKeys, 'ctrl+shift+x');
-	// Escape and Enter already survive a text box, so they claim no alias.
-	assert.equal(shortcuts.find(s => s.keys === 'escape')!.typingKeys, undefined);
+	assert.ok(shortcuts.find(s => s.keys === 'l'), 'the round letter');
+	assert.ok(shortcuts.find(s => s.keys === 'r'), 'the clock');
 });
 
 test('the round heading names the letter every answer has to start with', () => {

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { BROWSER_RESERVED_CHORDS } from '../src/shortcuts.js';
+import { BROWSER_RESERVED_CHORDS, TYPING_COMMAND_PREFIX } from '../src/shortcuts.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..');
@@ -15,12 +15,12 @@ function keymapSpecs(): string[] {
 	return Object.keys(keymap);
 }
 
-/** Every `keys:` / `typingKeys:` literal a family declares for its own surface. */
+/** Every `keys:` literal a family declares for its own surface. */
 function familyShortcutSpecs(): { spec: string; where: string }[] {
 	const found: { spec: string; where: string }[] = [];
 	for (const file of ['categoriesBoard.ts', 'forbiddenBoard.ts', 'cardBoardShell.ts', 'handPanel.ts']) {
 		const source = readFileSync(join(here, '..', 'src', file), 'utf8');
-		for (const match of source.matchAll(/\b(?:typingKeys|keys):\s*'([^']+)'/g)) {
+		for (const match of source.matchAll(/\bkeys:\s*'([^']+)'/g)) {
 			found.push({ spec: match[1], where: file });
 		}
 	}
@@ -59,4 +59,15 @@ test('the reserved list itself stays well-formed, so a typo cannot silently disa
 		assert.equal(chord, chord.toLowerCase(), chord);
 	}
 	assert.equal(new Set(BROWSER_RESERVED_CHORDS).size, BROWSER_RESERVED_CHORDS.length);
+});
+
+test('the typing command prefix is free, and is not a letter', () => {
+	assert.equal(BROWSER_RESERVED_CHORDS.includes(TYPING_COMMAND_PREFIX), false);
+	// A letter would collide with a shortcut in the same modifier space (S and Shift+S would
+	// both want Ctrl+Shift+S) and would move around with the keyboard layout. Space does not.
+	assert.equal(TYPING_COMMAND_PREFIX, 'ctrl+shift+space');
+	// The one key it must never be mistaken for: nothing else in the app may claim it, or a
+	// keystroke would both arm the prefix and do something else.
+	assert.equal(keymapSpecs().includes(TYPING_COMMAND_PREFIX), false);
+	assert.deepEqual(familyShortcutSpecs().filter(e => e.spec === TYPING_COMMAND_PREFIX), []);
 });

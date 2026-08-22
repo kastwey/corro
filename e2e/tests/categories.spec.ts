@@ -229,27 +229,32 @@ test('the surface answers the reading keys without a screen reader having to hun
 	await expect(echo).toHaveAttribute('aria-hidden', 'true');
 	await expect(echo).toContainText(LETTER);
 
-	// Inside an answer box the bare letters type themselves, so the chords do the job there.
+	// Inside an answer box the bare letters type themselves. The command prefix arms exactly
+	// one keystroke and it acts from right there, without ever reaching the field. This is the
+	// only place it can be proven: a real focused text box in a real browser.
 	const field = berto.locator('.categories-sheet-input').first();
 	await field.focus();
 	await berto.keyboard.type('l');
 	await expect(field).toHaveValue('l');
-	await berto.keyboard.press('Control+Shift+KeyL');
+	await berto.keyboard.press('Control+Shift+Space');
+	await berto.keyboard.press('l');
 	await expectAnnouncement(berto, new RegExp(`letter is ${LETTER}`, 'i'));
-	await berto.keyboard.press('Control+Shift+KeyX');
+	await berto.keyboard.press('Control+Shift+Space');
+	await berto.keyboard.press('r');
 	await expectAnnouncement(berto, /seconds remaining/i);
-	await expect(field).toHaveValue('l', 'the chords act without typing anything');
+	await expect(field).toHaveValue('l', 'neither the prefix nor the command typed anything');
 
-	// The shortcut list grows its third column, and no row of it is left silent.
+	// One keystroke only: the letter after a spent prefix is a letter again.
+	await berto.keyboard.press('r');
+	await expect(field).toHaveValue('lr');
+
+	// The shortcuts list says how to do that once, above the table, and the table itself keeps
+	// to two columns — it describes what a key does, never what it does while typing.
 	await berto.keyboard.press('Control+F1');
 	const help = berto.locator('.help-shortcuts');
 	await expect(help).toBeVisible();
-	await expect(help.locator('thead th')).toHaveCount(3);
-	const typingCells = help.locator('.help-shortcuts__typing');
-	expect(await typingCells.count()).toBeGreaterThan(1);
-	for (const cell of await typingCells.all()) {
-		await expect(cell).not.toBeEmpty();
-	}
+	await expect(help.locator('thead th')).toHaveCount(2);
+	await expect(berto.locator('.help-typing-hint')).toContainText('Ctrl + Shift + Space');
 	await flushAxeAudit(berto);
 	await berto.keyboard.press('Escape');
 	await flushAxeAudit(ana);

@@ -93,7 +93,7 @@ function normalizeKeySpec(ev: KeyboardEvent) {
 
 /** Canonical, keymap-friendly name for a key. The space bar reports " " (or the
  *  legacy "Spacebar"); we expose it as "space" so it can be mapped in keymap.json. */
-function normalizeKeyName(rawKey: string): string {
+export function normalizeKeyName(rawKey: string): string {
 	const k = rawKey.toLowerCase();
 	return k === ' ' || k === 'spacebar' ? 'space' : k;
 }
@@ -391,6 +391,21 @@ function createCommandExecutor(opts: KeyHandlersOptions) {
 	};
 }
 
+/**
+ * The MODAL dialog owning a target, when there is one. Every dialog is a native `<dialog>`
+ * (div-based `role="dialog"` surfaces are forbidden — see AGENTS.md), and a NON-modal one
+ * (`data-modal="false"`) does not trap focus: it behaves like one more panel, so global
+ * shortcuts keep working from inside it and it does not count here.
+ *
+ * Shared so that everything gating on "a modal dialog owns focus" — the global key layer and
+ * the typing command prefix — asks the same question the same way.
+ */
+export function owningModalDialog(target: EventTarget | null): HTMLElement | null {
+	const element = target instanceof HTMLElement ? target : null;
+	const dialog = element?.closest('dialog[open]') as HTMLElement | null;
+	return dialog && dialog.dataset.modal !== 'false' ? dialog : null;
+}
+
 export function attachKeyHandlers(opts: KeyHandlersOptions) {
 	const execute = createCommandExecutor(opts);
 
@@ -458,13 +473,11 @@ export function attachKeyHandlers(opts: KeyHandlersOptions) {
 		));
 		if (isInteractive && isActivationKey) return;
 
-		// check if focus is inside a dialog (every dialog is a native <dialog>; div-based
-		// role="dialog" surfaces are forbidden — see copilot-instructions Accessibility).
-		// A NON-modal dialog (data-modal="false") does not trap focus: it behaves like one
-		// more panel, so global shortcuts (Ctrl+F6 cycling, Escape back to the board, Ctrl+D)
-		// keep working from inside it and it is skipped here.
+		// Is focus inside a dialog? A NON-modal one is skipped (see owningModalDialog), so
+		// global shortcuts — Ctrl+F6 cycling, Escape back to the board, Ctrl+D — keep working
+		// from inside it. The dialog itself is still wanted below, for the picker's minimize.
 		const openDialog = target?.closest('dialog[open]') as HTMLElement | null;
-		const isInDialog = !!openDialog && openDialog.dataset.modal !== 'false';
+		const isInDialog = !!owningModalDialog(target);
 
 		// While a modal dialog owns focus we ignore global shortcuts so they can't disrupt
 		// the flow — EXCEPT read-only "announce" queries (money, release passes, Free Parking
