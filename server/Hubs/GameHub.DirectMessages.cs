@@ -166,7 +166,7 @@ public partial class GameHub
 
 		var user = await _users.GetUserAsync(userId);
 		if (user?.Handle is not { Length: > 0 } handle) return;
-		if (user.EffectiveVisibility == PresenceVisibility.Nobody) return;
+		if (user.EffectiveVisibility == PresenceVisibility.Nobody) return;  // nothing to announce
 
 		var friendIds = _friendships is null
 			? new Dictionary<string, FriendshipService.Relationship>()
@@ -179,7 +179,9 @@ public partial class GameHub
 			var isFriend = friendIds.GetValueOrDefault(readerId, FriendshipService.Relationship.None)
 				== FriendshipService.Relationship.Friends;
 			// "Only friends" means exactly that, here as everywhere else.
-			if (user.EffectiveVisibility == PresenceVisibility.Friends && !isFriend) continue;
+			if (!ReachRules.IsVisibleTo(user, isFriend
+				? FriendshipService.Relationship.Friends
+				: FriendshipService.Relationship.None)) continue;
 
 			var connections = _presence.ConnectionsOf(readerId).ToList();
 			if (connections.Count == 0) continue;
@@ -218,13 +220,7 @@ public partial class GameHub
 
 		var relationship = friendships.GetValueOrDefault(
 			user.UserId, FriendshipService.Relationship.None);
-		var allowed = user.EffectiveMessagePolicy switch
-		{
-			MessagePolicy.Anyone => true,
-			MessagePolicy.Friends => relationship == FriendshipService.Relationship.Friends,
-			_ => false,
-		};
-		if (!allowed) return null;
+		if (!ReachRules.AcceptsFrom(user, relationship)) return null;
 
 		// Nothing is stored, so somebody who is not here cannot be reached. Reported as one
 		// outcome with all the others.

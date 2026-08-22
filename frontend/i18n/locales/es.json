@@ -2039,9 +2039,11 @@
     "inviteWhoLabel": "Nombre público de quien quieres invitar",
     "joinRequestAdmitted": "{{handle}} ya está dentro.",
     "joinRequestRefused": "Has rechazado a {{handle}}.",
-    "inviteFriendsHint": "O pídeselo a uno de tus amigos que está libre ahora mismo.",
-    "inviteFriendsLabel": "Amigos a los que puedes invitar",
-    "inviteFriend": "Invitar a {{handle}}"
+    "invitePeopleHint": "O elige a alguien de quienes están conectados y aceptan invitaciones.",
+    "invitePeopleLabel": "Personas a las que puedes invitar",
+    "inviteMatches": "{{count}} personas a las que puedes invitar. Pulsa flecha abajo para recorrerlas.",
+    "inviteMatches_one": "1 persona a la que puedes invitar. Pulsa flecha abajo para llegar a ella.",
+    "invitePerson": "Invitar a {{handle}}"
   },
   "common": {
     "ok": "Aceptar",

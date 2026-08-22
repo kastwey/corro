@@ -462,6 +462,21 @@ export class UnifiedGameClient {
 	}
 
 	/**
+	 * Who could be asked to this table right now. Empty for anybody who could not invite anyway —
+	 * signed out, not seated here, or at a table with no room — so the picker simply does not
+	 * appear rather than offering people it would then refuse.
+	 */
+	async getInvitablePlayers(gameId: string): Promise<string[]> {
+		if (!this.isConnected || !this.connection) return [];
+		try {
+			return await this.connection.invoke("GetInvitablePlayers", gameId);
+		} catch {
+			// Losing the list costs the browse half; typing a name still works.
+			return [];
+		}
+	}
+
+	/**
 	 * Offer this browser's seats to the signed-in account. Each carries the seat's own secret,
 	 * which is the proof; the server takes only the ones that check out and that nobody else owns,
 	 * and answers with how many. Signed out, the answer is 0.

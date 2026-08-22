@@ -95,6 +95,74 @@ public partial class GameHub
 	}
 
 	/// <summary>
+	/// Who could be asked to this table right now: connected, visible to the caller, willing to be
+	/// invited by them, and not already here or already asked.
+	///
+	/// It exists so inviting is not a memory test. Typing a public name still works and reaches
+	/// people this never lists — somebody who is here but hidden — so the two ways answer different
+	/// questions: "I know who I want" and "who is about?".
+	///
+	/// This is the one place a message policy becomes observable without an attempt, and that was
+	/// weighed rather than overlooked. For somebody the caller can ALREADY see in the room, the
+	/// policy is deducible today with one invitation: away and unknown-name are both ruled out by
+	/// their being visibly present, so a refusal can only be the policy. What changes is the cost —
+	/// this can be read on a timer without the target ever being asked. It was chosen anyway,
+	/// because a picker of people who cannot be picked is not a feature, and the only thing learned
+	/// about somebody already visible is that they did not choose "anyone". Nobody hidden from the
+	/// caller appears here for any reason: the presence setting still decides that, first.
+	/// </summary>
+	public async Task<List<string>> GetInvitablePlayers(string gameId)
+	{
+		var empty = new List<string>();
+		if (_users is null || _presence is null) return empty;
+		if (SignedInUserId() is not { Length: > 0 } callerId) return empty;
+
+		var game = await _gameRepository.LoadGameAsync(gameId ?? string.Empty);
+		if (game is null) return empty;
+		// The same seat check InviteToTable makes. Without it this would answer "who is around and
+		// reachable by me" for any table id somebody cared to guess.
+		if (!game.Players.Any(p => p.UserId == callerId)) return empty;
+		if (!game.HasRoom) return empty;
+
+		var caller = await _users.GetUserAsync(callerId);
+		// Somebody with no public name cannot invite at all (InviteToTable says NEEDS_PUBLIC_NAME),
+		// so there is nobody to offer them.
+		if (caller?.Handle is not { Length: > 0 }) return empty;
+
+		var relationships = _friendships is null
+			? new Dictionary<string, FriendshipService.Relationship>()
+			: (Dictionary<string, FriendshipService.Relationship>)
+				await _friendships.RelationshipsForAsync(callerId);
+
+		var seated = game.Players
+			.Select(p => p.UserId)
+			.Where(id => id is { Length: > 0 })
+			.ToHashSet();
+		var invited = game.Invitations.Select(i => i.UserId).ToHashSet();
+
+		var candidates = new List<string>();
+		foreach (var userId in _presence.OnlineUserIds())
+		{
+			if (userId == callerId || seated.Contains(userId) || invited.Contains(userId)) continue;
+
+			var user = await _users.GetUserAsync(userId);
+			if (user?.Handle is not { Length: > 0 } handle) continue;
+
+			var relationship = relationships.GetValueOrDefault(
+				userId, FriendshipService.Relationship.None);
+			// Seeing comes first and on its own: somebody hidden from this caller is not offered,
+			// whatever their message policy says.
+			if (!ReachRules.IsVisibleTo(user, relationship)) continue;
+			if (!ReachRules.AcceptsFrom(user, relationship)) continue;
+
+			candidates.Add(handle);
+		}
+
+		candidates.Sort(StringComparer.OrdinalIgnoreCase);
+		return candidates;
+	}
+
+	/// <summary>
 	/// Asks somebody to this table. The caller must hold a seat here — an invitation to a table you
 	/// are not at is somebody else's invitation to make.
 	/// </summary>
@@ -288,12 +356,7 @@ public partial class GameHub
 			: (await _friendships.RelationshipsForAsync(fromUserId))
 				.GetValueOrDefault(user.UserId, FriendshipService.Relationship.None);
 
-		return user.EffectiveMessagePolicy switch
-		{
-			MessagePolicy.Anyone => user,
-			MessagePolicy.Friends when relationship == FriendshipService.Relationship.Friends => user,
-			_ => null,
-		};
+		return ReachRules.AcceptsFrom(user, relationship) ? user : null;
 	}
 
 	/// <summary>Whether anybody seated here is a friend of the asker.</summary>

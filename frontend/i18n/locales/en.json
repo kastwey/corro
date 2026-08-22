@@ -2039,9 +2039,11 @@
     "inviteWhoLabel": "Public name of who you want to invite",
     "joinRequestAdmitted": "{{handle}} is in.",
     "joinRequestRefused": "{{handle}} was refused.",
-    "inviteFriendsHint": "Or ask one of your friends who is free right now.",
-    "inviteFriendsLabel": "Friends you can invite",
-    "inviteFriend": "Invite {{handle}}"
+    "invitePeopleHint": "Or pick somebody who is connected and open to invitations.",
+    "invitePeopleLabel": "People you can invite",
+    "inviteMatches": "{{count}} players you can invite. Press Down arrow to walk them.",
+    "inviteMatches_one": "1 player you can invite. Press Down arrow to reach them.",
+    "invitePerson": "Invite {{handle}}"
   },
   "common": {
     "ok": "OK",

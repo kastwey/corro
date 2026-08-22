@@ -96,7 +96,7 @@ public class PresenceController : ControllerBase
 				: relationships.GetValueOrDefault(userId, FriendshipService.Relationship.None);
 
 			if (relationship != FriendshipService.Relationship.Self
-				&& !CanSee(user, relationship))
+				&& !ReachRules.IsVisibleTo(user, relationship))
 			{
 				// Present, and not for this reader to see. Counted rather than named — see the
 				// summary at the top of this file for what that does and does not give away.
@@ -129,18 +129,6 @@ public class PresenceController : ControllerBase
 			HasHandle = reader?.Handle is { Length: > 0 },
 		};
 	}
-
-	/// <summary>
-	/// Whether one player's choice lets this reader see them. Each option means exactly what it
-	/// says — <see cref="PresenceVisibility.Nobody"/> hides them from friends too.
-	/// </summary>
-	private static bool CanSee(UserDocument user, FriendshipService.Relationship relationship) =>
-		user.EffectiveVisibility switch
-		{
-			PresenceVisibility.Everyone => true,
-			PresenceVisibility.Friends => relationship == FriendshipService.Relationship.Friends,
-			_ => false,
-		};
 
 	/// <summary>
 	/// What somebody is doing, from what the server already knows — nobody reports their own

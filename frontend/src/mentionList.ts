@@ -52,7 +52,7 @@ export class MentionList {
 	 * Offer these names. An empty list closes rather than showing an empty box, and the count is
 	 * said out loud: a list that appears in silence is one somebody listening never learns about.
 	 */
-	show(names: readonly string[], options: { takeFocus?: boolean } = {}): void {
+	show(names: readonly string[], options: { takeFocus?: boolean; silent?: boolean } = {}): void {
 		this.names = [...names];
 		if (this.names.length === 0) {
 			this.close();
@@ -62,7 +62,9 @@ export class MentionList {
 		this.active = 0;
 		this.render();
 		this.deps.list.hidden = false;
-		if (this.deps.announce && this.deps.countText) {
+		// A list somebody ASKED for announces itself; one that simply came with the view does not,
+		// or it talks over whatever brought them here.
+		if (!options.silent && this.deps.announce && this.deps.countText) {
 			this.deps.announce(this.deps.countText(this.names.length));
 		}
 		if (options.takeFocus !== false) this.focusOption(0);

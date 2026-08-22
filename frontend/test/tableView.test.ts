@@ -43,6 +43,16 @@ function mount(): void {
 				<div id="table-rules-fields"></div>
 			</details>
 			<p id="table-waiting-host" hidden>Waiting for the host</p>
+			<p class="table-view__invite" id="table-invite-someone" hidden>
+				<label for="table-invite-handle">Public name</label>
+				<input type="text" id="table-invite-handle" maxlength="20" autocomplete="off">
+				<button type="button" id="table-invite-send">Invite</button>
+			</p>
+			<div id="table-invite-people-block" hidden>
+				<p class="form-hint" id="table-invite-people-hint">Or pick somebody.</p>
+				<ul id="table-invite-people" role="listbox" aria-label="People you can invite"></ul>
+			</div>
+			<p id="table-invite-status" role="status" aria-live="polite"></p>
 			<div id="table-actions"></div>
 		</section>
 		<p id="game-surface-intro">Focus will move to your hand.</p>
@@ -635,4 +645,149 @@ test('the code and the link that bring someone else show only when there is one 
 	assert.equal(document.getElementById('table-invite-url')!.textContent, '');
 	assert.equal(copyCode.hidden, true);
 	assert.equal(copyLink.hidden, true);
+});
+
+/**
+ * Asking somebody to the table.
+ *
+ * Knowing the name and knowing only that somebody is about are the same task from a keyboard, so
+ * they are the same control: ONE listbox that opens showing everyone available and narrows as the
+ * name is typed. The alternative — a field and a separate list — makes the common case a trip
+ * between two controls.
+ *
+ * Who qualifies is the SERVER's answer (connected, visible to this player, open to invitations).
+ * Nothing here re-decides it; this only shows what came back and filters by what was typed.
+ */
+
+/** A table with a free seat, which is what makes the invite controls appear at all. */
+function invitableTable(): any {
+	return table({
+		status: 'waiting_for_players',
+		players: [{ id: 'a', name: 'Ana', token: 'red_hat', isHost: true, isReady: true }],
+		maxPlayers: 4,
+	});
+}
+
+function withPicker(people: string[], invited: string[] = []) {
+	const view = newView({
+		invite: async handle => void invited.push(handle),
+		invitablePlayers: async () => people,
+		inviteMatchCount: count => `${count} found`,
+	});
+	view.setTable(invitableTable());
+	return view;
+}
+
+/** Lets the picker's fetch settle — it is asked for on wiring, not awaited by setTable. */
+const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+
+test('the picker opens showing everyone who could come, as a real list', async () => {
+	withPicker(['ana', 'anabel', 'berto']);
+	await settle();
+
+	const list = document.getElementById('table-invite-people')!;
+	assert.equal(document.getElementById('table-invite-people-block')!.hidden, false);
+	assert.equal(list.getAttribute('role'), 'listbox');
+	const options = Array.from(list.querySelectorAll('[role="option"]'));
+	assert.deepEqual(options.map(o => o.textContent), ['ana', 'anabel', 'berto']);
+	// One tab stop, and the first is the one a reader is told about.
+	assert.deepEqual(options.map(o => (o as HTMLElement).tabIndex), [0, -1, -1]);
+	assert.deepEqual(options.map(o => o.getAttribute('aria-selected')), ['true', 'false', 'false']);
+});
+
+// It came with the view rather than being asked for; announcing it would talk over whatever
+// brought the player here.
+test('the list that simply appears says nothing; the one that narrows says how many', async () => {
+	withPicker(['ana', 'anabel', 'berto']);
+	await settle();
+	const status = document.getElementById('table-invite-status')!;
+	assert.equal(status.textContent, '');
+
+	const input = document.getElementById('table-invite-handle') as HTMLInputElement;
+	input.value = 'an';
+	input.dispatchEvent(new window.Event('input'));
+
+	assert.equal(status.textContent, '2 found');
+	assert.deepEqual(
+		Array.from(document.querySelectorAll('#table-invite-people [role="option"]'))
+			.map(o => o.textContent),
+		['ana', 'anabel']);
+});
+
+test('typing narrows the same list rather than replacing it, and matching is case-blind', async () => {
+	withPicker(['ana', 'anabel', 'berto']);
+	await settle();
+	const input = document.getElementById('table-invite-handle') as HTMLInputElement;
+
+	input.value = 'BER';
+	input.dispatchEvent(new window.Event('input'));
+	assert.deepEqual(
+		Array.from(document.querySelectorAll('#table-invite-people [role="option"]'))
+			.map(o => o.textContent),
+		['berto']);
+
+	// Clearing it brings everyone back: the browse list is the same list.
+	input.value = '';
+	input.dispatchEvent(new window.Event('input'));
+	assert.equal(document.querySelectorAll('#table-invite-people [role="option"]').length, 3);
+});
+
+test('Down walks in from the field, and choosing invites without typing a name', async () => {
+	const invited: string[] = [];
+	withPicker(['ana', 'berto'], invited);
+	await settle();
+	const input = document.getElementById('table-invite-handle') as HTMLInputElement;
+
+	input.dispatchEvent(new window.KeyboardEvent(
+		'keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+	const options = Array.from(document.querySelectorAll<HTMLElement>('#table-invite-people [role="option"]'));
+	assert.equal(document.activeElement, options[0]);
+
+	options[0].dispatchEvent(new window.KeyboardEvent(
+		'keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+	assert.deepEqual(invited, ['ana']);
+});
+
+// Dismissing the list once must not take the browse half away for good.
+test('Down reopens a list that Escape closed', async () => {
+	withPicker(['ana', 'berto']);
+	await settle();
+	const input = document.getElementById('table-invite-handle') as HTMLInputElement;
+	const list = document.getElementById('table-invite-people')!;
+
+	input.dispatchEvent(new window.KeyboardEvent(
+		'keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+	const first = list.querySelector<HTMLElement>('[role="option"]')!;
+	first.dispatchEvent(new window.KeyboardEvent(
+		'keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+	assert.equal(list.hidden, true);
+
+	input.dispatchEvent(new window.KeyboardEvent(
+		'keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+	assert.equal(list.hidden, false);
+	assert.equal(list.querySelectorAll('[role="option"]').length, 2);
+});
+
+// Typing a name the server never offered still works: somebody present but hidden is invitable and
+// will never appear here. The two ways answer different questions.
+test('the field still sends a name that is not in the list', async () => {
+	const invited: string[] = [];
+	withPicker(['ana'], invited);
+	await settle();
+	const input = document.getElementById('table-invite-handle') as HTMLInputElement;
+
+	input.value = 'somebodyHidden';
+	input.dispatchEvent(new window.KeyboardEvent(
+		'keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+	assert.deepEqual(invited, ['somebodyHidden']);
+});
+
+// An empty list with a heading is a stop that answers nothing.
+test('nobody to offer means no block at all, and the field still works', async () => {
+	withPicker([]);
+	await settle();
+
+	assert.equal(document.getElementById('table-invite-people-block')!.hidden, true);
+	assert.equal(document.getElementById('table-invite-someone')!.hidden, false);
 });
