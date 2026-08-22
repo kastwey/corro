@@ -128,7 +128,48 @@ written to prevent. An assertion scoped to the whole page couples it to every ot
 regression test that passes with *and* without the fix is not a regression test; reinstate the
 bug and watch it fail before believing it.
 
-## 3. Prove it before you say it
+## 3. Look at it, because the reviewer cannot
+
+**The person reading this review is blind.** That single fact changes what a review has to do,
+and it is the easiest thing in this repository to forget while reading a diff that looks
+correct.
+
+A visual defect announces itself to nobody here. It is not in the diff, not in the spoken
+output, not in the test log — a subtitle painted over a title, a panel clipped at the edge, a
+column that stopped scrolling: every one of those passes review in silence and reaches a sighted
+player as a broken game. Axe does not fill the gap either. It rules on contrast and structure
+and says nothing whatsoever about geometry: an element can sit exactly on top of another with
+perfect contrast and pass every rule there is.
+
+So the design has to be *checked*, deliberately, three ways:
+
+**Read the pictures.** `property-screenshot`, `race-screenshot`, `card-piles-screenshot` and
+`exploding-screenshot` capture each stage of a real game in both themes for exactly this reason
+— their own header says "so a sighted reviewer, or Claude reading the PNGs, can audit contrast
+and layout". They are attached to the Playwright report, so open them and actually look. And
+notice what they do *not* cover: a view those scenarios never reach is a view no picture exists
+of, which is itself a finding on a PR that adds one.
+
+**Assert the geometry rather than trusting the eye.** The patterns are already written, in
+`forbidden.spec.ts`, each born from a real complaint — copy them rather than inventing:
+
+- nothing spills past the viewport at 390px (collect every element whose `right` exceeds
+  `clientWidth` and assert the list is empty — a list, so the failure names the culprit);
+- boxes that share a cell do not overlap (`subtitle.top >= title.bottom`);
+- headings that *announce* at the same level also *render* at the same size, or a new section
+  that missed the shared rule paints at the browser default and only a sighted player ever
+  finds out.
+
+**Enlarge the text — and note that today nothing does.** No spec raises the font size or zooms,
+so the whole suite only ever proves the layout works at one size. A player who needs 200% text
+meets a different application: lines clip, panels ride over each other, and content pushed out
+of a box is unreachable if that box does not scroll. When a PR touches layout, that coverage is
+what it is missing. Raising the root font size is the faithful version where the CSS is
+rem-based; otherwise emulate browser zoom — and then re-run the three checks above plus the one
+that matters most at that size: whatever no longer fits can still be scrolled to, and reached
+from the keyboard (AGENTS.md, "a scrollable region needs keyboard access").
+
+## 4. Prove it before you say it
 
 A review that is wrong twice stops being read. Before writing a finding down:
 
@@ -141,7 +182,7 @@ A review that is wrong twice stops being read. Before writing a finding down:
 - If you could not check something, say which part you could not check rather than rounding it
   up to a claim.
 
-## 4. Deliver it
+## 5. Deliver it
 
 Give the findings in one pass, ordered by severity, each explained as above, and say plainly
 which you would act on first and why. Then hand the decision over: which findings to take, in
@@ -154,7 +195,7 @@ be followed; a defect in a specific line goes inline on that line. Several nits 
 are one comment, not six. Every comment ends with the attribution footer, so a reader knows what
 wrote it.
 
-## 5. When CI is red
+## 6. When CI is red
 
 Work in this order, because each step is cheaper than the next and any of them can end the
 hunt:
@@ -213,8 +254,32 @@ it and adds `use.launchOptions.executablePath`. It has to live in `e2e/` because
 `.git/info/exclude` rather than `.gitignore` — it is scaffolding for one machine, not a fact
 about the repository — and delete both when the run is done.
 
-## 6. Done
+## 7. Done
 
 A review is finished when every finding has an answer — fixed, argued, or explicitly deferred —
 and the branch is green on its own merge. Green with findings still unanswered is not finished,
 and neither is a set of answers on a red branch.
+
+## Keeping this list worth reading
+
+A review will turn up defects this file does not name, and the reflex is to add each one to
+section 2. Resist it. **A catalogue that grows without limit stops being applied** — not because
+anybody decides to ignore it, but because thirty entries read as a wall and get skimmed, and a
+skimmed list catches less than a short one that is actually worked through. Every line added
+costs attention that the lines already there were paying for.
+
+So a new entry has to earn its place. Ask, in this order:
+
+- **Has it happened more than once, or could it plausibly?** A one-off mistake somebody has
+  already learnt from is a story, not a pattern.
+- **Would it be missed without the note?** If the diff shows it, the compiler catches it or a
+  suite already fails on it, writing it down buys nothing.
+- **Does something else already cover it?** AGENTS.md holds the rules and
+  [verifying-changes](../verifying-changes/SKILL.md) the procedure. A rule restated here is a
+  rule with two homes that will disagree eventually.
+- **Can it replace an entry rather than join it?** Two specific traps often share one underlying
+  shape, and the shape catches more than either. Prefer rewriting to appending.
+
+When an entry does earn its place and nothing can be merged away, that is the moment to move the
+catalogue into `references/` and leave a pointer here — better a second file somebody opens when
+they need it than a first file nobody finishes.
