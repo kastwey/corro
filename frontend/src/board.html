@@ -80,14 +80,16 @@
 		<input type="text" id="table-invite-handle" maxlength="20" autocomplete="off">
 		<button type="button" id="table-invite-send" class="secondary-button" data-i18n="table.inviteSend">Invite</button>
 	  </p>
-	  <!-- Friends who could actually come: connected, and not in the middle of a game. Nobody
-		   should have to know a public name by heart to ask a friend to play. It is a listbox for
+	  <!-- Who could actually come: connected, visible to you, and willing to be invited. Nobody
+		   should have to know a public name by heart, and nobody should be offered somebody who
+		   would only refuse. Typing in the field above narrows this list rather than replacing it,
+		   so knowing the name and browsing who is about are the same control. It is a listbox for
 		   the same reason the chat's name list is one — loose buttons are announced with no idea
 		   they are a list, no position and no count. -->
-	  <div id="table-invite-friends-block" hidden>
-		<p class="form-hint" id="table-invite-friends-hint" data-i18n="table.inviteFriendsHint">Or ask one of your friends who is free right now.</p>
-		<ul id="table-invite-friends" class="lobby-chat__suggestions" role="listbox"
-			data-i18n-attr:aria-label="table.inviteFriendsLabel" aria-label="Friends you can invite"></ul>
+	  <div id="table-invite-people-block" hidden>
+		<p class="form-hint" id="table-invite-people-hint" data-i18n="table.invitePeopleHint">Or pick somebody who is connected and open to invitations.</p>
+		<ul id="table-invite-people" class="lobby-chat__suggestions" role="listbox"
+			data-i18n-attr:aria-label="table.invitePeopleLabel" aria-label="People you can invite"></ul>
 	  </div>
 	  <p id="table-invite-status" class="form-hint" role="status" aria-live="polite"></p>
 

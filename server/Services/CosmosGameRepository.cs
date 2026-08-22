@@ -192,7 +192,10 @@ public class CosmosGameRepository : IGameRepository
 			var iterator = _container.GetItemQueryIterator<GameDocument>(query);
 			while (iterator.HasMoreResults && games.Count < maxCount)
 			{
-				foreach (var game in await iterator.ReadNextAsync(ct)) games.Add(game);
+				foreach (var game in await iterator.ReadNextAsync(ct))
+				{
+					games.Add(game);
+				}
 			}
 			return games;
 		}

@@ -1,7 +1,7 @@
 // app.ts — frontend (server mode only)
 
 import { createAnnouncer } from './announcer.js';
-import { fetchFriends, requestFriendAtTable } from './friends.js';
+import { requestFriendAtTable } from './friends.js';
 import {
 	asInviteResult, asSendInviteResult, parsePendingInvitations,
 	resultText as inviteResultText, sendResultText,
@@ -549,12 +549,11 @@ async function initBoard() {
 		selfPlayerId: () => playerSession.playerId,
 		// Friends who are connected and not already playing. The friends list says which of them
 		// is at a joinable table; anybody NOT deep in a game is somebody who could come here.
-		invitableFriends: async () => {
-			const friends = await fetchFriends(fetch);
-			return friends
-				.filter(friend => friend.relationship === 'Friends')
-				.map(friend => friend.handle);
-		},
+		// Who is connected, visible to this player and open to an invitation — the server's answer,
+		// not a filter applied here. It used to be "my accepted friends", which listed people who
+		// were asleep and hid people who would gladly have come.
+		invitablePlayers: () => gameClient.getInvitablePlayers(gameId),
+		inviteMatchCount: count => tSync('table.inviteMatches', { count }),
 		// An invitation to another table, answered from this one. Accepting LEAVES this table: the
 		// lobby takes it from there with the code the server hands back, so there is one way into a
 		// table rather than a second that would have to be kept in step with it.

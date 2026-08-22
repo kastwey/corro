@@ -8,6 +8,13 @@ For **how the system is built** (architecture, client, accessibility, server, ga
 families, end-to-end flows), see the prose docs in [docs/](docs/README.md). This file is
 the *rules*; those docs are the *map*.
 
+Repeatable multi-step procedures — running and narrowing the test suites, proving that a
+regression test actually fails without its fix — live as skills in
+[.claude/skills/](.claude/skills/). They carry the *steps* and point back here for the rules, so
+this file stays the single place a rule is written. Claude Code loads a skill only when it is
+relevant, which keeps procedure out of every session's context; anyone else can read one as
+ordinary markdown.
+
 ## What this project is
 
 Multiplayer, **accessibility-first** Corro for screen-reader users (JAWS,

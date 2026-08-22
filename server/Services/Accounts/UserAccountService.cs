@@ -495,7 +495,10 @@ public sealed class UserAccountService
 		}
 
 		var user = await _repository.GetUserAsync(userId, ct);
-		if (user is null) return new HandleResult(HandleOutcome.NoSuchAccount);
+		if (user is null)
+		{
+			return new HandleResult(HandleOutcome.NoSuchAccount);
+		}
 
 		var normalized = PlayerHandle.Normalize(requested);
 		var current = user.Handle is { Length: > 0 } held ? PlayerHandle.Normalize(held) : null;
@@ -559,7 +562,11 @@ public sealed class UserAccountService
 	public async Task<bool> IsHandleAvailableAsync(
 		string requested, string forUserId, DateTime utcNow, CancellationToken ct = default)
 	{
-		if (PlayerHandle.Validate(requested) != PlayerHandle.Rejection.None) return false;
+		if (PlayerHandle.Validate(requested) != PlayerHandle.Rejection.None)
+		{
+			return false;
+		}
+
 		var claim = await _repository.GetHandleClaimAsync(PlayerHandle.Normalize(requested), ct);
 		return claim is null
 			|| PlayerHandle.CanTakeOver(new HandleClaim(claim.UserId, claim.ReleasedAtUtc), forUserId, utcNow);
@@ -583,23 +590,43 @@ public sealed class UserAccountService
 		CancellationToken ct = default)
 	{
 		var user = await _repository.GetUserAsync(userId, ct);
-		if (user is null) return Array.Empty<string>();
+		if (user is null)
+		{
+			return Array.Empty<string>();
+		}
 
 		var held = new List<string>(user.UnlockCodes);
 		var known = held.ToHashSet(StringComparer.Ordinal);
 		foreach (var code in codes ?? Array.Empty<string>())
 		{
-			if (string.IsNullOrWhiteSpace(code)) continue;
+			if (string.IsNullOrWhiteSpace(code))
+			{
+				continue;
+			}
 			// Normalized by the SERVER, the same way the manifest codes are: what a client sends is
 			// the text somebody typed, in whatever shape they typed it.
 			var normalized = Services.Corro.ShippedPackageProvider.Normalize(code);
-			if (normalized.Length == 0 || normalized.Length > MaxUnlockCodeLength) continue;
-			if (!known.Add(normalized)) continue;
+			if (normalized.Length == 0 || normalized.Length > MaxUnlockCodeLength)
+			{
+				continue;
+			}
+
+			if (!known.Add(normalized))
+			{
+				continue;
+			}
+
 			held.Add(normalized);
-			if (held.Count >= MaxUnlockCodes) break;
+			if (held.Count >= MaxUnlockCodes)
+			{
+				break;
+			}
 		}
 
-		if (held.Count == user.UnlockCodes.Count) return user.UnlockCodes;
+		if (held.Count == user.UnlockCodes.Count)
+		{
+			return user.UnlockCodes;
+		}
 
 		var saved = await _repository.UpsertUserAsync(user with { UnlockCodes = held }, ct);
 		return saved.UnlockCodes;
@@ -613,7 +640,11 @@ public sealed class UserAccountService
 		string userId, MessagePolicy policy, CancellationToken ct = default)
 	{
 		var user = await _repository.GetUserAsync(userId, ct);
-		if (user is null) return null;
+		if (user is null)
+		{
+			return null;
+		}
+
 		return await _repository.UpsertUserAsync(user with { MessagePolicy = policy }, ct);
 	}
 
@@ -635,7 +666,11 @@ public sealed class UserAccountService
 		string userId, PresenceVisibility visibility, CancellationToken ct = default)
 	{
 		var user = await _repository.GetUserAsync(userId, ct);
-		if (user is null) return null;
+		if (user is null)
+		{
+			return null;
+		}
+
 		return await _repository.UpsertUserAsync(user with
 		{
 			Visibility = visibility,

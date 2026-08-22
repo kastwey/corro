@@ -96,8 +96,16 @@ public sealed class GameSessionRegistry
 	public int CountActiveTables()
 	{
 		var tables = new HashSet<string>(StringComparer.Ordinal);
-		foreach (var gameId in _connectionGameMap.Values) tables.Add(gameId);
-		foreach (var gameId in _lobbyConnections.Values) tables.Add(gameId);
+		foreach (var gameId in _connectionGameMap.Values)
+		{
+			tables.Add(gameId);
+		}
+
+		foreach (var gameId in _lobbyConnections.Values)
+		{
+			tables.Add(gameId);
+		}
+
 		return tables.Count;
 	}
 
@@ -116,7 +124,11 @@ public sealed class GameSessionRegistry
 	public int CountConnectedPlayers()
 	{
 		var players = new HashSet<string>(StringComparer.Ordinal);
-		foreach (var playerId in _authenticatedConnections.Values) players.Add(playerId);
+		foreach (var playerId in _authenticatedConnections.Values)
+		{
+			players.Add(playerId);
+		}
+
 		return players.Count;
 	}
 

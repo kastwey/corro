@@ -77,7 +77,10 @@ public partial class GameHub
 	/// </summary>
 	public async Task<IReadOnlyList<PendingInvitation>> GetMyTableInvitations()
 	{
-		if (SignedInUserId() is not { Length: > 0 } userId) return Array.Empty<PendingInvitation>();
+		if (SignedInUserId() is not { Length: > 0 } userId)
+		{
+			return Array.Empty<PendingInvitation>();
+		}
 
 		var tables = await _gameRepository.GetTablesInvitingUserAsync(userId, 20);
 		return tables
@@ -95,26 +98,159 @@ public partial class GameHub
 	}
 
 	/// <summary>
+	/// Who could be asked to this table right now: connected, visible to the caller, willing to be
+	/// invited by them, and not already here or already asked.
+	///
+	/// It exists so inviting is not a memory test. Typing a public name still works and reaches
+	/// people this never lists — somebody who is here but hidden — so the two ways answer different
+	/// questions: "I know who I want" and "who is about?".
+	///
+	/// This is the one place a message policy becomes observable without an attempt, and that was
+	/// weighed rather than overlooked. For somebody the caller can ALREADY see in the room, the
+	/// policy is deducible today with one invitation: away and unknown-name are both ruled out by
+	/// their being visibly present, so a refusal can only be the policy. What changes is the cost —
+	/// this can be read on a timer without the target ever being asked. It was chosen anyway,
+	/// because a picker of people who cannot be picked is not a feature, and the only thing learned
+	/// about somebody already visible is that they did not choose "anyone". Nobody hidden from the
+	/// caller appears here for any reason: the presence setting still decides that, first.
+	/// </summary>
+	public async Task<List<string>> GetInvitablePlayers(string gameId)
+	{
+		var empty = new List<string>();
+		if (_users is null || _presence is null)
+		{
+			return empty;
+		}
+
+		if (SignedInUserId() is not { Length: > 0 } callerId)
+		{
+			return empty;
+		}
+
+		var game = await _gameRepository.LoadGameAsync(gameId ?? string.Empty);
+		if (game is null)
+		{
+			return empty;
+		}
+		// The same seat check InviteToTable makes. Without it this would answer "who is around and
+		// reachable by me" for any table id somebody cared to guess.
+		if (!game.Players.Any(p => p.UserId == callerId))
+		{
+			return empty;
+		}
+
+		if (!game.HasRoom)
+		{
+			return empty;
+		}
+
+		var caller = await _users.GetUserAsync(callerId);
+		// Somebody with no public name cannot invite at all (InviteToTable says NEEDS_PUBLIC_NAME),
+		// so there is nobody to offer them.
+		if (caller?.Handle is not { Length: > 0 })
+		{
+			return empty;
+		}
+
+		var relationships = _friendships is null
+			? new Dictionary<string, FriendshipService.Relationship>()
+			: (Dictionary<string, FriendshipService.Relationship>)
+				await _friendships.RelationshipsForAsync(callerId);
+
+		var seated = game.Players
+			.Select(p => p.UserId)
+			.Where(id => id is { Length: > 0 })
+			.ToHashSet();
+		var invited = game.Invitations.Select(i => i.UserId).ToHashSet();
+
+		var candidates = new List<string>();
+		foreach (var userId in _presence.OnlineUserIds())
+		{
+			if (userId == callerId || seated.Contains(userId) || invited.Contains(userId))
+			{
+				continue;
+			}
+
+			var user = await _users.GetUserAsync(userId);
+			if (user?.Handle is not { Length: > 0 } handle)
+			{
+				continue;
+			}
+
+			var relationship = relationships.GetValueOrDefault(
+				userId, FriendshipService.Relationship.None);
+			// Seeing comes first and on its own: somebody hidden from this caller is not offered,
+			// whatever their message policy says.
+			if (!ReachRules.IsVisibleTo(user, relationship))
+			{
+				continue;
+			}
+
+			if (!ReachRules.AcceptsFrom(user, relationship))
+			{
+				continue;
+			}
+
+			candidates.Add(handle);
+		}
+
+		candidates.Sort(StringComparer.OrdinalIgnoreCase);
+		return candidates;
+	}
+
+	/// <summary>
 	/// Asks somebody to this table. The caller must hold a seat here — an invitation to a table you
 	/// are not at is somebody else's invitation to make.
 	/// </summary>
 	public async Task<TableInviteResult> InviteToTable(TableInviteRequest request)
 	{
-		if (_users is null || SignedInUserId() is not { Length: > 0 } inviterId) return Outcome("REFUSED");
+		if (_users is null || SignedInUserId() is not { Length: > 0 } inviterId)
+		{
+			return Outcome("REFUSED");
+		}
 
 		var game = await _gameRepository.LoadGameAsync(request?.GameId ?? string.Empty);
-		if (game is null) return Outcome("REFUSED");
-		if (!game.Players.Any(p => p.UserId == inviterId)) return Outcome("REFUSED");
-		if (!game.HasRoom) return Outcome("TABLE_FULL");
+		if (game is null)
+		{
+			return Outcome("REFUSED");
+		}
+
+		if (!game.Players.Any(p => p.UserId == inviterId))
+		{
+			return Outcome("REFUSED");
+		}
+
+		if (!game.HasRoom)
+		{
+			return Outcome("TABLE_FULL");
+		}
 
 		var inviter = await _users.GetUserAsync(inviterId);
-		if (inviter?.Handle is not { Length: > 0 } inviterHandle) return Outcome("NEEDS_PUBLIC_NAME");
+		if (inviter?.Handle is not { Length: > 0 } inviterHandle)
+		{
+			return Outcome("NEEDS_PUBLIC_NAME");
+		}
 
 		var target = await ReachableAccountAsync(request!.Handle, inviterId);
-		if (target is null) return Outcome("REFUSED");
-		if (game.Players.Any(p => p.UserId == target.UserId)) return Outcome("ALREADY_HERE");
-		if (game.Invitations.Any(i => i.UserId == target.UserId)) return Outcome("INVITED");
-		if (game.Invitations.Count >= MaxPendingPerTable) return Outcome("REFUSED");
+		if (target is null)
+		{
+			return Outcome("REFUSED");
+		}
+
+		if (game.Players.Any(p => p.UserId == target.UserId))
+		{
+			return Outcome("ALREADY_HERE");
+		}
+
+		if (game.Invitations.Any(i => i.UserId == target.UserId))
+		{
+			return Outcome("INVITED");
+		}
+
+		if (game.Invitations.Count >= MaxPendingPerTable)
+		{
+			return Outcome("REFUSED");
+		}
 
 		var invitation = new TableInvitation
 		{
@@ -128,7 +264,10 @@ public partial class GameHub
 			doc.Invitations.Any(i => i.UserId == target.UserId)
 				? null
 				: doc with { Invitations = [.. doc.Invitations, invitation] });
-		if (saved is null) return Outcome("INVITED");
+		if (saved is null)
+		{
+			return Outcome("INVITED");
+		}
 
 		await NotifyAsync(target.UserId, "TableInvitation", new
 		{
@@ -146,21 +285,49 @@ public partial class GameHub
 	/// </summary>
 	public async Task<TableInviteResult> RequestToJoinTable(TableAnswerRequest request)
 	{
-		if (_users is null || SignedInUserId() is not { Length: > 0 } askerId) return Outcome("REFUSED");
+		if (_users is null || SignedInUserId() is not { Length: > 0 } askerId)
+		{
+			return Outcome("REFUSED");
+		}
 
 		var game = await _gameRepository.LoadGameAsync(request?.GameId ?? string.Empty);
-		if (game is null) return Outcome("REFUSED");
-		if (!game.HasRoom) return Outcome("TABLE_FULL");
-		if (game.Players.Any(p => p.UserId == askerId)) return Outcome("ALREADY_HERE");
+		if (game is null)
+		{
+			return Outcome("REFUSED");
+		}
+
+		if (!game.HasRoom)
+		{
+			return Outcome("TABLE_FULL");
+		}
+
+		if (game.Players.Any(p => p.UserId == askerId))
+		{
+			return Outcome("ALREADY_HERE");
+		}
 
 		var asker = await _users.GetUserAsync(askerId);
-		if (asker?.Handle is not { Length: > 0 } askerHandle) return Outcome("NEEDS_PUBLIC_NAME");
+		if (asker?.Handle is not { Length: > 0 } askerHandle)
+		{
+			return Outcome("NEEDS_PUBLIC_NAME");
+		}
 
 		// A friend must actually be sitting here. Otherwise this would be a way to knock on any
 		// table whose id somebody guessed.
-		if (!await AnyFriendIsSeatedAsync(game, askerId)) return Outcome("REFUSED");
-		if (game.JoinRequests.Any(r => r.UserId == askerId)) return Outcome("ASKED");
-		if (game.JoinRequests.Count >= MaxPendingPerTable) return Outcome("REFUSED");
+		if (!await AnyFriendIsSeatedAsync(game, askerId))
+		{
+			return Outcome("REFUSED");
+		}
+
+		if (game.JoinRequests.Any(r => r.UserId == askerId))
+		{
+			return Outcome("ASKED");
+		}
+
+		if (game.JoinRequests.Count >= MaxPendingPerTable)
+		{
+			return Outcome("REFUSED");
+		}
 
 		var ask = new TableJoinRequest
 		{
@@ -173,7 +340,10 @@ public partial class GameHub
 			doc.JoinRequests.Any(r => r.UserId == askerId)
 				? null
 				: doc with { JoinRequests = [.. doc.JoinRequests, ask] });
-		if (saved is null) return Outcome("ASKED");
+		if (saved is null)
+		{
+			return Outcome("ASKED");
+		}
 
 		await BroadcastLobbyAsync(saved);
 		return Outcome("ASKED", game.GameId);
@@ -185,11 +355,21 @@ public partial class GameHub
 	/// </summary>
 	public async Task<TableInviteResult> AcceptTableInvitation(TableAnswerRequest request)
 	{
-		if (SignedInUserId() is not { Length: > 0 } userId) return Outcome("REFUSED");
+		if (SignedInUserId() is not { Length: > 0 } userId)
+		{
+			return Outcome("REFUSED");
+		}
 
 		var game = await _gameRepository.LoadGameAsync(request?.GameId ?? string.Empty);
-		if (game is null) return Outcome("GONE");
-		if (!game.Invitations.Any(i => i.UserId == userId)) return Outcome("GONE");
+		if (game is null)
+		{
+			return Outcome("GONE");
+		}
+
+		if (!game.Invitations.Any(i => i.UserId == userId))
+		{
+			return Outcome("GONE");
+		}
 		// The table filling up between the invitation and the answer is the ordinary case, not an
 		// error: it is said plainly, and the invitation is cleared so it stops offering something
 		// that is no longer there.
@@ -199,7 +379,10 @@ public partial class GameHub
 		{
 			Invitations = doc.Invitations.Where(i => i.UserId != userId).ToList(),
 		});
-		if (saved is not null) await BroadcastLobbyAsync(saved);
+		if (saved is not null)
+		{
+			await BroadcastLobbyAsync(saved);
+		}
 
 		return full ? Outcome("TABLE_FULL") : Outcome("JOINING", game.GameId, game.InviteCode);
 	}
@@ -207,13 +390,20 @@ public partial class GameHub
 	/// <summary>Turns an invitation down. Nothing is reported to the table beyond it disappearing.</summary>
 	public async Task<TableInviteResult> DeclineTableInvitation(TableAnswerRequest request)
 	{
-		if (SignedInUserId() is not { Length: > 0 } userId) return Outcome("REFUSED");
+		if (SignedInUserId() is not { Length: > 0 } userId)
+		{
+			return Outcome("REFUSED");
+		}
 
 		var saved = await _registry.MutateDocumentAsync(request?.GameId ?? string.Empty, doc =>
 			doc.Invitations.Any(i => i.UserId == userId)
 				? doc with { Invitations = doc.Invitations.Where(i => i.UserId != userId).ToList() }
 				: null);
-		if (saved is not null) await BroadcastLobbyAsync(saved);
+		if (saved is not null)
+		{
+			await BroadcastLobbyAsync(saved);
+		}
+
 		return Outcome("DECLINED");
 	}
 
@@ -224,16 +414,29 @@ public partial class GameHub
 	/// </summary>
 	public async Task<TableInviteResult> AnswerJoinRequest(TableAnswerRequest request, bool accept)
 	{
-		if (_users is null || SignedInUserId() is not { Length: > 0 } hostId) return Outcome("REFUSED");
+		if (_users is null || SignedInUserId() is not { Length: > 0 } hostId)
+		{
+			return Outcome("REFUSED");
+		}
 
 		var game = await _gameRepository.LoadGameAsync(request?.GameId ?? string.Empty);
-		if (game is null) return Outcome("GONE");
-		if (!game.Players.Any(p => p.UserId == hostId)) return Outcome("REFUSED");
+		if (game is null)
+		{
+			return Outcome("GONE");
+		}
+
+		if (!game.Players.Any(p => p.UserId == hostId))
+		{
+			return Outcome("REFUSED");
+		}
 
 		var normalized = PlayerHandle.Normalize(request!.Handle ?? string.Empty);
 		var ask = game.JoinRequests.FirstOrDefault(
 			r => PlayerHandle.Normalize(r.Handle) == normalized);
-		if (ask?.UserId is not { Length: > 0 } askerId) return Outcome("GONE");
+		if (ask?.UserId is not { Length: > 0 } askerId)
+		{
+			return Outcome("GONE");
+		}
 
 		var saved = await _registry.MutateDocumentAsync(game.GameId, doc => doc with
 		{
@@ -251,10 +454,20 @@ public partial class GameHub
 				}]
 				: doc.Invitations,
 		});
-		if (saved is not null) await BroadcastLobbyAsync(saved);
+		if (saved is not null)
+		{
+			await BroadcastLobbyAsync(saved);
+		}
 
-		if (!accept) return Outcome("DECLINED");
-		if (!game.HasRoom) return Outcome("TABLE_FULL");
+		if (!accept)
+		{
+			return Outcome("DECLINED");
+		}
+
+		if (!game.HasRoom)
+		{
+			return Outcome("TABLE_FULL");
+		}
 
 		// The code goes to the person admitted, never to the table: it is their way in, not news.
 		await NotifyAsync(askerId, "JoinRequestAccepted", new
@@ -273,33 +486,49 @@ public partial class GameHub
 	private async Task<UserDocument?> ReachableAccountAsync(string handle, string fromUserId)
 	{
 		var normalized = PlayerHandle.Normalize(handle ?? string.Empty);
-		if (normalized.Length == 0) return null;
+		if (normalized.Length == 0)
+		{
+			return null;
+		}
 
 		var claim = await _users!.GetHandleClaimAsync(normalized);
-		if (claim is null || claim.ReleasedAtUtc is not null) return null;
+		if (claim is null || claim.ReleasedAtUtc is not null)
+		{
+			return null;
+		}
 
 		var user = await _users.GetUserAsync(claim.UserId);
-		if (user?.Handle is not { Length: > 0 } stored) return null;
-		if (PlayerHandle.Normalize(stored) != normalized) return null;
-		if (user.UserId == fromUserId) return null;
+		if (user?.Handle is not { Length: > 0 } stored)
+		{
+			return null;
+		}
+
+		if (PlayerHandle.Normalize(stored) != normalized)
+		{
+			return null;
+		}
+
+		if (user.UserId == fromUserId)
+		{
+			return null;
+		}
 
 		var relationship = _friendships is null
 			? FriendshipService.Relationship.None
 			: (await _friendships.RelationshipsForAsync(fromUserId))
 				.GetValueOrDefault(user.UserId, FriendshipService.Relationship.None);
 
-		return user.EffectiveMessagePolicy switch
-		{
-			MessagePolicy.Anyone => user,
-			MessagePolicy.Friends when relationship == FriendshipService.Relationship.Friends => user,
-			_ => null,
-		};
+		return ReachRules.AcceptsFrom(user, relationship) ? user : null;
 	}
 
 	/// <summary>Whether anybody seated here is a friend of the asker.</summary>
 	private async Task<bool> AnyFriendIsSeatedAsync(GameDocument game, string askerId)
 	{
-		if (_friendships is null) return false;
+		if (_friendships is null)
+		{
+			return false;
+		}
+
 		var relationships = await _friendships.RelationshipsForAsync(askerId);
 		return game.Players.Any(p => p.UserId is { Length: > 0 } seated
 			&& relationships.GetValueOrDefault(seated, FriendshipService.Relationship.None)
@@ -310,9 +539,17 @@ public partial class GameHub
 	/// what was stored on the table is what they find when they come back.</summary>
 	private async Task NotifyAsync(string userId, string method, object payload)
 	{
-		if (_presence is null) return;
+		if (_presence is null)
+		{
+			return;
+		}
+
 		var connections = _presence.ConnectionsOf(userId).ToList();
-		if (connections.Count == 0) return;
+		if (connections.Count == 0)
+		{
+			return;
+		}
+
 		await Clients.Clients(connections).SendAsync(method, payload);
 	}
 

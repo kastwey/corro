@@ -110,6 +110,29 @@ a table rather than two that have to be kept in step.
 An invitation reaches you wherever you are: the lobby has a panel for it, and so does a table, since
 sitting at one table is exactly where you are when a friend wants you at theirs.
 
+### Picking somebody instead of spelling them
+
+Asking somebody is one control, not two: a field with a list under it that opens showing everybody
+who could come and narrows as a name is typed. Knowing the name and knowing only that somebody is
+about are the same task from a keyboard, and splitting them would make the common case a trip
+between two controls. It is the chat's name list, reused — a third hand-rolled option list is a
+third chance to announce loose buttons with no position and no count.
+
+The candidates are the SERVER's answer (`GetInvitablePlayers`), never a filter applied by the
+client, and the two questions are asked in order: can this caller SEE them, and do they accept being
+asked. Seeing comes first and on its own, so the picker can never become a way around the presence
+setting — somebody hidden is absent from it whatever their message policy says, and is still
+reachable by typing their name. That is what keeps the two ways distinct: "who is about?" and "I
+know who I want".
+
+**This is the one place a message policy becomes observable without an attempt**, and it was weighed
+rather than overlooked. For somebody the caller can already see in the room, the policy is deducible
+today with one invitation: away and unknown-name are both ruled out by their being visibly present,
+so a refusal there can only be the policy. What changes is the cost — this can be read on a timer
+without the target ever being asked. It was chosen anyway, because a picker of people who cannot be
+picked is not a feature, and the only thing learned about somebody already visible is that they did
+not choose "anyone".
+
 ## What never travels
 
 - **The account id of a seat.** It is stored and stripped on the way to a client. Opaque, but
@@ -129,7 +152,8 @@ found among strangers, and the people you dealt into a game are not strangers.
 | Presence | `Hubs/PresenceRegistry.cs`, `Controllers/PresenceController.cs` | `onlinePlayers.ts` |
 | Friendships | `Services/Accounts/FriendshipService.cs`, `FriendshipKey.cs`, `Controllers/FriendsController.cs` | `friends.ts`, `friendsList.ts` |
 | Messages | `Hubs/GameHub.DirectMessages.cs` | `lobbyChat.ts`, `mentions.ts` |
-| Invitations | `Hubs/GameHub.Invitations.cs` | `tableInvites.ts` |
+| Invitations | `Hubs/GameHub.Invitations.cs` | `tableInvites.ts`, `tableView.ts` |
+| Who may see / be reached | `Services/Accounts/ReachRules.cs` | — |
 | Shared widgets | — | `friendRoster.ts`, `mentionList.ts`, `tabs.ts` |
 | Settings screen | `Controllers/AuthController.cs` | `accountSettings.ts`, `lobbyNotices.ts` |
 

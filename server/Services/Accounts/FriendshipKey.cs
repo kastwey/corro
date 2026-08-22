@@ -33,8 +33,16 @@ public static class FriendshipKey
 	/// </summary>
 	public static string? Other(string userA, string userB, string forUserId)
 	{
-		if (forUserId == userA) return userB;
-		if (forUserId == userB) return userA;
+		if (forUserId == userA)
+		{
+			return userB;
+		}
+
+		if (forUserId == userB)
+		{
+			return userA;
+		}
+
 		return null;
 	}
 }
