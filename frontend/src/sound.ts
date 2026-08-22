@@ -301,6 +301,46 @@ class SoundManager {
 	}
 
 	/**
+	* Plays a short sequence of synthesized tones — a two-tone cue for a UI state change.
+	*
+	* Synthesized rather than loaded from the sound pack on purpose: this is engine chrome, not
+	* a game event, so it must sound the same in every package and must not depend on a package
+	* shipping a buffer for it (see the package boundary rule in AGENTS.md). No asset, no
+	* manifest entry, nothing for a package to override.
+	*
+	* Mute and volume are the CALLER's business, exactly as for a pack event: this is the
+	* mechanism, `soundEvents` owns the preference.
+	*/
+	async playTones(frequencies: number[], options: { volume?: number; stepMs?: number } = {}): Promise<boolean> {
+	if (frequencies.length === 0) return false;
+	if (!(await this.ensureAudioContext())) return false;
+
+	const context = this.audioContext!;
+	const stepMs = options.stepMs ?? 70;
+	const peak = Math.max(0, Math.min(1, options.volume ?? 0.5));
+	let at = context.currentTime;
+
+	for (const frequency of frequencies) {
+		const oscillator = context.createOscillator();
+		const gain = context.createGain();
+		oscillator.type = 'sine';
+		oscillator.frequency.value = frequency;
+		// A ramped envelope, because a square-edged start and stop click audibly — and a
+		// click next to speech is exactly what a screen-reader player does not need.
+		const seconds = stepMs / 1000;
+		gain.gain.setValueAtTime(0.0001, at);
+		gain.gain.exponentialRampToValueAtTime(Math.max(peak, 0.0002), at + seconds * 0.2);
+		gain.gain.exponentialRampToValueAtTime(0.0001, at + seconds);
+		oscillator.connect(gain);
+		gain.connect(this.masterGain!);
+		oscillator.start(at);
+		oscillator.stop(at + seconds);
+		at += seconds;
+	}
+	return true;
+	}
+
+	/**
 	* Gets the state of a sound
 	*/
 	getSoundState(id: string): { isPlaying: boolean; isPaused: boolean } | null {

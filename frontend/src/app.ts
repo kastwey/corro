@@ -15,6 +15,7 @@ import {
 	recordAnnouncementHistory,
 } from './announcer.js';
 import { attachKeyHandlers, PROPERTY_ONLY_COMMANDS, CARD_FAMILY_HIDDEN_COMMANDS } from './keys.js';
+import { attachCommandPrefix } from './commandPrefix.js';
 import { buildGroupKeyMap, buildGroupSquareIndex } from './groupKeys.js';
 import { AUDIO_UNLOCK_EVENTS, shouldResumeAudioContext, tokenHopCue } from './audioGating.js';
 import { Board } from './board.js';
@@ -2588,6 +2589,17 @@ async function initBoard() {
 		globalAnnounce(createAnnouncement('game.square_not_found', {}), { instant: true });
 		boardToast.show(tSync('game.square_not_found'), 'loss');
 	}
+	});
+
+	// Inside a text box — an answer on the categories sheet, a line in the chat — a bare letter
+	// types itself instead of acting. The prefix arms exactly one keystroke and replays it on
+	// the board, so every shortcut above is reachable from a field without a second vocabulary
+	// to learn and without the help table having to claim anything per row.
+	attachCommandPrefix({
+	surface: () => document.getElementById('board'),
+	announce: announceText,
+	t: (key, vars) => tSync(key, vars),
+	cue: kind => soundEvents.playModeCue(kind === 'armed'),
 	});
 
 	// Keep keyboard focus inside the game page: Tab / Shift+Tab wrap around the board's

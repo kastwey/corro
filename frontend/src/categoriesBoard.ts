@@ -52,6 +52,16 @@ const SAVE_DEBOUNCE_MS = 500;
  *  difference between a saved answer and a lost one is measured in exactly these seconds. */
 const URGENT_SAVE_SECONDS = 5;
 
+/**
+ * How long the visible echo of a query stays on screen.
+ *
+ * It is an ANSWER TO A QUESTION, not a status line: "23 seconds remaining" is true when it is
+ * asked and false a second later, and a stale answer left in place is worse for the player who
+ * reads it than no answer at all. Long enough to read at leisure, short enough that nobody
+ * takes it for the current state. The spoken half is unaffected: it was heard once, when asked.
+ */
+const ECHO_LIFETIME_MS = 12_000;
+
 const visible = (element: HTMLElement) => !element.hidden;
 
 type Verdict = Exclude<CategoriesVerdict, 'pending'>;
@@ -62,6 +72,7 @@ export class CategoriesBoard {
 	private readonly nowLine: HTMLElement;
 	private readonly dutyLine: HTMLElement;
 	private readonly progressLine: HTMLElement;
+	private readonly echo: HTMLElement;
 	private readonly timerPanel: HTMLElement;
 	private readonly timerValue: HTMLElement;
 	private readonly timerProgress: HTMLProgressElement;
@@ -87,6 +98,10 @@ export class CategoriesBoard {
 	private verdicts = new Map<string, Verdict>();
 	private verdictsForPrompt = '';
 	private saveHandle: number | null = null;
+	/** The pending expiry of the visible echo, if one is on screen. */
+	private echoHandle: number | null = null;
+	/** The round and phase the echo was answered in; it goes stale when either moves on. */
+	private echoContext: string | null = null;
 	/** The round whose sheet is currently built, so typing is never re-rendered out from under
 	 *  the caret. */
 	private sheetRound = -1;
@@ -136,10 +151,22 @@ export class CategoriesBoard {
 				<div class="categories-controls">
 					<button type="button" class="btn btn--primary categories-start"></button>
 				</div>
+				<!-- The answer to a shortcut this player pressed. Personal (it never leaves this
+				     browser), aria-hidden (the live region already said it), self-replacing, and
+				     short-lived: an answer that outlives the question it answered is a wrong one. -->
+				<p class="categories-echo" aria-hidden="true" hidden></p>
 			</section>
 			<section class="categories-sheet" aria-labelledby="categories-sheet-title" hidden>
 				<h3 id="categories-sheet-title"></h3>
-				<ol class="categories-sheet-list"></ol>
+				<!-- ONE named group for the whole sheet: these twelve boxes are one set of related
+				     controls with one name, not twelve sets of one. It WRAPS the list rather than
+				     replacing it — role="group" on the <ol> would strip its list semantics and
+				     orphan every <li> — and it borrows the heading's own words instead of
+				     paraphrasing them, so entering the sheet does not say the same fact twice in
+				     two nearly identical sentences. -->
+				<div class="categories-sheet-group" role="group" aria-labelledby="categories-sheet-title">
+					<ol class="categories-sheet-list"></ol>
+				</div>
 				<div class="categories-controls">
 					<button type="button" class="btn categories-finish"></button>
 				</div>
@@ -165,6 +192,7 @@ export class CategoriesBoard {
 		this.nowLine = this.required('.categories-now__line');
 		this.dutyLine = this.required('.categories-duty');
 		this.progressLine = this.required('.categories-progress');
+		this.echo = this.required('.categories-echo');
 		this.timerPanel = this.required('.categories-timer');
 		this.timerValue = this.required('.categories-timer__value');
 		this.timerProgress = this.required('.categories-timer__progress');
@@ -199,6 +227,8 @@ export class CategoriesBoard {
 		});
 		this.finishButton.addEventListener('click', () => {
 			if (this.finishButton.getAttribute('aria-disabled') === 'true') {
+				// Spoken only. The reason is already ON SCREEN in the hint this button points at
+				// with aria-describedby, so echoing it would print the same sentence twice.
 				this.deps.announce(this.finishHint.textContent ?? '');
 				return;
 			}
@@ -247,29 +277,94 @@ export class CategoriesBoard {
 		else if (visible(this.finishButton)) this.finishButton.focus();
 	}
 
+	/**
+	 * The surface's two queries: L for the round's letter, R for the clock ("reloj" in Spanish,
+	 * "remaining" in English).
+	 *
+	 * Both are bare letters, which inside an answer box type themselves — that is what the
+	 * command prefix is for (Ctrl+Shift+Space, then the letter), and it arrives here as a
+	 * replay on the surface, so this handler needs no second form of its own.
+	 */
 	private onSurfaceKeydown(event: KeyboardEvent): void {
 		if (event.ctrlKey || event.altKey || event.metaKey || event.shiftKey || event.repeat) return;
 		const key = event.key.toLowerCase();
+		if (isTypingTarget(event.target)) return;
 
 		// Escape comes back to whatever this player's job is, the way Escape leaves a menu and
 		// lands where the menu was opened from.
-		if (event.key === 'Escape' && !isTypingTarget(event.target)) {
+		if (event.key === 'Escape') {
 			event.preventDefault();
 			event.stopPropagation();
 			this.focusHand();
 			return;
 		}
-		if (key !== 'r' || isTypingTarget(event.target)) return;
 
-		// R is family-local: "reloj" in Spanish, "remaining" in English. The value comes from the
-		// server clock tick, so asking never starts a client-side spoken countdown.
+		const query = key === 'l' ? 'letter' : key === 'r' ? 'time' : null;
+		if (!query) return;
+
 		const round = this.round();
 		if (!round) return;
 		event.preventDefault();
 		event.stopPropagation();
-		this.deps.announce(round.phase === 'writing'
+		if (query === 'letter') {
+			this.say(this.t('categories_letter_label', { letter: round.letter }));
+			return;
+		}
+		this.say(round.phase === 'writing'
 			? this.t('categories_timer_label', { seconds: this.secondsRemaining })
 			: this.t('categories_timer_not_running'));
+	}
+
+	/**
+	 * Speak a personal answer, and show it too. The spoken half already reaches whoever pressed
+	 * the key; the visible half exists because a sighted player pressing the same shortcut got
+	 * nothing at all. It is aria-hidden and replaces itself: the live region has already said
+	 * this, and hearing it twice would be worse than not seeing it.
+	 *
+	 * What it shows always expires — on its own after a few seconds, and at once when the round
+	 * or the phase moves on. An answer nobody can tell is out of date is a lie in slow motion:
+	 * the round's letter is only this round's, and the seconds remaining were only ever true at
+	 * the instant they were asked for.
+	 */
+	private say(text: string): void {
+		this.deps.announce(text);
+		this.showEcho(text);
+	}
+
+	private showEcho(text: string): void {
+		this.cancelEcho();
+		// Nothing to show is not the same as something blank: an empty bordered box reads as a
+		// rendering bug to the player it was drawn for.
+		if (!text.trim()) return;
+		this.echo.textContent = text;
+		this.echo.hidden = false;
+		this.echoContext = this.echoContextKey();
+		const setTimer = this.deps.setTimer ?? ((handler, ms) => window.setTimeout(handler, ms));
+		this.echoHandle = setTimer(() => {
+			this.echoHandle = null;
+			this.clearEcho();
+		}, ECHO_LIFETIME_MS);
+	}
+
+	/** Takes the answer off the screen. Purely visual: nothing here is ever spoken again. */
+	private clearEcho(): void {
+		this.cancelEcho();
+		this.echoContext = null;
+		this.echo.textContent = '';
+		this.echo.hidden = true;
+	}
+
+	/** What an on-screen answer is only true FOR: this round, in this phase. */
+	private echoContextKey(): string | null {
+		const round = this.round();
+		return round ? `${round.roundNumber}:${round.phase}` : null;
+	}
+
+	private cancelEcho(): void {
+		if (this.echoHandle === null) return;
+		const clearTimer = this.deps.clearTimer ?? ((handle: number) => window.clearTimeout(handle));
+		clearTimer(this.echoHandle);
+		this.echoHandle = null;
 	}
 
 	// ── Commands ──────────────────────────────────────────────────────────────
@@ -340,6 +435,12 @@ export class CategoriesBoard {
 		const focusedInside = this.element.contains(document.activeElement);
 		const round = state.round;
 		const judging = round.judgeId === myId;
+
+		// A shown answer belongs to the round and phase it was asked in. Once either moves on it
+		// is not an old answer, it is a wrong one — the letter is another letter now.
+		if (this.echoContext !== null && this.echoContext !== `${round.roundNumber}:${round.phase}`) {
+			this.clearEcho();
+		}
 
 		this.localizeStatic();
 		this.renderScores(gs);
@@ -416,16 +517,6 @@ export class CategoriesBoard {
 
 			const item = document.createElement('li');
 			item.className = 'categories-sheet-item';
-			// A named group around each field. Arriving at it announces the category AND the
-			// letter, so the one fact every answer depends on is repeated at every box instead
-			// of being read once at the top of a sheet with twelve of them.
-			const group = document.createElement('div');
-			group.className = 'categories-sheet-group';
-			group.setAttribute('role', 'group');
-			group.setAttribute('aria-label', this.t('categories_sheet_group', {
-				category: prompt.name,
-				letter: round.letter,
-			}));
 			const inputId = `categories-answer-${prompt.categoryId}`;
 			const label = document.createElement('label');
 			label.className = 'categories-sheet-label';
@@ -440,8 +531,7 @@ export class CategoriesBoard {
 			input.autocomplete = 'off';
 			input.spellcheck = false;
 			input.maxLength = 60;
-			group.append(label, input);
-			item.appendChild(group);
+			item.append(label, input);
 			this.sheetList.appendChild(item);
 		}
 	}
@@ -517,6 +607,9 @@ export class CategoriesBoard {
 					button.addEventListener('click', () => {
 						this.verdicts.set(answer.playerId, verdict);
 						this.refreshVerdictButtons(gs, prompt, round.letter);
+						// Spoken only. The judge can SEE which verdict is in force — the buttons
+						// carry it — and what a category finally decided has its own panel. The
+						// echo answers questions this player asked, not actions they just took.
 						this.deps.announce(this.t('categories_verdict_set', {
 							player: categoriesPlayerName(gs, answer.playerId),
 							verdict: categoriesVerdictLabel(verdict, this.deps.tSync),
@@ -689,6 +782,7 @@ export class CategoriesBoard {
 			...CARD_STATUS_SHORTCUTS,
 			{ keys: 'enter', descKey: 'game.help_cmd_categories_next_field' },
 			{ keys: 'escape', descKey: 'game.help_cmd_categories_home' },
+			{ keys: 'l', descKey: 'game.help_cmd_categories_letter' },
 			{ keys: 'r', descKey: 'game.help_cmd_categories_timer' },
 			{ keys: 'up/down', descKey: 'game.help_cmd_categories_answers' },
 			{ keys: 'right/left', descKey: 'game.help_cmd_categories_verdicts' },
