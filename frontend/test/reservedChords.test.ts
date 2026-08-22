@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { readdirSync, readFileSync } from 'node:fs';
+import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BROWSER_RESERVED_CHORDS, TYPING_COMMAND_PREFIX } from '../src/shortcuts.js';
 
@@ -15,26 +15,55 @@ function keymapSpecs(): string[] {
 	return Object.keys(keymap);
 }
 
-/** Every `keys:` literal a family declares for its own surface. */
+/**
+ * Every `keys:` literal any family declares for its own surface.
+ *
+ * The whole source tree, not a list of files to keep in step: a guard that has to be told about
+ * each new family is a guard that silently stops covering the next one — which is precisely the
+ * failure it exists to prevent.
+ */
 function familyShortcutSpecs(): { spec: string; where: string }[] {
+	const src = join(here, '..', 'src');
 	const found: { spec: string; where: string }[] = [];
-	for (const file of ['categoriesBoard.ts', 'forbiddenBoard.ts', 'cardBoardShell.ts', 'handPanel.ts']) {
-		const source = readFileSync(join(here, '..', 'src', file), 'utf8');
-		for (const match of source.matchAll(/\bkeys:\s*'([^']+)'/g)) {
-			found.push({ spec: match[1], where: file });
+	const walk = (dir: string) => {
+		for (const entry of readdirSync(dir, { withFileTypes: true })) {
+			const full = join(dir, entry.name);
+			if (entry.isDirectory()) { walk(full); continue; }
+			if (!entry.name.endsWith('.ts')) continue;
+			const source = readFileSync(full, 'utf8');
+			for (const match of source.matchAll(/\bkeys:\s*'([^']+)'/g)) {
+				found.push({ spec: match[1], where: relative(src, full) });
+			}
 		}
-	}
+	};
+	walk(src);
 	return found;
 }
 
 /**
- * Two bindings predate this rule and are almost certainly dead in Chrome, which answers both
- * before the page is asked: Ctrl+T opens a tab instead of the trade builder, and Ctrl+Shift+J
- * opens the developer console instead of spending a release pass. They are recorded here rather
- * than quietly dropped from the reserved list — the guard has to keep meaning what it says — and
- * rather than rebound in passing, because moving a shipped shortcut is the property game's call.
+ * Bindings that predate this rule and are on the reserved list anyway. Every one of them is
+ * shipped, so each is a decision for the game that published it rather than something to rebind
+ * in passing — and each is recorded HERE rather than quietly dropped from the list, because a
+ * guard that shrinks to fit its violations stops meaning anything.
+ *
+ * What each one is actually up against:
+ *  - Ctrl+T (trade builder) opens a tab, and Ctrl+Shift+J (release pass) the developer console:
+ *    Chrome answers both before the page is asked, so they are almost certainly dead there.
+ *  - Ctrl+Shift+R (chat input) is a hard reload in both browsers — it throws the page away.
+ *  - Ctrl+Shift+A (action bar) is Firefox's add-ons manager and Chrome's tab search;
+ *    Ctrl+Shift+B (re-enter auction) the bookmarks toolbar; Ctrl+Shift+M (manage properties)
+ *    Chrome's profile menu; Ctrl+Shift+H (chat) Firefox's library.
+ *  - The four Ctrl+Alt bindings (sound, voice panel, voice mute, voice speakers) are AltGr on
+ *    Windows and the VoiceOver modifier on macOS.
+ *
+ * Adding to this list is not a way to pass the test: it is a note that something already shipped
+ * broken. A NEW binding belongs on neither list.
  */
-const KNOWN_PRE_EXISTING = new Set(['ctrl+t', 'ctrl+shift+j']);
+const KNOWN_PRE_EXISTING = new Set([
+	'ctrl+t', 'ctrl+shift+j',
+	'ctrl+shift+r', 'ctrl+shift+a', 'ctrl+shift+b', 'ctrl+shift+m', 'ctrl+shift+h',
+	'ctrl+alt+m', 'ctrl+alt+v', 'ctrl+alt+x', 'ctrl+alt+a',
+]);
 
 test('no shortcut is one the browser answers first, or one that edits text', () => {
 	const reserved = new Set(BROWSER_RESERVED_CHORDS);
@@ -55,10 +84,30 @@ test('no shortcut is one the browser answers first, or one that edits text', () 
 
 test('the reserved list itself stays well-formed, so a typo cannot silently disable it', () => {
 	for (const chord of BROWSER_RESERVED_CHORDS) {
-		assert.match(chord, /^(ctrl|ctrl\+shift)\+[a-z]$/, chord);
+		assert.match(chord, /^(ctrl|ctrl\+shift|ctrl\+alt)\+[a-z]$/, chord);
 		assert.equal(chord, chord.toLowerCase(), chord);
 	}
 	assert.equal(new Set(BROWSER_RESERVED_CHORDS).size, BROWSER_RESERVED_CHORDS.length);
+	// Ctrl+Alt is barred as a SPACE, not letter by letter: on Windows the layout turns it into
+	// AltGr, so which letters type a character depends on the keyboard in front of the player.
+	for (const letter of 'abcdefghijklmnopqrstuvwxyz') {
+		assert.ok(BROWSER_RESERVED_CHORDS.includes(`ctrl+alt+${letter}`), `ctrl+alt+${letter}`);
+	}
+});
+
+test('every exemption is a real one, so the list cannot be padded to pass', () => {
+	const reserved = new Set(BROWSER_RESERVED_CHORDS);
+	const bound = new Set([
+		...keymapSpecs().map(spec => spec.toLowerCase()),
+		...familyShortcutSpecs().map(entry => entry.spec.toLowerCase()),
+	]);
+
+	for (const chord of KNOWN_PRE_EXISTING) {
+		assert.ok(reserved.has(chord), `${chord} is exempted from a list it is not on`);
+		// The day somebody rebinds one of these, its exemption has to go with it — otherwise the
+		// debt list outlives the debt and nobody can tell which entries still mean anything.
+		assert.ok(bound.has(chord), `${chord} is no longer bound: drop it from KNOWN_PRE_EXISTING`);
+	}
 });
 
 test('the typing command prefix is free, and is not a letter', () => {

@@ -1072,7 +1072,6 @@
     "help_cmd_categories_timer": "Announce the time remaining on the clock",
     "help_cmd_categories_answers": "Move between the answers being judged",
     "help_cmd_categories_verdicts": "Enter and leave the verdicts for the answer you are on",
-    "categories_sheet_group": "Your answers, all starting with {{letter}}",
     "categories_letter_label": "This round's letter is {{letter}}.",
     "help_typing_prefix": "Inside a text box the letters type themselves, so press {{keys}} first and then the key you would press anywhere else.",
     "typing_command_armed": "Command.",

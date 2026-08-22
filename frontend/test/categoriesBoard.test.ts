@@ -175,15 +175,21 @@ test('the letter die shows the round letter and re-rolls only when a new round d
 	assert.equal(die.classList.contains('categories-die--rolling'), true);
 });
 
-test('the whole sheet is ONE named group, carrying the round letter', () => {
+test('the whole sheet is ONE named group, named by the heading it sits under', () => {
 	const h = harness('p1');
 
 	const group = h.element.querySelector<HTMLElement>('.categories-sheet-group')!;
+	const heading = h.element.querySelector<HTMLElement>('#categories-sheet-title')!;
 
 	assert.equal(group.getAttribute('role'), 'group');
-	assert.match(group.getAttribute('aria-label')!, /\bR\b/);
-	// One group for twelve related fields, not twelve groups of one.
-	assert.equal(h.element.querySelectorAll('[role="group"]').length, 1);
+	// Borrowed, not paraphrased: a second sentence saying the same thing in slightly other
+	// words is read out immediately after this one, and one of them has to go.
+	assert.equal(group.getAttribute('aria-labelledby'), 'categories-sheet-title');
+	assert.equal(group.getAttribute('aria-label'), null);
+	assert.match(heading.textContent!, /\bR\b/, 'and the name still carries the round letter');
+	// One group for twelve related fields, not twelve groups of one. Scoped to the sheet: what
+	// the rest of the page does with groups is not this test's business.
+	assert.equal(h.element.querySelectorAll('.categories-sheet [role="group"]').length, 1);
 	// It WRAPS the list: role="group" on the <ol> itself would orphan every <li> inside it.
 	assert.ok(group.querySelector('ol.categories-sheet-list'), 'the list keeps its own semantics');
 	assert.equal(inputs(h).length, 2, 'and the fields still live inside it');

@@ -86,11 +86,13 @@ test('a shared Spanish deck, per-player interfaces and one full judged round', a
 	await flushAxeAudit(ana);
 
 	// ── Writing ───────────────────────────────────────────────────────────────
-	// ONE named group holds the whole sheet, and its name carries the round's letter.
+	// ONE named group holds the whole sheet, and it borrows the heading's words rather than
+	// paraphrasing them — entering the sheet must not say the same fact twice.
 	const sheetGroup = berto.locator('.categories-sheet-group');
 	await expect(sheetGroup).toHaveAttribute('role', 'group');
-	await expect(sheetGroup).toHaveAttribute('aria-label', new RegExp(`empezando por ${LETTER}`));
-	await expect(berto.locator('[role="group"]')).toHaveCount(1);
+	await expect(sheetGroup).toHaveAttribute('aria-labelledby', 'categories-sheet-title');
+	await expect(berto.getByRole('group')).toHaveAccessibleName(new RegExp(`empezando por ${LETTER}`));
+	await expect(berto.locator('.categories-sheet [role="group"]')).toHaveCount(1);
 
 	// Enter walks the sheet and stops ON the finish button rather than pressing it.
 	await sheetInput(berto, 0).focus();

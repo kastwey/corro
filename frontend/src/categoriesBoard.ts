@@ -79,7 +79,6 @@ export class CategoriesBoard {
 	private readonly sheetSection: HTMLElement;
 	private readonly sheetHeading: HTMLElement;
 	private readonly sheetList: HTMLOListElement;
-	private readonly sheetGroup: HTMLElement;
 	private readonly startButton: HTMLButtonElement;
 	private readonly finishButton: HTMLButtonElement;
 	private readonly finishHint: HTMLElement;
@@ -159,9 +158,13 @@ export class CategoriesBoard {
 			</section>
 			<section class="categories-sheet" aria-labelledby="categories-sheet-title" hidden>
 				<h3 id="categories-sheet-title"></h3>
-				<!-- The group WRAPS the list rather than replacing it: role="group" on the <ol>
-				     would strip its list semantics and orphan every <li> inside it. -->
-				<div class="categories-sheet-group" role="group">
+				<!-- ONE named group for the whole sheet: these twelve boxes are one set of related
+				     controls with one name, not twelve sets of one. It WRAPS the list rather than
+				     replacing it — role="group" on the <ol> would strip its list semantics and
+				     orphan every <li> — and it borrows the heading's own words instead of
+				     paraphrasing them, so entering the sheet does not say the same fact twice in
+				     two nearly identical sentences. -->
+				<div class="categories-sheet-group" role="group" aria-labelledby="categories-sheet-title">
 					<ol class="categories-sheet-list"></ol>
 				</div>
 				<div class="categories-controls">
@@ -196,7 +199,6 @@ export class CategoriesBoard {
 		this.sheetSection = this.required('.categories-sheet');
 		this.sheetHeading = this.required('#categories-sheet-title');
 		this.sheetList = this.required('.categories-sheet-list');
-		this.sheetGroup = this.required('.categories-sheet-group');
 		this.startButton = this.required('.categories-start');
 		this.finishButton = this.required('.categories-finish');
 		this.finishHint = this.required('#categories-finish-hint');
@@ -225,7 +227,9 @@ export class CategoriesBoard {
 		});
 		this.finishButton.addEventListener('click', () => {
 			if (this.finishButton.getAttribute('aria-disabled') === 'true') {
-				this.say(this.finishHint.textContent ?? '');
+				// Spoken only. The reason is already ON SCREEN in the hint this button points at
+				// with aria-describedby, so echoing it would print the same sentence twice.
+				this.deps.announce(this.finishHint.textContent ?? '');
 				return;
 			}
 			this.finishWriting();
@@ -501,12 +505,6 @@ export class CategoriesBoard {
 	private renderSheet(gs: GameState): void {
 		const round = gs.categories!.round;
 		this.sheetHeading.textContent = this.t('categories_sheet_title', { letter: round.letter });
-		// ONE named group for the whole sheet: these twelve boxes are one set of related
-		// controls with one name, not twelve sets of one. Repeating the name at every field
-		// would be a toll paid on every Tab.
-		this.sheetGroup.setAttribute('aria-label', this.t('categories_sheet_group', {
-			letter: round.letter,
-		}));
 		if (this.sheetRound === round.roundNumber) return;
 
 		this.sheetRound = round.roundNumber;
@@ -609,7 +607,10 @@ export class CategoriesBoard {
 					button.addEventListener('click', () => {
 						this.verdicts.set(answer.playerId, verdict);
 						this.refreshVerdictButtons(gs, prompt, round.letter);
-						this.say(this.t('categories_verdict_set', {
+						// Spoken only. The judge can SEE which verdict is in force — the buttons
+						// carry it — and what a category finally decided has its own panel. The
+						// echo answers questions this player asked, not actions they just took.
+						this.deps.announce(this.t('categories_verdict_set', {
 							player: categoriesPlayerName(gs, answer.playerId),
 							verdict: categoriesVerdictLabel(verdict, this.deps.tSync),
 						}));
