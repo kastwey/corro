@@ -337,7 +337,8 @@
 }
 
 /* The answer to a shortcut this player pressed. Quiet on purpose: it is personal, it never
-   leaves this browser, and it replaces itself rather than stacking up. */
+   leaves this browser, it replaces itself rather than stacking up, and it goes away on its
+   own — the seconds it reported were only true at the instant they were asked for. */
 .categories-echo {
   margin: 12px 0 0;
   padding: 8px 11px;

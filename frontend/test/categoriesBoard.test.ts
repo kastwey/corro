@@ -217,21 +217,78 @@ test('L says the letter and R the clock, and neither steals a keystroke from an 
 	assert.deepEqual(h.announced, []);
 });
 
+const ask = (h: Harness, key: string) =>
+	h.element.dispatchEvent(new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+
 test('a personal answer is also shown, quietly, and never twice to a screen reader', () => {
 	const h = harness('p1', 'writing');
 	const echo = h.element.querySelector<HTMLElement>('.categories-echo')!;
 
 	assert.equal(echo.hidden, true, 'nothing to echo before anything is asked');
 
-	h.element.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'l', bubbles: true, cancelable: true }));
+	ask(h, 'l');
 
 	assert.equal(echo.hidden, false);
 	assert.equal(echo.textContent, h.announced.at(-1));
 	// The live region already said it; showing it must not make it speak again.
 	assert.equal(echo.getAttribute('aria-hidden'), 'true');
 
-	h.element.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'r', bubbles: true, cancelable: true }));
+	ask(h, 'r');
 	assert.equal(echo.textContent, h.announced.at(-1), 'it replaces itself instead of stacking');
+});
+
+test('a shown answer expires on its own, and speaks no second time when it goes', () => {
+	const h = harness('p1', 'writing');
+	const echo = h.element.querySelector<HTMLElement>('.categories-echo')!;
+	ask(h, 'r');
+	const spoken = h.announced.length;
+
+	h.runTimers();
+
+	// "23 seconds remaining" was true when it was asked and false a second later; left on
+	// screen it would be read as the current state.
+	assert.equal(echo.hidden, true);
+	assert.equal(echo.textContent, '');
+	assert.equal(h.announced.length, spoken, 'the visible half is visual only, coming AND going');
+});
+
+test('a new round takes the previous round\'s answer off the screen', () => {
+	const h = harness('p1', 'writing');
+	const echo = h.element.querySelector<HTMLElement>('.categories-echo')!;
+	ask(h, 'l');
+	assert.equal(echo.hidden, false);
+
+	// The letter of round 1 is not an old answer once round 2 has its own: it is a wrong one.
+	(h.state as any).categories.round.roundNumber += 1;
+	(h.state as any).categories.round.letter = 'M';
+	h.render();
+
+	assert.equal(echo.hidden, true);
+	assert.equal(echo.textContent, '');
+});
+
+test('a phase change clears it too', () => {
+	const h = harness('p1', 'writing');
+	const echo = h.element.querySelector<HTMLElement>('.categories-echo')!;
+	ask(h, 'l');
+
+	(h.state as any).categories.round.phase = 'review';
+	h.render();
+
+	assert.equal(echo.hidden, true, 'the duty it answered is over');
+});
+
+test('an answer with nothing in it draws nothing at all', () => {
+	const h = harness('p1', 'writing');
+	const echo = h.element.querySelector<HTMLElement>('.categories-echo')!;
+	const finish = h.element.querySelector<HTMLElement>('.categories-finish')!;
+	finish.setAttribute('aria-disabled', 'true');
+	h.element.querySelector<HTMLElement>('#categories-finish-hint')!.textContent = '';
+
+	finish.click();
+
+	// An empty bordered box reads as a rendering bug to the player it was drawn for.
+	assert.equal(echo.hidden, true);
 });
 
 test('the surface declares both queries to the shortcuts help', () => {

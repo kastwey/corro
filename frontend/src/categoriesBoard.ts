@@ -52,6 +52,16 @@ const SAVE_DEBOUNCE_MS = 500;
  *  difference between a saved answer and a lost one is measured in exactly these seconds. */
 const URGENT_SAVE_SECONDS = 5;
 
+/**
+ * How long the visible echo of a query stays on screen.
+ *
+ * It is an ANSWER TO A QUESTION, not a status line: "23 seconds remaining" is true when it is
+ * asked and false a second later, and a stale answer left in place is worse for the player who
+ * reads it than no answer at all. Long enough to read at leisure, short enough that nobody
+ * takes it for the current state. The spoken half is unaffected: it was heard once, when asked.
+ */
+const ECHO_LIFETIME_MS = 12_000;
+
 const visible = (element: HTMLElement) => !element.hidden;
 
 type Verdict = Exclude<CategoriesVerdict, 'pending'>;
@@ -89,6 +99,10 @@ export class CategoriesBoard {
 	private verdicts = new Map<string, Verdict>();
 	private verdictsForPrompt = '';
 	private saveHandle: number | null = null;
+	/** The pending expiry of the visible echo, if one is on screen. */
+	private echoHandle: number | null = null;
+	/** The round and phase the echo was answered in; it goes stale when either moves on. */
+	private echoContext: string | null = null;
 	/** The round whose sheet is currently built, so typing is never re-rendered out from under
 	 *  the caret. */
 	private sheetRound = -1;
@@ -139,7 +153,8 @@ export class CategoriesBoard {
 					<button type="button" class="btn btn--primary categories-start"></button>
 				</div>
 				<!-- The answer to a shortcut this player pressed. Personal (it never leaves this
-				     browser), aria-hidden (the live region already said it) and self-replacing. -->
+				     browser), aria-hidden (the live region already said it), self-replacing, and
+				     short-lived: an answer that outlives the question it answered is a wrong one. -->
 				<p class="categories-echo" aria-hidden="true" hidden></p>
 			</section>
 			<section class="categories-sheet" aria-labelledby="categories-sheet-title" hidden>
@@ -301,11 +316,51 @@ export class CategoriesBoard {
 	 * the key; the visible half exists because a sighted player pressing the same shortcut got
 	 * nothing at all. It is aria-hidden and replaces itself: the live region has already said
 	 * this, and hearing it twice would be worse than not seeing it.
+	 *
+	 * What it shows always expires — on its own after a few seconds, and at once when the round
+	 * or the phase moves on. An answer nobody can tell is out of date is a lie in slow motion:
+	 * the round's letter is only this round's, and the seconds remaining were only ever true at
+	 * the instant they were asked for.
 	 */
 	private say(text: string): void {
 		this.deps.announce(text);
+		this.showEcho(text);
+	}
+
+	private showEcho(text: string): void {
+		this.cancelEcho();
+		// Nothing to show is not the same as something blank: an empty bordered box reads as a
+		// rendering bug to the player it was drawn for.
+		if (!text.trim()) return;
 		this.echo.textContent = text;
 		this.echo.hidden = false;
+		this.echoContext = this.echoContextKey();
+		const setTimer = this.deps.setTimer ?? ((handler, ms) => window.setTimeout(handler, ms));
+		this.echoHandle = setTimer(() => {
+			this.echoHandle = null;
+			this.clearEcho();
+		}, ECHO_LIFETIME_MS);
+	}
+
+	/** Takes the answer off the screen. Purely visual: nothing here is ever spoken again. */
+	private clearEcho(): void {
+		this.cancelEcho();
+		this.echoContext = null;
+		this.echo.textContent = '';
+		this.echo.hidden = true;
+	}
+
+	/** What an on-screen answer is only true FOR: this round, in this phase. */
+	private echoContextKey(): string | null {
+		const round = this.round();
+		return round ? `${round.roundNumber}:${round.phase}` : null;
+	}
+
+	private cancelEcho(): void {
+		if (this.echoHandle === null) return;
+		const clearTimer = this.deps.clearTimer ?? ((handle: number) => window.clearTimeout(handle));
+		clearTimer(this.echoHandle);
+		this.echoHandle = null;
 	}
 
 	// ── Commands ──────────────────────────────────────────────────────────────
@@ -376,6 +431,12 @@ export class CategoriesBoard {
 		const focusedInside = this.element.contains(document.activeElement);
 		const round = state.round;
 		const judging = round.judgeId === myId;
+
+		// A shown answer belongs to the round and phase it was asked in. Once either moves on it
+		// is not an old answer, it is a wrong one — the letter is another letter now.
+		if (this.echoContext !== null && this.echoContext !== `${round.roundNumber}:${round.phase}`) {
+			this.clearEcho();
+		}
 
 		this.localizeStatic();
 		this.renderScores(gs);
