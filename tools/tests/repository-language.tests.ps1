@@ -48,7 +48,16 @@ $languagePattern = [Regex]::new("$accentPattern|$wordPattern")
 
 $scriptFiles = @(& git -C $root ls-files -- '*.ps1' '*.psm1' '*.sh' '*.cmd' '*.bat' '*.js' '*.mjs' '*.cjs')
 if ($LASTEXITCODE -ne 0) { throw 'Could not enumerate tracked scripts.' }
-$filesToCheck = @($scriptFiles + 'AGENTS.md' + 'CLAUDE.md' + 'tools/tests/repository-language.tests.ps1' | Sort-Object -Unique)
+# Skills are authored instructions too, so they answer to the same language rule. These are read
+# from disk rather than from the index, because a skill is normally written and used well before it
+# is ever committed, and the check is worth having then rather than one commit later.
+$skillsRoot = Join-Path $root '.claude/skills'
+$skillFiles = @()
+if (Test-Path -LiteralPath $skillsRoot -PathType Container) {
+    $skillFiles = @(Get-ChildItem -LiteralPath $skillsRoot -Recurse -File -Filter '*.md' |
+        ForEach-Object { [IO.Path]::GetRelativePath($root, $_.FullName).Replace([char]92, [char]47) })
+}
+$filesToCheck = @($scriptFiles + $skillFiles + 'AGENTS.md' + 'CLAUDE.md' + 'tools/tests/repository-language.tests.ps1' | Sort-Object -Unique)
 $violations = New-Object System.Collections.Generic.List[string]
 
 foreach ($relativePath in $filesToCheck) {
