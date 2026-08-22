@@ -1,6 +1,6 @@
 ---
 name: reviewing-prs
-description: Reviews a pull request against Corro's own failure modes and drives it to green — how to read the change, how to prove a finding before claiming it, how to word it, and what to do when CI is red (job logs, the Playwright artefact, reproducing locally, telling a real defect from a race). Use whenever a PR is to be reviewed, analysed, commented on, watched, babysat or fixed, whenever a CI check fails on one, and whenever somebody asks "what's wrong with this PR" or "why is CI red" — including on the reviewer's own PRs.
+description: Reviews a pull request against Corro's own failure modes and drives it to green — how to read the change, how to prove a finding before claiming it, how to explain it to somebody who has not read the diff, and what to do when CI is red (job logs, the Playwright artefact, reproducing locally, telling a real defect from a race). Findings are explained and proposed, never acted on unprompted. Use whenever a PR is to be reviewed, analysed, commented on, watched, babysat or fixed, whenever a CI check fails on one, and whenever somebody asks "what's wrong with this PR" or "why is CI red" — including on the reviewer's own PRs.
 ---
 
 # Reviewing a pull request
@@ -10,19 +10,51 @@ description: Reviews a pull request against Corro's own failure modes and drives
 This is the third thing: reading somebody's change, proving what you think is wrong before you
 say it, saying it well, and getting the branch to green afterwards.
 
-## The posture: propose, don't push
+## The posture: explain, propose, wait
 
-**Default to a comment, and touch the branch only when asked to in so many words.** This holds
-even for a one-line fix, and even on a PR whose author is the person you are talking to.
+**A review produces findings, not changes.** Explain each one, propose a fix, and then stop and
+let the person you are talking to decide. Nothing is acted on — no edit to the branch, no
+comment posted on the PR — until they say so, and their "yes" to one finding is not a "yes" to
+the next one.
 
-The reason is not caution, it is ownership: the author has to live with this code and answer for
-it later, so the decision is theirs. A review that silently edits the branch also destroys the
-thing being reviewed — the author opens the diff expecting their change and finds somebody
-else's. And a finding you were sure about is sometimes wrong; a comment costs a reply, a push
-costs a revert and the author's trust in the next review.
+This is not caution for its own sake. Three things go wrong when a review starts fixing:
 
-When a fix is obvious and small, say so in the comment and offer to make it. "Push it" takes
-three words, and then you have permission.
+- **The decision was not yours to take.** The author has to live with this code and answer for
+  it later. A finding is information they act on; a push is a choice made for them.
+- **A review that edits the branch destroys what was under review.** The author opens the diff
+  expecting their change and finds somebody else's mixed into it.
+- **A finding you were certain of is sometimes wrong.** An explanation costs a reply; a push
+  costs a revert, and the next review gets read with one eye closed.
+
+An obvious one-line fix is not an exception — say in the finding that it is a one-liner and
+offer it. "Do it" takes two words, and then you have an instruction rather than a guess.
+
+## Explaining a finding
+
+Write for somebody who has not read the diff, does not have the file open, and should not have
+to. They are deciding whether this matters and what to do about it; they can only decide from
+what you tell them.
+
+Work in this order, and resist starting at the third step — that is the failure mode, and it
+reads as noise even when the finding is real:
+
+1. **What the thing is.** "Ctrl+F1 opens a table of every shortcut; for a screen-reader player
+   that table *is* the documentation." Name the feature in plain words before naming the defect.
+2. **What it does today**, concretely — the actual rows, the actual string, the actual
+   keystroke. Concrete beats accurate-but-abstract: six named rows that lie land where "the
+   default is unsound" does not.
+3. **Why that is wrong, and who it hurts.** A defect with no victim is a preference. "A blind
+   player concludes their screen reader ate the keystroke" is the sentence that makes a finding
+   worth acting on.
+4. **The smallest fix you can see**, offered as a proposal with its trade-off, not as a verdict.
+
+Assume none of the vocabulary. Module names, helper functions and repo idioms are shorthand for
+things the reader may know perfectly well and still not have in mind right now; spell out what
+each one does the first time it appears. Cite `file.ts:line` so the claim can be checked — but
+never let the citation stand in for the explanation.
+
+The test: could somebody who has not opened the repository today tell you whether this finding
+matters? If not, it is not explained yet.
 
 ## 1. Read the change
 
@@ -109,15 +141,18 @@ A review that is wrong twice stops being read. Before writing a finding down:
 - If you could not check something, say which part you could not check rather than rounding it
   up to a claim.
 
-## 4. Say it
+## 4. Deliver it
 
-English, like everything else in the repo. Order by severity, and for each finding give the
-three things a reader needs: what is wrong, why it matters *here*, and the smallest fix you can
-see. A finding with no proposed fix is a complaint.
+Give the findings in one pass, ordered by severity, each explained as above, and say plainly
+which you would act on first and why. Then hand the decision over: which findings to take, in
+what order, and whether each becomes a PR comment or a change. Waiting is the work here, not an
+interruption of it.
 
-Design-level arguments go in one general comment where the reasoning can be followed; a defect
-in a specific line goes inline on that line. Several nits from one cause are one comment, not
-six. End every comment with the attribution footer so a reader knows what wrote it.
+Once something is confirmed, publishing it follows the repo's usual rules: English, like every
+other artefact here. A design-level argument goes in one general comment where the reasoning can
+be followed; a defect in a specific line goes inline on that line. Several nits from one cause
+are one comment, not six. Every comment ends with the attribution footer, so a reader knows what
+wrote it.
 
 ## 5. When CI is red
 
