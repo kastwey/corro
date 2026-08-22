@@ -57,7 +57,11 @@ public partial class GameHub : Hub
 	/// </summary>
 	private async Task<string?> HandleOfCallerAsync()
 	{
-		if (_users is null || SignedInUserId() is not { Length: > 0 } userId) return null;
+		if (_users is null || SignedInUserId() is not { Length: > 0 } userId)
+		{
+			return null;
+		}
+
 		var user = await _users.GetUserAsync(userId);
 		return user?.Handle is { Length: > 0 } handle ? handle : null;
 	}

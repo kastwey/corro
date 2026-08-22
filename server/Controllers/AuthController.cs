@@ -377,7 +377,10 @@ public class AuthController : ControllerBase
 		[FromQuery] string handle, CancellationToken ct)
 	{
 		var userId = SessionPrincipal.UserId(User);
-		if (userId is null) return Unauthorized();
+		if (userId is null)
+		{
+			return Unauthorized();
+		}
 
 		var rejection = PlayerHandle.Validate(handle);
 		return new
@@ -397,7 +400,10 @@ public class AuthController : ControllerBase
 		[FromBody] HandleRequest request, CancellationToken ct)
 	{
 		var userId = SessionPrincipal.UserId(User);
-		if (userId is null) return Unauthorized();
+		if (userId is null)
+		{
+			return Unauthorized();
+		}
 
 		var result = await _accounts.SetHandleAsync(userId, request.Handle ?? string.Empty, DateTime.UtcNow, ct);
 		return result.Outcome switch
@@ -426,7 +432,10 @@ public class AuthController : ControllerBase
 		[FromBody] MessagePolicyRequest request, CancellationToken ct)
 	{
 		var userId = SessionPrincipal.UserId(User);
-		if (userId is null) return Unauthorized();
+		if (userId is null)
+		{
+			return Unauthorized();
+		}
 
 		if (!Enum.TryParse<MessagePolicy>(request?.Policy, ignoreCase: true, out var policy)
 			|| !Enum.IsDefined(policy))
@@ -456,7 +465,10 @@ public class AuthController : ControllerBase
 		[FromBody] UnlockCodesRequest request, CancellationToken ct)
 	{
 		var userId = SessionPrincipal.UserId(User);
-		if (userId is null) return Unauthorized();
+		if (userId is null)
+		{
+			return Unauthorized();
+		}
 
 		var codes = await _accounts.AddUnlockCodesAsync(
 			userId, request?.Codes ?? Array.Empty<string>(), ct);
@@ -476,7 +488,10 @@ public class AuthController : ControllerBase
 		[FromBody] VisibilityRequest request, CancellationToken ct)
 	{
 		var userId = SessionPrincipal.UserId(User);
-		if (userId is null) return Unauthorized();
+		if (userId is null)
+		{
+			return Unauthorized();
+		}
 
 		if (!Enum.TryParse<PresenceVisibility>(request?.Visibility, ignoreCase: true, out var visibility)
 			|| !Enum.IsDefined(visibility))

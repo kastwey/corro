@@ -95,7 +95,11 @@ public class FriendshipService
 		CancellationToken ct = default)
 	{
 		var target = await ListedAccountByHandleAsync(targetHandle, ct);
-		if (target is null) return RequestOutcome.NoSuchPlayer;
+		if (target is null)
+		{
+			return RequestOutcome.NoSuchPlayer;
+		}
+
 		return await RequestBetweenAsync(fromUserId, target, utcNow, ct);
 	}
 
@@ -117,9 +121,17 @@ public class FriendshipService
 		DateTime utcNow,
 		CancellationToken ct = default)
 	{
-		if (targetUserId == fromUserId) return RequestOutcome.Self;
+		if (targetUserId == fromUserId)
+		{
+			return RequestOutcome.Self;
+		}
+
 		var target = await _repository.GetUserAsync(targetUserId, ct);
-		if (target?.Handle is not { Length: > 0 }) return RequestOutcome.NoSuchPlayer;
+		if (target?.Handle is not { Length: > 0 })
+		{
+			return RequestOutcome.NoSuchPlayer;
+		}
+
 		return await RequestBetweenAsync(fromUserId, target, utcNow, ct);
 	}
 
@@ -131,7 +143,10 @@ public class FriendshipService
 		DateTime utcNow,
 		CancellationToken ct)
 	{
-		if (target.UserId == fromUserId) return RequestOutcome.Self;
+		if (target.UserId == fromUserId)
+		{
+			return RequestOutcome.Self;
+		}
 
 		var (low, high) = FriendshipKey.Order(fromUserId, target.UserId);
 		var pairId = FriendshipKey.For(fromUserId, target.UserId);
@@ -189,12 +204,21 @@ public class FriendshipService
 		CancellationToken ct = default)
 	{
 		var other = await AccountByHandleAsync(otherHandle, ct);
-		if (other is null) return RespondOutcome.NoRequest;
+		if (other is null)
+		{
+			return RespondOutcome.NoRequest;
+		}
 
 		var stored = await _repository.GetFriendshipAsync(FriendshipKey.For(userId, other.UserId), ct);
-		if (stored is null || stored.State != FriendshipState.Pending) return RespondOutcome.NoRequest;
+		if (stored is null || stored.State != FriendshipState.Pending)
+		{
+			return RespondOutcome.NoRequest;
+		}
 		// Answering your own request is not answering anything.
-		if (stored.RequestedBy == userId) return RespondOutcome.NoRequest;
+		if (stored.RequestedBy == userId)
+		{
+			return RespondOutcome.NoRequest;
+		}
 
 		await _repository.ReplaceFriendshipAsync(stored with
 		{
@@ -221,11 +245,21 @@ public class FriendshipService
 		CancellationToken ct = default)
 	{
 		var other = await AccountByHandleAsync(otherHandle, ct);
-		if (other is null) return false;
+		if (other is null)
+		{
+			return false;
+		}
 
 		var stored = await _repository.GetFriendshipAsync(FriendshipKey.For(userId, other.UserId), ct);
-		if (stored is null || stored.State != FriendshipState.Accepted) return false;
-		if (stored.UserA != userId && stored.UserB != userId) return false;
+		if (stored is null || stored.State != FriendshipState.Accepted)
+		{
+			return false;
+		}
+
+		if (stored.UserA != userId && stored.UserB != userId)
+		{
+			return false;
+		}
 
 		await _repository.DeleteFriendshipAsync(stored.PairId, ct);
 		return true;
@@ -248,13 +282,22 @@ public class FriendshipService
 			var relationship = RelationshipFor(friendship, userId);
 			// A refusal is not a relationship anybody lists. The refuser sees nothing; the refused
 			// player keeps seeing "asked", which RelationshipFor already reports.
-			if (relationship == Relationship.None) continue;
+			if (relationship == Relationship.None)
+			{
+				continue;
+			}
 
 			var otherId = FriendshipKey.Other(friendship.UserA, friendship.UserB, userId);
-			if (otherId is null) continue;
+			if (otherId is null)
+			{
+				continue;
+			}
 
 			var other = await _repository.GetUserAsync(otherId, ct);
-			if (other?.Handle is not { Length: > 0 } handle) continue;
+			if (other?.Handle is not { Length: > 0 } handle)
+			{
+				continue;
+			}
 
 			views.Add(new FriendView(handle, relationship));
 		}
@@ -278,7 +321,11 @@ public class FriendshipService
 		foreach (var friendship in friendships)
 		{
 			var otherId = FriendshipKey.Other(friendship.UserA, friendship.UserB, userId);
-			if (otherId is null) continue;
+			if (otherId is null)
+			{
+				continue;
+			}
+
 			byOther[otherId] = RelationshipFor(friendship, userId);
 		}
 
@@ -342,11 +389,17 @@ public class FriendshipService
 	private async Task<UserDocument?> AccountByHandleAsync(string handle, CancellationToken ct)
 	{
 		var normalized = PlayerHandle.Normalize(handle ?? string.Empty);
-		if (normalized.Length == 0) return null;
+		if (normalized.Length == 0)
+		{
+			return null;
+		}
 
 		var claim = await _repository.GetHandleClaimAsync(normalized, ct);
 		// A released handle names nobody: its last holder gave it up.
-		if (claim is null || claim.ReleasedAtUtc is not null) return null;
+		if (claim is null || claim.ReleasedAtUtc is not null)
+		{
+			return null;
+		}
 
 		var user = await _repository.GetUserAsync(claim.UserId, ct);
 		// The claim is the lock, but the account is the truth: a claim whose holder no longer wears

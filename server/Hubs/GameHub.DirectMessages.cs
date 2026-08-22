@@ -71,17 +71,34 @@ public partial class GameHub
 			Unreachable = Array.Empty<string>(),
 		};
 
-		if (_users is null || _presence is null) return empty;
-		if (SignedInUserId() is not { Length: > 0 } senderId) return empty;
+		if (_users is null || _presence is null)
+		{
+			return empty;
+		}
+
+		if (SignedInUserId() is not { Length: > 0 } senderId)
+		{
+			return empty;
+		}
 
 		var sender = await _users.GetUserAsync(senderId);
 		// Somebody with no public name cannot be written back to, so they may not write. It is the
 		// same rule the friends list makes: a conversation needs two nameable ends.
-		if (sender?.Handle is not { Length: > 0 } senderHandle) return empty;
+		if (sender?.Handle is not { Length: > 0 } senderHandle)
+		{
+			return empty;
+		}
 
 		var text = (request?.Text ?? string.Empty).Trim();
-		if (text.Length == 0) return empty;
-		if (text.Length > DirectMessageMaxLength) text = text[..DirectMessageMaxLength];
+		if (text.Length == 0)
+		{
+			return empty;
+		}
+
+		if (text.Length > DirectMessageMaxLength)
+		{
+			text = text[..DirectMessageMaxLength];
+		}
 
 		var wanted = (request?.Handles ?? Array.Empty<string>())
 			.Where(handle => !string.IsNullOrWhiteSpace(handle))
@@ -90,7 +107,10 @@ public partial class GameHub
 			.Distinct(StringComparer.Ordinal)
 			.Take(DirectMessageMaxRecipients)
 			.ToList();
-		if (wanted.Count == 0) return empty;
+		if (wanted.Count == 0)
+		{
+			return empty;
+		}
 
 		var friendships = _friendships is null
 			? new Dictionary<string, FriendshipService.Relationship>()
@@ -101,8 +121,14 @@ public partial class GameHub
 		foreach (var handle in wanted)
 		{
 			var recipient = await RecipientForAsync(handle, senderId, friendships);
-			if (recipient is null) unreachable.Add(handle);
-			else reachable.Add((recipient, recipient.Handle!));
+			if (recipient is null)
+			{
+				unreachable.Add(handle);
+			}
+			else
+			{
+				reachable.Add((recipient, recipient.Handle!));
+			}
 		}
 
 		if (reachable.Count == 0)
@@ -128,7 +154,11 @@ public partial class GameHub
 		foreach (var (user, _) in reachable)
 		{
 			var connections = _presence.ConnectionsOf(user.UserId).ToList();
-			if (connections.Count == 0) continue;
+			if (connections.Count == 0)
+			{
+				continue;
+			}
+
 			await Clients.Clients(connections).SendAsync("DirectMessage", message);
 		}
 
@@ -155,7 +185,10 @@ public partial class GameHub
 	/// </summary>
 	private async Task AnnouncePresenceAsync(string userId, bool arriving)
 	{
-		if (_users is null || _presence is null) return;
+		if (_users is null || _presence is null)
+		{
+			return;
+		}
 
 		// The count first: it is for everyone and does not depend on who arrived.
 		await Clients.All.SendAsync("PresenceCount", new
@@ -165,8 +198,15 @@ public partial class GameHub
 		});
 
 		var user = await _users.GetUserAsync(userId);
-		if (user?.Handle is not { Length: > 0 } handle) return;
-		if (user.EffectiveVisibility == PresenceVisibility.Nobody) return;  // nothing to announce
+		if (user?.Handle is not { Length: > 0 } handle)
+		{
+			return;
+		}
+
+		if (user.EffectiveVisibility == PresenceVisibility.Nobody)
+		{
+			return;  // nothing to announce
+		}
 
 		var friendIds = _friendships is null
 			? new Dictionary<string, FriendshipService.Relationship>()
@@ -175,16 +215,27 @@ public partial class GameHub
 
 		foreach (var readerId in _presence.OnlineUserIds())
 		{
-			if (readerId == userId) continue;
+			if (readerId == userId)
+			{
+				continue;
+			}
+
 			var isFriend = friendIds.GetValueOrDefault(readerId, FriendshipService.Relationship.None)
 				== FriendshipService.Relationship.Friends;
 			// "Only friends" means exactly that, here as everywhere else.
 			if (!ReachRules.IsVisibleTo(user, isFriend
 				? FriendshipService.Relationship.Friends
-				: FriendshipService.Relationship.None)) continue;
+				: FriendshipService.Relationship.None))
+			{
+				continue;
+			}
 
 			var connections = _presence.ConnectionsOf(readerId).ToList();
-			if (connections.Count == 0) continue;
+			if (connections.Count == 0)
+			{
+				continue;
+			}
+
 			await Clients.Clients(connections).SendAsync("PresenceChanged", new
 			{
 				handle,
@@ -211,16 +262,33 @@ public partial class GameHub
 		IReadOnlyDictionary<string, FriendshipService.Relationship> friendships)
 	{
 		var claim = await _users!.GetHandleClaimAsync(normalizedHandle);
-		if (claim is null || claim.ReleasedAtUtc is not null) return null;
+		if (claim is null || claim.ReleasedAtUtc is not null)
+		{
+			return null;
+		}
 
 		var user = await _users.GetUserAsync(claim.UserId);
-		if (user?.Handle is not { Length: > 0 } stored) return null;
-		if (PlayerHandle.Normalize(stored) != normalizedHandle) return null;
-		if (user.UserId == senderId) return null;
+		if (user?.Handle is not { Length: > 0 } stored)
+		{
+			return null;
+		}
+
+		if (PlayerHandle.Normalize(stored) != normalizedHandle)
+		{
+			return null;
+		}
+
+		if (user.UserId == senderId)
+		{
+			return null;
+		}
 
 		var relationship = friendships.GetValueOrDefault(
 			user.UserId, FriendshipService.Relationship.None);
-		if (!ReachRules.AcceptsFrom(user, relationship)) return null;
+		if (!ReachRules.AcceptsFrom(user, relationship))
+		{
+			return null;
+		}
 
 		// Nothing is stored, so somebody who is not here cannot be reached. Reported as one
 		// outcome with all the others.

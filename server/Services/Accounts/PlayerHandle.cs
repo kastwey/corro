@@ -63,11 +63,26 @@ public static class PlayerHandle
 	public static Rejection Validate(string? handle)
 	{
 		var trimmed = (handle ?? string.Empty).Trim();
-		if (trimmed.Length < MinLength) return Rejection.TooShort;
-		if (trimmed.Length > MaxLength) return Rejection.TooLong;
+		if (trimmed.Length < MinLength)
+		{
+			return Rejection.TooShort;
+		}
+
+		if (trimmed.Length > MaxLength)
+		{
+			return Rejection.TooLong;
+		}
 		// Checked after length so "" reports "too short" rather than the less helpful "bad characters".
-		if (!Allowed.IsMatch(trimmed)) return Rejection.BadCharacters;
-		if (Reserved.Contains(Normalize(trimmed))) return Rejection.Reserved;
+		if (!Allowed.IsMatch(trimmed))
+		{
+			return Rejection.BadCharacters;
+		}
+
+		if (Reserved.Contains(Normalize(trimmed)))
+		{
+			return Rejection.Reserved;
+		}
+
 		return Rejection.None;
 	}
 
@@ -78,8 +93,16 @@ public static class PlayerHandle
 	/// </summary>
 	public static bool CanTakeOver(HandleClaim existing, string byUserId, DateTime utcNow)
 	{
-		if (existing.UserId == byUserId) return true;
-		if (existing.ReleasedAtUtc is not { } released) return false;
+		if (existing.UserId == byUserId)
+		{
+			return true;
+		}
+
+		if (existing.ReleasedAtUtc is not { } released)
+		{
+			return false;
+		}
+
 		return utcNow - released >= ReleaseCooldown;
 	}
 

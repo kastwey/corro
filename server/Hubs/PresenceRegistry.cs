@@ -41,9 +41,16 @@ public sealed class PresenceRegistry
 	/// <summary>Drop one connection. The person only leaves with their last one.</summary>
 	public void Remove(string userId, string connectionId)
 	{
-		if (!_byUser.TryGetValue(userId, out var connections)) return;
+		if (!_byUser.TryGetValue(userId, out var connections))
+		{
+			return;
+		}
+
 		connections.TryRemove(connectionId, out _);
-		if (connections.IsEmpty) _byUser.TryRemove(userId, out _);
+		if (connections.IsEmpty)
+		{
+			_byUser.TryRemove(userId, out _);
+		}
 	}
 
 	public bool IsOnline(string userId) => _byUser.ContainsKey(userId);
