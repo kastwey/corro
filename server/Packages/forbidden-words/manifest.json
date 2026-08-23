@@ -9,10 +9,7 @@
   },
   "author": "Corro contributors",
   "version": "1.1.0",
-  "locales": [
-    "en",
-    "es"
-  ],
+  "locales": ["en", "es"],
   "players": {
     "min": 4,
     "max": 8
@@ -25,38 +22,14 @@
     "cycles": 5
   },
   "tokens": [
-    {
-      "id": "spark",
-      "nameKey": "tokens.spark"
-    },
-    {
-      "id": "orbit",
-      "nameKey": "tokens.orbit"
-    },
-    {
-      "id": "prism",
-      "nameKey": "tokens.prism"
-    },
-    {
-      "id": "wave",
-      "nameKey": "tokens.wave"
-    },
-    {
-      "id": "leaf",
-      "nameKey": "tokens.leaf"
-    },
-    {
-      "id": "comet",
-      "nameKey": "tokens.comet"
-    },
-    {
-      "id": "pulse",
-      "nameKey": "tokens.pulse"
-    },
-    {
-      "id": "knot",
-      "nameKey": "tokens.knot"
-    }
+    { "id": "spark", "nameKey": "tokens.spark" },
+    { "id": "orbit", "nameKey": "tokens.orbit" },
+    { "id": "prism", "nameKey": "tokens.prism" },
+    { "id": "wave", "nameKey": "tokens.wave" },
+    { "id": "leaf", "nameKey": "tokens.leaf" },
+    { "id": "comet", "nameKey": "tokens.comet" },
+    { "id": "pulse", "nameKey": "tokens.pulse" },
+    { "id": "knot", "nameKey": "tokens.knot" }
   ],
   "houseRules": [
     {
