@@ -465,14 +465,20 @@ public static class SheddingTurnFlow
 			if (p != null) { p.FinishPlace = index + 1; p.Status = PlayerStatus.Finished; }
 		}
 
-		// The match goes to whoever heads the placings: still the round winner under "collect"
-		// (no other seat can be at the target, and a level score goes to the hand that emptied),
-		// the lowest score under "penalty". Reading it off the placings keeps WinnerId and first
-		// place naming the same player in both directions.
+		// The match goes to whoever heads the placings: the highest score under "collect", the
+		// lowest under "penalty", a level score going to the hand that emptied. Under a TARGET
+		// ending that head is still the round winner; a ROUNDS ending just stops at a fixed
+		// round, so any seat can be in front of them. Reading it off the placings keeps WinnerId
+		// and first place naming the same player either way.
 		var champion = context.GameState.Players
 			.FirstOrDefault(p => p.Id == placings.FirstOrDefault()?.PlayerId) ?? winner;
 
-		if (penalty && placings.Count > 0 && placings[^1].Score >= runtime.Rules.TargetScore
+		// Only a match played TO the target can be lost by reaching it. Under a rounds ending the
+		// target is not in force — the lobby doesn't even show it to the host, so it sits at the
+		// package default — and a long penalty match crosses it on the way: the table would hear
+		// "reaches 500 points and loses the match" and then, immediately, "Ana wins".
+		if (penalty && runtime.Rules.EndMode != "rounds"
+			&& placings.Count > 0 && placings[^1].Score >= runtime.Rules.TargetScore
 			&& runtime.Rules.TargetScore > 0)
 		{
 			// Last place carries the highest total: those are the points that ended the match.

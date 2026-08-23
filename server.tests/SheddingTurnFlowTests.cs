@@ -486,6 +486,29 @@ public class SheddingTurnFlowTests
 		Assert.DoesNotContain("game.shedding_match_lost", Keys(context)); // there was no target to reach
 	}
 
+	[Fact]
+	public async Task A_rounds_match_never_says_anyone_lost_by_reaching_a_target_the_host_never_set()
+	{
+		// The rounds ending hides the target from the host, so it stays at the package default —
+		// which a penalty match of any length crosses on the way. Reading the crossing as a loss
+		// gave one match two endings: "b reaches 500 points and loses" and then "a wins".
+		var (state, context) = Game(
+			rules: new SheddingRulesConfig { EndMode = "rounds", Rounds = 1, Scoring = "penalty" },
+			hands: new[]
+			{
+				("a", new[] { "red-7" }),
+				("b", new[] { "wild" }), // 50 banked on top of 495: past the untouched 500
+			});
+		SheddingRulebook.SeatOf(state.Shedding!, "b").Score = 495;
+
+		Assert.True(Assert.IsType<SheddingActionResponse>(await Play(context, state, "a", "red-7#0")).GameEnded);
+
+		Assert.Equal("a", state.WinnerId); // the lowest score still wins under penalty
+		Assert.Equal(545, SheddingRulebook.SeatOf(state.Shedding!, "b").Score);
+		Assert.DoesNotContain("game.shedding_match_lost", Keys(context));
+		Assert.Contains("game.game_over", Keys(context)); // one ending, and it is this one
+	}
+
 	// ── Leaving ───────────────────────────────────────────────────────────────
 
 	[Fact]
