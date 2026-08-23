@@ -86,7 +86,6 @@ public interface IGameCommandExecutor
 	/// earcons/visuals. The audience of each dispatch is preserved for per-player rendering.
 	/// </summary>
 	event Func<IReadOnlyList<AnnouncementDispatch>, Task> OnGameEvents;
-	event Func<Square, Task> OnSquareChanged;
 	event Func<CardDrawnNotification, Task> OnCardDrawn;
 
 	/// <summary>

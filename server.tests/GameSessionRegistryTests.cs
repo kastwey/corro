@@ -433,7 +433,6 @@ public class GameSessionRegistryTests
 		public void AttachPackageDefinition(GameDefinition definition) { }
 		public event Func<GameState, Task>? OnGameStateChanged { add { } remove { } }
 		public event Func<IReadOnlyList<AnnouncementDispatch>, Task>? OnGameEvents { add { } remove { } }
-		public event Func<Square, Task>? OnSquareChanged { add { } remove { } }
 		public event Func<CardDrawnNotification, Task>? OnCardDrawn { add { } remove { } }
 		public event Func<ServerResponse, Task>? OnBroadcast { add { } remove { } }
 	}

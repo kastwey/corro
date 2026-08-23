@@ -788,8 +788,8 @@ public sealed class GameSessionRegistry
 			await _hub.Clients.Group(gameId).SendAsync("CommandResponse", response);
 
 			// Broadcast the full updated state so every board repaints ownership, money and turn after a
-			// timer-driven auction end (the per-square "SquareChanged" message has no client handler).
-			// NotifyStateChangedAsync also persists via the OnGameStateChanged subscription.
+			// timer-driven auction end. NotifyStateChangedAsync also persists via the
+			// OnGameStateChanged subscription.
 			await gameService.NotifyStateChangedAsync();
 
 			_logger?.LogInformation("EndAuctionViaCommand: Auction ended for {GameId}", gameId);
@@ -897,9 +897,6 @@ public sealed class GameSessionRegistry
 			}
 			_logger?.LogDebug("GameEvents batch ({Count} events) sent for game {GameId}", dispatches.Count, gameId);
 		};
-
-		gameService.OnSquareChanged += async (square) =>
-			await _hub.Clients.Group(gameId).SendAsync("SquareChanged", square);
 
 		gameService.OnCardDrawn += async (card) =>
 			await _hub.Clients.Group(gameId).SendAsync("CardDrawn", card);
