@@ -160,6 +160,42 @@ test('a conditional rule is shown only while its choice sits on the option it be
 	container.remove();
 });
 
+// The panel is a FIXED element whose innerHTML is replaced, and both callers re-render it on
+// every board the host tries. Watching it once per render left one more listener behind each
+// time. Nothing visibly broke — the sync is idempotent — it just piled up.
+test('re-rendering the same panel does not stack another visibility listener', () => {
+	const container = document.createElement('div');
+	document.body.appendChild(container);
+	let listeners = 0;
+	const addEventListener = container.addEventListener.bind(container);
+	container.addEventListener = ((type: string, ...rest: unknown[]) => {
+		if (type === 'change') listeners++;
+		(addEventListener as (...args: unknown[]) => void)(type, ...rest);
+	}) as typeof container.addEventListener;
+
+	for (let board = 0; board < 3; board++) {
+		container.innerHTML = renderHouseRules([], [
+			{
+				id: 'endMode', type: 'choice', default: 'score', editableByHost: true,
+				options: [{ id: 'score' }, { id: 'rounds' }],
+			},
+			{ id: 'rounds', type: 'number', default: 15, editableByHost: true, showWhen: { rule: 'endMode', is: 'rounds' } },
+		], k => k);
+		syncHouseRuleVisibility(container);
+		watchHouseRuleVisibility(container);
+	}
+
+	assert.equal(listeners, 1);
+
+	// The one that survived is on the container, so it still reaches the LAST render's radios.
+	const roundsRadio = container.querySelector<HTMLInputElement>('[data-rule-id="endMode"][value="rounds"]')!;
+	roundsRadio.checked = true;
+	roundsRadio.dispatchEvent(new window.Event('change', { bubbles: true }));
+	assert.equal(container.querySelector<HTMLElement>('.rule-conditional')!.hidden, false);
+
+	container.remove();
+});
+
 test('focus never stays on a rule that is being hidden', () => {
 	const container = document.createElement('div');
 	container.innerHTML = renderHouseRules([], [

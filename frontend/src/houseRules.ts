@@ -84,8 +84,17 @@ export function syncHouseRuleVisibility(container: HTMLElement): void {
 	});
 }
 
-/** Keeps the conditional rules in step with their choice while the host edits the form. */
+/**
+ * Keeps the conditional rules in step with their choice while the host edits the form.
+ *
+ * Called once per RENDER, but the container it watches outlives every render — both callers own a
+ * fixed element and only replace its innerHTML — so a host trying four boards left four listeners
+ * behind. Marking the container makes the second call a no-op: nothing visibly broke, since the
+ * sync is idempotent, it just piled up.
+ */
 export function watchHouseRuleVisibility(container: HTMLElement): void {
+	if (container.dataset.ruleVisibilityWatched === 'yes') return;
+	container.dataset.ruleVisibilityWatched = 'yes';
 	container.addEventListener('change', event => {
 		const target = event.target as HTMLElement | null;
 		if (target?.dataset?.ruleType !== 'choice') return;
