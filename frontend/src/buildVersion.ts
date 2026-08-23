@@ -89,6 +89,31 @@ export function deploymentSentence(info: BuildVersion, translate: Translate, lan
 }
 
 /**
+ * The mark every link that leaves this site carries, drawn exactly as the footer's own (see
+ * index.html). A screen reader is told about the new window by the link's accessible name; this
+ * is the same promise for somebody who is looking at it, and it is decorative on purpose.
+ */
+function externalMark(doc: Document): SVGElement {
+	const NS = 'http://www.w3.org/2000/svg';
+	const svg = doc.createElementNS(NS, 'svg');
+	svg.setAttribute('class', 'version-details__icon');
+	svg.setAttribute('viewBox', '0 0 24 24');
+	svg.setAttribute('fill', 'none');
+	svg.setAttribute('stroke', 'currentColor');
+	svg.setAttribute('stroke-width', '2');
+	svg.setAttribute('stroke-linecap', 'round');
+	svg.setAttribute('stroke-linejoin', 'round');
+	svg.setAttribute('aria-hidden', 'true');
+	svg.setAttribute('focusable', 'false');
+	for (const d of ['M14 5h5v5', 'M10 14 19 5', 'M19 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h4']) {
+		const path = doc.createElementNS(NS, 'path');
+		path.setAttribute('d', d);
+		svg.appendChild(path);
+	}
+	return svg;
+}
+
+/**
  * The dialog's body: what this build is, and the way to read the commit behind it.
  *
  * Built as elements rather than as markup so nothing from the server is ever parsed as HTML, and
@@ -111,13 +136,14 @@ export function buildVersionDetails(
 		const commit = doc.createElement('p');
 		if (info.commitUrl) {
 			const link = doc.createElement('a');
-			link.className = 'app-footer__external-link';
+			link.className = 'version-details__link';
 			link.href = info.commitUrl;
 			link.target = '_blank';
 			link.rel = 'noopener noreferrer';
 			link.textContent = translate('footer.versionCommit', { commit: info.commit });
 			link.setAttribute(
 				'aria-label', translate('footer.versionCommitNewWindowLabel', { commit: info.commit }));
+			link.appendChild(externalMark(doc));
 			commit.appendChild(link);
 		} else {
 			// The build knows what it was made from; this deployment just cannot point at it.
@@ -180,7 +206,9 @@ export function renderVersion(
 		return false;
 	}
 	button.textContent = translate('footer.version', { version: info.version });
-	button.addEventListener('click', () => onOpen(button));
+	// Assigned rather than added: rendering twice (a language change, a re-read of the stamp) must
+	// leave ONE handler behind, not two dialogs opening on top of each other.
+	button.onclick = () => onOpen(button);
 	host.hidden = false;
 	return true;
 }

@@ -58,6 +58,35 @@ test('the footer states the build, and opening it explains what that means', asy
 	await expect(dialog).toBeHidden();
 });
 
+test('a deployment that cannot point at its commit still names it, without a dead link', async ({ browser }) => {
+	const page = await newPlayerPage(browser);
+	// A host whose repository is not somewhere a browser can open — a private mirror, an SSH
+	// remote. The build still knows what it was made from, so the dialog says so in plain words
+	// instead of offering a link to nowhere. Reached here because Axe only inspects states a
+	// scenario arrives at, and this paragraph exists in no other one.
+	await page.route('**/api/config/version', route => route.fulfill({
+		status: 200,
+		contentType: 'application/json',
+		body: JSON.stringify({
+			configured: true,
+			version: VERSION,
+			commit: COMMIT,
+			commitUrl: null,
+			deployedAt: '2026-08-23T14:32:10Z',
+		}),
+	}));
+
+	await gotoLobbyHome(page);
+	await page.locator('#site-version-btn').click();
+	const dialog = page.locator('.game-dialog.dialog-version');
+	await expect(dialog).toBeVisible();
+	await expect(dialog).toContainText('Compilada a partir del commit 0123456.');
+	await expect(dialog.locator('a')).toHaveCount(0);
+	await flushAxeAudit(page);
+	await page.keyboard.press('Escape');
+	await expect(dialog).toBeHidden();
+});
+
 test('a build that was never stamped shows no version at all', async ({ browser }) => {
 	const page = await newPlayerPage(browser);
 	// What a clone run from source answers: there is no stamp, so there is nothing to say.

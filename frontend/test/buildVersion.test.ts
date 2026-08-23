@@ -158,6 +158,13 @@ test('the dialog states the build and offers the commit as a link out', () => {
 	assert.equal(link.getAttribute('rel'), 'noopener noreferrer');
 	// The accessible name contains the visible text, so saying what is written activates it.
 	assert.ok((link.getAttribute('aria-label') ?? '').startsWith(link.textContent ?? ''));
+
+	// And it carries the same mark as every other link out of this site, hidden from the reader
+	// who was already told about the new window in words.
+	const mark = link.querySelector('svg');
+	assert.equal(mark?.getAttribute('class'), 'version-details__icon');
+	assert.equal(mark?.getAttribute('aria-hidden'), 'true');
+	assert.equal(mark?.getAttribute('focusable'), 'false');
 });
 
 test('a deployment that cannot point at its commit still names it, without a dead link', () => {
@@ -188,6 +195,20 @@ test('the footer entry is a button labelled with the stamp, and it opens the dia
 	assert.equal(button.getAttribute('href'), null);
 	button.click();
 	assert.deepEqual(opened, ['dialog']);
+});
+
+// Rendering twice used to leave two handlers on the button, and the second press would have
+// opened the dialog on top of itself.
+test('rendering the entry again replaces its handler rather than stacking another', () => {
+	const host = footer();
+	const opened: string[] = [];
+	const info = parseBuildVersion(stamped());
+
+	renderVersion(host, info, translate, () => opened.push('first'));
+	renderVersion(host, info, translate, () => opened.push('second'));
+
+	(host.querySelector('button') as HTMLButtonElement).click();
+	assert.deepEqual(opened, ['second']);
 });
 
 test('an unstamped build leaves the footer as it was: no entry, nothing to read', () => {

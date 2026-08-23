@@ -74,12 +74,17 @@ try {
     $thirdSameDay = Add-Commit $workspace 'third' '2026-08-23T23:59:59+00:00'
     $lateLocal = Add-Commit $workspace 'late' '2026-08-24T02:30:00+03:00'
     $nextDay = Add-Commit $workspace 'next' '2026-08-24T07:10:00+00:00'
+    # Exactly midnight: the day's window starts on this instant, and git's own filters have to
+    # include it. If they did not, the ordinal would come out zero and the script would refuse to
+    # stamp a release made in that one second.
+    $midnight = Add-Commit $workspace 'midnight' '2026-08-25T00:00:00+00:00'
 
     Assert-Equal '20260823-001' (Get-Stamp $first).Version 'the first update of a day is 001'
     Assert-Equal '20260823-002' (Get-Stamp $second).Version 'the second update of the same day is 002'
     Assert-Equal '20260823-003' (Get-Stamp $thirdSameDay).Version 'the last minute of the day still belongs to it'
     Assert-Equal '20260823-004' (Get-Stamp $lateLocal).Version 'a local time after midnight is dated by its UTC day'
     Assert-Equal '20260824-001' (Get-Stamp $nextDay).Version 'a new day starts counting again'
+    Assert-Equal '20260825-001' (Get-Stamp $midnight).Version 'a commit made exactly at midnight opens its own day'
 
     # The stamp is a fact about the commit, not about when somebody happened to build it.
     Assert-Equal '20260823-002' (Get-Stamp $second @{ Timestamp = [DateTimeOffset]::Parse('2027-01-01T00:00:00Z') }).Version `
