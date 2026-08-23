@@ -140,12 +140,18 @@
   "lobby": {
     "backToHome": "Volver al inicio",
     "home": {
+      "heading": "Inicio",
+      "playHeading": "Jugar",
+      "peopleHeading": "Personas",
       "createButton": "Crear una mesa",
       "joinButton": "Unirse con un código",
       "onlineButton": "Quién está conectado",
       "friendsButton": "Amigos",
       "friendsButtonWaiting": "Amigos, {{count}} esperando",
       "friendsButtonWaiting_one": "Amigos, 1 esperando",
+      "messagesButton": "Mensajes",
+      "messagesButtonUnread": "Mensajes, {{count}} sin leer",
+      "messagesButtonUnread_one": "Mensajes, 1 sin leer",
       "settingsButton": "Ajustes"
     },
     "createGame": "Crear una mesa nueva",
@@ -363,6 +369,7 @@
     "chat": {
       "heading": "Mensajes",
       "hint": "Escribe a alguien nombrándolo con @. Aquí no hay chat general.",
+      "arrived": "{{from}} te ha escrito.",
       "logLabel": "Mensajes recibidos y enviados",
       "inputLabel": "Tu mensaje",
       "send": "Enviar",

@@ -12,7 +12,7 @@ let lobbyViewFromState: typeof import('../src/lobby/ui.js').lobbyViewFromState;
 function renderViews(): void {
 	document.body.innerHTML = `
 		<section id="view-home" class="lobby-view">
-			<h2 id="home-heading" data-view-heading tabindex="-1">Your games</h2>
+			<h2 id="home-heading" data-view-heading tabindex="-1">Home</h2>
 		</section>
 		<section id="view-create" class="lobby-view hidden" hidden>
 			<h2 id="create-heading" data-view-heading tabindex="-1">Create</h2>
@@ -25,6 +25,9 @@ function renderViews(): void {
 		</section>
 		<section id="view-friends" class="lobby-view hidden" hidden>
 			<h2 id="friends-heading" data-view-heading tabindex="-1">Friends</h2>
+		</section>
+		<section id="view-messages" class="lobby-view hidden" hidden>
+			<h2 id="messages-heading" data-view-heading tabindex="-1">Messages</h2>
 		</section>
 		<section id="view-settings" class="lobby-view hidden" hidden>
 			<h2 id="settings-heading" data-view-heading tabindex="-1">Settings</h2>

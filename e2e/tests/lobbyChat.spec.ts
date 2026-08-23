@@ -11,12 +11,20 @@
 import { test, expect } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
 import {
-	appI18n, closeAccountSettings, gotoLobbyHome, newPlayerPage, openAccountSettings,
+	appI18n, closeAccountSettings, expectAnnouncement, gotoLobbyHome, newPlayerPage,
+	openAccountSettings,
 } from '../helpers/game';
 import type { Page } from '../helpers/test';
 
 const account = appI18n('es').account.settings as Record<string, string>;
 const chat = appI18n('es').lobby.chat as Record<string, string>;
+const home = appI18n('es').lobby.home as Record<string, string>;
+
+/** Messages are a screen of their own now, reached from the home page's People block. */
+async function openMessages(page: Page): Promise<void> {
+	await page.locator('#go-messages-btn').click();
+	await expect(page.locator('#view-messages')).toBeVisible();
+}
 
 /** A signed-in player with a public name, visible to everyone and open to messages. */
 async function chatter(
@@ -40,7 +48,7 @@ async function chatter(
 	await closeAccountSettings(page);
 
 	await gotoLobbyHome(page);
-	await expect(page.locator('#lobby-chat')).toBeVisible();
+	await openMessages(page);
 	return page;
 }
 
@@ -151,10 +159,41 @@ test('the matching names are counted out loud and walked with the arrows', async
 	await expect(input).toHaveValue('@lchatmatchone ');
 });
 
-test('signed out, there is no panel at all', async ({ browser }) => {
+test('signed out, there is no way in and no screen behind it', async ({ browser }) => {
 	const stranger = await newPlayerPage(browser, 'es-ES');
 	await gotoLobbyHome(stranger);
 
-	await expect(stranger.locator('#lobby-chat')).toBeHidden();
+	// The whole People block is withheld: writing needs an account on both ends, so a door that
+	// could only ever answer "sign in first" is a dead end with extra steps.
+	await expect(stranger.locator('#home-people')).toBeHidden();
+	await expect(stranger.locator('#go-messages-btn')).toBeHidden();
+	await expect(stranger.locator('#view-messages')).toBeHidden();
 	await flushAxeAudit(stranger);
+});
+
+// The screen moved off the home page, so a message landing while somebody is reading their tables
+// must still reach them: said once, and then WAITING somewhere they can find it. A count painted
+// in a corner would be invisible to exactly the people this lobby is for, so it is in the name of
+// the button.
+test('a message that lands while you are elsewhere is said once and waits in the button name', async ({ browser }) => {
+	const ana = await chatter(browser, 'lchat-teller', 'lchatteller');
+	const berto = await chatter(browser, 'lchat-away', 'lchataway');
+
+	// Berto goes back to his tables: the messages screen is no longer where he is.
+	await berto.locator('#messages-back-btn').click();
+	await expect(berto.locator('#view-home')).toBeVisible();
+
+	await write(ana, '@lchataway ¿jugamos?');
+
+	// Who wrote, never what they wrote: the lobby says there is something to read, and reading it
+	// stays the reader's own move.
+	await expectAnnouncement(berto, /lchatteller te ha escrito\./);
+	await expect(berto.locator('#go-messages-btn')).toHaveText(home.messagesButtonUnread_one);
+	await flushAxeAudit(berto);
+
+	// Opening the screen IS reading it, so the mark goes.
+	await openMessages(berto);
+	await expect(berto.locator('#lobby-chat-log .lobby-chat__line')).toHaveCount(1);
+	await expect(berto.locator('#go-messages-btn')).toHaveText(home.messagesButton);
+	await flushAxeAudit(berto);
 });

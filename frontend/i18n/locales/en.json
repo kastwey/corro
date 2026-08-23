@@ -140,12 +140,18 @@
   "lobby": {
     "backToHome": "Back to home",
     "home": {
+      "heading": "Home",
+      "playHeading": "Play",
+      "peopleHeading": "People",
       "createButton": "Create a table",
       "joinButton": "Join with a code",
       "onlineButton": "Who is online",
       "friendsButton": "Friends",
       "friendsButtonWaiting": "Friends, {{count}} waiting",
       "friendsButtonWaiting_one": "Friends, 1 waiting",
+      "messagesButton": "Messages",
+      "messagesButtonUnread": "Messages, {{count}} unread",
+      "messagesButtonUnread_one": "Messages, 1 unread",
       "settingsButton": "Settings"
     },
     "createGame": "Create a new table",
@@ -363,6 +369,7 @@
     "chat": {
       "heading": "Messages",
       "hint": "Write to somebody by naming them with @. There is no general channel here.",
+      "arrived": "{{from}} has written to you.",
       "logLabel": "Messages received and sent",
       "inputLabel": "Your message",
       "send": "Send",

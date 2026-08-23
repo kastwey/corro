@@ -85,6 +85,15 @@ beside it, and that is an accessibility argument rather than a stylistic one: a 
 saying one sentence a trip between two controls. So `@` works anywhere in the line, several people
 can be named at once, and a bare `@` followed by a space means "whoever last wrote to me".
 
+Messages are a lobby SCREEN of their own (`view-messages`), reached from the People block on the
+home page, and never a dialog. Home is an entrance hall — what you can start, what is waiting on an
+answer, your tables, the people — and a log with a text box under it is a place you go to, not
+something to read past on the way to your tables. Nothing about that lets a message interrupt: one
+arriving while the reader is elsewhere is said once through the lobby's live region, naming who
+wrote and never what they wrote, and then waits in the NAME of the way in ("Messages, 3 unread"),
+exactly as the friends button carries its requests. Opening the screen is what clears it, because
+opening it is what reading them means.
+
 Nothing is stored on the server. A message is handed to the recipient's open connections and
 forgotten — no mailbox, no history, no record that two people ever wrote to each other. What was
 said this session is kept by the browser, per tab. A stored conversation would need retention, a way
@@ -107,7 +116,8 @@ that it exists.
 Accepting walks the ORDINARY join, with the invite code the server hands back. There is one way into
 a table rather than two that have to be kept in step.
 
-An invitation reaches you wherever you are: the lobby has a panel for it, and so does a table, since
+An invitation reaches you wherever you are: the lobby's home page has a block for it — before your
+own tables, because a seat expires and a table you already have does not — and so does a table, since
 sitting at one table is exactly where you are when a friend wants you at theirs.
 
 ### Picking somebody instead of spelling them

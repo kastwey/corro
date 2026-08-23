@@ -126,13 +126,16 @@ export function hideSection(sectionId: string): void {
 }
 
 /**
- * The four mutually-exclusive top-level lobby views. Only one is ever visible:
- * `view-home` (the games list + entry buttons), `view-create`, `view-join` and
- * `view-waiting` (the created/joined waiting room). Splitting the page this way keeps
- * the waiting room from showing the games list behind it.
+ * The mutually-exclusive top-level lobby views. Only one is ever visible: `view-home` (the
+ * entrance hall — what you can start, what is waiting, your tables, the people), the two forms
+ * (`view-create`, `view-join`), the three screens the home's People block leads to
+ * (`view-online`, `view-friends`, `view-messages`), `view-settings`, and `view-waiting` (the
+ * created/joined waiting room). Splitting the page this way keeps each screen to one subject:
+ * the waiting room never shows the games list behind it, and the home never becomes a place to
+ * read past a message log on the way to your tables.
  */
 export const LOBBY_VIEWS = ['view-home', 'view-create', 'view-join', 'view-online',
-	'view-friends',
+	'view-friends', 'view-messages',
 	'view-settings', 'view-waiting'] as const;
 export type LobbyView = typeof LOBBY_VIEWS[number];
 

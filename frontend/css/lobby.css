@@ -6,12 +6,34 @@
 	display: block;
 }
 
-/* Home entry buttons (create / join), shown above the games list. */
+/* The home is a stack of named blocks — play, what is waiting, your tables, people — and each
+   block is drawn as one so the eye groups what the headings already group for a reader. */
+.home-block {
+	margin-bottom: 1.75rem;
+}
+
+.home-block:last-child {
+	margin-bottom: 0;
+}
+
+/* A hairline where the heading already says a new subject starts, so the eye groups what a
+   reader hears grouped. Never the only cue: every block is named by its own heading. */
+.home-block + .home-block {
+	padding-top: 1.5rem;
+	border-top: 1px solid var(--border);
+}
+
+.home-block__heading {
+	margin: 0 0 0.75rem;
+	font-size: 1.1rem;
+	color: var(--text);
+}
+
+/* A block's row of ways in (create / join, or the three people screens). */
 .home-actions {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.75rem;
-	margin-bottom: 1.5rem;
 }
 
 .home-actions .home-action-btn {
@@ -278,7 +300,14 @@
 	color: var(--text-muted);
 }
 
-/* Saved games ("your games") list */
+/* The blocks own the rhythm between them, so their last child does not add a second gap. */
+.home-block > .saved-game-list,
+.home-block > .your-games-empty,
+.home-block > .form-hint:last-child {
+	margin-bottom: 0;
+}
+
+/* Saved games ("your tables") list */
 .saved-game-list {
 	list-style: none;
 	padding: 0;
@@ -522,26 +551,12 @@
 	min-width: 0;
 }
 
-/* ---- Messages in the lobby ---------------------------------------------- */
-/* A permanent panel, not a dialog: a message arriving must not steal focus or open anything, and
-   somebody who wants to write should not have to remember a chord first. */
+/* ---- Rows in a box: messages, and the tables waiting for you ------------- */
+/* Both are lists whose ROWS are the focus stops (a roving list), so the box needs no tabindex of
+   its own; it scrolls once the list is long. One shape for both, because a reader who has met the
+   message log has met the invitations too. */
 
-.lobby-chat {
-	margin: 1rem 0;
-	padding: 0.75rem;
-	border: 1px solid var(--border);
-	border-radius: var(--radius);
-	background: var(--surface-2);
-}
-
-.lobby-chat h3 {
-	margin: 0 0 0.25rem;
-	font-size: 1rem;
-}
-
-/* The log scrolls once a conversation is long; its rows are the focus stops, so it needs no
-   tabindex of its own (see the roving list). */
-.lobby-chat__log {
+.lobby-roster-log {
 	margin: 0.5rem 0;
 	padding: 0.25rem;
 	max-height: 12rem;
@@ -552,21 +567,84 @@
 	background: var(--surface);
 }
 
-.lobby-chat__line {
+.lobby-chat__line,
+.lobby-invite {
 	padding: 0.35rem 0.5rem;
 	border-radius: var(--radius-sm);
 	color: var(--text);
 }
 
-.lobby-chat__line + .lobby-chat__line {
+/* An invitation is a line plus its answers, side by side like every other roster row. */
+.lobby-invite {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+}
+
+.lobby-invite__line {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.lobby-invite__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+}
+
+.lobby-invite__btn {
+	padding: 0.3rem 0.6rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--surface-2);
+	color: var(--text);
+	font-size: 0.9rem;
+	cursor: pointer;
+}
+
+.lobby-invite__btn:hover {
+	background: var(--surface);
+}
+
+.lobby-chat__line + .lobby-chat__line,
+.lobby-invite + .lobby-invite {
 	border-top: 1px solid var(--border);
 }
 
+/* Every focus stop shows where the keyboard is — the rows, and the buttons inside a row's
+   toolbar once the keyboard is actually in there. */
 .lobby-chat__line:focus,
-.lobby-chat__line:focus-visible {
+.lobby-chat__line:focus-visible,
+.lobby-invite:focus,
+.lobby-invite:focus-visible {
 	outline: 3px solid var(--focus, #ffd24d);
 	outline-offset: -3px;
 	background: var(--surface-2);
+}
+
+.lobby-invite__btn:focus,
+.lobby-invite__btn:focus-visible {
+	outline: 3px solid var(--focus, #ffd24d);
+	outline-offset: 1px;
+}
+
+/* A whole screen has room to show more of a conversation than a panel wedged into the home
+   page ever did. */
+#view-messages .lobby-roster-log {
+	max-height: 18rem;
+}
+
+/* Writing is what this screen is for, so the box takes the width of one. */
+.lobby-chat__input {
+	width: 100%;
+	padding: 0.5rem 0.6rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--surface);
+	color: var(--text);
+	font: inherit;
+	resize: vertical;
 }
 
 .lobby-chat__suggestions {

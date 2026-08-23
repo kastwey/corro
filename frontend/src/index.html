@@ -50,49 +50,78 @@
 			</div>
 		</header>
 
-		<!-- VIEW: HOME — list of your games + entry points to create / join -->
+		<!-- VIEW: HOME — the entrance hall, and nothing else.
+			 Four blocks in the order somebody needs them: what you can start, what is waiting on an
+			 answer, the tables you already have, and the people. Each block owns an h3 of its own,
+			 so a reader jumping by heading lands ON the thing rather than inside whatever the view's
+			 heading happened to name — the old home called itself "Your tables" and then hung the
+			 invitations, the messages and the entry buttons under that name.
+			 The blocks are plain <div>s on purpose: a <section> with a name is a landmark, and a
+			 landmark inside this view's own landmark is exactly the nesting the accessibility rules
+			 forbid. The heading does the naming; the region stays flat. -->
 		<section id="view-home" class="lobby-view" aria-labelledby="home-heading">
-			<h2 id="home-heading" data-view-heading tabindex="-1" data-i18n="lobby.savedGames.heading">Your games</h2>
-			<div class="home-actions">
-				<button type="button" id="go-create-btn" class="home-action-btn" data-i18n="lobby.home.createButton">Create game</button>
-				<button type="button" id="go-join-btn" class="home-action-btn secondary-button" data-i18n="lobby.home.joinButton">Join with a code</button>
-				<!-- Revealed only for a signed-in player: the list is members-only, so offering the
-					 way in to somebody who would be turned away is a dead end with extra steps. -->
-				<button type="button" id="go-online-btn" class="home-action-btn secondary-button" data-i18n="lobby.home.onlineButton" hidden>Who is online</button>
-				<!-- Same rule, and its label carries the count of requests waiting: a person who
-					 cannot glance at a badge has to hear that there is something to answer. -->
-				<button type="button" id="go-friends-btn" class="home-action-btn secondary-button" data-i18n="lobby.home.friendsButton" hidden>Friends</button>
+			<h2 id="home-heading" data-view-heading tabindex="-1" data-i18n="lobby.home.heading">Home</h2>
+
+			<div class="home-block">
+				<h3 class="home-block__heading" data-i18n="lobby.home.playHeading">Play</h3>
+				<div class="home-actions">
+					<button type="button" id="go-create-btn" class="home-action-btn" data-i18n="lobby.home.createButton">Create a table</button>
+					<button type="button" id="go-join-btn" class="home-action-btn secondary-button" data-i18n="lobby.home.joinButton">Join with a code</button>
+				</div>
 			</div>
-			<!-- Tables waiting on an answer. Above the chat because a seat expires and a message
-				 does not: a table that fills while somebody reads past it is gone. Revealed only
-				 when something is actually waiting, so an empty region never takes a tab stop. -->
-			<section class="lobby-invites" id="lobby-invites" aria-labelledby="lobby-invites-heading" hidden>
-				<h3 id="lobby-invites-heading" data-i18n="lobby.invites.heading">Waiting for you</h3>
+
+			<!-- Tables waiting on an answer. Before your own tables because a seat expires and a
+				 table you already have does not: one that fills while somebody reads past it is
+				 gone. Revealed only when something is actually waiting, so an empty block never
+				 takes a heading or a tab stop. -->
+			<div class="home-block" id="lobby-invites" hidden>
+				<h3 class="home-block__heading" data-i18n="lobby.invites.heading">Waiting for you</h3>
 				<p class="form-hint" data-i18n="lobby.invites.hint">Tables you have been asked to, and doors you knocked on.</p>
-				<ul id="lobby-invites-list" class="lobby-chat__log" role="list"></ul>
+				<ul id="lobby-invites-list" class="lobby-roster-log" role="list"></ul>
 				<p id="lobby-invites-status" class="form-hint" role="status" aria-live="polite"></p>
-			</section>
+			</div>
 
-			<!-- Writing to people. Permanent rather than a dialog: a message arriving must not steal
-				 focus or open anything, and somebody who wants to write should not have to remember
-				 a chord first. Revealed only for a signed-in player, like the other two ways in. -->
-			<section class="lobby-chat" id="lobby-chat" aria-labelledby="lobby-chat-heading" hidden>
-				<h3 id="lobby-chat-heading" data-i18n="lobby.chat.heading">Messages</h3>
-				<p class="form-hint" data-i18n="lobby.chat.hint">Write to somebody by naming them with @. There is no general channel here.</p>
-				<ul id="lobby-chat-log" class="lobby-chat__log" role="list" data-i18n-attr:aria-label="lobby.chat.logLabel" aria-label="Messages received and sent"></ul>
-				<label for="lobby-chat-input" data-i18n="lobby.chat.inputLabel">Your message</label>
-				<textarea id="lobby-chat-input" rows="2" maxlength="1000"></textarea>
-				<!-- The matching names, as a real LISTBOX. It was a plain container of buttons, which
-					 a screen reader announces one at a time with no idea they are a list at all — no
-					 position, no count. Its size is also said out loud (see lobby-chat-status). -->
-				<ul id="lobby-chat-suggestions" class="lobby-chat__suggestions" role="listbox"
-					data-i18n-attr:aria-label="lobby.chat.suggestionsLabel" aria-label="Matching players" hidden></ul>
-				<button type="button" id="lobby-chat-send" class="secondary-button" data-i18n="lobby.chat.send">Send</button>
-				<p id="lobby-chat-status" class="form-hint" role="status" aria-live="polite"></p>
-			</section>
+			<div class="home-block">
+				<h3 class="home-block__heading" data-i18n="lobby.savedGames.heading">Your tables</h3>
+				<ul id="your-games-list" class="saved-game-list"></ul>
+				<p id="your-games-empty" class="your-games-empty hidden" data-i18n="lobby.savedGames.empty">You don't have any tables yet. Create one or join with a code.</p>
+			</div>
 
-			<ul id="your-games-list" class="saved-game-list"></ul>
-			<p id="your-games-empty" class="your-games-empty hidden" data-i18n="lobby.savedGames.empty">You don't have any games yet. Create a new one or join with a code.</p>
+			<!-- The people, and the ways to reach them. Revealed as ONE block only for a signed-in
+				 player: all three doors are members-only, so offering them to somebody who would be
+				 turned away is a dead end with extra steps — and an empty "People" heading is worse
+				 than no heading at all. Two of the labels carry a count (requests waiting, messages
+				 unread), because a number nobody can glance at has to be in the name of the thing. -->
+			<div class="home-block" id="home-people" hidden>
+				<h3 class="home-block__heading" data-i18n="lobby.home.peopleHeading">People</h3>
+				<div class="home-actions">
+					<button type="button" id="go-online-btn" class="home-action-btn secondary-button" data-i18n="lobby.home.onlineButton">Who is online</button>
+					<button type="button" id="go-friends-btn" class="home-action-btn secondary-button" data-i18n="lobby.home.friendsButton">Friends</button>
+					<button type="button" id="go-messages-btn" class="home-action-btn secondary-button" data-i18n="lobby.home.messagesButton">Messages</button>
+				</div>
+			</div>
+		</section>
+
+		<!-- VIEW: MESSAGES — writing to people. Its own screen, like Who is online and Friends,
+			 rather than a panel wedged into the home page: a log, a box and a name list are a place
+			 you go to, not something to read past on the way to your tables.
+			 It is still not a dialog. A message arriving must not steal focus or open anything, so
+			 an arrival is said once through the lobby's live region and the home button keeps the
+			 standing count — nothing here opens itself. -->
+		<section id="view-messages" class="lobby-view hidden" aria-labelledby="messages-heading" hidden>
+			<button type="button" id="messages-back-btn" class="secondary-button lobby-back-btn" data-i18n="lobby.backToHome">Back to home</button>
+			<h2 id="messages-heading" data-view-heading tabindex="-1" data-i18n="lobby.chat.heading">Messages</h2>
+			<p class="form-hint" data-i18n="lobby.chat.hint">Write to somebody by naming them with @. There is no general channel here.</p>
+			<ul id="lobby-chat-log" class="lobby-roster-log" role="list" data-i18n-attr:aria-label="lobby.chat.logLabel" aria-label="Messages received and sent"></ul>
+			<label for="lobby-chat-input" data-i18n="lobby.chat.inputLabel">Your message</label>
+			<textarea id="lobby-chat-input" class="lobby-chat__input" rows="3" maxlength="1000"></textarea>
+			<!-- The matching names, as a real LISTBOX. It was a plain container of buttons, which
+				 a screen reader announces one at a time with no idea they are a list at all — no
+				 position, no count. Its size is also said out loud (see lobby-chat-status). -->
+			<ul id="lobby-chat-suggestions" class="lobby-chat__suggestions" role="listbox"
+				data-i18n-attr:aria-label="lobby.chat.suggestionsLabel" aria-label="Matching players" hidden></ul>
+			<button type="button" id="lobby-chat-send" class="secondary-button" data-i18n="lobby.chat.send">Send</button>
+			<p id="lobby-chat-status" class="form-hint" role="status" aria-live="polite"></p>
 		</section>
 
 		<!-- VIEW: CREATE — the create-game form -->
