@@ -7,6 +7,7 @@
 // landmarks and occupants) — all asserted against the package's own i18n.
 
 import { test, expect } from '../helpers/test';
+import { flushAxeAudit } from '../helpers/axeAudit';
 import {
 	chooseBoard,
 	actionButton,
@@ -237,6 +238,22 @@ test('race: exits, auto-moves, piece choice on a barrier, and circuit exploratio
 	await expect(circuitCell(ana, 7).locator('.race-piece')).toHaveCount(1);
 	await expect(circuitCell(berto, 7).locator('.race-piece')).toHaveCount(1);
 	await expectAnnouncement(berto, /Ana avanza una ficha hasta la casilla 7/);
+
+	// F1 opens the package guide. This is the only shipped guide with a table, and the only
+	// place it can be audited: its rows used to reach a screen reader as a paragraph of
+	// vertical bars, and its wrapped bullets were cut at the line break.
+	await ana.keyboard.press('F1');
+	const guide = ana.locator('.game-dialog.dialog-help:has(.board-help)');
+	await expect(guide).toBeVisible();
+	const squadrons = guide.locator('.board-help__table');
+	await expect(squadrons.locator('thead th').first()).toHaveText('Escuadrón');
+	await expect(squadrons.locator('tbody tr').first().locator('td')).toHaveText(['Rojo', '5', '68']);
+	await expect(guide.locator('.board-help')).not.toContainText('|');
+	await expect(guide.locator('.board-help')).toContainText(
+		'una despega obligatoriamente a tu sector de salida.');
+	await flushAxeAudit(ana);
+	await ana.keyboard.press('Escape');
+	await expect(guide).toBeHidden();
 });
 
 test('a chained bonus choice replaces the dialog with FRESH options', async ({ browser }) => {

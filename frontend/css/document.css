@@ -22,6 +22,27 @@
 .board-help ul,
 .board-help ol { margin: 0.6em 0; padding-left: 1.5em; }
 .board-help li { margin: 0.2em 0; }
+/* A nested list belongs to the item above it: tighten it so the two read as one block. */
+.board-help li > ul,
+.board-help li > ol { margin: 0.2em 0; }
+
+/* Guide tables wrap instead of scrolling. A table that overflows would need its own keyboard
+   handle to be reachable; one that wraps needs nothing and stays readable on a phone. */
+.board-help__table {
+	width: 100%;
+	margin: 0.7em 0;
+	border-collapse: collapse;
+}
+
+.board-help__table th,
+.board-help__table td {
+	padding: 0.35em 0.6em;
+	border: 1px solid var(--border);
+	text-align: left;
+	vertical-align: top;
+}
+
+.board-help__table th { background: var(--surface-2); }
 
 .board-help__contents {
 	margin: 0.9rem 0 1.1rem;

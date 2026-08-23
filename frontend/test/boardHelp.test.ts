@@ -18,6 +18,52 @@ test('headings, paragraphs and lists render to HTML', () => {
 	assert.match(html, /<ol><li>first<\/li><li>second<\/li><\/ol>/);
 });
 
+test('a bullet wrapped over several lines keeps its whole sentence', () => {
+	// Reported from the shipped guides: authors wrap long bullets, which is ordinary Markdown.
+	// The renderer used to cut the item at the line break, close the list and leave the tail as a
+	// stray paragraph — so a three-point list was heard as three one-item lists.
+	const html = renderMarkdown('- **5** — a ship launches\n  to your start sector.\n- **6** — roll again.');
+	assert.match(html, /<ul><li><strong>5<\/strong> — a ship launches to your start sector\.<\/li>/);
+	assert.match(html, /<li><strong>6<\/strong> — roll again\.<\/li><\/ul>/);
+	assert.doesNotMatch(html, /<p>to your start sector/);
+});
+
+test('an unindented line after a list still starts a paragraph', () => {
+	const html = renderMarkdown('- one\n- two\nA new sentence.');
+	assert.match(html, /<ul><li>one<\/li><li>two<\/li><\/ul>/);
+	assert.match(html, /<p>A new sentence\.<\/p>/);
+});
+
+test('a nested list stays inside its parent item, and the numbering does not restart', () => {
+	const html = renderMarkdown('1. Roll.\n2. Where you land:\n   - Free planet: buy it.\n   - Taxes: pay up.\n3. Doubles roll again.');
+	// One list, not three: the steps after the nested block used to open a second <ol> that
+	// started again at 1, so steps 3 and 4 of a turn were read out as 1 and 2.
+	assert.equal(html.match(/<ol>/g)?.length, 1);
+	assert.match(html, /<li>Where you land:<ul><li>Free planet: buy it\.<\/li><li>Taxes: pay up\.<\/li><\/ul><\/li>/);
+	assert.match(html, /<li>Doubles roll again\.<\/li><\/ol>/);
+});
+
+test('a table renders as a table with column headers, not as a paragraph of pipes', () => {
+	const html = renderMarkdown('| Squadron | Launches at |\n|---|---|\n| Red | 5 |\n| Blue | 22 |');
+	assert.match(html, /<table class="board-help__table">/);
+	assert.match(html, /<thead><tr><th scope="col">Squadron<\/th><th scope="col">Launches at<\/th><\/tr><\/thead>/);
+	assert.match(html, /<tbody><tr><td>Red<\/td><td>5<\/td><\/tr><tr><td>Blue<\/td><td>22<\/td><\/tr><\/tbody>/);
+	assert.doesNotMatch(html, /<p>[^<]*\|/);
+});
+
+test('table cells are escaped and formatted like any other text', () => {
+	const html = renderMarkdown('| Who | What |\n|---|---|\n| **Red** | <img src=x onerror=alert(1)> |');
+	assert.match(html, /<td><strong>Red<\/strong><\/td>/);
+	assert.doesNotMatch(html, /<img/);
+	assert.match(html, /&lt;img/);
+});
+
+test('a lone pipe line is not mistaken for a table', () => {
+	const html = renderMarkdown('| not a table, no separator row');
+	assert.doesNotMatch(html, /<table/);
+	assert.match(html, /<p>\| not a table/);
+});
+
 test('inline bold, italic and code render', () => {
 	const html = renderMarkdown('A **bold** and *italic* and `code` word.');
 	assert.match(html, /<strong>bold<\/strong>/);
@@ -98,6 +144,13 @@ test('every physical package guide has help discovery, screen-reader guidance an
 			}
 
 			const html = renderMarkdown(guide, lang === 'es' ? 'Contenido' : 'Contents');
+			// No table may survive as prose: a row that never became a table reaches a screen
+			// reader as a run of vertical bars.
+			assert.doesNotMatch(html, /<p>[^<]*\|/, `${context}: a table row rendered as a paragraph`);
+			// Consecutive sibling lists are the signature of a bullet cut at its line break:
+			// every wrapped item used to close the list and open a new one.
+			assert.doesNotMatch(html, /<\/(ul|ol)>\n<(ul|ol)>/, `${context}: a list was split in two`);
+
 			const fragments = [...html.matchAll(/<a href="#([a-z0-9][a-z0-9-]*)">/g)].map(m => m[1]);
 			assert.ok(fragments.length > 0, `${context}: generated no contents links`);
 			for (const fragment of fragments) {
