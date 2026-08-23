@@ -276,14 +276,26 @@ export class ForbiddenBoard {
 					: this.t('forbidden_timer_not_running'));
 				return;
 			}
-			if (key === 'p' && visible(this.passButton)) {
+			if (key === 'p') {
 				// P is "pasar" and "pass", the same bilingual mnemonic R and V already use. Pass was
 				// the only clue-giver action without a key: Enter banks a guessed word, so skipping
 				// one meant tabbing away from the card with the clock running. Going through the
 				// button keeps the out-of-passes case spoken instead of silently ignored.
+				//
+				// The key belongs to the ROLE, not to the button. Before the clock starts the button
+				// does not exist, and the card is a textarea, so the document keymap skips the key
+				// too: P answered nothing at all, which reads as a dead app. R already answers in
+				// that same moment, and its line is the right one — there is no word on the card yet.
+				const turn = this.deps.getGameState()?.forbidden?.turn;
+				const myId = this.deps.getMyPlayerId();
+				if (!turn || !myId || forbiddenRole(turn, myId) !== 'clue-giver') return;
 				event.preventDefault();
 				event.stopPropagation();
-				this.passButton.click();
+				if (visible(this.passButton)) {
+					this.passButton.click();
+					return;
+				}
+				this.deps.announce(this.t('forbidden_timer_not_running'));
 				return;
 			}
 			if (key !== 'v' || !visible(this.violationButton)) return;

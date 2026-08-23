@@ -258,6 +258,21 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 		{ keys: 'r', descKey: 'game.help_cmd_forbidden_timer' },
 	);
 
+	// Found in review: P said nothing at all in this same moment. The pass button only exists
+	// once the clock runs, and the card is a textarea, so the document keymap skips the key too
+	// — total silence, which reads as a dead app. The key answers for the role, like R.
+	let earlyPassKeyLeaked = 0;
+	const documentEarlyPassKey = () => { earlyPassKeyLeaked++; };
+	document.addEventListener('keydown', documentEarlyPassKey);
+	const earlyPassKey = new window.KeyboardEvent('keydown', { key: 'p', bubbles: true, cancelable: true });
+	card.dispatchEvent(earlyPassKey);
+	document.removeEventListener('keydown', documentEarlyPassKey);
+	assert.equal(earlyPassKey.defaultPrevented, true);
+	assert.equal(earlyPassKeyLeaked, 0, 'family-local P never reaches document shortcuts');
+	assert.deepEqual(commands.pass, [], 'and no word is passed before there is one to pass');
+	assert.equal(announced.at(-1), 'The timer is not running.');
+	assert.equal(document.activeElement, card);
+
 	const enterToStart = new window.KeyboardEvent('keydown', {
 		key: 'Enter', bubbles: true, cancelable: true,
 	});
@@ -406,8 +421,11 @@ test('role surface lets the clue-giver start directly and keeps unavailable cont
 	assert.deepEqual(commands.violation, [1, 1]);
 	// P belongs to the clue-giver. The monitor's card is not theirs to skip. (The keystroke is
 	// still cancelled, but by the protected card that refuses every character, not by the board.)
-	card.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'p', bubbles: true, cancelable: true }));
+	const monitorPassKey = new window.KeyboardEvent('keydown', { key: 'p', bubbles: true, cancelable: true });
+	const beforeMonitorPass = announced.at(-1);
+	card.dispatchEvent(monitorPassKey);
 	assert.deepEqual(commands.pass, [1, 1], 'P cannot pass a word for the monitor');
+	assert.equal(announced.at(-1), beforeMonitorPass, 'nor does it explain a clock that is running');
 	assert.deepEqual(
 		board.helpShortcuts().find(shortcut => shortcut.descKey === 'game.help_cmd_forbidden_violation'),
 		{ keys: 'v', descKey: 'game.help_cmd_forbidden_violation' },
