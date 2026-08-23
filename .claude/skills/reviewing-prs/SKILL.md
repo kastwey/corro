@@ -182,6 +182,20 @@ A review that is wrong twice stops being read. Before writing a finding down:
 - If you could not check something, say which part you could not check rather than rounding it
   up to a claim.
 
+**A state you can build in a test is not a state the game can reach.** A fixture assembles
+whatever you type into it; what decides which states exist is the rulebook — that is where the
+transitions live. So before reporting that some state renders badly, find the code that produces
+it. A phase can be set and replaced a few statements later inside one method, in which case no
+client ever sees it and the finding is about a situation the game does not have. The suites sit
+downstream of the rules: they can tell you a state is handled, never that it happens.
+
+That makes the rulebook the authority — **unless the PR is changing the rulebook itself**, and
+then the code cannot vouch for its own correctness. There the question is not "what does this do"
+but "what should it do", and the answer lives outside the repository: the published rules of the
+game being modelled, which are older than this code and settle most arguments on their own. When
+the rule turns out to be Corro's own invention — a house rule, with no outside authority to check
+it against — that is a question for the maintainer, not a gap to fill with a plausible guess.
+
 ## 5. Deliver it
 
 Give the findings in one pass, ordered by severity, each explained as above, and say plainly
