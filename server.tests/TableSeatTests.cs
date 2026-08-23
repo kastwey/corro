@@ -377,6 +377,7 @@ public class TableSeatTests
 		public event Func<IReadOnlyList<AnnouncementDispatch>, Task>? OnGameEvents { add { } remove { } }
 		public event Func<Square, Task>? OnSquareChanged { add { } remove { } }
 		public event Func<CardDrawnNotification, Task>? OnCardDrawn { add { } remove { } }
+		public event Func<ServerResponse, Task>? OnBroadcast { add { } remove { } }
 	}
 
 	private sealed class FakeCallerContext : HubCallerContext

@@ -88,6 +88,14 @@ public interface IGameCommandExecutor
 	event Func<IReadOnlyList<AnnouncementDispatch>, Task> OnGameEvents;
 	event Func<Square, Task> OnSquareChanged;
 	event Func<CardDrawnNotification, Task> OnCardDrawn;
+
+	/// <summary>
+	/// Raised for a response the rulebook addressed to the whole table rather than to the
+	/// caller — a side effect nobody commanded, such as the auction that opens when a purchase
+	/// is declined. Raised from the SERVICE, so it reaches the table whoever ran the command:
+	/// the hub for a person, the bot driver for a bot.
+	/// </summary>
+	event Func<ServerResponse, Task> OnBroadcast;
 }
 
 /// <summary>

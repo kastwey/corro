@@ -435,6 +435,7 @@ public class GameSessionRegistryTests
 		public event Func<IReadOnlyList<AnnouncementDispatch>, Task>? OnGameEvents { add { } remove { } }
 		public event Func<Square, Task>? OnSquareChanged { add { } remove { } }
 		public event Func<CardDrawnNotification, Task>? OnCardDrawn { add { } remove { } }
+		public event Func<ServerResponse, Task>? OnBroadcast { add { } remove { } }
 	}
 
 	internal sealed class NoopHubContext : IHubContext<GameHub>

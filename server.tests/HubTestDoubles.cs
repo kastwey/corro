@@ -131,6 +131,17 @@ internal sealed class FakeGameService : IGameService
 
 	public event Func<Square, Task>? OnSquareChanged { add { } remove { } }
 	public event Func<CardDrawnNotification, Task>? OnCardDrawn { add { } remove { } }
+
+	// Real, raisable too: the registry subscribes to this one, so a test can prove the trip from
+	// a rulebook's table-wide response to the group without going through a whole property game.
+	private Func<ServerResponse, Task>? _onBroadcast;
+	public event Func<ServerResponse, Task>? OnBroadcast
+	{
+		add => _onBroadcast += value;
+		remove => _onBroadcast -= value;
+	}
+	public Task RaiseBroadcastAsync(ServerResponse response)
+		=> _onBroadcast?.Invoke(response) ?? Task.CompletedTask;
 }
 
 internal sealed class FakeGameServiceFactory : IGameServiceFactory

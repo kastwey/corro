@@ -10,8 +10,12 @@ import type {
 import type { ICommandHandler, CommandContext } from './index.js';
 
 /**
- * Handles AUCTION_STARTED responses - called via PropertyDeclined with auctionStarted=true
- * or directly from server
+ * Handles AUCTION_STARTED, which the server's rulebook addresses to the whole table when a
+ * declined purchase opens an auction — the decline's own response is private to whoever
+ * declined, and the players who have to bid sent no command at all.
+ *
+ * Instant feedback, not the source of truth: reconcileModals opens the same dialog from
+ * state.activeAuction on every state update, which is what covers a reconnect.
  */
 export class AuctionStartedHandler implements ICommandHandler {
 	readonly responseType = 'AUCTION_STARTED';
