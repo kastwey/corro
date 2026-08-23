@@ -151,8 +151,7 @@
       "friendsButtonWaiting_one": "Friends, 1 waiting",
       "messagesButton": "Messages",
       "messagesButtonUnread": "Messages, {{count}} unread",
-      "messagesButtonUnread_one": "Messages, 1 unread",
-      "settingsButton": "Settings"
+      "messagesButtonUnread_one": "Messages, 1 unread"
     },
     "createGame": "Create a new table",
     "joinGame": "Join a table",

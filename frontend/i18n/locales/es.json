@@ -151,8 +151,7 @@
       "friendsButtonWaiting_one": "Amigos, 1 esperando",
       "messagesButton": "Mensajes",
       "messagesButtonUnread": "Mensajes, {{count}} sin leer",
-      "messagesButtonUnread_one": "Mensajes, 1 sin leer",
-      "settingsButton": "Ajustes"
+      "messagesButtonUnread_one": "Mensajes, 1 sin leer"
     },
     "createGame": "Crear una mesa nueva",
     "joinGame": "Unirse a una mesa",
