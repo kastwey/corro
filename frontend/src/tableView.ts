@@ -198,6 +198,11 @@ export class TableView {
 		this.deckSelect?.addEventListener('change', event => {
 			void this.deps?.setContentLanguage?.((event.target as HTMLSelectElement).value);
 		});
+		// Wired HERE, with the other fixed elements, and not beside the render that fills it: the
+		// panel is one element that outlives every board shown in it, so wiring it per render made
+		// a host who had seen three boards send three identical writes for one change. It
+		// delegates, so it reaches whatever was rendered last.
+		this.rulesFields?.addEventListener('change', () => void this.saveRules());
 	}
 
 	isVisible(): boolean {
@@ -269,7 +274,6 @@ export class TableView {
 			}
 			this.rulesFields.innerHTML = renderHouseRules(
 				pkg!.ruleGroups ?? [], rules, key => this.deps!.t(key));
-			this.rulesFields.addEventListener('change', () => void this.saveRules());
 			this.rulesBox.hidden = false;
 		}
 		// The labels carry their own keys, so the translation pass resolves them wherever the
