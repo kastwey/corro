@@ -112,8 +112,10 @@ export interface GameFamily extends FamilyTraits {
 	/** The players-panel identity line replacing the money line (the race squadron, the track
 	*  piece name); null falls back to the panel default. */
 	boardIdentity(gs: GameState, playerId: string, getPlayer: (id: string) => Player | null | undefined): string | null;
-	/** The C-key identity announcement ("you are the red squadron"); null = not handled. */
-	identityAnnouncement(gs: GameState, myId: string, getPlayer: (id: string) => Player | null | undefined): FamilyIdentityAnnouncement | null;
+	/** The C-key identity announcement ("you are the red squadron"); null = not handled.
+	*  Optional: the card families own that letter on their own surface and answer "how am I
+	*  doing?" with S, so C never reaches them. */
+	identityAnnouncement?(gs: GameState, myId: string, getPlayer: (id: string) => Player | null | undefined): FamilyIdentityAnnouncement | null;
 	/** Already-translated lines for the read-only "player info" dialog, replacing the property
 	*  economy (money, board position, holding, release passes and owned squares) that no other
 	*  family has. Defaults to this family's own identity line. */
@@ -342,11 +344,8 @@ function makeCardFamily(
 	return {
 	...familyTraitsFor(gameType)!,
 	boardIdentity: (gs, playerId) => status(gs, playerId),
-	identityAnnouncement(gs, myId) {
-		// '_raw' is the announcer's literal-text channel (the status is already translated).
-		const text = status(gs, myId);
-		return text ? { key: '_raw', vars: { text } } : null;
-	},
+	// No identityAnnouncement: C does not reach a card family. This status text IS what S
+	// already reads on the surface, so C was a second key for the same sentence.
 	createView(deps): FamilyView {
 		const board = createBoard(deps);
 		const focusHand = () => { board.focusHand(); return true; };

@@ -216,8 +216,9 @@ export class SheddingBoard {
 		});
 		// C — just the card on the table and the colour in force. D says the same plus the deck
 		// count, and in a game this fast the count is a preamble you sit through on every check.
-		// C is free here: the engine's own "how am I doing?" (AnnounceMyStatus) repeats S word for
-		// word in a card family, which is why the shortcuts help already hides it.
+		// C is free here: the engine's own "how am I doing?" (AnnounceMyStatus) repeated S word
+		// for word in a card family, so it is hidden from the shortcuts help AND inert in this
+		// family (keys.ts) — the letter means one thing, wherever focus happens to be.
 		registerPileStatusKey(this.element, {
 			key: 'c',
 			announce: this.deps.announce,
@@ -283,7 +284,6 @@ export class SheddingBoard {
 		this.deps.announce(sheddingWatchText(gs, myId, this.deps.tSync));
 	}
 
-	/** D reads the table state that is visual but deliberately absent from the hand. */
 	/**
 	 * The C readout: what is on the table, and — only when it differs — what colour is in force.
 	 * The two can only disagree after a wild, so naming the colour every time would repeat the
@@ -304,6 +304,7 @@ export class SheddingBoard {
 		});
 	}
 
+	/** D reads the table state that is visual but deliberately absent from the hand. */
 	private pileStatusText(): string | null {
 		const gs = this.deps.getGameState();
 		if (!gs?.shedding) return null;
