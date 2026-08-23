@@ -1,5 +1,7 @@
 using System.Text.Json;
+using CorroServer.Hubs;
 using CorroServer.Models;
+using CorroServer.Models.Corro;
 using CorroServer.Services;
 using CorroServer.Services.Bots;
 using CorroServer.Services.Corro;
@@ -23,6 +25,18 @@ public class BotDriverTests
 		{
 			new() { Id = "a", Name = "Ana", Token = "car" },
 			new() { Id = "b", Name = "Bot 1", Token = "motorbike", IsBot = true },
+		}, def, "es");
+		return svc;
+	}
+
+	private static async Task<GameService> StartHumanVsSheddingBotAsync()
+	{
+		var def = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("four-colours"));
+		var svc = new GameService(new CorroRulebook(), new AuctionRulebook());
+		await svc.InitializeFromDefinitionAsync(new List<Player>
+		{
+			new() { Id = "a", Name = "Ana", Token = "disc" },
+			new() { Id = "b", Name = "Bot 1", Token = "star", IsBot = true },
 		}, def, "es");
 		return svc;
 	}
@@ -100,6 +114,53 @@ public class BotDriverTests
 		await svc.ExecuteCommandAsync(new JourneyDiscardCommand { PlayerId = "a", InstanceId = myCard });
 
 		await WaitUntilAsync(() => Volatile.Read(ref afterCommand) > 0, "the bot's move to run the after-command work");
+	}
+
+	[Fact]
+	public async Task A_match_the_BOT_ends_leaves_the_table_ready_to_play_again()
+	{
+		// The test above proves the wiring: the driver runs whatever the caller handed it. This one
+		// proves the CONSEQUENCE the wiring exists for, which is what was actually reported — the
+		// table going back to waiting. They are two claims, and only the second one bit: a table
+		// whose match the bot won answered "the game has already started" for good.
+		//
+		// So the callback here is the real one both hub sites pass, against a real registry, rather
+		// than a counter.
+		var svc = await StartHumanVsSheddingBotAsync();
+
+		// One card from going out, with a score that its win carries past the 500-point target: the
+		// command that ends the MATCH is then the bot's own, which is the whole point.
+		var shedding = svc.GameState!.Shedding!;
+		var bot = SheddingRulebook.SeatOf(shedding, "b");
+		bot.Score = 495;
+		bot.Hand.Clear();
+		bot.Hand.Add(new SheddingCardInstance { InstanceId = "red-7#99", CardId = "red-7" });
+		shedding.DiscardPile.Clear();
+		shedding.DiscardPile.Add(new SheddingCardInstance { InstanceId = "red-3#98", CardId = "red-3" });
+		shedding.CurrentColor = "red";
+		SheddingRulebook.SyncCounts(shedding);
+		svc.GameState.CurrentTurn = "b";
+
+		var repo = new GameSessionRegistryTests.RecordingRepo();
+		repo.Documents["g1"] = new GameDocument
+		{
+			Id = "game-g1", GameId = "g1", Status = GameStatus.Active, HostId = "a", InviteCode = "INV",
+		};
+		var registry = new GameSessionRegistry(
+			new GameSessionRegistryTests.NoopHubContext(), repo,
+			new GameSessionRegistryTests.RecordingTimer(), TestFixtures.NewPackageRestorer());
+		registry.RegisterService("g1", svc);
+
+		var driver = new BotDriver(new BotOptions { ActionDelay = TimeSpan.Zero });
+		driver.Attach("g1", svc, () => registry.CleanupIfGameOverAsync("g1", svc));
+
+		await WaitUntilAsync(() => repo.Documents["g1"].Status == GameStatus.WaitingForPlayers,
+			"the table to go back to waiting after the bot's winning move");
+
+		var table = repo.Documents["g1"];
+		Assert.Null(table.GameState);              // no match running: the host may start another
+		Assert.True(table.LastMatch!.IsGameOver);  // …and the result outlived the game
+		Assert.Equal("b", table.LastMatch.WinnerId);
 	}
 
 	[Fact]
