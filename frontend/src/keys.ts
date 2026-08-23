@@ -29,7 +29,7 @@ export interface BoardNavigator {
 }
 import { GameCommands } from './gameCommands.js';
 import type { GameManager } from './gameManager.js';
-import { isSimultaneousFamily } from './familyTraits.js';
+import { isSimultaneousFamily, isToolbarlessFamily } from './familyTraits.js';
 
 export interface KeyHandlersOptions {
 	board: HTMLElement;
@@ -140,8 +140,11 @@ const BOARD_MOVEMENT_COMMANDS = new Set([
  *  to walk (Move*, GoToStart, NextOccupied), no piece to jump to (GoToMe), no dice
  *  (RollDice) and no circuit landmarks (GoToMyStart/GoToBarrier — race-tagged anyway).
  *  Their own S key is the documented "how am I doing?", so C (AnnounceMyStatus) is a
- *  redundant alias here and is dropped too. All still route at runtime — they simply
- *  don't belong in this game's shortcut list. */
+ *  redundant alias here and is dropped too — and, unlike the rest of this list, C does not
+ *  route at runtime either (see the executor): a card board may bind that letter itself,
+ *  and a key that answered one question on the board and another from the players panel
+ *  could not be documented honestly. The others still route; they simply don't belong in
+ *  this game's shortcut list. */
 export const CARD_FAMILY_HIDDEN_COMMANDS = new Set<string>([
 	...PROPERTY_ONLY_COMMANDS,
 	...BOARD_MOVEMENT_COMMANDS,
@@ -204,6 +207,12 @@ function createCommandExecutor(opts: KeyHandlersOptions) {
 					// One key, one question — "how am I doing?" — answered per family:
 					// your cash on a property board; your squadron / piece colour on the
 					// others, where money is meaningless and used to leave C dead.
+					// A CARD family answers it with S on its own surface — literally the same
+					// text, since the family status line fed both — so C is inert there and
+					// the board is free to bind it (Four Colours: the card on the table).
+					// Routing it anyway made C answer two different questions depending on
+					// where focus was, and the shortcuts help could only describe one.
+					if (isToolbarlessFamily(familyOf(opts))) return false;
 					return familyOf(opts) === 'property'
 						? opts.gameCommands.announceCurrentPlayerMoney()
 						: opts.onAnnounceIdentity?.() ?? false;

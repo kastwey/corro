@@ -2557,12 +2557,13 @@ async function initBoard() {
 	onAnnounceTurn: () => currentFamilyView()?.announceTurn?.() ?? false,
 	// C off the property board: "how am I doing?" is your board identity there —
 	// the race squadron, or the track piece and its colour. The family owns the phrasing.
+	// A card family answers with S instead and never gets here (the key layer stops C).
 	onAnnounceIdentity: () => {
 		const gs = gameManager.getCurrentGameState();
 		const myId = gameManager.getMyPlayerId();
 		const family = gs && familyFor(gs.gameType);
 		if (!gs || !myId || !family) return false;
-		const identity = family.identityAnnouncement(gs, myId, id => gameManager.getPlayer(id));
+		const identity = family.identityAnnouncement?.(gs, myId, id => gameManager.getPlayer(id));
 		if (!identity) return false;
 		announce(createAnnouncement(identity.key, identity.vars), { instant: true });
 		return true;

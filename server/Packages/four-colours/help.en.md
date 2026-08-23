@@ -52,6 +52,7 @@ sweeps the rivals in one go. Noticing who is running short is part of the game. 
 
 ### Finding cards and checking the table
 
+- **C** says the top card and nothing else: the quick check between turns. After a wild it adds the colour that rules, because the card no longer says it.
 - **D** announces the deck count, discard top and colour in force. **S** announces your hand, direction and score; **Shift+S** reviews your rivals.
 - **R**, **G**, **B** and **Y** jump through cards of that colour; number keys jump through that value and **I** through special cards. Add **Shift** to move backward.
 - Some rules add keys for doubles or calling the last card. **Ctrl+F1** always shows the exact list for the current game.

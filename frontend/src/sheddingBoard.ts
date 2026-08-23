@@ -87,6 +87,7 @@ export class SheddingBoard {
 	 *  active-rules dialog is the global Ctrl+Shift+F1 command.) */
 	helpShortcuts(): HelpShortcut[] {
 		const shortcuts = cardBoardHelpShortcuts(this.hand, 'game.help_cmd_shedding_piles');
+		shortcuts.push({ keys: 'c', descKey: 'game.help_cmd_shedding_top' });
 		shortcuts.push({ keys: 'r / g / b / y', descKey: 'game.help_cmd_shedding_colour_jump' });
 		shortcuts.push({ keys: 'shift + r / g / b / y', descKey: 'game.help_cmd_shedding_colour_jump_back' });
 		shortcuts.push({ keys: '0 – 9', descKey: 'game.help_cmd_shedding_number_jump' });
@@ -213,6 +214,16 @@ export class SheddingBoard {
 			announce: this.deps.announce,
 			read: () => this.pileStatusText(),
 		});
+		// C — just the card on the table and the colour in force. D says the same plus the deck
+		// count, and in a game this fast the count is a preamble you sit through on every check.
+		// C is free here: the engine's own "how am I doing?" (AnnounceMyStatus) repeated S word
+		// for word in a card family, so it is hidden from the shortcuts help AND inert in this
+		// family (keys.ts) — the letter means one thing, wherever focus happens to be.
+		registerPileStatusKey(this.element, {
+			key: 'c',
+			announce: this.deps.announce,
+			read: () => this.topCardText(),
+		});
 
 		// R / G / B / Y — jump the hand focus to the NEXT card of that colour (wrapping);
 		// Shift+ the same walks to the PREVIOUS one (like S / Shift+S). The classic-colour
@@ -271,6 +282,26 @@ export class SheddingBoard {
 		const myId = this.deps.getMyPlayerId();
 		if (!gs || !myId) return;
 		this.deps.announce(sheddingWatchText(gs, myId, this.deps.tSync));
+	}
+
+	/**
+	 * The C readout: what is on the table, and — only when it differs — what colour is in force.
+	 * The two can only disagree after a wild, so naming the colour every time would repeat the
+	 * card's own colour on almost every check, dozens of times a game. When they disagree the
+	 * colour is the ONLY thing that says what may be played, so it is never dropped there.
+	 */
+	private topCardText(): string | null {
+		const gs = this.deps.getGameState();
+		if (!gs?.shedding) return null;
+		const top = topDef(gs);
+		const inForce = gs.shedding.currentColor;
+		if (top && top.color === inForce) {
+			return this.deps.tSync('game.shedding_top_readout_plain', { card: top.nameKey });
+		}
+		return this.deps.tSync('game.shedding_top_readout', {
+			card: top?.nameKey ?? 'game.shedding_no_top',
+			color: `colors.${inForce}`,
+		});
 	}
 
 	/** D reads the table state that is visual but deliberately absent from the hand. */

@@ -452,6 +452,51 @@ test('C answers per family: money on property boards, board identity on race and
 	}
 });
 
+// A card family answers "how am I doing?" with S on its own surface, and the identity C used
+// to speak WAS that same status line. Routing it made one letter mean two different things
+// depending on focus — the board's reading with focus on the cards, the status from a panel —
+// which no shortcut list can describe honestly. C is left untouched here so a card board can
+// own it (Four Colours reads the card on the table).
+test('C is inert in every card family: the letter belongs to the surface, not the engine', () => {
+	for (const family of ['journey', 'assembly', 'draft', 'shedding', 'exploding', 'forbidden', 'categories']) {
+		const h = attachStatus(family);
+		try {
+			assert.equal(pressKey(h.board, 'c'), false, `${family}: C is left for the surface`);
+			assert.equal(h.calls.money, 0, `${family}: no money readout`);
+			assert.equal(h.calls.identity, 0, `${family}: no identity readout`);
+		} finally {
+			h.detach();
+			h.board.remove();
+		}
+	}
+});
+
+// The read-only queries stay alive while a modal dialog owns focus (checking your situation
+// must not cost you the dialog). C is one of them on a property board — and stays silent in a
+// card family there too, so the key means the same everywhere or nothing at all.
+test('C inside a modal dialog: still the property money readout, still silent in a card family', () => {
+	for (const [family, expected] of [['property', 1], ['shedding', 0]] as const) {
+		const h = attachStatus(family);
+		const dialog = document.createElement('dialog');
+		dialog.setAttribute('open', '');
+		dialog.dataset.modal = 'true';
+		const content = document.createElement('div');
+		content.tabIndex = 0;
+		dialog.appendChild(content);
+		document.body.appendChild(dialog);
+		try {
+			content.focus();
+			assert.equal(pressKey(content, 'c'), expected === 1, `${family}: C consumed in the dialog`);
+			assert.equal(h.calls.money, expected, `${family}: money calls from the dialog`);
+			assert.equal(h.calls.identity, 0, `${family}: identity calls from the dialog`);
+		} finally {
+			h.detach();
+			dialog.remove();
+			h.board.remove();
+		}
+	}
+});
+
 // ── N / Shift+N: occupied squares in property games, ALL pieces in race games ─
 
 function attachPieceNav(family: string) {
