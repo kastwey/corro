@@ -43,6 +43,23 @@ export default defineConfig({
 	// judging a shared machine by a solo-machine stopwatch is what makes a suite flaky.
 	timeout: SHARD_COUNT > 1 ? 300_000 : 90_000,
 	expect: { timeout: SHARD_COUNT > 1 ? 25_000 : 15_000 },
+	// One retry, and only in CI. This suite is deterministic by construction — scripted dice,
+	// decks in file order, join-order turns — so a test that passes on the second attempt never
+	// disagreed with the product: it lost a race against a loaded shared runner. Two of those
+	// landed within a day, each a 15s wait for a reaction that normally takes milliseconds, each
+	// on a commit whose neighbours passed with identical product code (one of them changed a
+	// markdown file and nothing else). See issue #15.
+	//
+	// Safe with the scripted dice: every spec that uses them resets the server's queue in
+	// `beforeEach`, which Playwright re-runs per ATTEMPT, so a retry starts from an empty queue
+	// rather than the failed attempt's leftovers. The Axe audit and the coverage ledger are
+	// per-test fixtures for the same reason and get the same fresh start.
+	//
+	// It hides nothing: a test that needed the retry is reported as FLAKY, in the list output and
+	// in the HTML report, so a recurrence stays visible instead of arriving as a red run and an
+	// email. A test that fails BOTH attempts is a defect, exactly as it was before. Locally there
+	// are no retries — a flake in front of you is worth more than a green run.
+	retries: process.env.CI ? 1 : 0,
 	// Shards run as separate processes at the same time, so each needs its own folders — one
 	// shared report folder means four processes overwriting each other's failure traces.
 	outputDir: `test-results${SHARD_SUFFIX}`,
