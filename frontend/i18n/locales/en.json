@@ -970,6 +970,7 @@
     "forbidden_card_label": "Words",
     "forbidden_card_target_line": "Target word: {{target}}.",
     "forbidden_card_words_heading": "Forbidden words:",
+    "forbidden_card_waiting": "The word appears when the turn starts.",
     "forbidden_start_button": "Start the timer",
     "forbidden_correct_button": "Correct, next card",
     "forbidden_pass_button": "Pass",

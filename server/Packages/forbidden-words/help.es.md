@@ -19,6 +19,8 @@ El anfitrión elige un idioma común para las palabras al crear la partida y pue
 
 El portavoz comprueba que todos estén preparados y pulsa **Iniciar el temporizador**. Puede preguntarlo por el chat de voz al jugar a distancia o directamente cuando todos estén juntos en persona; el adivinante y el supervisor no tienen que confirmar nada en Corro.
 
+La palabra llega al arrancar el reloj, no antes: hasta ese momento la carta dice que aparecerá al empezar el turno, también para el supervisor. Así todos los turnos se preparan con el mismo tiempo.
+
 La carta privada es un cuadro de edición multilínea protegido. No se puede modificar, pero siguen disponibles el movimiento del cursor, los comandos de lectura del lector de pantalla, la selección y la copia.
 
 ## Durante el temporizador

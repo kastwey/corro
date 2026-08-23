@@ -243,7 +243,13 @@ public sealed class ForbiddenFamily : IGameFamily
 		}
 
 		var turn = forbidden.Turn;
-		if (playerId != turn.ClueGiverId && playerId != turn.MonitorId)
+		// Role is not enough: the card must also be live. Dealing it while the turn is still
+		// being prepared handed the clue-giver unlimited time to plan clues before starting the
+		// clock, and let the monitor study the forbidden list at leisure — the timed turn stopped
+		// measuring what it claims to measure. Hiding it on the CLIENT would not have fixed that:
+		// the words were already in those two browsers, readable by anyone who looked.
+		var live = turn.Phase == ForbiddenTurnPhase.Active;
+		if (!live || (playerId != turn.ClueGiverId && playerId != turn.MonitorId))
 		{
 			projected = projected with
 			{

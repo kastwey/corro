@@ -970,6 +970,7 @@
     "forbidden_card_label": "Palabras",
     "forbidden_card_target_line": "Palabra objetivo: {{target}}.",
     "forbidden_card_words_heading": "Palabras prohibidas:",
+    "forbidden_card_waiting": "La palabra aparece al empezar el turno.",
     "forbidden_start_button": "Iniciar el temporizador",
     "forbidden_correct_button": "Correcta, siguiente carta",
     "forbidden_pass_button": "Pasar",

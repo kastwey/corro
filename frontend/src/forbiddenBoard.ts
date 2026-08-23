@@ -365,15 +365,15 @@ export class ForbiddenBoard {
 		this.renderRoles(gs, myId);
 		this.localizeCardLabel();
 
-		const canSeeCard = !!turn.target && (role === 'clue-giver' || role === 'monitor');
-		this.cardPanel.hidden = !canSeeCard;
-		if (canSeeCard) {
-			this.protectedCard.setValue(formatForbiddenCard(
-				turn.target!,
-				turn.forbiddenWords,
-				locale,
-				this.deps.tSync,
-			));
+		// The card stays put between turns and only its CONTENT waits. Hiding the whole panel
+		// would drop focus and make it reappear under a screen-reader user every single turn;
+		// the words are withheld by the server, so an empty card gives nothing away.
+		const holdsCard = role === 'clue-giver' || role === 'monitor';
+		this.cardPanel.hidden = !holdsCard;
+		if (holdsCard) {
+			this.protectedCard.setValue(turn.target
+				? formatForbiddenCard(turn.target, turn.forbiddenWords, locale, this.deps.tSync)
+				: this.t('forbidden_card_waiting'));
 		}
 
 		this.renderTimer(turn.startedAt ?? null, turn.durationSeconds, turn.phase === 'active');
