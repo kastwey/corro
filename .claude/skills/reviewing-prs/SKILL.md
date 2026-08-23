@@ -29,11 +29,21 @@ This is not caution for its own sake. Three things go wrong when a review starts
 An obvious one-line fix is not an exception — say in the finding that it is a one-liner and
 offer it. "Do it" takes two words, and then you have an instruction rather than a guess.
 
-## Explaining a finding
+## Explaining the change, and then the findings
 
 Write for somebody who has not read the diff, does not have the file open, and should not have
 to. They are deciding whether this matters and what to do about it; they can only decide from
 what you tell them.
+
+**Start with the change itself, before a single finding.** What is this PR for, in a couple of
+sentences, and then what it actually does — each thing it changes and what that thing is trying
+to achieve. Skipping this is easy to do and hard to notice, because by the time you write the
+review you have had the diff in your head for an hour and the purpose feels like background.
+
+It is not background: **a finding is a deviation from an intent**, and a reader who has not been
+told the intent cannot weigh the deviation. Praise has the same problem — "this part is right"
+says nothing until they know what "this part" was for. Assume they know only the PR's title,
+because often that is true.
 
 Work in this order, and resist starting at the third step — that is the failure mode, and it
 reads as noise even when the finding is real:
