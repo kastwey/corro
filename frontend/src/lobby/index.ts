@@ -40,7 +40,7 @@ import {
 	actionsForInvitation, asInviteResult, describeInvitation, parsePendingInvitations, resultText,
 } from '../tableInvites.js';
 import { FriendsList } from '../friendsList.js';
-import { messagesButtonLabel, unreadAfterArrival } from './unreadMessages.js';
+import { isOwnEcho, messagesButtonLabel, unreadAfterArrival } from './unreadMessages.js';
 import { fetchFriends, type FriendEntry } from '../friends.js';
 import { listenForShake, requestShakePermission } from '../shakeGesture.js';
 import { initializeSiteMetrics, renderActivity } from '../siteMetrics.js';
@@ -82,6 +82,8 @@ class UnifiedLobbyUI {
 	private lobbyChat: LobbyChat | null = null;
 	/** Messages that landed while this player was somewhere else in the lobby. */
 	private unreadMessages = 0;
+	/** This reader's own public name, so their own lines coming back are recognised as theirs. */
+	private myHandle: string | null = null;
 	private invitesRoster: FriendRoster | null = null;
 	private friendsTabs: Tabs | null = null;
 	private settingsTabs: Tabs | null = null;
@@ -841,6 +843,11 @@ class UnifiedLobbyUI {
 	 * a text field first.
 	 */
 	private showMessagesView(): void {
+		// The startup settles the view LAST (checkExistingSession), and the way in here appears as
+		// soon as the account answers — which is earlier. Without this, opening the messages while
+		// the boards are still loading is undone a second later, taking with it a count already
+		// cleared and, from the friends list, a half-written line and the keyboard with it.
+		this.viewClaimed = true;
 		showView('view-messages');
 		window.history.pushState({ view: 'view-messages' }, '');
 		this.unreadMessages = 0;
@@ -984,6 +991,10 @@ class UnifiedLobbyUI {
 		const suggestions = getElement('lobby-chat-suggestions');
 		if (!log || !input || !send || !suggestions || this.lobbyChat) return;
 
+		// Kept here as well as inside the panel, because telling this reader's OWN lines from
+		// somebody else's is what decides whether an arriving message is news at all.
+		this.myHandle = session.user?.handle ?? null;
+
 		this.lobbyChat = new LobbyChat({
 			log, input, send, suggestions,
 			status: getElement('lobby-chat-status'),
@@ -1007,14 +1018,21 @@ class UnifiedLobbyUI {
 	private receiveDirectMessage(data: unknown): void {
 		const message = data as { from?: unknown; to?: unknown; text?: unknown } | null;
 		if (typeof message?.from !== 'string' || typeof message.text !== 'string') return;
+		// The server sends a copy to the sender's OTHER tabs, so the conversation reads the same
+		// everywhere (GameHub.DirectMessages). That copy is this reader's own line coming back: it
+		// belongs in the log written as theirs, and it is not news. Announcing it would tell
+		// somebody they have written to themselves, and counting it would leave an unread mark on
+		// a message they wrote.
+		const mine = isOwnEcho(message.from, this.myHandle);
 		this.lobbyChat?.receive({
 			from: message.from,
 			to: Array.isArray(message.to)
 				? message.to.filter((h: unknown): h is string => typeof h === 'string')
 				: [],
 			text: message.text,
-			mine: false,
+			mine,
 		});
+		if (mine) return;
 		const viewing = this.viewingMessages();
 		this.unreadMessages = unreadAfterArrival(this.unreadMessages, viewing);
 		this.labelMessagesButton();
@@ -1053,9 +1071,10 @@ class UnifiedLobbyUI {
 	/**
 	 * Tables waiting on this player. Read once on arrival, and refreshed when one lands while they
 	 * are here — never polled, for the same reason the online list is not: a page you visit, not a
-	 * ticker. An invitation IS addressed to them personally, though, so a new one says so once.
+	 * ticker. Saying that one HAS landed is the caller's job (listenForPeople), because it has to be
+	 * said from wherever the reader is standing rather than into this block.
 	 */
-	private async refreshInvitations(announce?: string): Promise<void> {
+	private async refreshInvitations(): Promise<void> {
 		const list = getElement('lobby-invites-list');
 		const section = getElement('lobby-invites');
 		if (!list || !section) return;
@@ -1084,8 +1103,6 @@ class UnifiedLobbyUI {
 				onClick: () => void this.answerInvitation(invitation.gameId, action === 'accept'),
 			})),
 		})));
-
-		if (announce) this.sayInvite(announce);
 	}
 
 	/** A shipped board's name in this player's language, or null when it cannot be named. */
@@ -1221,8 +1238,17 @@ class UnifiedLobbyUI {
 
 		// Something landing while they are here is worth saying once — unlike the room changing
 		// around them, an invitation is addressed to them personally.
-		gameClient.on('tableInvitation', () => void this.refreshInvitations(
-			i18nBinder.tSync('lobby.invites.arrived')));
+		//
+		// Said through the lobby's OWN live region rather than the status line under the
+		// invitations: that line lives on the home page, and home is hidden while the reader is on
+		// any other screen — the messages one most of all, now that it is somewhere people sit. A
+		// live region inside a hidden view is not a quiet announcement, it is no announcement, and
+		// a seat expires while a message does not. The list itself is what says it on screen; the
+		// status line stays for the outcome of the reader's own answer.
+		gameClient.on('tableInvitation', () => {
+			this.announceInLobby(i18nBinder.tSync('lobby.invites.arrived'));
+			void this.refreshInvitations();
+		});
 		gameClient.on('joinRequestAccepted', (data: unknown) => {
 			const code = (data as { inviteCode?: unknown } | null)?.inviteCode;
 			if (typeof code === 'string' && code.length > 0) void this.enterTableByCode(code);

@@ -204,3 +204,32 @@ test('somebody hidden from you is not offered, but can still be invited by name'
 	await gotoLobbyHome(berto);
 	await expect(berto.locator('#lobby-invites-list .lobby-invite')).toHaveCount(1);
 });
+
+// An invitation has to reach somebody wherever they are standing, and the lobby is several screens
+// now. Regression: the arrival was written into the status line under the invitations block, which
+// lives on the home page — hidden, and therefore silent, from every other screen. Silence is the
+// one thing a seat that expires cannot afford.
+test('an invitation is heard from another lobby screen, not only from home', async ({ browser }) => {
+	const ana = await member(browser, 'inv-elsewhere-host', 'invelsewherehost');
+	const berto = await member(browser, 'inv-elsewhere-guest', 'invelsewhereguest');
+
+	// Berto is in the lobby, but not on its home page: he is reading his messages, which is a
+	// screen people sit on rather than pass through.
+	await gotoLobbyHome(berto);
+	await berto.locator('#go-messages-btn').click();
+	await expect(berto.locator('#view-messages')).toBeVisible();
+
+	await createGame(ana, 'Ana', 'snakes-and-ladders');
+	await expect(ana.locator('#table-view')).toBeVisible();
+	await ana.locator('#table-invite-handle').fill('invelsewhereguest');
+	await ana.locator('#table-invite-send').click();
+	await expectAnnouncement(
+		ana, new RegExp(table.inviteSent.replace('{{handle}}', 'invelsewhereguest')));
+
+	await expectAnnouncement(berto, new RegExp(invites.arrived));
+	await flushAxeAudit(berto);
+
+	// …and it is waiting for him on the home page when he goes back for it.
+	await berto.locator('#messages-back-btn').click();
+	await expect(berto.locator('#lobby-invites-list .lobby-invite')).toHaveCount(1);
+});

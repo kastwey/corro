@@ -6,7 +6,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { messagesButtonLabel, unreadAfterArrival } from '../src/lobby/unreadMessages.js';
+import { isOwnEcho, messagesButtonLabel, unreadAfterArrival } from '../src/lobby/unreadMessages.js';
 
 /** A stand-in for i18next: reports the key it was asked for and what it was given. */
 const t = (key: string, vars?: Record<string, unknown>) =>
@@ -37,4 +37,23 @@ test('a message arriving while you are elsewhere is added to what is waiting', (
 test('a message arriving on the messages screen leaves nothing waiting', () => {
 	assert.equal(unreadAfterArrival(0, true), 0);
 	assert.equal(unreadAfterArrival(3, true), 0);
+});
+
+// Regression: the server copies every message to the sender's OTHER tabs so the conversation reads
+// the same everywhere, and that copy carries the SENDER's handle. Treated as an arrival it told
+// somebody "you have written to you" and left an unread mark on a line they had just written.
+test('this reader own line coming back is not somebody writing to them', () => {
+	assert.equal(isOwnEcho('ana', 'ana'), true);
+	// A handle is a name: the same person however it is capitalised, exactly as the chat's own
+	// reply-to rule compares them.
+	assert.equal(isOwnEcho('Ana', 'ana'), true);
+	assert.equal(isOwnEcho('ana', 'ANA'), true);
+});
+
+test('somebody else writing is an arrival, and so is anything at all before a name is known', () => {
+	assert.equal(isOwnEcho('berto', 'ana'), false);
+	assert.equal(isOwnEcho('anabel', 'ana'), false, 'a name that merely starts the same is not them');
+	// Nobody signed in, or an account with no public name yet: whatever arrived is not theirs.
+	assert.equal(isOwnEcho('ana', null), false);
+	assert.equal(isOwnEcho('ana', ''), false);
 });

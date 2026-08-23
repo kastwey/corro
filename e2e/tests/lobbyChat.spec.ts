@@ -197,3 +197,30 @@ test('a message that lands while you are elsewhere is said once and waits in the
 	await expect(berto.locator('#go-messages-btn')).toHaveText(home.messagesButton);
 	await flushAxeAudit(berto);
 });
+
+// Regression: the server sends a copy of every message to the sender's OTHER tabs, so that a
+// conversation reads the same everywhere. The copy carries the SENDER's handle, and read as an
+// arrival it told somebody they had written to themselves and left an unread mark on a line they
+// had just written.
+test('your own line reaching your other tab is not somebody writing to you', async ({ browser }) => {
+	const ana = await chatter(browser, 'lchat-echo', 'lchatecho');
+	await chatter(browser, 'lchat-echo-peer', 'lchatechopeer');
+
+	// The same person, signed in again in another tab. The account already has its public name, so
+	// there is nothing to set up here: this is simply somebody with the lobby open twice.
+	const otherTab = await newPlayerPage(browser, 'es-ES');
+	await otherTab.goto('/api/auth/signin/e2e?returnUrl=%2F&subject=lchat-echo');
+	await expect(otherTab.locator('#account-bar .account-status')).toBeVisible();
+	await gotoLobbyHome(otherTab);
+
+	await write(ana, '@lchatechopeer ¿jugamos?');
+
+	// It reaches the other tab written as what it is — their own line, to somebody — and leaves no
+	// mark on the way in, because there is nothing there they have not read.
+	const echoed = otherTab.locator('#lobby-chat-log .lobby-chat__line');
+	await expect(echoed).toHaveCount(1);
+	await expect(echoed).toHaveText(
+		chat.lineMine.replace('{{to}}', 'lchatechopeer').replace('{{text}}', '¿jugamos?'));
+	await expect(otherTab.locator('#go-messages-btn')).toHaveText(home.messagesButton);
+	await flushAxeAudit(otherTab);
+});
