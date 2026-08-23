@@ -102,6 +102,21 @@ public class ForbiddenFamilyTests
 	}
 
 	[Fact]
+	public async Task The_shipped_rules_and_the_defaults_the_lobby_offers_are_the_same_figures()
+	{
+		// One rule, two places to write its figure. The form always sends the host's value, so a
+		// mismatch plays right and only reads wrong — until the values do not arrive at all and the
+		// match falls back to the block below, the figure nobody kept up to date.
+		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+		var rules = definition.Manifest.ForbiddenRules!;
+		var offered = definition.Manifest.HouseRules.ToDictionary(rule => rule.Id, rule => rule.Default);
+
+		Assert.Equal(rules.EndMode, offered["forbiddenEndMode"]!.Value.GetString());
+		Assert.Equal(rules.Cycles, offered["forbiddenCycles"]!.Value.GetInt32());
+		Assert.Equal(rules.TargetScore, offered["forbiddenTargetScore"]!.Value.GetInt32());
+	}
+
+	[Fact]
 	public async Task The_host_chooses_how_the_match_ends_and_with_which_number()
 	{
 		// The path a real host takes, which the rulebook tests skip by building the rules by hand:
