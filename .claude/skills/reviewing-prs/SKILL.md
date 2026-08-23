@@ -184,9 +184,18 @@ from the keyboard (AGENTS.md, "a scrollable region needs keyboard access").
 A review that is wrong twice stops being read. Before writing a finding down:
 
 - Follow the code path yourself and cite it as `file.ts:line`. The PR description is the
-  author's belief about their change, not evidence.
+  author's belief about their change, not evidence — and neither is a comment in the diff. A
+  comment saying "tables wrap rather than scroll, because a scrolling one would need a keyboard
+  handle" is the author explaining their reasoning; the repository's actual rule was narrower
+  (a region that scrolls must be *reachable*, which is two attributes, not a prohibition).
+  Repeating a justification as though it were the rule puts the author's belief in your mouth.
 - A claim about behaviour ("this key does nothing while typing") needs the handler that decides
   it, not the label that describes it.
+- **Try a proposed fix on inputs other than the one that prompted it.** A rule inferred from a
+  single example usually fits that example perfectly. Marking the first cell of every table row
+  as a header reads beautifully on a table whose first column is a label, and turns a plain data
+  column into a heading everywhere else. If the fix generalises, say what it generalises over;
+  if it does not, that is not a fix, it is a request for a decision.
 - Run the suites (see [verifying-changes](../verifying-changes/SKILL.md)). "The tests pass" is
   worth saying only if you ran them.
 - If you could not check something, say which part you could not check rather than rounding it
@@ -212,6 +221,15 @@ Give the findings in one pass, ordered by severity, each explained as above, and
 which you would act on first and why. Then hand the decision over: which findings to take, in
 what order, and whether each becomes a PR comment or a change. Waiting is the work here, not an
 interruption of it.
+
+**Some findings are not this PR's to fix, and saying so is part of the finding.** A change can
+be right and still sit inside something questionable — a format that cannot express what the
+author needs, a mechanism worth replacing wholesale. Those are real, and they are not this
+author's to answer: the guide renderer growing a fourth special case is a question about the
+renderer, and only the guide's own author can say whether a table's first column is a label.
+File them where a decision can be made — an issue, with the reasoning that got you there — and
+say plainly in the review that they do not block the change. A good fix parked for weeks under
+an architectural argument helps nobody, least of all the players waiting for the bug to go.
 
 **A PR from a fork can only be answered, not pushed to.** The git proxy injects credentials for
 this repository alone, so a branch living on somebody's fork is unreachable from here — and it
