@@ -86,7 +86,6 @@ public partial class CorroRulebook
 		// Clear pending
 		context.GameState.PendingPurchase = null;
 
-		await context.Presenter.NotifySquareChangedAsync(square);
 		await context.Announce("game.property_purchased", new Dictionary<string, object>
 		{
 			["actorId"] = player.Id,

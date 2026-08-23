@@ -129,7 +129,6 @@ internal sealed class FakeGameService : IGameService
 	public Task RaiseGameEventsAsync(IReadOnlyList<AnnouncementDispatch> batch)
 		=> _onGameEvents?.Invoke(batch) ?? Task.CompletedTask;
 
-	public event Func<Square, Task>? OnSquareChanged { add { } remove { } }
 	public event Func<CardDrawnNotification, Task>? OnCardDrawn { add { } remove { } }
 
 	// Real, raisable too: the registry subscribes to this one, so a test can prove the trip from

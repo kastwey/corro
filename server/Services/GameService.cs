@@ -63,7 +63,6 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 
 	public event Func<GameState, Task> OnGameStateChanged = delegate { return Task.CompletedTask; };
 	public event Func<IReadOnlyList<AnnouncementDispatch>, Task> OnGameEvents = delegate { return Task.CompletedTask; };
-	public event Func<Square, Task> OnSquareChanged = delegate { return Task.CompletedTask; };
 	public event Func<CardDrawnNotification, Task> OnCardDrawn = delegate { return Task.CompletedTask; };
 	public event Func<ServerResponse, Task> OnBroadcast = delegate { return Task.CompletedTask; };
 
@@ -405,9 +404,6 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 			catch (Exception ex) { _logger?.LogError(ex, "Failed to broadcast a {Type} to the table", response.Type); }
 		}
 	}
-
-	/// <summary>Notifies clients that a single square's visual state changed (IGamePresenter).</summary>
-	public Task NotifySquareChangedAsync(Square square) => OnSquareChanged(square);
 
 	/// <summary>Reveals a drawn Chance / Community card to clients (IGamePresenter).</summary>
 	public Task NotifyCardDrawnAsync(CardDrawnNotification notification) => OnCardDrawn(notification);

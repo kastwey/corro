@@ -4,9 +4,9 @@ namespace CorroServer.Services.Commands;
 
 /// <summary>
 /// Client-facing notification sink the rulebook fires while resolving a command.
-/// Bundles ordered state checkpoints, single-square visual refreshes and card reveals into
-/// one cohesive abstraction so <see cref="GameContext"/> does not keep growing an open-ended
-/// list of <c>Func&lt;&gt;</c> delegates. Normal full-state delivery belongs to the command host
+/// Bundles ordered state checkpoints, card reveals and table-wide responses into one cohesive
+/// abstraction so <see cref="GameContext"/> does not keep growing an open-ended list of
+/// <c>Func&lt;&gt;</c> delegates. Normal full-state delivery belongs to the command host
 /// after <c>GameService</c> has flushed the command's announcement batch; handlers cannot
 /// bypass that ordering.
 /// <see cref="GameService"/> provides the live implementation; tests use a no-op or a
@@ -23,9 +23,6 @@ public interface IGamePresenter
 	/// the next segment, flushed normally when the command ends.
 	/// </summary>
 	Task CheckpointTurnSegmentAsync();
-
-	/// <summary>Notifies clients that a single square's visual state changed.</summary>
-	Task NotifySquareChangedAsync(Square square);
 
 	/// <summary>
 	/// Sends one response to EVERY player, for something that happened to the table rather than

@@ -83,7 +83,6 @@ public partial class CorroRulebook
 		context.Helper.AddPlayerMoney(player.Id, mortgageValue);
 		context.Helper.SetBankMoney(context.Helper.GetBankMoney() - mortgageValue);
 
-		await context.Presenter.NotifySquareChangedAsync(square);
 		await context.Announce("game.property_mortgaged", new Dictionary<string, object>
 		{
 			["actorId"] = player.Id,
@@ -162,7 +161,6 @@ public partial class CorroRulebook
 		context.Helper.AddPlayerMoney(player.Id, -unmortgageCost);
 		context.Helper.SetBankMoney(context.Helper.GetBankMoney() + unmortgageCost);
 
-		await context.Presenter.NotifySquareChangedAsync(square);
 		await context.Announce("game.property_unmortgaged", new Dictionary<string, object>
 		{
 			["actorId"] = player.Id,
@@ -344,7 +342,6 @@ public partial class CorroRulebook
 			square.BigBuildings = 1;
 		}
 
-		await context.Presenter.NotifySquareChangedAsync(square);
 		await context.Announce(buildingBig ? "game.big_building_built" : "game.building_built", new Dictionary<string, object>
 		{
 			["actorId"] = player.Id,
@@ -433,7 +430,6 @@ public partial class CorroRulebook
 		context.Helper.AddPlayerMoney(player.Id, saleValue);
 		context.Helper.SetBankMoney(context.Helper.GetBankMoney() - saleValue);
 
-		await context.Presenter.NotifySquareChangedAsync(square);
 
 		context.Logger?.LogDebug("{PlayerName} sold building on {SquareName} for {Amount}€", player.Name, square.Name, saleValue);
 
