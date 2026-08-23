@@ -170,7 +170,7 @@ public sealed class ForbiddenFamily : IGameFamily
 		var resolved = definition.ForbiddenWords?.GetValueOrDefault(start.Lang)
 			?? throw new InvalidOperationException(
 				$"forbidden word deck does not provide the selected language '{start.Lang}'.");
-		var deck = (start.Random is { } random ? random.Shuffle(resolved) : resolved).ToList();
+		var deck = OrderDeck(resolved, start.AlreadyDealt, start.Random);
 		var forbidden = ForbiddenRulebook.CreateInitialState(arranged, deck, rules);
 		var teamOf = arranged
 			.SelectMany((team, index) => team.Select(id => (id, index)))
@@ -230,6 +230,55 @@ public sealed class ForbiddenFamily : IGameFamily
 		=> state.Forbidden?.Turn is { Phase: ForbiddenTurnPhase.Active } turn
 			? new ForbiddenExpireTurnCommand { PlayerId = turn.ClueGiverId }
 			: null;
+
+	/// <summary>
+	/// The deck for one match: everything this table has never been dealt first, then the rest.
+	/// Both halves are shuffled, so the order is fresh every time — only the PRIORITY is
+	/// remembered. A group that plays several matches in a row used to meet repeats immediately,
+	/// because each match reshuffled the whole deck as if it were the table's first.
+	///
+	/// With nothing unseen left the whole deck counts as unseen again, so a table never stalls.
+	/// That is a safety net rather than the usual path: the table's memory recycles itself the
+	/// moment a match completes the trip round the deck, so what normally arrives here is the
+	/// memory of a trip in progress.
+	/// </summary>
+	internal static List<ForbiddenWordDef> OrderDeck(
+		IReadOnlyList<ForbiddenWordDef> deck,
+		IReadOnlyCollection<string> alreadyDealt,
+		IRandomSource? random)
+	{
+		List<ForbiddenWordDef> Shuffled(List<ForbiddenWordDef> cards)
+			=> (random is { } source ? source.Shuffle(cards) : cards).ToList();
+
+		if (alreadyDealt.Count == 0)
+		{
+			return Shuffled(deck.ToList());
+		}
+		var seen = new HashSet<string>(alreadyDealt, StringComparer.Ordinal);
+		var unseen = deck.Where(word => !seen.Contains(word.Id)).ToList();
+		if (unseen.Count == 0)
+		{
+			return Shuffled(deck.ToList());
+		}
+		return Shuffled(unseen)
+			.Concat(Shuffled(deck.Where(word => seen.Contains(word.Id)).ToList()))
+			.ToList();
+	}
+
+	/// <summary>The cards this match dealt: the front of its deck, up to the cursor. A match that
+	/// ran past the end of the deck (cursor wraps) has dealt all of it.</summary>
+	public MatchDeal CardsDealt(GameState state)
+	{
+		var deck = state.ForbiddenDeck;
+		var dealt = state.Forbidden?.CardCursor ?? 0;
+		if (deck is null || deck.Count == 0 || dealt <= 0)
+		{
+			return MatchDeal.None;
+		}
+		return new MatchDeal(
+			deck.Take(Math.Min(dealt, deck.Count)).Select(word => word.Id).ToList(),
+			deck.Count);
+	}
 
 	public bool HasHiddenInformation => true;
 

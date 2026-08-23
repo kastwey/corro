@@ -139,6 +139,31 @@ public record GameDocument
 	public int MatchesPlayed { get; init; }
 
 	/// <summary>
+	/// Card ids this table has already been dealt, keyed by "gameType:contentLanguage" — two decks
+	/// of different games, or of the same game in another language, share no cards and no memory.
+	///
+	/// Reshuffling the whole deck for every match made a group meet the same words again almost
+	/// immediately; knowing what the table has already seen lets the next match deal the rest
+	/// first. It lives here, on the table, because that is the thing that outlives a match.
+	/// Only families that answer <c>CardsDealt</c> ever write to it.
+	///
+	/// It is a memory of the CURRENT trip through the deck, not of the table's whole history: once
+	/// the trip is complete the list starts again from the match that completed it, so it can never
+	/// grow to cover the deck and leave every later match with nothing unseen to prefer.
+	/// </summary>
+	[JsonPropertyName("dealtCards")]
+	public Dictionary<string, List<string>>? DealtCards { get; init; }
+
+	/// <summary>The <see cref="DealtCards"/> key for a game type and content language.</summary>
+	public static string DeckMemoryKey(string gameType, string? contentLanguage)
+		=> $"{gameType}:{contentLanguage ?? string.Empty}";
+
+	/// <summary>What this table has been dealt from one deck in its current trip through it,
+	/// newest matches included.</summary>
+	public IReadOnlyCollection<string> DealtFrom(string gameType, string? contentLanguage)
+		=> DealtCards?.GetValueOrDefault(DeckMemoryKey(gameType, contentLanguage)) ?? (IReadOnlyCollection<string>)Array.Empty<string>();
+
+	/// <summary>
 	/// Copy safe to SEND TO CLIENTS: every player's credentials (secret id, re-entry code)
 	/// are stripped. Persistence always stores the full document; any hub message carrying
 	/// a GameDocument (LobbyUpdated, create/join/start responses) must go through this —
@@ -173,6 +198,9 @@ public record GameDocument
 		// rival's hand, and "the game is over" is not a reason to relax the family's own contract.
 		LastMatch = LastMatch is null ? null
 			: Services.Corro.Families.GameFamilies.For(LastMatch.GameType).ProjectFor(LastMatch, null),
+		// The deck memory is bookkeeping for the next shuffle: no client reads it, it grows with
+		// every match, and this document is broadcast on every lobby update. It stays on the server.
+		DealtCards = null,
 	};
 }
 

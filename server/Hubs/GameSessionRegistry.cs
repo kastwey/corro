@@ -531,6 +531,7 @@ public sealed class GameSessionRegistry
 			GameState = null,
 			LastMatch = finalState,
 			MatchesPlayed = document.MatchesPlayed + 1,
+			DealtCards = RememberDealtCards(document, finalState),
 		});
 		_persistedDocuments[gameId] = saved;
 
@@ -551,6 +552,43 @@ public sealed class GameSessionRegistry
 		_logger?.LogInformation(
 			"Match {Number} retired for table {GameId}; the table remains", saved.MatchesPlayed, gameId);
 		return saved;
+	}
+
+	/// <summary>
+	/// The table's deck memory with this match's dealt cards added — or, when that completes a trip
+	/// round the whole deck, started over from this match's cards alone. Families that keep no
+	/// memory answer nothing and the document is left exactly as it was — including its absent
+	/// field, so a table that never plays a card game never grows one.
+	/// </summary>
+	internal static Dictionary<string, List<string>>? RememberDealtCards(GameDocument document, GameState finalState)
+	{
+		var deal = GameFamilies.For(finalState.GameType).CardsDealt(finalState);
+		if (deal.CardIds.Count == 0)
+		{
+			return document.DealtCards;
+		}
+
+		var key = GameDocument.DeckMemoryKey(finalState.GameType ?? string.Empty, document.Language);
+		var memory = document.DealtCards is null
+			? new Dictionary<string, List<string>>(StringComparer.Ordinal)
+			: new Dictionary<string, List<string>>(document.DealtCards, StringComparer.Ordinal);
+		var seen = memory.TryGetValue(key, out var existing)
+			? new List<string>(existing)
+			: new List<string>();
+		// A card already remembered is not remembered twice: the memory is a set of ids, and its
+		// size is weight the table's document carries on every lobby update.
+		var known = new HashSet<string>(seen, StringComparer.Ordinal);
+		seen.AddRange(deal.CardIds.Where(id => known.Add(id)));
+
+		// The table has now been round the entire deck, so the memory recycles: it keeps only what
+		// this match just dealt, the way you reshuffle a discard pile and leave the last trick out
+		// of it. A memory that only ever grew would saturate — 556 words at twenty a match, about
+		// twenty-eight matches — and from then on every match would reshuffle the whole deck again,
+		// exactly the repetition this memory exists to stop, on the tables that play most.
+		memory[key] = deal.DeckSize > 0 && seen.Count >= deal.DeckSize
+			? deal.CardIds.Distinct(StringComparer.Ordinal).ToList()
+			: seen;
+		return memory;
 	}
 
 	// ── Wiring (moved verbatim from the Hub's static callbacks) ───────────────
@@ -715,7 +753,9 @@ public sealed class GameSessionRegistry
 		}
 	}
 
-	private async Task ExpireRoundViaCommand(string gameId)
+	/// <summary>Internal so the E2E clock endpoint drives the SAME path a real timeout takes —
+	/// command, broadcast and retirement — instead of a lookalike that could drift from it.</summary>
+	internal async Task ExpireRoundViaCommand(string gameId)
 	{
 		try
 		{

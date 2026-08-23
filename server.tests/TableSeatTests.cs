@@ -369,7 +369,7 @@ public class TableSeatTests
 		public Task EndGameAsync() => Task.CompletedTask;
 		public Task NotifyStateChangedAsync() => Task.CompletedTask;
 		public Task SetPlayerConnectedAsync(string playerId, bool connected) => Task.CompletedTask;
-		public Task InitializeFromDefinitionAsync(List<Player> players, CorroServer.Models.Corro.GameDefinition definition, string lang = "en", GameSettings? settings = null, bool raceTeams = false, Dictionary<string, System.Text.Json.JsonElement>? ruleValues = null, List<List<string>>? teams = null) => Task.CompletedTask;
+		public Task InitializeFromDefinitionAsync(List<Player> players, CorroServer.Models.Corro.GameDefinition definition, string lang = "en", GameSettings? settings = null, bool raceTeams = false, Dictionary<string, System.Text.Json.JsonElement>? ruleValues = null, List<List<string>>? teams = null, IReadOnlyCollection<string>? alreadyDealt = null) => Task.CompletedTask;
 		public void ConfigureSettings(GameSettings settings) { }
 		public Task RestoreGameAsync(GameState savedState) => Task.CompletedTask;
 		public void AttachPackageDefinition(CorroServer.Models.Corro.GameDefinition definition) { }

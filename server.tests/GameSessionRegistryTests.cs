@@ -2,6 +2,7 @@ using CorroServer.Hubs;
 using CorroServer.Models;
 using CorroServer.Models.Corro;
 using CorroServer.Services;
+using CorroServer.Services.Corro.Families;
 using CorroServer.Services.Voice;
 using Microsoft.AspNetCore.SignalR;
 using Xunit;
@@ -277,6 +278,137 @@ public class GameSessionRegistryTests
 		InviteCode = "INV",
 	};
 
+	/// <summary>The six-word deck the memory tests play with, in the table's original order.</summary>
+	private static IReadOnlyList<string> SixWords => Enumerable.Range(0, 6).Select(index => $"w{index}").ToList();
+
+	private static List<ForbiddenWordDef> Deck(IReadOnlyList<string> ids) => ids.Select(id => new ForbiddenWordDef
+	{
+		Id = id,
+		Target = $"t{id}",
+		Forbidden = new List<string> { "a", "b", "c" },
+	}).ToList();
+
+	/// <summary>A finished forbidden match whose deck was dealt down to <paramref name="dealt"/>.
+	/// The deck is the six words in <paramref name="order"/> — the order a real match gets from
+	/// <c>OrderDeck</c>, unseen first — so the cards it dealt are its first <paramref name="dealt"/>.</summary>
+	private static GameState FinishedForbiddenMatch(int dealt, IReadOnlyList<string>? order = null)
+	{
+		var deck = Deck(order ?? SixWords);
+		return new GameState
+		{
+			GameType = "forbidden",
+			IsGameOver = true,
+			ForbiddenDeck = deck,
+			Forbidden = new ForbiddenState
+			{
+				CardCursor = dealt,
+				Turn = new ForbiddenTurnState { ClueGiverId = "p0", GuesserId = "p1", MonitorId = "p2" },
+			},
+		};
+	}
+
+	[Fact]
+	public async Task Retiring_a_real_match_writes_its_dealt_cards_onto_the_saved_table()
+	{
+		// The memory is only worth anything if the retirement actually records it: the next match
+		// reads it from the SAVED document, not from anything still in memory.
+		var reg = NewRegistry(out _, out var repo);
+		repo.Documents["g1"] = NewTable("g1") with { Language = "es" };
+		var service = new FakeService(gameOver: true, state: FinishedForbiddenMatch(dealt: 3));
+		reg.RegisterService("g1", service);
+
+		await reg.CleanupIfGameOverAsync("g1", service);
+
+		var table = await repo.LoadGameAsync("g1");
+		Assert.Equal(new[] { "w0", "w1", "w2" }, table!.DealtCards!["forbidden:es"]);
+		// And that is exactly what the next match at this table would be told it has already seen.
+		Assert.Equal(new[] { "w0", "w1", "w2" }, table.DealtFrom("forbidden", table.Language));
+	}
+
+	[Fact]
+	public void A_retired_match_adds_its_dealt_cards_to_the_table_and_never_twice()
+	{
+		var table = NewTable("g1") with { Language = "es" };
+
+		var afterFirst = GameSessionRegistry.RememberDealtCards(table, FinishedForbiddenMatch(dealt: 3));
+		Assert.Equal(new[] { "w0", "w1", "w2" }, afterFirst!["forbidden:es"]);
+
+		// The next match starts from what is left, so its dealt cards overlap the memory only if
+		// the deck ran out. Re-adding must not grow the document with duplicates.
+		var afterSecond = GameSessionRegistry.RememberDealtCards(
+			table with { DealtCards = afterFirst }, FinishedForbiddenMatch(dealt: 5));
+		Assert.Equal(new[] { "w0", "w1", "w2", "w3", "w4" }, afterSecond!["forbidden:es"]);
+	}
+
+	[Fact]
+	public void The_match_that_completes_the_deck_starts_the_memory_over_from_its_own_cards()
+	{
+		var table = NewTable("g1") with { Language = "es" };
+
+		// Four of the six words are behind this table already.
+		var afterFirst = GameSessionRegistry.RememberDealtCards(table, FinishedForbiddenMatch(dealt: 4));
+		Assert.Equal(new[] { "w0", "w1", "w2", "w3" }, afterFirst!["forbidden:es"]);
+
+		// This match is dealt the two unseen words first and then falls back on seen ones, so it
+		// completes the trip round the deck. The memory does not stay full: it starts again from
+		// the three words this match just used, which are precisely the ones the group must not
+		// meet again straight away.
+		var afterSecond = GameSessionRegistry.RememberDealtCards(
+			table with { DealtCards = afterFirst },
+			FinishedForbiddenMatch(dealt: 3, order: new[] { "w4", "w5", "w0", "w1", "w2", "w3" }));
+		Assert.Equal(new[] { "w4", "w5", "w0" }, afterSecond!["forbidden:es"]);
+	}
+
+	[Fact]
+	public void A_table_that_keeps_playing_never_meets_the_words_of_the_match_before()
+	{
+		// The invariant a group actually notices, over several trips through the deck: six words,
+		// three a match, the real ordering and the real bookkeeping wired together. Without the
+		// recycle the memory covers the deck on the second match and stays that way, and from the
+		// fourth on every match is dealt the same three words as the one before it.
+		var table = NewTable("g1") with { Language = "es" };
+		var previous = Array.Empty<string>();
+
+		for (var match = 1; match <= 6; match++)
+		{
+			var order = ForbiddenFamily
+				.OrderDeck(Deck(SixWords), table.DealtFrom("forbidden", table.Language), random: null)
+				.Select(word => word.Id)
+				.ToList();
+			var dealt = order.Take(3).ToArray();
+
+			Assert.Empty(dealt.Intersect(previous, StringComparer.Ordinal));
+
+			table = table with
+			{
+				DealtCards = GameSessionRegistry.RememberDealtCards(table, FinishedForbiddenMatch(dealt: 3, order: order)),
+			};
+			previous = dealt;
+		}
+	}
+
+	[Fact]
+	public void Deck_memory_is_kept_per_content_language_and_left_alone_by_other_families()
+	{
+		var spanish = NewTable("g1") with { Language = "es" };
+		var memory = GameSessionRegistry.RememberDealtCards(spanish, FinishedForbiddenMatch(dealt: 2));
+
+		// Switching the table's word language starts a separate memory: two decks share no cards,
+		// so what was played in Spanish must not hide English words.
+		var english = spanish with { Language = "en", DealtCards = memory };
+		var both = GameSessionRegistry.RememberDealtCards(english, FinishedForbiddenMatch(dealt: 1));
+		Assert.Equal(new[] { "w0", "w1" }, both!["forbidden:es"]);
+		Assert.Equal(new[] { "w0" }, both["forbidden:en"]);
+
+		// A family that keeps no memory leaves the document untouched — including its absent field.
+		var plain = NewTable("g2");
+		Assert.Null(GameSessionRegistry.RememberDealtCards(plain, new GameState { GameType = "property" }));
+
+		// And the memory never reaches a client: it is bookkeeping for the next shuffle, it grows
+		// with every match, and this document goes out on every lobby update.
+		Assert.Null((english with { DealtCards = both }).Sanitized().DealtCards);
+	}
+
 	// The public liveness number in the footer. It counts PEOPLE PRESENT, which is a narrower
 	// question than "does this process know about the game": a table everyone dropped out of is
 	// exactly the one nobody is sitting at, and advertising it would make a quiet server look busy.
@@ -414,8 +546,8 @@ public class GameSessionRegistryTests
 	{
 		private readonly GameState _state;
 		public bool Ended { get; private set; }
-		public FakeService(bool gameOver, string? packageToken = null)
-			=> _state = new GameState { IsGameOver = gameOver, PackageToken = packageToken };
+		public FakeService(bool gameOver, string? packageToken = null, GameState? state = null)
+			=> _state = state ?? new GameState { IsGameOver = gameOver, PackageToken = packageToken };
 
 		public GameState? GameState => _state;
 		public Task<GameState> GetGameStateAsync() => Task.FromResult(_state);
@@ -427,7 +559,7 @@ public class GameSessionRegistryTests
 		public Task<ServerResponse> ExecuteCommandAsync(GameCommand command) => Task.FromResult<ServerResponse>(new ErrorResponse { Message = "", Code = "" });
 		public Task NotifyStateChangedAsync() => Task.CompletedTask;
 		public Task SetPlayerConnectedAsync(string playerId, bool connected) => Task.CompletedTask;
-		public Task InitializeFromDefinitionAsync(List<Player> players, GameDefinition definition, string lang = "en", GameSettings? settings = null, bool raceTeams = false, Dictionary<string, System.Text.Json.JsonElement>? ruleValues = null, List<List<string>>? teams = null) => Task.CompletedTask;
+		public Task InitializeFromDefinitionAsync(List<Player> players, GameDefinition definition, string lang = "en", GameSettings? settings = null, bool raceTeams = false, Dictionary<string, System.Text.Json.JsonElement>? ruleValues = null, List<List<string>>? teams = null, IReadOnlyCollection<string>? alreadyDealt = null) => Task.CompletedTask;
 		public void ConfigureSettings(GameSettings settings) { }
 		public Task RestoreGameAsync(GameState savedState) => Task.CompletedTask;
 		public void AttachPackageDefinition(GameDefinition definition) { }

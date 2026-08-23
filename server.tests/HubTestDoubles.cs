@@ -112,7 +112,7 @@ internal sealed class FakeGameService : IGameService
 	public string GameId => "g";
 	public bool IsGameActive => true;
 	public Task<GameState> GetGameStateAsync() => Task.FromResult(new GameState());
-	public Task InitializeFromDefinitionAsync(List<Player> players, CorroServer.Models.Corro.GameDefinition definition, string lang = "en", GameSettings? settings = null, bool raceTeams = false, Dictionary<string, System.Text.Json.JsonElement>? ruleValues = null, List<List<string>>? teams = null) => Task.CompletedTask;
+	public Task InitializeFromDefinitionAsync(List<Player> players, CorroServer.Models.Corro.GameDefinition definition, string lang = "en", GameSettings? settings = null, bool raceTeams = false, Dictionary<string, System.Text.Json.JsonElement>? ruleValues = null, List<List<string>>? teams = null, IReadOnlyCollection<string>? alreadyDealt = null) => Task.CompletedTask;
 	public void ConfigureSettings(GameSettings settings) { }
 	public Task EndGameAsync() => Task.CompletedTask;
 	public Task RestoreGameAsync(GameState savedState) => Task.CompletedTask;
