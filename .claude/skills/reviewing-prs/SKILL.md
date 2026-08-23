@@ -252,10 +252,20 @@ carry most of the difference, and "write naturally" is not one of them:
   author got right and move on, especially when merging it says the rest.
 
 Once something is confirmed, publishing it follows the repo's usual rules: English, like every
-other artefact here. A design-level argument goes in one general comment where the reasoning can
-be followed; a defect in a specific line goes inline on that line. Several nits from one cause
-are one comment, not six. Every comment ends with the attribution footer, so a reader knows what
-wrote it.
+other artefact here. **Findings go where they live: one comment each, anchored on its own line.**
+Six findings stacked into one general comment make the author scroll back and forth mapping prose
+to code. The review body then carries only what belongs to no line — the greeting, what you ran,
+the shape of what follows. Several nits from ONE cause are still one comment, not six, and a
+design-level argument that answers to no single line stays in the body where the reasoning can be
+followed.
+
+**GitHub anchors a comment only on a line the diff touches.** When the defect lives in code the
+PR never opened — an announcement downstream of a rule it changed, a stale comment two screens
+away — anchor it on the diff line that caused it and name the real file and line in the text.
+That reads better than a general comment: the author's own change is sitting right there
+explaining why the untouched code is now wrong.
+
+Every comment ends with the attribution footer, so a reader knows what wrote it.
 
 ## 6. When CI is red
 
