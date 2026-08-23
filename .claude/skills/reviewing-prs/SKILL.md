@@ -237,6 +237,20 @@ is theirs to change in any case. There, the comment *is* the deliverable, with t
 it. Preparing the fix locally first is still worth the detour: a proposal you have actually run,
 carrying a regression test that fails without it, is a different thing from a suggestion.
 
+**A posted comment is shorter than the analysis behind it, and sounds like a person.** The
+explanation you gave the person deciding was for somebody weighing whether to act; the comment
+goes to somebody who already knows this code and now has to do something about it. Three habits
+carry most of the difference, and "write naturally" is not one of them:
+
+- **Put the fix as a question.** "Could the cycle reset the memory too?" leaves the decision with
+  the author. "The smallest fix is…" has already taken it.
+- **Leave the trade-offs out of the first comment.** Weighing the pros and cons of your own
+  suggestion before anybody has answered reads like a document, not a colleague. They come up if
+  the author raises them.
+- **Short sentences, and no balanced pairs.** "556 words a language, ~20 a match" carries what a
+  symmetrical "not only X but also Y" paragraph was carrying. Praise is one line: name what the
+  author got right and move on, especially when merging it says the rest.
+
 Once something is confirmed, publishing it follows the repo's usual rules: English, like every
 other artefact here. A design-level argument goes in one general comment where the reasoning can
 be followed; a defect in a specific line goes inline on that line. Several nits from one cause
