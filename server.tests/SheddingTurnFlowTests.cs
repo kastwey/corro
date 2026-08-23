@@ -331,10 +331,13 @@ public class SheddingTurnFlowTests
 	}
 
 	[Fact]
-	public async Task A_one_round_match_ends_and_the_table_can_play_again()
+	public async Task A_one_round_match_is_over_as_soon_as_that_round_is()
 	{
-		// Reported from play: a host who chose a single round finished it and then could not
-		// start another match — the table still believed a game was running.
+		// The rulebook half of a report from play: a host who chose a single round finished it and
+		// then could not start another match. Two claims live in that sentence, and this file can
+		// only make the first — the MATCH being over once the round is. That the TABLE then goes
+		// back to waiting belongs to the hub and is asserted in GameSessionRegistryTests; the name
+		// this test used to carry promised both and delivered one.
 		var (state, context) = Game(
 			rules: new SheddingRulesConfig { EndMode = "rounds", Rounds = 1, TargetScore = 500 },
 			hands: new[] { ("a", new[] { "red-7" }), ("b", new[] { "blue-7" }) });
