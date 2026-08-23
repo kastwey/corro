@@ -61,6 +61,17 @@ Always finish a change by running the frontend tests (incl. translation parity)
 **and** `dotnet test`; run the E2E suite when the change touches a flow it covers
 (lobby, trades, purchases, announcements).
 
+### Remote sessions (Claude Code on the web)
+
+A cloud session starts from a bare container: repository and Node, and none of the four gates
+above except the frontend one. `.claude/hooks/session-start.sh` (registered in
+`.claude/settings.json`) installs the rest before the session begins — PowerShell, the .NET SDK,
+both `node_modules`, the Playwright browser — and compiles the server once so the first
+`dotnet test` is a test run. It does nothing on a local machine (`$CLAUDE_CODE_REMOTE`), where
+`tools/dev.ps1` owns that job, and nothing on a second run: about half a minute from empty, a few
+seconds once the container image has it. **An agent in a remote session has no excuse for an
+unrun gate** — if one of them will not start, say what failed rather than skipping it.
+
 ### Pre-push hook (blocks a red push)
 
 A shared `pre-push` hook (`.githooks/pre-push`) refuses to push to ANY branch when the suites
