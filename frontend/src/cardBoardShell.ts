@@ -87,12 +87,14 @@ export interface PileStatusKeyDeps {
 }
 
 /**
- * Wire D as the card-family pile query. It is deliberately surface-local: trivia already
- * uses D for destinations, while card games have no spatial destination cursor. Modified
- * chords are ignored so Ctrl+D remains the global "focus open dialog" command.
+ * Wire a one-letter table readout on a card surface — D everywhere (the shared pile query),
+ * or whichever letter the board hands over for a reading of its own (Four Colours gives C
+ * the card on the table). Deliberately surface-local: trivia already uses D for destinations,
+ * while card games have no spatial destination cursor. Modified chords are ignored so
+ * Ctrl+D remains the global "focus open dialog" command.
  */
 export function registerPileStatusKey(element: HTMLElement, deps: PileStatusKeyDeps): void {
-	const letter = deps.key ?? 'd';
+	const letter = (deps.key ?? 'd').toLowerCase();
 	element.addEventListener('keydown', (e) => {
 		if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
 		if (e.key.toLowerCase() !== letter) return;
