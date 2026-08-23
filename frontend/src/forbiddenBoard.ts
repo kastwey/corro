@@ -194,7 +194,7 @@ export class ForbiddenBoard {
 				<div class="forbidden-controls">
 					<button type="button" class="btn btn--primary forbidden-start"></button>
 					<button type="button" class="btn forbidden-correct"></button>
-					<button type="button" class="btn forbidden-pass"></button>
+					<button type="button" class="btn forbidden-pass" aria-keyshortcuts="P"></button>
 					<button type="button" class="btn forbidden-violation" aria-keyshortcuts="V"></button>
 				</div>
 				<p id="forbidden-pass-hint" class="forbidden-control-hint" hidden></p>
@@ -274,6 +274,28 @@ export class ForbiddenBoard {
 				this.deps.announce(turn.phase === 'active'
 					? this.t('forbidden_timer_label', { seconds: this.secondsRemaining })
 					: this.t('forbidden_timer_not_running'));
+				return;
+			}
+			if (key === 'p') {
+				// P is "pasar" and "pass", the same bilingual mnemonic R and V already use. Pass was
+				// the only clue-giver action without a key: Enter banks a guessed word, so skipping
+				// one meant tabbing away from the card with the clock running. Going through the
+				// button keeps the out-of-passes case spoken instead of silently ignored.
+				//
+				// The key belongs to the ROLE, not to the button. Before the clock starts the button
+				// does not exist, and the card is a textarea, so the document keymap skips the key
+				// too: P answered nothing at all, which reads as a dead app. R already answers in
+				// that same moment, and its line is the right one — there is no word on the card yet.
+				const turn = this.deps.getGameState()?.forbidden?.turn;
+				const myId = this.deps.getMyPlayerId();
+				if (!turn || !myId || forbiddenRole(turn, myId) !== 'clue-giver') return;
+				event.preventDefault();
+				event.stopPropagation();
+				if (visible(this.passButton)) {
+					this.passButton.click();
+					return;
+				}
+				this.deps.announce(this.t('forbidden_timer_not_running'));
 				return;
 			}
 			if (key !== 'v' || !visible(this.violationButton)) return;
@@ -453,6 +475,7 @@ export class ForbiddenBoard {
 			...CARD_STATUS_SHORTCUTS,
 			{ keys: 'enter', descKey: 'game.help_cmd_forbidden_enter' },
 			{ keys: 'escape', descKey: 'game.help_cmd_forbidden_card' },
+			{ keys: 'p', descKey: 'game.help_cmd_forbidden_pass' },
 			{ keys: 'r', descKey: 'game.help_cmd_forbidden_timer' },
 			{ keys: 'v', descKey: 'game.help_cmd_forbidden_violation' },
 			{ keys: 'tab', descKey: 'game.help_cmd_forbidden_controls' },

@@ -39,6 +39,7 @@ La puntuación puede bajar de cero. Cuando todos han sido portavoces una vez, ga
 El foco entra en la mesa de funciones. La carta privada es el tablero de esta familia: **Intro** hace desde ahí lo único que te toca hacer, **Escape** vuelve siempre a ella y, tras cada acción, el foco regresa a las palabras.
 
 - Pulsa **Intro** en la carta privada para iniciar el temporizador; una vez en marcha, **Intro** marca la palabra como adivinada y reparte la siguiente.
+- Como portavoz, pulsa **P** para pasar la palabra que no consigues sacar; llega la siguiente sin parar el reloj. Si ya has gastado todos los pases del turno, la tecla te lo dice.
 - Pulsa **Escape** desde cualquier punto de la superficie para volver a las palabras.
 - Pulsa **S** en la superficie del juego para oír tu equipo, puntuación y función.
 - Pulsa **Shift+S** para oír la puntuación del equipo contrario.

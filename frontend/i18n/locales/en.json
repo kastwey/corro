@@ -1033,6 +1033,7 @@
     "forbidden_rules_cycles": "Complete clue-giver rotations before scoring: {{count}}",
     "help_cmd_forbidden_enter": "From the words, start the timer or mark the word guessed",
     "help_cmd_forbidden_card": "Go back to the words",
+    "help_cmd_forbidden_pass": "Pass the current word when you are the clue-giver",
     "help_cmd_forbidden_timer": "Announce the time remaining on the timer",
     "help_cmd_forbidden_violation": "Report the target or a forbidden word when you are the monitor",
     "help_cmd_forbidden_controls": "Move between your private card and available role actions",

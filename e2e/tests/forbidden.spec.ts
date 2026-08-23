@@ -309,11 +309,27 @@ test('shared Spanish cards, per-player UI and authoritative role actions', async
 	await expect(ana.locator('.forbidden-score').first()).toContainText('1');
 	await flushAxeAudit(carla);
 
+	// P skips the word from the words themselves. Passing used to be the one clue-giver action
+	// that needed a tab away from the card, with the clock running.
 	const beforePass = await anaCard.inputValue();
-	await ana.locator('.forbidden-pass').click();
+	await anaCard.focus();
+	await ana.keyboard.press('p');
 	await expectAnnouncement(berto, /Ana pasa/);
 	await expect(anaCard).not.toHaveValue(beforePass);
+	await expect(anaCard).toBeFocused();
 	await expect(ana.locator('.forbidden-score').first()).toContainText('1');
+
+	// The button is the same action for a mouse or a switch, and the turn allows three passes.
+	// Counting the lines rather than waiting for one more: `expectAnnouncement` scans the whole
+	// log, so a second wait for "Ana pasa" would match the keyboard one and prove nothing.
+	const beforeSecondPass = await anaCard.inputValue();
+	await ana.locator('.forbidden-pass').click();
+	await expect(anaCard).not.toHaveValue(beforeSecondPass);
+	await expect(anaCard).toBeFocused();
+	await expect.poll(async () => {
+		const heard: string[] = await berto.evaluate(() => (window as any).__announcements ?? []);
+		return heard.filter(line => /Ana pasa/.test(line)).length;
+	}).toBe(2);
 
 	// Reach a narrow, dark rendering of the live monitor state and verify it neither clips
 	// horizontally nor loses its role control. Automatic teardown audits the final state too.
