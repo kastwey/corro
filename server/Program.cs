@@ -16,6 +16,13 @@ internal class Program
 			builder.Configuration.AddUserSecrets<Program>();
 		}
 
+		// Which build this is (see BuildInfoOptions). The file is written INTO the published
+		// application by tools/build-version.ps1, so it describes this release and nothing else;
+		// a clone run from source has no such file and shows no version at all. Added last on
+		// purpose: a release states its own identity, and no ambient environment variable should
+		// be able to make a deployment claim it is a different build than the one it is running.
+		builder.Configuration.AddJsonFile("buildinfo.json", optional: true, reloadOnChange: false);
+
 		// Register all the classic game services using our extension method
 		builder.Services.AddCorroServices(builder.Configuration);
 

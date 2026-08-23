@@ -805,6 +805,44 @@
 	color: var(--text-muted);
 }
 
+/* Which build this is. Reads as part of the footer prose, so it is styled like the links beside
+   it — a real button underneath, keyboard-reachable and focusable, with the footer's own muted
+   ink rather than a dimmed copy of it. */
+.app-footer__version {
+	margin: 0.125rem 0 0;
+}
+
+.app-footer__version-btn {
+	padding: 0;
+	border: 0;
+	background: none;
+	font: inherit;
+	color: var(--text-muted);
+	text-decoration: underline;
+	text-underline-offset: 0.15em;
+	cursor: pointer;
+}
+
+.app-footer__version-btn:hover {
+	color: var(--text);
+}
+
+.app-footer__version-btn:focus-visible {
+	outline: none;
+	box-shadow: var(--focus-ring);
+	border-radius: 0.25rem;
+}
+
+/* The dialog behind it: two short sentences and a link, so the only thing to arrange is that they
+   do not run together. */
+.version-details p {
+	margin: 0 0 0.5rem;
+}
+
+.version-details p:last-child {
+	margin-bottom: 0;
+}
+
 .app-footer__links {
 	display: flex;
 	justify-content: center;

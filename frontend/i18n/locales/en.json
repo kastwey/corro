@@ -12,7 +12,14 @@
     "activity": "{{tables}}, {{players}}.",
     "corroNewWindowLabel": "Corro on GitHub, opens in a new window",
     "licenseNewWindowLabel": "AGPL-3.0 license, opens in a new window",
-    "privacy": "Privacy"
+    "privacy": "Privacy",
+    "version": "Version {{version}}",
+    "versionTitle": "About this version",
+    "versionDeployed": "Version {{version}}, deployed on {{date}}.",
+    "versionOnly": "Version {{version}}.",
+    "versionCommit": "See commit {{commit}} on GitHub",
+    "versionCommitNewWindowLabel": "See commit {{commit}} on GitHub, opens in a new window",
+    "versionCommitPlain": "Built from commit {{commit}}."
   },
   "privacyPage": {
     "browserTitle": "Privacy notice — All Welcome",

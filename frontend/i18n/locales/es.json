@@ -12,7 +12,14 @@
     "activity": "{{tables}}, {{players}}.",
     "corroNewWindowLabel": "Corro en GitHub, se abre en una ventana nueva",
     "licenseNewWindowLabel": "Licencia AGPL-3.0, se abre en una ventana nueva",
-    "privacy": "Privacidad"
+    "privacy": "Privacidad",
+    "version": "Versión {{version}}",
+    "versionTitle": "Acerca de esta versión",
+    "versionDeployed": "Versión {{version}}, desplegada el {{date}}.",
+    "versionOnly": "Versión {{version}}.",
+    "versionCommit": "Ver el commit {{commit}} en GitHub",
+    "versionCommitNewWindowLabel": "Ver el commit {{commit}} en GitHub, se abre en una ventana nueva",
+    "versionCommitPlain": "Compilada a partir del commit {{commit}}."
   },
   "privacyPage": {
     "browserTitle": "Aviso de privacidad — All Welcome",

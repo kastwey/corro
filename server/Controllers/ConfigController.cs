@@ -16,6 +16,7 @@ public class ConfigController : ControllerBase
 	private readonly SiteBrandingOptions _siteBranding;
 	private readonly PrivacyOptions _privacy;
 	private readonly PublicMetricsOptions _metrics;
+	private readonly BuildInfoOptions _build;
 	private readonly GameSessionRegistry? _sessions;
 	private readonly IWebHostEnvironment? _environment;
 	private readonly bool _voiceAvailable;
@@ -29,11 +30,13 @@ public class ConfigController : ControllerBase
 		IWebHostEnvironment? environment = null,
 		ILiveKitVoiceService? voiceService = null,
 		IOptions<PublicMetricsOptions>? metrics = null,
-		GameSessionRegistry? sessions = null)
+		GameSessionRegistry? sessions = null,
+		IOptions<BuildInfoOptions>? build = null)
 	{
 		_siteBranding = siteBranding.Value;
 		_privacy = privacy?.Value ?? new PrivacyOptions();
 		_metrics = metrics?.Value ?? new PublicMetricsOptions();
+		_build = build?.Value ?? new BuildInfoOptions();
 		_sessions = sessions;
 		_environment = environment;
 		_voiceAvailable = voiceService?.IsConfigured ?? false;
@@ -128,6 +131,31 @@ public class ConfigController : ControllerBase
 				ConnectedPlayers = (int?)_sessions.CountConnectedPlayers(),
 			}
 			: new { ActiveTables = (int?)null, ConnectedPlayers = (int?)null };
+
+	/// <summary>
+	/// Which build of Corro this is: the date-and-ordinal stamp, when it went live, and where the
+	/// commit behind it can be read.
+	///
+	/// Corro ships continuously, so the useful question is not "which version" but "when was this
+	/// last updated" — which is what the stamp answers. A build that was never stamped (a clone run
+	/// from source, a developer's own server) reports nothing and the lobby shows no version,
+	/// because a made-up number would be worse than none.
+	///
+	/// The deployment time travels as a UTC instant rather than as a sentence: the client formats
+	/// it in the reader's own language and time zone.
+	/// </summary>
+	[HttpGet("version")]
+	public ActionResult<object> GetVersion()
+		=> _build.IsConfigured
+			? (object)new
+			{
+				Configured = true,
+				_build.Version,
+				_build.Commit,
+				_build.CommitUrl,
+				_build.DeployedAt,
+			}
+			: new { Configured = false };
 
 	/// <summary>
 	/// Get available languages

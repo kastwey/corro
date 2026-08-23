@@ -43,6 +43,7 @@ import { FriendsList } from '../friendsList.js';
 import { fetchFriends, type FriendEntry } from '../friends.js';
 import { listenForShake, requestShakePermission } from '../shakeGesture.js';
 import { initializeSiteMetrics, renderActivity } from '../siteMetrics.js';
+import { initializeBuildVersion } from '../buildVersion.js';
 import { showSecondAccountNotice } from '../secondAccountNotice.js';
 import { showMergedNotice } from '../mergedNotice.js';
 import { applyRuleSettings, readRuleSettings } from './ruleFields.js';
@@ -115,6 +116,12 @@ class UnifiedLobbyUI {
 		void initializeSiteMetrics(
 			document.getElementById('site-activity'),
 			(key, vars) => i18nBinder.tSync(key, vars));
+		// And which build this is, on the same terms: worth knowing on arrival, never worth
+		// waiting for. A build that was never stamped shows no version at all.
+		void initializeBuildVersion(
+			document.getElementById('site-version'),
+			(key, vars) => i18nBinder.tSync(key, vars),
+			() => i18nBinder.getCurrentLanguage());
 		await this.connectToServer();
 		await this.fetchLobbyOptions();
 		this.checkExistingSession();

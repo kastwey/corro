@@ -40,6 +40,7 @@ jobs:
           ./tools/tests/emulator-startup.tests.ps1
           ./tools/tests/hook-installation.tests.ps1
           ./tools/tests/repository-language.tests.ps1
+          ./tools/tests/build-version.tests.ps1
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
@@ -144,6 +145,11 @@ jobs:
       - name: Check out the tested commit
         if: steps.freshness.outputs.deploy == 'true'
         uses: actions/checkout@v5
+        with:
+          # Full history: the build stamp is the commit's UTC day plus that day's ordinal, counted
+          # over the commits it is built on. A shallow clone knows only the tip, so every release
+          # would claim to be the first update of its day (build-version.ps1 refuses outright).
+          fetch-depth: 0
 
       - name: Log in to Azure with OIDC
         if: steps.freshness.outputs.deploy == 'true'
@@ -242,6 +248,18 @@ jobs:
             exit 1
           fi
 
+          # Which build this is, for the lobby footer: the commit's UTC day and that day's
+          # ordinal. Written INTO the published application, so the stamp travels with the
+          # release and a server run from source simply has none.
+          pwsh -File tools/build-version.ps1 \
+            -Sha "$GITHUB_SHA" \
+            -RepositoryUrl "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            -OutputPath "$publish_dir/buildinfo.json"
+          test -f "$publish_dir/buildinfo.json"
+          # Kept for the post-deployment check: a stamp that never reaches production would
+          # otherwise fail silently, as a footer that simply shows no version.
+          echo "BUILD_VERSION=$(jq -r '.Build.Version' "$publish_dir/buildinfo.json")" >> "$GITHUB_ENV"
+
           # The marker makes the post-deployment check prove that this exact commit is live,
           # rather than merely accepting a healthy response from the previous release.
           printf '%s\n' "$GITHUB_SHA" > "$publish_dir/wwwroot/deployment.txt"
@@ -278,10 +296,23 @@ jobs:
           curl --fail --silent --show-error --retry 24 --retry-delay 5 --retry-all-errors \
             "$PRODUCTION_URL/api/packages/shipped" > /dev/null
 
+          # The build stamp the lobby footer will show. A stamp that did not ship, or one the
+          # server refused as malformed, hides the footer entry instead of failing anything, so
+          # the only way to notice is to ask production what it thinks it is running.
+          reported="$(curl --fail --silent --show-error --retry 24 --retry-delay 5 --retry-all-errors \
+            "$PRODUCTION_URL/api/config/version")"
+          if ! jq -e --arg version "$BUILD_VERSION" --arg sha "$GITHUB_SHA" \
+            '.configured == true and .version == $version and .commit == $sha' \
+            <<< "$reported" > /dev/null; then
+            echo "::error::Production reports version '$reported'; expected '$BUILD_VERSION' at '$GITHUB_SHA'."
+            exit 1
+          fi
+
           {
             echo '### Production deployment'
             echo ''
             echo "- URL: $PRODUCTION_URL/"
+            echo "- Version: \`$BUILD_VERSION\`"
             echo "- Commit: \`$GITHUB_SHA\`"
             echo '- Exact revision and API checks: passed'
           } >> "$GITHUB_STEP_SUMMARY"

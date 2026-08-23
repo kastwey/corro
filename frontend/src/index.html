@@ -489,6 +489,15 @@
 			 and never refreshed under the reader: it is the answer to "is anyone else here?" on
 			 arrival, not a ticker that talks over somebody trying to read the page. -->
 		<p class="app-footer__metrics" id="site-activity" hidden></p>
+		<!-- Which build this is (see buildVersion.ts). Corro ships continuously, so the stamp is the
+			 day it was updated and that day's ordinal rather than a semantic version. A button and
+			 not a link, because the code on its own is not the answer: the dialog behind it states
+			 the build in words and offers the commit. Empty and hidden until the server answers,
+			 and absent entirely from a build that was never stamped. -->
+		<p class="app-footer__version" id="site-version" hidden>
+			<button type="button" id="site-version-btn" class="app-footer__version-btn"
+				aria-haspopup="dialog"></button>
+		</p>
 		<!-- A named navigation region: these are the ways OUT of the page, and a screen-reader user
 			 jumping by landmark should find them by name rather than by hunting the end of the
 			 document. Inside <footer> (contentinfo), which is where a nav of this kind belongs. -->

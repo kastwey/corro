@@ -108,6 +108,13 @@ export default defineConfig({
 			// only ever audit the footer WITHOUT it. Turned on here, every lobby state in every
 			// scenario carries it through Axe.
 			PublicMetrics__ShowActivity: 'true',
+			// A stamped build, so the footer's version entry and its dialog are audited in every
+			// lobby state. A real release gets these from the buildinfo.json written at publish
+			// time; here they are fixed values so the assertions can name them.
+			Build__Version: '20260823-001',
+			Build__Commit: '0123456789abcdef0123456789abcdef01234567',
+			Build__RepositoryUrl: 'https://github.com/kastwey/corro',
+			Build__DeployedAt: '2026-08-23T14:32:10Z',
 			// Additional shipped-package root read only in E2E mode. It never enters the
 			// server's production Packages directory or publish artifact.
 			E2E__PackagesRoot: path.resolve(__dirname, 'fixtures', 'packages'),
