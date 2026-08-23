@@ -543,14 +543,15 @@ public sealed class GameSessionRegistry
 	}
 
 	/// <summary>
-	/// The table's deck memory with this match's dealt cards added. Families that keep no memory
-	/// answer nothing and the document is left exactly as it was — including its absent field, so
-	/// a table that never plays a card game never grows one.
+	/// The table's deck memory with this match's dealt cards added — or, when that completes a trip
+	/// round the whole deck, started over from this match's cards alone. Families that keep no
+	/// memory answer nothing and the document is left exactly as it was — including its absent
+	/// field, so a table that never plays a card game never grows one.
 	/// </summary>
 	internal static Dictionary<string, List<string>>? RememberDealtCards(GameDocument document, GameState finalState)
 	{
-		var dealt = GameFamilies.For(finalState.GameType).DealtCardIds(finalState);
-		if (dealt.Count == 0)
+		var deal = GameFamilies.For(finalState.GameType).CardsDealt(finalState);
+		if (deal.CardIds.Count == 0)
 		{
 			return document.DealtCards;
 		}
@@ -563,10 +564,18 @@ public sealed class GameSessionRegistry
 			? new List<string>(existing)
 			: new List<string>();
 		// A card already remembered is not remembered twice: the memory is a set of ids, and its
-		// size is what a table's document carries forever.
+		// size is weight the table's document carries on every lobby update.
 		var known = new HashSet<string>(seen, StringComparer.Ordinal);
-		seen.AddRange(dealt.Where(id => known.Add(id)));
-		memory[key] = seen;
+		seen.AddRange(deal.CardIds.Where(id => known.Add(id)));
+
+		// The table has now been round the entire deck, so the memory recycles: it keeps only what
+		// this match just dealt, the way you reshuffle a discard pile and leave the last trick out
+		// of it. A memory that only ever grew would saturate — 556 words at twenty a match, about
+		// twenty-eight matches — and from then on every match would reshuffle the whole deck again,
+		// exactly the repetition this memory exists to stop, on the tables that play most.
+		memory[key] = deal.DeckSize > 0 && seen.Count >= deal.DeckSize
+			? deal.CardIds.Distinct(StringComparer.Ordinal).ToList()
+			: seen;
 		return memory;
 	}
 

@@ -237,8 +237,10 @@ public sealed class ForbiddenFamily : IGameFamily
 	/// remembered. A group that plays several matches in a row used to meet repeats immediately,
 	/// because each match reshuffled the whole deck as if it were the table's first.
 	///
-	/// A table that has seen every card starts a clean cycle instead of stalling: with nothing
-	/// unseen left, the whole deck counts as unseen again.
+	/// With nothing unseen left the whole deck counts as unseen again, so a table never stalls.
+	/// That is a safety net rather than the usual path: the table's memory recycles itself the
+	/// moment a match completes the trip round the deck, so what normally arrives here is the
+	/// memory of a trip in progress.
 	/// </summary>
 	internal static List<ForbiddenWordDef> OrderDeck(
 		IReadOnlyList<ForbiddenWordDef> deck,
@@ -265,15 +267,17 @@ public sealed class ForbiddenFamily : IGameFamily
 
 	/// <summary>The cards this match dealt: the front of its deck, up to the cursor. A match that
 	/// ran past the end of the deck (cursor wraps) has dealt all of it.</summary>
-	public IReadOnlyList<string> DealtCardIds(GameState state)
+	public MatchDeal CardsDealt(GameState state)
 	{
 		var deck = state.ForbiddenDeck;
 		var dealt = state.Forbidden?.CardCursor ?? 0;
 		if (deck is null || deck.Count == 0 || dealt <= 0)
 		{
-			return Array.Empty<string>();
+			return MatchDeal.None;
 		}
-		return deck.Take(Math.Min(dealt, deck.Count)).Select(word => word.Id).ToList();
+		return new MatchDeal(
+			deck.Take(Math.Min(dealt, deck.Count)).Select(word => word.Id).ToList(),
+			deck.Count);
 	}
 
 	public bool HasHiddenInformation => true;

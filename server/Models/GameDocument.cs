@@ -145,7 +145,11 @@ public record GameDocument
 	/// Reshuffling the whole deck for every match made a group meet the same words again almost
 	/// immediately; knowing what the table has already seen lets the next match deal the rest
 	/// first. It lives here, on the table, because that is the thing that outlives a match.
-	/// Only families that answer <c>DealtCardIds</c> ever write to it.
+	/// Only families that answer <c>CardsDealt</c> ever write to it.
+	///
+	/// It is a memory of the CURRENT trip through the deck, not of the table's whole history: once
+	/// the trip is complete the list starts again from the match that completed it, so it can never
+	/// grow to cover the deck and leave every later match with nothing unseen to prefer.
 	/// </summary>
 	[JsonPropertyName("dealtCards")]
 	public Dictionary<string, List<string>>? DealtCards { get; init; }
@@ -154,7 +158,8 @@ public record GameDocument
 	public static string DeckMemoryKey(string gameType, string? contentLanguage)
 		=> $"{gameType}:{contentLanguage ?? string.Empty}";
 
-	/// <summary>What this table has already been dealt from one deck, newest matches included.</summary>
+	/// <summary>What this table has been dealt from one deck in its current trip through it,
+	/// newest matches included.</summary>
 	public IReadOnlyCollection<string> DealtFrom(string gameType, string? contentLanguage)
 		=> DealtCards?.GetValueOrDefault(DeckMemoryKey(gameType, contentLanguage)) ?? (IReadOnlyCollection<string>)Array.Empty<string>();
 

@@ -83,12 +83,17 @@ It also remembers **which cards it has already been dealt**, in `dealtCards`, ke
 and content language. A match used to shuffle the whole deck as if it were the table's first, so a
 group playing several in a row met words it had just had — with 556 cards and twenty spent in a
 short match of Forbidden Words, about even odds of a repeat between two consecutive matches. The
-next match now deals the unseen ones first, and a table that has been through the entire deck
-starts a clean cycle rather than stalling.
+next match now deals the unseen ones first.
+
+What it holds is **one trip through the deck, not the table's whole history**. The match that
+completes the trip does not leave the memory full: it starts it again from its own cards, the way
+you reshuffle a discard pile and leave the last trick out of it. A memory that only ever grew would
+cover the deck after some twenty-eight matches and stay that way, and every match after that would
+reshuffle everything again — the original repetition, back for good, on the tables that play most.
 
 The memory belongs here for the same reason the chat does: it is about the group, not about one
 game. It never reaches a client — no client reads it, it grows with every match, and this document
-is broadcast on every lobby update — and a family that answers no `DealtCardIds` never creates it.
+is broadcast on every lobby update — and a family that answers no `CardsDealt` never creates it.
 
 ## The end-of-match dialog
 

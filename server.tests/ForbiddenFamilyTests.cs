@@ -272,14 +272,28 @@ public class ForbiddenFamilyTests
 		}).State;
 
 		// One card is dealt with the opening turn.
-		Assert.Equal(new[] { state.ForbiddenDeck![0].Id }, family.DealtCardIds(state));
+		Assert.Equal(new[] { state.ForbiddenDeck![0].Id }, family.CardsDealt(state).CardIds);
 
 		ForbiddenRulebook.DealNextCard(state.Forbidden!, state.ForbiddenDeck!);
 		ForbiddenRulebook.DealNextCard(state.Forbidden!, state.ForbiddenDeck!);
-		Assert.Equal(state.ForbiddenDeck!.Take(3).Select(word => word.Id), family.DealtCardIds(state));
+		Assert.Equal(state.ForbiddenDeck!.Take(3).Select(word => word.Id), family.CardsDealt(state).CardIds);
 		// The rest of the deck was shuffled, not seen: remembering it would burn the whole deck
 		// on a table's first evening.
 		Assert.True(state.ForbiddenDeck!.Count > 3);
+
+		// The deck's size travels with them, and it is the WHOLE deck: without it the table could
+		// never tell that it had been round the lot and its memory should start a new trip.
+		Assert.Equal(state.ForbiddenDeck!.Count, family.CardsDealt(state).DeckSize);
+	}
+
+	[Fact]
+	public void A_match_that_dealt_nothing_reports_no_deal_at_all()
+	{
+		// Nothing to remember and nothing to measure against: a table whose match never got going
+		// must not be told it has been round a deck of zero cards.
+		var deal = new ForbiddenFamily().CardsDealt(new GameState { GameType = "forbidden" });
+		Assert.Empty(deal.CardIds);
+		Assert.Equal(0, deal.DeckSize);
 	}
 
 	[Fact]
@@ -298,7 +312,7 @@ public class ForbiddenFamilyTests
 		{
 			ForbiddenRulebook.DealNextCard(first.Forbidden!, first.ForbiddenDeck!);
 		}
-		var dealtFirst = family.DealtCardIds(first);
+		var dealtFirst = family.CardsDealt(first).CardIds;
 		Assert.Equal(20, dealtFirst.Count);
 
 		var second = family.CreateGame(new FamilyStartContext
@@ -313,6 +327,6 @@ public class ForbiddenFamilyTests
 
 		// Reported from play: reshuffling the whole deck for every match made a group of four meet
 		// words they had just had. With 556 cards and twenty a match, that was about even odds.
-		Assert.Empty(family.DealtCardIds(second).Intersect(dealtFirst));
+		Assert.Empty(family.CardsDealt(second).CardIds.Intersect(dealtFirst));
 	}
 }

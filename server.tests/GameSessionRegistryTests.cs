@@ -2,6 +2,7 @@ using CorroServer.Hubs;
 using CorroServer.Models;
 using CorroServer.Models.Corro;
 using CorroServer.Services;
+using CorroServer.Services.Corro.Families;
 using CorroServer.Services.Voice;
 using Microsoft.AspNetCore.SignalR;
 using Xunit;
@@ -277,15 +278,22 @@ public class GameSessionRegistryTests
 		InviteCode = "INV",
 	};
 
-	/// <summary>A finished forbidden match whose deck was dealt down to <paramref name="dealt"/>.</summary>
-	private static GameState FinishedForbiddenMatch(int dealt)
+	/// <summary>The six-word deck the memory tests play with, in the table's original order.</summary>
+	private static IReadOnlyList<string> SixWords => Enumerable.Range(0, 6).Select(index => $"w{index}").ToList();
+
+	private static List<ForbiddenWordDef> Deck(IReadOnlyList<string> ids) => ids.Select(id => new ForbiddenWordDef
 	{
-		var deck = Enumerable.Range(0, 6).Select(index => new ForbiddenWordDef
-		{
-			Id = $"w{index}",
-			Target = $"t{index}",
-			Forbidden = new List<string> { "a", "b", "c" },
-		}).ToList();
+		Id = id,
+		Target = $"t{id}",
+		Forbidden = new List<string> { "a", "b", "c" },
+	}).ToList();
+
+	/// <summary>A finished forbidden match whose deck was dealt down to <paramref name="dealt"/>.
+	/// The deck is the six words in <paramref name="order"/> — the order a real match gets from
+	/// <c>OrderDeck</c>, unseen first — so the cards it dealt are its first <paramref name="dealt"/>.</summary>
+	private static GameState FinishedForbiddenMatch(int dealt, IReadOnlyList<string>? order = null)
+	{
+		var deck = Deck(order ?? SixWords);
 		return new GameState
 		{
 			GameType = "forbidden",
@@ -330,6 +338,53 @@ public class GameSessionRegistryTests
 		var afterSecond = GameSessionRegistry.RememberDealtCards(
 			table with { DealtCards = afterFirst }, FinishedForbiddenMatch(dealt: 5));
 		Assert.Equal(new[] { "w0", "w1", "w2", "w3", "w4" }, afterSecond!["forbidden:es"]);
+	}
+
+	[Fact]
+	public void The_match_that_completes_the_deck_starts_the_memory_over_from_its_own_cards()
+	{
+		var table = NewTable("g1") with { Language = "es" };
+
+		// Four of the six words are behind this table already.
+		var afterFirst = GameSessionRegistry.RememberDealtCards(table, FinishedForbiddenMatch(dealt: 4));
+		Assert.Equal(new[] { "w0", "w1", "w2", "w3" }, afterFirst!["forbidden:es"]);
+
+		// This match is dealt the two unseen words first and then falls back on seen ones, so it
+		// completes the trip round the deck. The memory does not stay full: it starts again from
+		// the three words this match just used, which are precisely the ones the group must not
+		// meet again straight away.
+		var afterSecond = GameSessionRegistry.RememberDealtCards(
+			table with { DealtCards = afterFirst },
+			FinishedForbiddenMatch(dealt: 3, order: new[] { "w4", "w5", "w0", "w1", "w2", "w3" }));
+		Assert.Equal(new[] { "w4", "w5", "w0" }, afterSecond!["forbidden:es"]);
+	}
+
+	[Fact]
+	public void A_table_that_keeps_playing_never_meets_the_words_of_the_match_before()
+	{
+		// The invariant a group actually notices, over several trips through the deck: six words,
+		// three a match, the real ordering and the real bookkeeping wired together. Without the
+		// recycle the memory covers the deck on the second match and stays that way, and from the
+		// fourth on every match is dealt the same three words as the one before it.
+		var table = NewTable("g1") with { Language = "es" };
+		var previous = Array.Empty<string>();
+
+		for (var match = 1; match <= 6; match++)
+		{
+			var order = ForbiddenFamily
+				.OrderDeck(Deck(SixWords), table.DealtFrom("forbidden", table.Language), random: null)
+				.Select(word => word.Id)
+				.ToList();
+			var dealt = order.Take(3).ToArray();
+
+			Assert.Empty(dealt.Intersect(previous, StringComparer.Ordinal));
+
+			table = table with
+			{
+				DealtCards = GameSessionRegistry.RememberDealtCards(table, FinishedForbiddenMatch(dealt: 3, order: order)),
+			};
+			previous = dealt;
+		}
 	}
 
 	[Fact]
