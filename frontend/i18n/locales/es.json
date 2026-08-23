@@ -288,6 +288,7 @@
       "copyLink": "No se pudo copiar el enlace",
       "copyCode": "No se pudo copiar el código",
       "deleteGame": "No se pudo eliminar la partida",
+      "leaveTable": "No se te ha podido sacar de esa mesa. Inténtalo de nuevo en un momento.",
       "disconnected": "Te has desconectado del servidor"
     },
     "aria": {
@@ -447,7 +448,7 @@
       "empty": "Aún no tienes mesas. Crea una o únete con un código.",
       "resume": "Reanudar",
       "delete": "Eliminar la mesa",
-      "remove": "Quitar de la lista",
+      "leave": "Salir de la mesa",
       "connectedCount": "{{connected}}/{{total}} conectados",
       "created": "Creada el {{date}}",
       "status": {
@@ -458,6 +459,12 @@
         "completed": "Terminada",
         "abandoned": "Abandonada",
         "unknown": "Desconocido"
+      },
+      "leaveConfirm": {
+        "title": "Salir de la mesa",
+        "message": "Tu asiento vuelve a la mesa y no podrás recuperarlo. Si allí hay una partida en marcha, salir la abandona.",
+        "confirm": "Salir",
+        "cancel": "Quedarme en la mesa"
       },
       "deleteConfirm": {
         "title": "Eliminar partida",

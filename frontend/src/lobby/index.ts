@@ -1754,16 +1754,17 @@ class UnifiedLobbyUI {
 			deleteBtn.addEventListener('click', () => this.confirmDeleteSavedGame(game));
 			actions.appendChild(deleteBtn);
 		} else {
-			const removeBtn = document.createElement('button');
-			removeBtn.type = 'button';
-			removeBtn.className = 'btn btn-secondary saved-game-remove';
-			removeBtn.textContent = t('lobby.savedGames.remove', 'Remove from list');
-			removeBtn.setAttribute('aria-label', `${t('lobby.savedGames.remove', 'Remove from list')} ${boardName || game.gameId}`);
-			removeBtn.addEventListener('click', () => {
-				GameSessionStore.removeGame(game.gameId);
-				void this.refreshSavedGames();
-			});
-			actions.appendChild(removeBtn);
+			// Somebody else's table: you cannot delete it, you leave it. This said "remove from
+			// list" and only cleared this browser's storage — which for a table the ACCOUNT was
+			// holding cleared nothing at all, so the row came back on the next refresh. Leaving is
+			// what the row was always for, and it is the same thing from every device.
+			const leaveBtn = document.createElement('button');
+			leaveBtn.type = 'button';
+			leaveBtn.className = 'btn btn-secondary saved-game-leave';
+			leaveBtn.textContent = t('lobby.savedGames.leave', 'Leave the table');
+			leaveBtn.setAttribute('aria-label', `${t('lobby.savedGames.leave', 'Leave the table')} ${boardName || game.gameId}`);
+			leaveBtn.addEventListener('click', () => this.confirmLeaveSavedGame(game));
+			actions.appendChild(leaveBtn);
 		}
 
 		li.appendChild(actions);
@@ -1858,6 +1859,36 @@ class UnifiedLobbyUI {
 					console.error('Error deleting game:', error);
 					showError(t('lobby.errors.deleteGame', 'Could not delete the game'));
 				}
+			}
+		});
+	}
+
+	/**
+	 * Giving up a seat is asked first, like deleting is: it is not reversible, the rest of the
+	 * table sees it, and mid-match it forfeits. The confirmation says so rather than leaving it to
+	 * be discovered.
+	 */
+	private confirmLeaveSavedGame(game: SavedGame): void {
+		dialogManager.init();
+		dialogManager.showConfirm({
+			title: 'Leave the table',
+			titleI18nKey: 'lobby.savedGames.leaveConfirm.title',
+			message: 'Your seat goes back to the table and you cannot take it up again.',
+			messageI18nKey: 'lobby.savedGames.leaveConfirm.message',
+			confirmI18nKey: 'lobby.savedGames.leaveConfirm.confirm',
+			cancelI18nKey: 'lobby.savedGames.leaveConfirm.cancel',
+			onConfirm: async () => {
+				try {
+					// The stored secret when this browser has one, and nothing when the table is
+					// here only because the account holds the seat — the server takes either.
+					await gameClient.leaveTableFromLobby(
+						game.gameId, game.playerId, game.playerSecretId ?? '');
+					GameSessionStore.removeGame(game.gameId);
+				} catch (error) {
+					console.error('Error leaving the table:', error);
+					showError(t('lobby.errors.leaveTable', 'Could not leave the table'));
+				}
+				await this.refreshSavedGames();
 			}
 		});
 	}

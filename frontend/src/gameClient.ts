@@ -775,6 +775,15 @@ export class UnifiedGameClient {
 		await this.invoke('LeaveTable');
 	}
 
+	/**
+	 * The same departure, asked from the LOBBY: a table this browser may never have stored, so
+	 * there is no authenticated connection to leave it through. The seat proves itself instead —
+	 * with its stored secret, or, when there is none, with the account that holds it.
+	 */
+	async leaveTableFromLobby(gameId: string, playerId: string, playerSecretId: string): Promise<void> {
+		await this.invoke('LeaveTableFromLobby', gameId, playerId, playerSecretId);
+	}
+
 	/** Host only: hand the sceptre to another human at this table. */
 	async transferHost(newHostId: string): Promise<void> {
 		await this.invoke('TransferHost', newHostId);

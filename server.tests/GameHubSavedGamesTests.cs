@@ -152,7 +152,7 @@ public class GameHubSavedGamesTests
 	// Neither side has an account: two nulls are not a match, or every anonymous caller would be
 	// the host of every table nobody signed in for.
 	[InlineData("", "", "secret", "", false)]
-	public void MayDeleteAsHost_AcceptsTheSecretOrTheOwningAccount_AndNothingElse(
+	public void MayActAsSeat_AcceptsTheSecretOrTheOwningAccount_AndNothingElse(
 		string? presentedSecret, string? callerUserId, string seatSecret, string? seatUserId, bool expected)
 	{
 		var host = new LobbyPlayer
@@ -161,7 +161,90 @@ public class GameHubSavedGamesTests
 			PlayerSecretId = seatSecret, UserId = seatUserId,
 		};
 
-		Assert.Equal(expected, GameHub.MayDeleteAsHost(host, presentedSecret, callerUserId));
+		Assert.Equal(expected, GameHub.MayActAsSeat(host, presentedSecret, callerUserId));
+	}
+
+	// The other half of what a lobby row offers, and the other half of the same report: a table
+	// you did not create is one you LEAVE, and the row's button only ever cleared this browser's
+	// storage — nothing at all when the table was there because the account held the seat.
+	[Fact]
+	public async Task LeaveTableFromLobby_WithTheSeatSecret_GivesUpTheSeat()
+	{
+		var gameId = NewId();
+		var game = DocFor(gameId, hostId: "host", hostSecret: "secret", extraPlayerId: "guest");
+		var repo = new StubRepository(game);
+		var (hub, clients, _) = BuildHub(repo);
+
+		await hub.LeaveTableFromLobby(gameId, "guest", "guest-secret");
+
+		Assert.True(clients.Caller.Received("TableLeft"));
+		var after = await repo.LoadGameAsync(gameId);
+		Assert.DoesNotContain(after!.Players, p => p.Id == "guest");
+		// Somebody is still sitting there, so the table stays.
+		Assert.DoesNotContain(gameId, repo.Deleted);
+	}
+
+	[Fact]
+	public async Task LeaveTableFromLobby_AsTheAccountHoldingTheSeat_GivesItUpWithoutTheSecret()
+	{
+		var gameId = NewId();
+		var game = DocFor(gameId, hostId: "host", hostSecret: "secret", extraPlayerId: "guest",
+			extraPlayerUserId: "user-1");
+		var repo = new StubRepository(game);
+		var (hub, clients, _) = BuildHub(repo, signedInUserId: "user-1");
+
+		// What the lobby sends for a table it knows only through the account: no secret.
+		await hub.LeaveTableFromLobby(gameId, "guest", "");
+
+		Assert.True(clients.Caller.Received("TableLeft"));
+		var after = await repo.LoadGameAsync(gameId);
+		Assert.DoesNotContain(after!.Players, p => p.Id == "guest");
+	}
+
+	[Fact]
+	public async Task LeaveTableFromLobby_WithoutHoldingTheSeat_IsRefusedAndChangesNothing()
+	{
+		var gameId = NewId();
+		var game = DocFor(gameId, hostId: "host", hostSecret: "secret", extraPlayerId: "guest",
+			extraPlayerUserId: "user-1");
+		var repo = new StubRepository(game);
+		var (hub, clients, _) = BuildHub(repo, signedInUserId: "somebody-else");
+
+		await hub.LeaveTableFromLobby(gameId, "guest", "");
+
+		Assert.True(clients.Caller.Received("Error"));
+		Assert.False(clients.Caller.Received("TableLeft"));
+		var after = await repo.LoadGameAsync(gameId);
+		Assert.Contains(after!.Players, p => p.Id == "guest");
+	}
+
+	// The last human out takes the table with them — the same rule LeaveTable has always had, and
+	// it has to still hold on this path, or leaving from the lobby would leave empty tables behind
+	// for the retention sweep.
+	[Fact]
+	public async Task LeaveTableFromLobby_AsTheLastPersonThere_DeletesTheTable()
+	{
+		var gameId = NewId();
+		var game = DocFor(gameId, hostId: "host", hostSecret: "secret");
+		var repo = new StubRepository(game);
+		var (hub, clients, _) = BuildHub(repo);
+
+		await hub.LeaveTableFromLobby(gameId, "host", "secret");
+
+		Assert.True(clients.Caller.Received("TableLeft"));
+		Assert.Contains(gameId, repo.Deleted);
+	}
+
+	[Fact]
+	public async Task LeaveTableFromLobby_MissingGame_ConfirmsToCallerSoListPrunes()
+	{
+		var repo = new StubRepository();
+		var (hub, clients, _) = BuildHub(repo);
+
+		await hub.LeaveTableFromLobby(NewId(), "guest", "guest-secret");
+
+		Assert.True(clients.Caller.Received("TableLeft"));
+		Assert.False(clients.Caller.Received("Error"));
 	}
 
 	[Fact]
@@ -448,7 +531,7 @@ public class GameHubSavedGamesTests
 
 	private static GameDocument DocFor(string gameId, string hostId, string hostSecret, string? extraPlayerId = null,
 		string? packageToken = null, string? shippedBoardId = null, string? packageBlobKey = null,
-		string? userId = null)
+		string? userId = null, string? extraPlayerUserId = null)
 	{
 		var players = new List<LobbyPlayer>
 		{
@@ -466,7 +549,8 @@ public class GameHubSavedGamesTests
 				Name = "Guest",
 				Token = "cross",
 				IsHost = false,
-				PlayerSecretId = "guest-secret"
+				PlayerSecretId = "guest-secret",
+				UserId = extraPlayerUserId
 			});
 		}
 

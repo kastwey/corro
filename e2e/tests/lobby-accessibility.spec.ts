@@ -390,14 +390,22 @@ test('home, dark theme, runtime language and create/join validation states are A
 	await expect(host.locator('#table-players')).toContainText('Berto');
 	await flushAxeAudit(guest);
 
-	// A guest gets the remove-only saved-game variant (the host gets delete, covered below).
-	// Leaving the table returns to the lobby, where their saved game is waiting.
+	// A guest gets the LEAVE variant of the saved-game row (the host gets delete, covered below):
+	// somebody else's table is not yours to delete, and giving up the seat is asked first, because
+	// it is not reversible and the rest of the table sees it.
 	await guest.locator('#table-back').click();
 	await expect(guest.locator('#view-home')).toBeVisible();
 	const guestSaved = guest.locator('#your-games-list .saved-game-item');
-	await expect(guestSaved.locator('.saved-game-remove')).toBeVisible();
-	await guestSaved.locator('.saved-game-remove').dispatchEvent('click');
+	await expect(guestSaved.locator('.saved-game-delete')).toHaveCount(0);
+	await expect(guestSaved.locator('.saved-game-leave')).toBeVisible();
+	await guestSaved.locator('.saved-game-leave').dispatchEvent('click');
+	const leaveConfirm = guest.locator('.game-dialog.dialog-confirm');
+	await expect(leaveConfirm).toBeVisible();
+	await flushAxeAudit(guest);
+	await leaveConfirm.locator('.btn-primary').click();
 	await expect(guest.locator('#your-games-empty')).toBeVisible();
+	// And it is a real departure, not a row hidden on one device: the table has the seat back.
+	await expect(host.locator('#table-players')).not.toContainText('Berto');
 });
 
 test('compact lobby keeps brand, preferences, content and footer in one vertical flow', async ({ browser }) => {

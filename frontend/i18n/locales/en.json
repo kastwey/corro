@@ -288,6 +288,7 @@
       "copyLink": "Could not copy link",
       "copyCode": "Could not copy the code",
       "deleteGame": "Could not delete the game",
+      "leaveTable": "You could not be taken off that table. Try again in a moment.",
       "disconnected": "You have been disconnected from the server"
     },
     "aria": {
@@ -447,7 +448,7 @@
       "empty": "You don't have any tables yet. Create one or join with a code.",
       "resume": "Resume",
       "delete": "Delete the table",
-      "remove": "Remove from list",
+      "leave": "Leave the table",
       "connectedCount": "{{connected}}/{{total}} connected",
       "created": "Created on {{date}}",
       "status": {
@@ -458,6 +459,12 @@
         "completed": "Finished",
         "abandoned": "Abandoned",
         "unknown": "Unknown"
+      },
+      "leaveConfirm": {
+        "title": "Leave the table",
+        "message": "Your seat goes back to the table and you cannot take it up again. If a match is running there, leaving forfeits it.",
+        "confirm": "Leave",
+        "cancel": "Stay at the table"
       },
       "deleteConfirm": {
         "title": "Delete game",
