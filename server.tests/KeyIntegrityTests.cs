@@ -83,6 +83,10 @@ public class KeyIntegrityTests
 
 	/// <summary>A definition carrying one host-editable rule, with everything else valid.</summary>
 	private static GameDefinition WithHouseRule(HouseRuleDef rule, Dictionary<string, string>? labels = null)
+		=> WithHouseRules(new() { rule }, labels);
+
+	/// <summary>The same, for the checks that need a rule AND the choice it depends on.</summary>
+	private static GameDefinition WithHouseRules(List<HouseRuleDef> rules, Dictionary<string, string>? labels = null)
 		=> new()
 		{
 			Manifest = new Manifest
@@ -90,7 +94,7 @@ public class KeyIntegrityTests
 				GameType = "shedding",
 				Locales = new() { "es" },
 				Tokens = new() { new TokenDef { Id = "t", Svg = "M0 0z" } },
-				HouseRules = new() { rule },
+				HouseRules = rules,
 			},
 			I18n = new() { ["es"] = labels ?? new() },
 		};
@@ -152,6 +156,94 @@ public class KeyIntegrityTests
 		var problems = Validator.Validate(unnamed);
 		Assert.Contains(problems, p => p.Contains("house rule 'sheddingScoring'") && p.Contains("rules.scoring"));
 		Assert.Contains(problems, p => p.Contains("option 'penalty'"));
+	}
+
+	private static readonly Dictionary<string, string> EndingLabels = new()
+	{
+		["rules.endMode"] = "Final",
+		["rules.score"] = "A una puntuación",
+		["rules.rounds"] = "Por rondas",
+		["rules.rounds_count"] = "Rondas",
+	};
+
+	/// <summary>The ending choice a conditional rule hangs off, exactly as a package declares it.</summary>
+	private static HouseRuleDef EndModeRule()
+		=> new()
+		{
+			Id = "sheddingEndMode",
+			Type = "choice",
+			NameKey = "rules.endMode",
+			Default = JsonSerializer.SerializeToElement("score"),
+			Options = new()
+			{
+				new HouseRuleOption { Id = "score", NameKey = "rules.score" },
+				new HouseRuleOption { Id = "rounds", NameKey = "rules.rounds" },
+			},
+		};
+
+	/// <summary>A number shown only under one branch: "rule" is the choice, "is" the option.</summary>
+	private static HouseRuleDef RoundsShownWhen(string rule, string @is)
+		=> new()
+		{
+			Id = "sheddingRounds",
+			Type = "number",
+			NameKey = "rules.rounds_count",
+			Default = JsonSerializer.SerializeToElement(15),
+			ShowWhen = new HouseRuleCondition { Rule = rule, Is = @is },
+		};
+
+	// A wrong showWhen fails SILENTLY: the lobby hides the rule for good, the host never sees it
+	// and the package plays by a default nobody chose. Nothing at run time can tell that apart
+	// from a rule the author meant to hide, so the three ways to get it wrong are caught here.
+
+	[Fact]
+	public void A_rule_shown_when_a_rule_the_package_never_declares_is_rejected()
+	{
+		var def = WithHouseRules(new() { EndModeRule(), RoundsShownWhen("sheddingScoring", "penalty") },
+			EndingLabels);
+
+		var problem = Assert.Single(Validator.Validate(def), p => p.Contains("shown when"));
+		Assert.Contains("sheddingRounds", problem);
+		Assert.Contains("declares no such rule", problem);
+	}
+
+	[Fact]
+	public void A_rule_shown_when_a_toggle_is_rejected()
+	{
+		// A toggle has no options to name, so the condition could never be met.
+		var toggle = new HouseRuleDef
+		{
+			Id = "sheddingLastCardCall",
+			Type = "toggle",
+			NameKey = "rules.endMode",
+			Default = JsonSerializer.SerializeToElement(false),
+		};
+		var def = WithHouseRules(new() { toggle, RoundsShownWhen("sheddingLastCardCall", "rounds") },
+			EndingLabels);
+
+		var problem = Assert.Single(Validator.Validate(def), p => p.Contains("depends on"));
+		Assert.Contains("sheddingRounds", problem);
+		Assert.Contains("'toggle'", problem); // the message names what it actually is
+	}
+
+	[Fact]
+	public void A_rule_shown_when_an_option_the_choice_does_not_offer_is_rejected()
+	{
+		var def = WithHouseRules(new() { EndModeRule(), RoundsShownWhen("sheddingEndMode", "roundz") },
+			EndingLabels);
+
+		var problem = Assert.Single(Validator.Validate(def), p => p.Contains("not one of its options"));
+		Assert.Contains("'roundz'", problem);
+		Assert.Contains("score, rounds", problem); // …and what it could have said
+	}
+
+	[Fact]
+	public void A_coherent_condition_passes()
+	{
+		var def = WithHouseRules(new() { EndModeRule(), RoundsShownWhen("sheddingEndMode", "rounds") },
+			EndingLabels);
+
+		Assert.DoesNotContain(Validator.Validate(def), p => p.Contains("sheddingRounds"));
 	}
 
 	[Fact]

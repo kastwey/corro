@@ -102,6 +102,52 @@ public class ForbiddenFamilyTests
 	}
 
 	[Fact]
+	public async Task The_host_chooses_how_the_match_ends_and_with_which_number()
+	{
+		// The path a real host takes, which the rulebook tests skip by building the rules by hand:
+		// the lobby's RuleValues reaching ForbiddenRulesConfig through CreateGame. This family
+		// refused house rules outright until the ending became the host's, so nothing else walks
+		// it — and a break here would leave the suite green while every match quietly played the
+		// package defaults.
+		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+		var byScore = new ForbiddenFamily().CreateGame(new FamilyStartContext
+		{
+			Players = Players(),
+			Definition = definition,
+			Lang = "en",
+			Teams = Teams(),
+			RuleValues = new Dictionary<string, System.Text.Json.JsonElement>
+			{
+				["forbiddenEndMode"] = System.Text.Json.JsonSerializer.SerializeToElement("score"),
+				["forbiddenTargetScore"] = System.Text.Json.JsonSerializer.SerializeToElement(12),
+				["forbiddenCycles"] = System.Text.Json.JsonSerializer.SerializeToElement(7),
+			},
+		});
+
+		var chosen = byScore.State.ForbiddenRules!;
+		Assert.Equal("score", chosen.EndMode);
+		Assert.Equal(12, chosen.TargetScore);
+		Assert.Equal(7, chosen.Cycles); // kept, simply not what ends this match
+		// The effective rules travel with the game, so the running match plays what the table
+		// agreed on rather than what the package ships.
+		Assert.Equal(chosen, Assert.IsType<ForbiddenRuntime>(byScore.Runtime).Rules);
+
+		// An ending the engine does not know leaves the family's own rotations standing.
+		var nonsense = new ForbiddenFamily().CreateGame(new FamilyStartContext
+		{
+			Players = Players(),
+			Definition = definition,
+			Lang = "en",
+			Teams = Teams(),
+			RuleValues = new Dictionary<string, System.Text.Json.JsonElement>
+			{
+				["forbiddenEndMode"] = System.Text.Json.JsonSerializer.SerializeToElement("whenever"),
+			},
+		}).State.ForbiddenRules!;
+		Assert.Equal("rounds", nonsense.EndMode);
+	}
+
+	[Fact]
 	public async Task Game_rejects_a_word_language_the_package_does_not_supply()
 	{
 		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
