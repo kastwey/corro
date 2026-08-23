@@ -903,5 +903,11 @@ public sealed class GameSessionRegistry
 
 		gameService.OnCardDrawn += async (card) =>
 			await _hub.Clients.Group(gameId).SendAsync("CardDrawn", card);
+
+		// A response the rulebook addressed to the table rather than to whoever acted. It rides
+		// the same "CommandResponse" message every other response uses, so the client's existing
+		// handler for that type answers it with no new plumbing.
+		gameService.OnBroadcast += async (response) =>
+			await _hub.Clients.Group(gameId).SendAsync("CommandResponse", response);
 	}
 }

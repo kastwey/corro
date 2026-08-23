@@ -6,6 +6,7 @@ using CorroServer.Tests.Doubles;
 using CorroServer.Models;
 using CorroServer.Services;
 using CorroServer.Services.Corro;
+using CorroServer.Services.Rules;
 using CorroServer.Services.Sounds;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -85,13 +86,13 @@ public class GameHubRoutingTests
 	}
 
 	[Fact]
-	public async Task ExecuteCommand_PropertyDeclinedStartsAuction_BroadcastsAuctionStartedToGroup()
+	public async Task ExecuteCommand_PropertyDeclinedStartsAuction_StaysPrivate_TheHubKnowsNoFamilies()
 	{
-		// Regression: in the buy-as-action turn model a property goes to auction when the
-		// current player declines it by ending the turn (or re-rolling). The decline
-		// response (PROPERTY_DECLINED) is private to the caller, so the auction must be
-		// broadcast to the whole group separately — otherwise every OTHER player's auction
-		// modal would never open and the timers would never start.
+		// The hub used to read this response, notice AuctionStarted and send AUCTION_STARTED to the
+		// group itself — its only line that named a family, and one a bot's command never reached,
+		// because a bot's command returns to nobody. The auction now leaves from the rulebook
+		// through the service (see the broadcast test below), so the hub is back to pure routing:
+		// a private response goes to its caller and nowhere else, whatever it happens to say.
 		var service = new FakeGameService(
 			new PropertyDeclinedResponse { PlayerId = "a", SquareIndex = 1, SquareName = "Square 1", AuctionStarted = true })
 		{
@@ -106,10 +107,69 @@ public class GameHubRoutingTests
 
 		await hub.ExecuteCommand(new EndTurnCommand { PlayerId = "a" });
 
-		// The caller still gets the private PROPERTY_DECLINED response...
 		Assert.True(clients.Caller.Received("CommandResponse"));
-		// ...AND the auction start reaches the whole group so every modal opens.
-		Assert.True(clients.Group(gameId).Received("CommandResponse"));
+		Assert.False(clients.Group(gameId).Received("CommandResponse"));
+	}
+
+	[Fact]
+	public async Task A_table_wide_response_from_the_rulebook_reaches_the_whole_group()
+	{
+		// The other half: the registry subscribes to the SERVICE, so anything the rulebook
+		// addresses to the table arrives whoever ran the command — the hub for a person, the bot
+		// driver for a bot. It rides the same "CommandResponse" message every response uses, so
+		// the client handler that already exists for the type answers it.
+		var hubContext = new FakeHubContext();
+		var registry = new GameSessionRegistry(
+			hubContext, new FakeRepository(), new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
+		var service = new FakeGameService(new ErrorResponse { Message = "", Code = "" });
+		registry.RegisterService("g-broadcast", service);
+
+		await service.RaiseBroadcastAsync(new AuctionStartedResponse
+		{
+			SquareIndex = 1,
+			SquareName = "Square 1",
+			StartingPrice = 1,
+			InitiatorPlayerId = "a",
+			InitiatorPlayerName = "Ana",
+			BidTimeoutSeconds = 20,
+		});
+
+		Assert.True(hubContext.GroupProxy.Received("CommandResponse"));
+	}
+
+	[Fact]
+	public async Task A_table_wide_response_ships_after_the_commands_voice_never_before_it()
+	{
+		// The auction response opens a dialog, and a dialog takes focus. Sent the moment the
+		// rulebook raises it, it would land on a screen reader still speaking the decline that
+		// caused it — the table would hear the panel instead of the reason for it. So the service
+		// holds it until the command's announcement batch has gone out, exactly as it holds the
+		// batch itself. Voice, then the panel, then the state.
+		var order = new List<string>();
+		var service = new GameService(new CorroRulebook(), new AuctionRulebook());
+		service.OnGameEvents += _ => { order.Add("voice"); return Task.CompletedTask; };
+		service.OnBroadcast += _ => { order.Add("broadcast"); return Task.CompletedTask; };
+		service.OnGameStateChanged += _ => { order.Add("state"); return Task.CompletedTask; };
+
+		var a = TestFixtures.NewPlayer("a", money: 1500, position: 1);
+		var b = TestFixtures.NewPlayer("b", money: 1500, position: 0);
+		var state = TestFixtures.NewState(new[] { a, b }, squares: new List<Square>
+		{
+			new() { Id = 0, Name = "Go", Type = "go" },
+			new() { Id = 1, Name = "Baltic", Type = "property", Price = 100 },
+		});
+		state.CurrentTurn = "a";
+		state.HasRolledThisTurn = true; // ending a turn requires it, and the decline is reached that way
+		state.PendingPurchase = new PendingPurchase { PlayerId = "a", SquareIndex = 1, SquareName = "Baltic", Price = 100 };
+		await service.RestoreGameAsync(state);
+		service.ConfigureSettings(new GameSettings { AuctionOnDecline = true });
+
+		await service.ExecuteCommandAsync(new EndTurnCommand { PlayerId = "a" });
+
+		Assert.NotNull(service.GameState!.ActiveAuction);
+		Assert.Contains("broadcast", order);
+		Assert.True(order.IndexOf("voice") < order.IndexOf("broadcast"),
+			$"the voice must be out before anything opens a dialog, got: {string.Join(" -> ", order)}");
 	}
 
 	[Fact]

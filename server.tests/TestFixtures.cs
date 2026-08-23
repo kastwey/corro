@@ -65,6 +65,14 @@ internal static class TestFixtures
 		public int CheckpointCount { get; private set; }
 		public List<Square> SquareChanges { get; } = new();
 		public List<CardDrawnNotification> CardsDrawn { get; } = new();
+		/// <summary>Responses the rulebook addressed to the whole table (IGamePresenter.BroadcastAsync).</summary>
+		public List<ServerResponse> Broadcasts { get; } = new();
+
+		public Task BroadcastAsync(ServerResponse response)
+		{
+			Broadcasts.Add(response);
+			return Task.CompletedTask;
+		}
 
 		public Task CheckpointTurnSegmentAsync()
 		{
