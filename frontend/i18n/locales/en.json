@@ -45,6 +45,7 @@
   "account": {
     "signInPrompt": "Sign in to keep your games, unlock codes and friends on any device.",
     "signInWith": "Sign in with {{provider}}",
+    "providersLabel": "Ways to sign in",
     "signedInAs": "Signed in as {{name}}.",
     "signedIn": "Signed in.",
     "signOut": "Sign out",
@@ -97,6 +98,7 @@
       "eraseExplanation": "This removes your profile and every way of signing in to it. Games you played stay with the other players, but they stop being linked to you. It cannot be undone.",
       "erase": "Erase my account",
       "eraseConfirm": "Erase your account for good?",
+      "eraseGroupLabel": "Confirm erasing your account",
       "eraseCancel": "Keep my account",
       "eraseConfirmButton": "Yes, erase it",
       "visibilityLegend": "Who can see that you are connected?",

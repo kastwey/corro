@@ -45,6 +45,7 @@
   "account": {
     "signInPrompt": "Inicia sesión para conservar tus partidas, tus códigos de desbloqueo y tus amistades en cualquier dispositivo.",
     "signInWith": "Iniciar sesión con {{provider}}",
+    "providersLabel": "Formas de iniciar sesión",
     "signedInAs": "Sesión iniciada como {{name}}.",
     "signedIn": "Sesión iniciada.",
     "signOut": "Cerrar sesión",
@@ -97,6 +98,7 @@
       "eraseExplanation": "Esto elimina tu perfil y todas sus formas de iniciar sesión. Las partidas que jugaste siguen con las demás personas, pero dejan de estar vinculadas a ti. No se puede deshacer.",
       "erase": "Borrar mi cuenta",
       "eraseConfirm": "¿Borrar tu cuenta definitivamente?",
+      "eraseGroupLabel": "Confirmar el borrado de tu cuenta",
       "eraseCancel": "Conservar mi cuenta",
       "eraseConfirmButton": "Sí, bórrala",
       "visibilityLegend": "¿Quién puede ver que estás conectado?",

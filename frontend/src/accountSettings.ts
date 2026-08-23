@@ -455,11 +455,14 @@ export async function renderAccountSettings(
 		const prompt = document.createElement('div');
 		prompt.className = 'account-erase-confirm';
 		prompt.setAttribute('role', 'group');
+		// A short name of its own rather than aria-labelledby pointing at the question below.
+		// Naming a group with a visible sentence makes that sentence its accessible name, and
+		// VoiceOver then reads it twice: once on entering the group, once as the paragraph it
+		// still is. The question is what somebody has to READ; this is only what the group is.
+		prompt.setAttribute('aria-label', tSync('account.settings.eraseGroupLabel'));
 
 		const question = document.createElement('p');
-		question.id = 'account-erase-question';
 		question.textContent = tSync('account.settings.eraseConfirm');
-		prompt.setAttribute('aria-labelledby', question.id);
 
 		const cancel = document.createElement('button');
 		cancel.type = 'button';

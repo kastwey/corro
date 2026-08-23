@@ -494,15 +494,20 @@ export async function initAccountBar(
 
 		const prompt = document.createElement('p');
 		prompt.className = 'account-prompt';
-		prompt.id = 'account-prompt';
 		prompt.textContent = tSync('account.signInPrompt');
 		mount.appendChild(prompt);
 
 		// A LIST, because that is what these are: one way in per provider, and how many there are is
 		// worth knowing before you start through them ("list, 2 items"). A role="group" named them
-		// as a set but could not count them. Named from the prompt above it, so entering the list
-		// says what it is for. `role="list"` is explicit because `list-style: none` makes browsers
-		// drop the semantics, and the layout needs it.
+		// as a set but could not count them. `role="list"` is explicit because `list-style: none`
+		// makes browsers drop the semantics, and the layout needs it.
+		//
+		// Named with a SHORT name of its own, not from the paragraph above. Pointing
+		// aria-labelledby at that sentence made it the list's accessible name, so VoiceOver in
+		// Safari said the whole thing twice in a row: once as the prose it is, and again on
+		// entering the list. The same lesson as the signed-in line above — a piece of visible text
+		// doing double duty as an accessible name is a piece of text somebody hears twice. The
+		// paragraph stays prose for everyone; the list says what it is for in four words.
 		//
 		// LINKS, not buttons, and deliberately: signing in is a full page navigation to the
 		// provider, so it must behave like one — middle-click, open in a new tab, and the status bar
@@ -510,7 +515,7 @@ export async function initAccountBar(
 		const list = document.createElement('ul');
 		list.className = 'account-providers';
 		list.setAttribute('role', 'list');
-		list.setAttribute('aria-labelledby', prompt.id);
+		list.setAttribute('aria-label', tSync('account.providersLabel'));
 
 		for (const provider of providers) {
 			const item = document.createElement('li');
