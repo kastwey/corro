@@ -189,6 +189,12 @@ which you would act on first and why. Then hand the decision over: which finding
 what order, and whether each becomes a PR comment or a change. Waiting is the work here, not an
 interruption of it.
 
+**A PR from a fork can only be answered, not pushed to.** The git proxy injects credentials for
+this repository alone, so a branch living on somebody's fork is unreachable from here — and it
+is theirs to change in any case. There, the comment *is* the deliverable, with the patch inside
+it. Preparing the fix locally first is still worth the detour: a proposal you have actually run,
+carrying a regression test that fails without it, is a different thing from a suggestion.
+
 Once something is confirmed, publishing it follows the repo's usual rules: English, like every
 other artefact here. A design-level argument goes in one general comment where the reasoning can
 be followed; a defect in a specific line goes inline on that line. Several nits from one cause
