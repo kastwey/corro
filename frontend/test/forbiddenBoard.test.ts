@@ -481,6 +481,23 @@ test('status shortcuts and pure role helpers produce flowing team sentences', ()
 	state.forbidden!.cycle = 1;
 	assert.doesNotMatch(forbiddenStatusText(state, 'p0', translate)!, /round|cycle/i,
 		'an ordinary match never mentions rounds or cycles at all');
+	// Reported from play: with the host asking for five rounds, every rotation from the second on
+	// called itself sudden death. Sudden death is the rotation ADDED once the rounds run out level
+	// — rotation two of five is just rotation two.
+	state.forbiddenRules!.cycles = 5;
+	state.forbidden!.cycle = 2;
+	assert.doesNotMatch(forbiddenStatusText(state, 'p0', translate)!, /sudden death/i);
+	assert.doesNotMatch(forbiddenTurnContextText(state, 'p3', translate)!, /sudden death/i);
+	state.forbidden!.cycle = 6;
+	assert.match(forbiddenStatusText(state, 'p0', translate)!, /Sudden death, round 6\./);
+	// On a target score nothing is sudden death: play just continues until somebody arrives.
+	state.forbiddenRules!.endMode = 'score';
+	state.forbiddenRules!.targetScore = 30;
+	assert.doesNotMatch(forbiddenStatusText(state, 'p0', translate)!, /sudden death/i);
+	assert.doesNotMatch(forbiddenTurnContextText(state, 'p3', translate)!, /sudden death/i);
+	delete state.forbiddenRules!.endMode;
+	state.forbiddenRules!.cycles = 1;
+	state.forbidden!.cycle = 1;
 	assert.deepEqual(
 		forbiddenCastLines(state, 'p0', translate).length, 3,
 		'the three jobs the turn has, no more and no fewer');
