@@ -1418,9 +1418,35 @@ public partial class GameHub
 	private const int MyTablesLimit = 50;
 
 	/// <summary>
+	/// Whether this caller is the host for the purpose of deleting the table.
+	///
+	/// The seat's secret is one proof and the account that OWNS the seat is the other, and the
+	/// second one is not a relaxation: an account holder can already take the seat back with
+	/// <see cref="ClaimSeatAsAccount"/>, secret and all, so refusing them here only made them walk
+	/// a longer road to the same place. Refusing them was in fact worse than pointless — the lobby
+	/// lists the tables an account holds from any device, offers the host their Delete button, and
+	/// the button then failed with "only the host can do this" said to the host.
+	///
+	/// Both proofs are exact and neither is optional: an empty secret matches nothing (a seat
+	/// always has one), and an anonymous caller has no account id to match, so a caller with
+	/// neither is refused exactly as before. Pure and static so the rule can be tested on its own,
+	/// which is where a mistake here would be expensive.
+	/// </summary>
+	internal static bool MayDeleteAsHost(LobbyPlayer host, string? presentedSecret, string? callerUserId)
+	{
+		var bySecret = !string.IsNullOrEmpty(presentedSecret) && host.PlayerSecretId == presentedSecret;
+		var byAccount = !string.IsNullOrEmpty(callerUserId) && host.UserId == callerUserId;
+		return bySecret || byAccount;
+	}
+
+	/// <summary>
 	/// Permanently delete a game. Only the host may do this. Everyone currently connected
 	/// to the game (or its lobby) is told via "GameDeleted" and detached from the group,
 	/// losing any in-progress state; the game document and its live service are removed.
+	///
+	/// Two ways to BE the host, because there are two ways to be holding the seat (see
+	/// <see cref="MayDeleteAsHost"/>): the seat's stored secret, which is what a browser has, and
+	/// the account the seat belongs to, which is what a device that has never seen this table has.
 	/// </summary>
 	public async Task DeleteGameLobby(string gameId, string hostId, string hostSecretId)
 	{
@@ -1434,9 +1460,9 @@ public partial class GameHub
 				return;
 			}
 
-			// Host-only, authenticated by the host's secret id (never publicly exposed).
 			var host = game.Players.FirstOrDefault(p => p.Id == hostId && p.IsHost);
-			if (game.HostId != hostId || host == null || host.PlayerSecretId != hostSecretId)
+			if (game.HostId != hostId || host == null
+				|| !MayDeleteAsHost(host, hostSecretId, SignedInUserId()))
 			{
 				_logger?.LogWarning("SECURITY: Non-host delete attempt for game {GameId} by {HostId}", gameId, hostId);
 				await Clients.Caller.SendAsync("Error", "HOST_ONLY");

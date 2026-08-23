@@ -89,6 +89,81 @@ public class GameHubSavedGamesTests
 		Assert.DoesNotContain(gameId, repo.Deleted);
 	}
 
+	// Reported from a real session: signed in, delete a table from the lobby, confirm, and the table
+	// is still there. The lobby lists the tables an ACCOUNT holds from any device — that is what
+	// signing in is for — but a browser that never saw the table has no seat secret to send, so the
+	// delete was refused with "only the host can do this", said to the host.
+	[Fact]
+	public async Task DeleteGameLobby_AsTheAccountHoldingTheHostSeat_DeletesWithoutTheSecret()
+	{
+		var gameId = NewId();
+		var game = DocFor(gameId, hostId: "host", hostSecret: "secret", userId: "user-1");
+		var repo = new StubRepository(game);
+		var (hub, clients, _) = BuildHub(repo, signedInUserId: "user-1");
+
+		// Exactly what the lobby sends for a table it knows only through the account: no secret.
+		await hub.DeleteGameLobby(gameId, "host", "");
+
+		Assert.True(clients.Caller.Received("GameDeleted"));
+		Assert.Contains(gameId, repo.Deleted);
+	}
+
+	// The account is a second proof, never a wider door: it has to be the account that OWNS the
+	// host seat.
+	[Fact]
+	public async Task DeleteGameLobby_AsAnotherAccount_RejectedWithHostOnly()
+	{
+		var gameId = NewId();
+		var game = DocFor(gameId, hostId: "host", hostSecret: "secret", userId: "user-1");
+		var repo = new StubRepository(game);
+		var (hub, clients, _) = BuildHub(repo, signedInUserId: "somebody-else");
+
+		await hub.DeleteGameLobby(gameId, "host", "");
+
+		Assert.True(clients.Caller.Received("Error"));
+		Assert.DoesNotContain(gameId, repo.Deleted);
+	}
+
+	// A seat nobody has signed in for keeps exactly the protection it had: the secret, or nothing.
+	[Fact]
+	public async Task DeleteGameLobby_AnonymousCallerWithNoSecret_RejectedWithHostOnly()
+	{
+		var gameId = NewId();
+		var game = DocFor(gameId, hostId: "host", hostSecret: "secret");
+		var repo = new StubRepository(game);
+		var (hub, clients, _) = BuildHub(repo);
+
+		await hub.DeleteGameLobby(gameId, "host", "");
+
+		Assert.True(clients.Caller.Received("Error"));
+		Assert.DoesNotContain(gameId, repo.Deleted);
+	}
+
+	// The rule on its own, including the pair that would open the door to everybody: a seat with no
+	// account, asked about by a caller with no account.
+	[Theory]
+	// secret        caller       seat secret   seat account   may delete
+	[InlineData("secret", null, "secret", null, true)]
+	[InlineData("wrong", null, "secret", null, false)]
+	[InlineData("", "user-1", "secret", "user-1", true)]
+	[InlineData("", "user-2", "secret", "user-1", false)]
+	[InlineData("", null, "secret", null, false)]
+	[InlineData(null, null, "secret", null, false)]
+	// Neither side has an account: two nulls are not a match, or every anonymous caller would be
+	// the host of every table nobody signed in for.
+	[InlineData("", "", "secret", "", false)]
+	public void MayDeleteAsHost_AcceptsTheSecretOrTheOwningAccount_AndNothingElse(
+		string? presentedSecret, string? callerUserId, string seatSecret, string? seatUserId, bool expected)
+	{
+		var host = new LobbyPlayer
+		{
+			Id = "host", Name = "Host", Token = "disc", IsHost = true,
+			PlayerSecretId = seatSecret, UserId = seatUserId,
+		};
+
+		Assert.Equal(expected, GameHub.MayDeleteAsHost(host, presentedSecret, callerUserId));
+	}
+
 	[Fact]
 	public async Task DeleteGameLobby_MissingGame_ConfirmsToCallerSoListPrunes()
 	{
