@@ -287,6 +287,12 @@
 	margin: 1rem 0;
 }
 
+/* The message region is permanent so a screen reader has it before the text arrives (see
+   ui.ts showError); with nothing to say it takes no space and paints nothing. */
+.error:empty {
+	display: none;
+}
+
 .success {
 	background: var(--good-soft);
 	color: var(--good);

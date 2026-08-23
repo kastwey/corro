@@ -343,6 +343,17 @@ test('home, dark theme, runtime language and create/join validation states are A
 	// Client-side error states are persistent DOM states too; scan both validation branches.
 	await host.locator('#create-button').click();
 	await expect(host.locator('#error-message')).toContainText('Please enter your name');
+	// Reported from a real session, about a refusal on a different screen: the message existed,
+	// said the right thing, and rendered four hundred pixels below the fold of a page taller than
+	// the window, where nobody saw it. It lives ABOVE the views now, and is an alert rather than a
+	// box that gets revealed — asserted structurally, because where it ends up scrolled to is a
+	// race against its own five-second clock and this is the part that decides it.
+	expect(await host.locator('#error-message').evaluate(el => ({
+		role: el.getAttribute('role'),
+		beforeTheViews: !!(el.compareDocumentPosition(document.getElementById('view-home')!)
+			& Node.DOCUMENT_POSITION_FOLLOWING),
+		insideAView: !!el.closest('.lobby-view'),
+	}))).toEqual({ role: 'alert', beforeTheViews: true, insideAView: false });
 	await host.locator('#host-name').fill('Ana');
 	await host.locator('#create-form input.token-radio').evaluateAll(radios => {
 		for (const radio of radios) (radio as HTMLInputElement).checked = false;

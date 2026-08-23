@@ -52,6 +52,17 @@
 			</div>
 		</header>
 
+		<!-- What went wrong, wherever it went wrong. Above the views rather than under them, which
+			 is where it used to be: at the bottom of a page taller than the window, a refusal
+			 rendered four hundred pixels below the fold and nobody saw it. One place per page for
+			 this, so it is always found in the same spot whichever view is on show.
+
+			 It is EMPTY, not hidden. A live region that is revealed and filled in the same breath
+			 is one a screen reader can miss entirely — the region has to be in the accessibility
+			 tree before the text lands in it. `.error:empty` keeps it out of sight until it has
+			 something to say (see ui.ts showError). -->
+		<div id="error-message" class="error" role="alert"></div>
+
 		<!-- VIEW: HOME — the entrance hall, and nothing else.
 			 Four blocks in the order somebody needs them: what you can start, what is waiting on an
 			 answer, the tables you already have, and the people. Each block owns an h3 of its own,
@@ -486,7 +497,6 @@
 		<!-- Spoken lobby events (the unlock feedback). It must remain outside the mutually hidden
 			 views so announcements work from every lobby screen. -->
 		<div id="lobby-live" class="sr-only" aria-live="polite"></div>
-		<div id="error-message" class="error hidden" aria-live="assertive" tabindex="-1"></div>
 		<div id="loading" class="loading hidden" data-i18n="lobby.processing" aria-live="polite">Processing...</div>
 	</main>
 
