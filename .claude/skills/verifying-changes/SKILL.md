@@ -1,6 +1,6 @@
 ---
 name: verifying-changes
-description: Runs Corro's verification gates in the right order — repository conventions, the frontend build and node:test suite, dotnet test, and the sharded Playwright E2E suite. Use when finishing a change, before pushing, when a suite has to be run or narrowed to a single spec, when deciding whether E2E applies, or when the E2E coverage map needs regenerating.
+description: Runs Corro's verification gates in the right order — repository conventions, the frontend build and node:test suite, dotnet test, and the sharded Playwright E2E suite — and how to look at a UI change in both themes without trusting a screenshot's colours. Use when finishing a change, before pushing, when a suite has to be run or narrowed to a single spec, when deciding whether E2E applies, when the E2E coverage map needs regenerating, or when a visual/contrast claim has to be checked.
 ---
 
 # Verifying a change
@@ -104,6 +104,75 @@ cd e2e && npm run test:map
 
 It is a full instrumented run (slower than `npm test`), and it is a build artefact: regenerate
 it, never hand-edit it.
+
+## Looking at a UI change
+
+AGENTS.md asks for a visual review of both themes, and a screenshot is how that gets done. It is
+an honest channel for SHAPE — what wrapped, what is next to what, how the headings step, whether
+a block reads as one thing — and an unreliable one for COLOUR. The image is rescaled and
+recompressed on its way to you, and a surface painted `#1a2236` can read as white. The mistake
+goes one way: towards restyling something that was never broken.
+
+So split the review. **Eyes for shape, measurement for colour.** Anything you are about to say
+with a colour in it — "the dark theme is not applying here", "that text is unreadable on that
+surface" — and any change you are about to make BECAUSE a screenshot looked wrong, gets measured
+first.
+
+Two measurements, and they answer different questions, which is why it is worth taking both:
+
+- `getComputedStyle` — what the CSS resolved to. *Which token won?*
+- the painted pixel — what landed after stacking, opacity, ancestors and the screenshot
+  pipeline. *What does somebody actually see?*
+
+When they disagree, the pixel is the one describing the product. When they agree, an image that
+still looks wrong is the image being wrong.
+
+The lobby needs no server to be looked at — it is static once built, and its failing SignalR
+calls do not stop the chrome from rendering:
+
+```bash
+cd frontend && npm run build
+(cd dist && python3 -m http.server 8099 &)
+```
+
+Then drive it with the browser the E2E suite already installed (on a remote session,
+`executablePath: '/opt/pw-browsers/chromium'`):
+
+```js
+const page = await browser.newPage({ viewport: { width: 900, height: 700 } });
+await page.goto('http://localhost:8099/index.html');
+// Both themes are one attribute apart; check the one you are NOT developing in too.
+await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
+
+// 1. What the CSS resolved to.
+console.log(await page.evaluate(sel => {
+	const cs = getComputedStyle(document.querySelector(sel));
+	return { background: cs.backgroundColor, color: cs.color, position: cs.position };
+}, '.player-context-menu'));
+
+// 2. What was painted there. Decoded in the browser, which needs no image library.
+const shot = (await page.screenshot()).toString('base64');
+console.log(await page.evaluate(async data => {
+	const img = new Image();
+	img.src = 'data:image/png;base64,' + data;
+	await img.decode();
+	const canvas = document.createElement('canvas');
+	canvas.width = img.width; canvas.height = img.height;
+	const ctx = canvas.getContext('2d');
+	ctx.drawImage(img, 0, 0);
+	const at = (x, y) => [...ctx.getImageData(x, y, 1, 1).data].slice(0, 3);
+	return { surface: at(345, 400), text: at(352, 357) };   // coordinates from a boundingBox()
+}, shot));
+```
+
+For a contrast claim the number is the WCAG ratio, not the two colours: relative luminance of
+each (`c/255`, then `c <= 0.03928 ? c/12.92 : ((c+0.055)/1.055) ** 2.4`, weighted
+`0.2126/0.7152/0.0722`), and `(lighter + 0.05) / (darker + 0.05)`. Under 4.5 for body text is a
+finding; the Axe gate says the same thing but only about states a scenario reaches, and this
+works on a state you are still building.
+
+None of this replaces the Axe gate or a look at the whole page. It is what turns "that looks
+off" into something worth acting on.
 
 ## Proving a regression test
 
