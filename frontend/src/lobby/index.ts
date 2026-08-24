@@ -15,6 +15,7 @@ import { isLobbyPathFor, lobbyPathFor } from '../languageUrl.js';
 import { renderHouseRules, readHouseRuleValues } from '../houseRules.js';
 import { GameSessionStore, SavedGame } from '../sessionUtils.js';
 import { dialogManager } from '../dialogManager.js';
+import { makeInFlightGuard } from '../inFlightGuard.js';
 import { FocusTrap } from '../focusTrap.js';
 import {
 	convertTokenToSnakeCase, getUsedTokens, renderTokenSelector
@@ -93,6 +94,9 @@ class UnifiedLobbyUI {
 	private viewClaimed = false;
 	/** Public names the @ autocomplete offers, refreshed when the lobby is opened. */
 	private chatCandidates: string[] = [];
+	/** The confirmed commands currently travelling, so a repeat activation in the window a
+	 *  confirmation leaves behind never asks the same question twice (see inFlightGuard). */
+	private readonly savedGameCommands = makeInFlightGuard();
 
 	constructor() {
 		void this.init();
@@ -1419,6 +1423,11 @@ class UnifiedLobbyUI {
 		// key and asks the host to confirm before the game is created. Shown EVERY time, by design.
 		const warningKey = this.uploadedPackage.warning;
 		if (warningKey) {
+			// Accepting the notice creates the game, and the confirmation closes before that
+			// request goes out — so a repeat activation on the restored Create button would
+			// accept twice and create the table TWICE. One acceptance at a time.
+			const key = 'createGame';
+			if (this.savedGameCommands.busy(key)) return;
 			dialogManager.showConfirm({
 				title: t('lobby.boardNotice.title', 'Notice'),
 				titleI18nKey: 'lobby.boardNotice.title',
@@ -1426,7 +1435,7 @@ class UnifiedLobbyUI {
 				confirmI18nKey: 'lobby.boardNotice.confirm',
 				cancelI18nKey: 'common.cancel',
 				focusConfirm: true,
-				onConfirm: () => void this.submitCreateGame(request),
+				onConfirm: () => this.savedGameCommands.run(key, () => this.submitCreateGame(request)),
 			});
 			return;
 		}
@@ -1844,6 +1853,11 @@ class UnifiedLobbyUI {
 
 	/** Host-only: confirm then ask the server to permanently delete a game. */
 	private confirmDeleteSavedGame(game: SavedGame): void {
+		// Not while this table's deletion is already travelling: the confirmation closes before
+		// its answer goes out, so focus is back on the row's Delete with the row still listed,
+		// and a repeat activation asks about a table that is on its way out (see inFlightGuard).
+		const key = `delete:${game.gameId}`;
+		if (this.savedGameCommands.busy(key)) return;
 		dialogManager.init();
 		dialogManager.showConfirm({
 			title: 'Delete game',
@@ -1852,14 +1866,14 @@ class UnifiedLobbyUI {
 			messageI18nKey: 'lobby.savedGames.deleteConfirm.message',
 			confirmI18nKey: 'lobby.savedGames.deleteConfirm.confirm',
 			cancelI18nKey: 'lobby.savedGames.deleteConfirm.cancel',
-			onConfirm: async () => {
+			onConfirm: () => this.savedGameCommands.run(key, async () => {
 				try {
 					await gameClient.deleteGame(game.gameId, game.playerId, game.playerSecretId);
 				} catch (error) {
 					console.error('Error deleting game:', error);
 					showError(t('lobby.errors.deleteGame', 'Could not delete the game'));
 				}
-			}
+			})
 		});
 	}
 
@@ -1869,6 +1883,10 @@ class UnifiedLobbyUI {
 	 * be discovered.
 	 */
 	private confirmLeaveSavedGame(game: SavedGame): void {
+		// Same window as deleting, same guard — and keyed per table, so leaving one is never
+		// swallowed because another is still being left.
+		const key = `leave:${game.gameId}`;
+		if (this.savedGameCommands.busy(key)) return;
 		dialogManager.init();
 		dialogManager.showConfirm({
 			title: 'Leave the table',
@@ -1877,7 +1895,7 @@ class UnifiedLobbyUI {
 			messageI18nKey: 'lobby.savedGames.leaveConfirm.message',
 			confirmI18nKey: 'lobby.savedGames.leaveConfirm.confirm',
 			cancelI18nKey: 'lobby.savedGames.leaveConfirm.cancel',
-			onConfirm: async () => {
+			onConfirm: () => this.savedGameCommands.run(key, async () => {
 				try {
 					// The stored secret when this browser has one, and nothing when the table is
 					// here only because the account holds the seat — the server takes either.
@@ -1889,7 +1907,7 @@ class UnifiedLobbyUI {
 					showError(t('lobby.errors.leaveTable', 'Could not leave the table'));
 				}
 				await this.refreshSavedGames();
-			}
+			})
 		});
 	}
 

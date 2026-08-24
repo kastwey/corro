@@ -178,6 +178,9 @@ export class HandPanel {
 	/** All held ids from the last authoritative render. Filters do not make a card "new". */
 	private renderedCardIds = new Set<string>();
 	private hasRenderedCards = false;
+	/** Cards whose discard has been sent and is not yet reflected in the hand — the window a
+	 *  confirmation leaves behind, where the card is still listed and still focused. */
+	private readonly discardsInFlight = new Set<string>();
 
 	// "What advances me most" is the natural top of a card hand: value order by default.
 	private sortMode = 'value';
@@ -293,6 +296,13 @@ export class HandPanel {
 		if (!this.deps || !this.listEl || !this.emptyEl) return;
 		this.syncMultiSelect();
 		const all = this.deps.getCards();
+		// A discard has landed once its card is no longer in the hand: release it, so the same
+		// card can be asked about again if the server never took it (a rejected command, a
+		// reconnect) instead of staying silently undiscardable.
+		if (this.discardsInFlight.size) {
+			const present = new Set(all.map(card => card.id));
+			for (const id of this.discardsInFlight) if (!present.has(id)) this.discardsInFlight.delete(id);
+		}
 		const visible = this.visibleCards(all);
 		const arrivingIds = this.hasRenderedCards && !isTokenMotionDisabled()
 			? new Set(all.filter(card => !this.renderedCardIds.has(card.id)).map(card => card.id))
@@ -769,6 +779,12 @@ export class HandPanel {
 	 *  toolbar button, the context menu, and the unplayable-card offer). */
 	private tryDiscard(card: HandCard): void {
 		if (!this.deps?.onDiscard) return; // no discard in this family: Delete falls through
+		// Nor while THIS card's discard is still travelling. The confirmation closes before the
+		// command goes out and focus comes straight back to the card, so a repeat activation
+		// (Enter's key auto-repeat is enough) would ask about a card the server is already
+		// taking away, and send the discard twice. Cleared in updateNow() once the card is
+		// actually gone from the hand.
+		if (this.discardsInFlight.has(card.id)) return;
 		// Don't even ASK when discarding isn't allowed yet (journey: "draw a card first") —
 		// speak the reason instead of opening a yes/no the server would only reject.
 		const can = this.deps.canDiscard?.() ?? { ok: true as const };
@@ -785,6 +801,7 @@ export class HandPanel {
 			// The player ASKED to discard: land on the answer, Cancel is one Tab away.
 			focusConfirm: true,
 			onConfirm: () => {
+				this.discardsInFlight.add(card.id);
 				this.focus(); // back on the hand before the server repaints it
 				this.deps!.onDiscard!(card);
 			},

@@ -21,6 +21,7 @@ import { AUDIO_UNLOCK_EVENTS, shouldResumeAudioContext, tokenHopCue } from './au
 import { Board } from './board.js';
 import { TokenAnimator } from './tokenAnimator.js';
 import { makeSettleGuard } from './settleGuard.js';
+import { makeInFlightGuard } from './inFlightGuard.js';
 import { holdingTeleports } from './holdingMovement.js';
 import { isTokenMotionDisabled } from './motion.js';
 import { AnnouncementGate } from './announcementGate.js';
@@ -314,12 +315,15 @@ async function initBoard() {
 	// decided against that stale state and ask the SAME question again, this time on top of
 	// the auction the first answer just started: the page goes inert and the player is
 	// stranded outside the auction, which is the very failure closing first exists to prevent.
-	let forfeitAnswerInFlight = false;
+	const forfeitCommands = makeInFlightGuard();
 	const confirmForfeitBuyable = (onConfirm: () => Promise<void>) => {
-	if (forfeitAnswerInFlight) return;
 	const gs = gameManager.getCurrentGameState();
 	const pp = gs?.pendingPurchase ?? null;
 	if (!pp) { void onConfirm(); return; }
+	// Keyed by the square under the hammer: the same forfeit is never asked twice, while a
+	// later one (the next turn, the next square) is never swallowed by a stale key.
+	const key = `forfeit:${pp.squareIndex}`;
+	if (forfeitCommands.busy(key)) return;
 	const auctions = !!gs?.settings?.auctionOnDecline;
 	dialogManager.showConfirm({
 		title: tSync('game.actions.confirm_pass_title'),
@@ -327,10 +331,7 @@ async function initBoard() {
 		message: tSync(auctions ? 'game.actions.confirm_pass_auction' : 'game.actions.confirm_pass_discard',
 		{ property: pp.squareName }),
 		confirmI18nKey: 'game.actions.confirm_pass_yes',
-		onConfirm: () => {
-		forfeitAnswerInFlight = true;
-		return onConfirm().finally(() => { forfeitAnswerInFlight = false; });
-		},
+		onConfirm: () => forfeitCommands.run(key, onConfirm),
 	});
 	};
 

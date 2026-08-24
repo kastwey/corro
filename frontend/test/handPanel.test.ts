@@ -228,6 +228,39 @@ test('Delete asks in a modal; confirming discards THAT card', async () => {
 	assert.equal(confirmDialog(), null, 'the dialog closed itself');
 });
 
+// Regression (issue #23 follow-up): the confirmation closes BEFORE the discard command goes
+// out, and focus comes straight back to the card — which is still in the hand, because the
+// server has not answered yet. A repeat activation there (Enter's key auto-repeat is enough)
+// used to ask about a card already on its way out and send the discard TWICE.
+test('a repeat Delete while the discard is still travelling does not ask again', async () => {
+	const items = rows();
+	items[0].focus();
+	key(items[0], 'Delete');
+	dialogButton('game.hand_discard').click();
+	await settled();
+	assert.deepEqual(discarded, ['c3']);
+
+	// Focus is back on that same card, still listed: press Delete again, twice.
+	const focused = document.activeElement as HTMLElement;
+	assert.equal(focused.dataset.focusId, 'c3');
+	key(focused, 'Delete');
+	assert.equal(confirmDialog(), null, 'the question is not asked again');
+	key(focused, 'Delete');
+	assert.deepEqual(discarded, ['c3'], 'and the command went out exactly once');
+
+	// Once the server has taken the card, the hand is free again — a card that came BACK
+	// (a rejected command, a reconnect) must not be left permanently undiscardable.
+	cards = cards.filter(c => c.id !== 'c3');
+	panel.update();
+	cards = [...cards, card({ id: 'c3', label: '100 km', typeKey: 'distance', value: 100 })];
+	panel.update();
+	const back = rows().find(r => r.dataset.focusId === 'c3')!;
+	back.focus();
+	key(back, 'Delete');
+	assert.ok(confirmDialog(), 'the card can be asked about again');
+	dialogButton('common.cancel').click();
+});
+
 test('cancelling the discard keeps the card and returns focus to the hand', () => {
 	const items = rows();
 	items[0].focus();
