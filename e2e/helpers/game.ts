@@ -55,16 +55,39 @@ export async function expireRoundClock(gameId: string): Promise<void> {
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 
-/** A shipped package's i18n table (e.g. squares/groups/terminology names). */
-export function packageI18n(packageId: string, lang: string): Record<string, any> {
-	const file = path.join(REPO_ROOT, 'server', 'Packages', packageId, 'i18n', `${lang}.json`);
-	return JSON.parse(fs.readFileSync(file, 'utf-8'));
+/**
+ * One file inside a package, from the SAME two roots the E2E server reads: the shipped
+ * packages, then the extra root `E2E__PackagesRoot` points at (playwright.config.ts). A
+ * fixture package is therefore addressed by id exactly like a shipped one, and a helper
+ * built on this works for both.
+ */
+function packageFile(packageId: string, ...parts: string[]): string {
+	const roots = [
+		path.join(REPO_ROOT, 'server', 'Packages'),
+		path.join(__dirname, '..', 'fixtures', 'packages'),
+	];
+	const found = roots
+		.map(root => path.join(root, packageId, ...parts))
+		.find(candidate => fs.existsSync(candidate));
+	if (!found) {
+		throw new Error(`package '${packageId}' has no ${parts.join('/')} in ${roots.join(' or ')}`);
+	}
+	return found;
 }
 
-/** A shipped package's manifest (tokens, groups, rules…). */
+/** A package's i18n table (e.g. squares/groups/terminology names). */
+export function packageI18n(packageId: string, lang: string): Record<string, any> {
+	return JSON.parse(fs.readFileSync(packageFile(packageId, 'i18n', `${lang}.json`), 'utf-8'));
+}
+
+/** A package's manifest (tokens, groups, rules…). */
 export function packageManifest(packageId: string): Record<string, any> {
-	const file = path.join(REPO_ROOT, 'server', 'Packages', packageId, 'manifest.json');
-	return JSON.parse(fs.readFileSync(file, 'utf-8'));
+	return JSON.parse(fs.readFileSync(packageFile(packageId, 'manifest.json'), 'utf-8'));
+}
+
+/** A card family's deck catalog (cards.json), in the order the package ships it. */
+export function packageCards(packageId: string): Record<string, any>[] {
+	return JSON.parse(fs.readFileSync(packageFile(packageId, 'cards.json'), 'utf-8'));
 }
 
 /** The app's own locale table (frontend/i18n/locales/<lang>.json). */

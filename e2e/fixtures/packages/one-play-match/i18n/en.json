@@ -1,0 +1,17 @@
+{
+  "colors": {
+    "red": "red",
+    "blue": "blue"
+  },
+  "cards": {
+    "blue_2": "Blue 2",
+    "blue_9": "Blue 9",
+    "red_3": "Red 3",
+    "red_5": "Red 5",
+    "red_9": "Red 9"
+  },
+  "tokens": {
+    "circle": "Circle",
+    "triangle": "Triangle"
+  }
+}

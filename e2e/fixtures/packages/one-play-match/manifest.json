@@ -1,0 +1,38 @@
+{
+  "format": "corro/v1",
+  "gameType": "shedding",
+  "engineVersion": "^1.0",
+  "id": "one-play-match",
+  "name": {
+    "es": "Partida de una jugada (prueba E2E)",
+    "en": "One-play match (E2E test)"
+  },
+  "author": "Corro E2E",
+  "version": "0.1.0",
+  "locales": [
+    "es",
+    "en"
+  ],
+  "players": {
+    "min": 2,
+    "max": 2
+  },
+  "sheddingRules": {
+    "handSize": 1,
+    "endMode": "rounds",
+    "rounds": 1,
+    "scoring": "penalty",
+    "targetScore": 1,
+    "drawnCardPlayable": true
+  },
+  "tokens": [
+    {
+      "id": "circle",
+      "nameKey": "tokens.circle"
+    },
+    {
+      "id": "triangle",
+      "nameKey": "tokens.triangle"
+    }
+  ]
+}

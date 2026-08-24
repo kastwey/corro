@@ -106,6 +106,7 @@ Playwright, while root-level files accumulate stale visual states.
 | `connection.spec.ts` | Mid-game disconnect: announcement + tag in the players list and turn indicator, the `t` key voices the absence, and the rejoin is announced (first-person for the returning player). |
 | `axe-monitor.spec.ts` | Mutation-driven Axe auditing retains a barrier from a transient UI state after that element disappears. |
 | `lobby-accessibility.spec.ts` | Lobby-only Axe states: both themes, runtime language switch, create/join validation, invalid and successful `.corro` uploads, upload removal, unlock prompt/feedback, saved-game actions, and the complete hidden-package lifecycle (reveal → persist → delayed stage → create → code-free guest → browser board). |
+| `shedding-match-end.spec.ts` | A shedding match that actually ENDS: a whole Four Colours round played out card by card (the deal predicted from `cards.json`, playability read off the hand the server sends), plus the regression for a rounds ending that also announced a loss on the target it was not being played to. |
 | `voice.spec.ts` | Optional voice lifecycle with two players: deployment-gated lobby choice, host enable/disable, opt-in unmuted join, presence, active-speaker query, local volume, reversible host mute and every settled Axe state. |
 
 ## Writing a scenario
@@ -118,12 +119,24 @@ All the plumbing lives in `helpers/game.ts`:
   flow through the real UI; `houseRules` flips the package's declared toggle rules.
 - `roll(page, d1, d2)` / `buyPendingProperty(page)` / `actionButton(page, id)`.
 - `expectAnnouncement(page, /regex/)` — asserts what a screen reader WOULD hear.
-- `packageI18n` / `packageManifest` / `appI18n` — the source of truth for texts.
+- `packageI18n` / `packageManifest` / `packageCards` / `appI18n` — the source of truth for
+  texts, rules and decks. The package helpers read the shipped packages first and the E2E
+  fixtures below second, so a fixture is addressed by id exactly like a shipped board.
 
-The shipped package under `fixtures/packages/hidden/` is injected as an additional package
-root **only** when the server runs in E2E mode. It is deliberately absent from
-`server/Packages/` and production publish artifacts. Its code is `e2e-hidden`; use it to
-test the unlock gate instead of relying on private/local packages.
+Everything under `fixtures/packages/` is injected as an additional package root **only**
+when the server runs in E2E mode, deliberately absent from `server/Packages/` and from
+production publish artifacts:
+
+- `hidden/` — code `e2e-hidden`; use it to test the unlock gate instead of relying on
+  private/local packages.
+- `one-play-match/` — a shedding deck of five cards dealing ONE each, played as a single
+  penalty round with the target score at 1. It exists because that combination cannot be
+  reached through a shipped package (the lobby hides the target field under a rounds
+  ending), and it turns a whole match into one key press.
+
+A fixture is a real package and the server validates it on load, but `dotnet test` never
+sees it — `KeyIntegrityTests` walks `server/Packages` only. Check one by hand with
+`dotnet tools/Corro.PackageCli/bin/Debug/net10.0/corro-package.dll validate e2e/fixtures/packages/<id>`.
 
 Known gotchas:
 
