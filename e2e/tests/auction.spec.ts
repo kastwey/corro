@@ -8,6 +8,7 @@
 // and the win is announced in the board's currency with ownership propagated.
 
 import { test, expect } from '../helpers/test';
+import { flushAxeAudit } from '../helpers/axeAudit';
 import {
 	actionButton,
 	appI18n,
@@ -52,6 +53,26 @@ test('auction: declining opens it for all, a lone bidder wins at once, ownership
 	await expect(bertoDialog).toBeVisible();
 	await expect(anaDialog).toContainText(sq3);
 	await expect(bertoDialog).toContainText(sq3);
+
+	// …and it has FOCUS on both, which is the only reason a screen-reader user knows it is
+	// there. Asserted for BOTH players because the two paths differ and only one was broken:
+	// Berto is a bystander (the dialog opens into an idle page), while Ana ACTED — she
+	// answered the forfeit confirmation, and that modal used to stay open for the whole
+	// end-turn round trip, making the page inert while the auction opened behind it and then
+	// handing focus back to the action bar on close. The auction ran with her never in it.
+	await expect(anaDialog.locator('#auction-bid-input')).toBeFocused();
+	await expect(bertoDialog.locator('#auction-bid-input')).toBeFocused();
+
+	// And the way back in works. Escape parks focus on the board and minimizes the panel
+	// (it never passes); "reenter auction" — the only action the toolbar offers while I'm
+	// bidding — must expand it and put focus back on the bid field. It used to call the
+	// OPEN helper, which returns immediately when the dialog is already open, so the control
+	// could never do anything at all.
+	await ana.keyboard.press('Escape');
+	await expect(ana.locator('#board')).toBeFocused();
+	await flushAxeAudit(ana);
+	await actionButton(ana, 'reenterAuction').click();
+	await expect(anaDialog.locator('#auction-bid-input')).toBeFocused();
 
 	// Ana passes; Berto bids 10. With every rival out, the auction resolves at once
 	// (no waiting for the countdown) and both modals close.

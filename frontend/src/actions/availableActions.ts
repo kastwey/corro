@@ -165,11 +165,12 @@ export function computeAvailableActions(ctx: ActionContext): ActionDescriptor[] 
 			? [{ ...DESCRIPTORS.rollDice }] : [];
 	}
 
-	// An auction I'm still in owns the interaction through its own modal. If that
-	// modal gets dismissed by accident the toolbar would otherwise be empty and the
-	// player could not get back in, so surface a single "reenter auction" action as
-	// the way back to the bidding modal (the auction dialog itself stays the source
-	// of truth; this just reopens it).
+	// An auction I'm still in owns the interaction through its own modal. The panel is
+	// non-modal, so focus can be anywhere but in it — parked on the board by Escape, or
+	// never handed over at all — and the toolbar would otherwise be empty, leaving the
+	// player no way back in. So surface a single "reenter auction" action as the way back
+	// to the bidding modal (the auction dialog itself stays the source of truth; this puts
+	// focus back into it, reopening it only if it really was dismissed).
 	if (ctx.activeAuctionForMe) {
 		return [{ ...DESCRIPTORS.reenterAuction }];
 	}

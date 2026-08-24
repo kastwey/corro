@@ -1779,7 +1779,7 @@
     "help_cmd_buy_property": "Comprar la propiedad actual",
     "help_cmd_manage_properties": "Gestionar tus propiedades",
     "help_cmd_open_trade": "Abrir el creador de intercambios",
-    "help_cmd_reenter_auction": "Volver a abrir la subasta en la que pujas",
+    "help_cmd_reenter_auction": "Volver a la subasta en la que pujas",
     "help_cmd_focus_actions": "Ir a la barra de acciones",
     "help_cmd_focus_dialog": "Ir al diálogo abierto",
     "no_dialog": "No hay diálogo al que ir",

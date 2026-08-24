@@ -192,6 +192,31 @@ class AuctionDialogClass {
 		}
 	}
 
+	/**
+	 * Put keyboard focus back into the OPEN dialog, on the same control a fresh open would
+	 * land on. This is what "reenter auction" needs: the player left the panel (Escape parks
+	 * focus on the board and minimizes it) or never got in, and wants back — the auction
+	 * itself must not be restarted, so `open()` is the wrong door.
+	 *
+	 * Expands it first when minimized: its controls are `display:none` there and cannot take
+	 * focus (same restore the Ctrl+D panel entry does).
+	 */
+	focus(): boolean {
+		if (!this.isOpen() || !this.data) return false;
+		const dialog = this.dialog!;
+		if (dialog.classList.contains('dialog--minimized')) {
+			dialog.classList.remove('dialog--minimized');
+			(dialog as unknown as { syncMinimize?: () => void }).syncMinimize?.();
+		}
+		if (this.data.playerMoney >= this.minBid()) {
+			this.input.focus();
+			this.input.select();
+		} else {
+			this.passBtn.focus();
+		}
+		return true;
+	}
+
 	/** Apply a partial update (new bid, timer tick, money change) without re-opening. */
 	update(partial: Partial<AuctionDialogData>): void {
 		if (!this.data) return;

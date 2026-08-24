@@ -1734,11 +1734,18 @@ async function initBoard() {
 	if (auctionDialog.isOpen()) auctionDialog.end();
 	}
 
-	// Reopen the auction modal I'm still part of (e.g. after I dismissed it by accident
-	// with Esc). Driven from the action bar and a keyboard shortcut. openAuctionModal is
-	// idempotent (no-op if already open or if I passed this square), and the desiredModal
-	// check ensures there really is an auction I may rejoin before reopening anything.
+	// Get back INTO the auction I'm still part of. Driven from the action bar and a keyboard
+	// shortcut, and what the player wants either way is FOCUS: the panel is non-modal, so
+	// Escape parks focus on the board (minimizing it) and leaves it open, and a dialog that
+	// opened while a modal one covered the page never got focus at all.
+	//
+	// So the already-open case is the NORMAL one, not the exception — and it used to be the
+	// only case that could happen, which is why the control did nothing: openAuctionModal
+	// returns immediately when the dialog is open, so it could only ever reopen a dialog that
+	// wasn't there. Focus it instead, and keep openAuctionModal for the genuinely closed case
+	// (dismissed for good), where desiredModal proves there is an auction left to rejoin.
 	function reenterAuction(): void {
+	if (auctionDialog.focus()) return;
 	// getSquares() resolves every name to this player's language; the raw state carries the
 	// board's canonical ones, which would show through in the trade review.
 	const desired = desiredModal(gameManager.getCurrentGameState(), gameManager.getMyPlayerId(),

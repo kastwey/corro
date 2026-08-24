@@ -231,3 +231,68 @@ test('an unaffordable minimum stays focusable, exposes its reason and announces 
 	assert.deepEqual(announced, [hint.textContent]);
 	auctionDialog.end();
 });
+
+// Regression (issue #23): "reenter auction" is about FOCUS, not about opening. The panel is
+// non-modal, so a bidder can be outside it while it is open — Escape parks focus on the board
+// and minimizes it, and a dialog that opened behind a modal one never received focus at all.
+// The control used to call the OPEN helper, which returns immediately when the dialog is
+// already open: it could therefore only ever act on a dialog that wasn't there, which is to
+// say never. focus() is the door back in.
+test('focus() puts focus back on the bid field of an already-open auction', () => {
+	installFakeI18next('en');
+	auctionDialog.open({
+		squareIndex: 7, squareName: 'Mayfair', currentBid: 0, highestBidderName: null,
+		secondsRemaining: 20, playerMoney: 1500, onBid: () => {}, onPass: () => {},
+	});
+	const input = document.getElementById('auction-bid-input') as HTMLInputElement;
+	// The player left for the board, as Escape does.
+	const board = document.createElement('div');
+	board.id = 'board';
+	board.tabIndex = -1;
+	document.body.appendChild(board);
+	board.focus();
+	assert.notEqual(document.activeElement, input);
+
+	assert.equal(auctionDialog.focus(), true, 'it reports that it took focus');
+	assert.equal(document.activeElement, input);
+	auctionDialog.end();
+});
+
+test('focus() expands a minimized auction first, since its controls cannot take focus there', () => {
+	installFakeI18next('en');
+	auctionDialog.open({
+		squareIndex: 7, squareName: 'Mayfair', currentBid: 0, highestBidderName: null,
+		secondsRemaining: 20, playerMoney: 1500, onBid: () => {}, onPass: () => {},
+	});
+	const dialog = document.getElementById('auction-dialog') as HTMLDialogElement;
+	(dialog.querySelector('.dialog-minimize') as HTMLButtonElement).click();
+	assert.ok(dialog.classList.contains('dialog--minimized'));
+
+	assert.equal(auctionDialog.focus(), true);
+	assert.ok(!dialog.classList.contains('dialog--minimized'), 'expanded on the way back in');
+	assert.equal(document.activeElement, document.getElementById('auction-bid-input'));
+	// The minimize button agrees it is expanded again (it is what a screen reader reads).
+	assert.equal(dialog.querySelector('.dialog-minimize')!.getAttribute('aria-expanded'), 'true');
+	auctionDialog.end();
+});
+
+test('focus() lands on Pass when the player cannot afford the minimum, as a fresh open does', () => {
+	installFakeI18next('en');
+	auctionDialog.open({
+		squareIndex: 7, squareName: 'Mayfair', currentBid: 100, highestBidderName: 'Nuria',
+		secondsRemaining: 20, playerMoney: 50, onBid: () => {}, onPass: () => {},
+	});
+	const passBtn = document.querySelector('.auction-pass-btn') as HTMLButtonElement;
+	document.body.focus();
+
+	assert.equal(auctionDialog.focus(), true);
+	assert.equal(document.activeElement, passBtn, 'the only thing they can do');
+	auctionDialog.end();
+});
+
+test('focus() reports false when no auction is open, so the caller can fall back to opening one', () => {
+	installFakeI18next('en');
+	auctionDialog.end();
+	assert.equal(auctionDialog.isOpen(), false);
+	assert.equal(auctionDialog.focus(), false);
+});

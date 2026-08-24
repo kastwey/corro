@@ -420,9 +420,12 @@ class DialogManagerClass {
 					i18nKey: 'game.buy_confirm_yes',
 					i18nVars: { price: options.price },
 					variant: 'primary',
+					// Close BEFORE the command goes out (see showConfirm): a modal dialog held
+					// open across a server round trip makes the rest of the page inert, so
+					// anything the answer causes to open cannot take focus.
 					action: async () => {
-						await options.onConfirm();
 						this.close();
+						await options.onConfirm();
 					}
 				},
 				{
@@ -526,9 +529,19 @@ class DialogManagerClass {
 					i18nKey: options.confirmI18nKey || 'common.confirm',
 					variant: 'primary',
 					focus: options.focusConfirm,
+					// Close BEFORE running the answer, never after awaiting it. A confirmed
+					// answer is usually a SERVER command, and awaiting it here kept this modal
+					// open for the whole round trip — during which the rest of the page is
+					// inert, so a surface the server opens in reply (the auction that ending a
+					// turn on a pending purchase starts) could not take focus; then this close
+					// handed focus back to the opener, stranding the player on the action bar
+					// with an open, unfocused dialog they never entered. Closing first also
+					// keeps an answer that opens ANOTHER dialog from being closed by this line,
+					// and matches how the rest of the client acts (the bus choice, passing an
+					// auction): leave locally, then tell the server.
 					action: async () => {
-						await options.onConfirm();
 						this.close();
+						await options.onConfirm();
 					}
 				}
 			]

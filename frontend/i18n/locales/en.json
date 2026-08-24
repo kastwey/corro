@@ -1779,7 +1779,7 @@
     "help_cmd_buy_property": "Buy the current property",
     "help_cmd_manage_properties": "Manage your properties",
     "help_cmd_open_trade": "Open the trade builder",
-    "help_cmd_reenter_auction": "Reopen the auction you're bidding in",
+    "help_cmd_reenter_auction": "Go back into the auction you're bidding in",
     "help_cmd_focus_actions": "Go to the actions bar",
     "help_cmd_focus_dialog": "Go to the open dialog",
     "no_dialog": "No dialog to go to",

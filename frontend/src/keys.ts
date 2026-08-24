@@ -48,7 +48,7 @@ export interface KeyHandlersOptions {
 	showBoardHelp?: () => void; // Opens the board guide / rules modal (F1)
 	showGameRules?: () => void; // Opens the active game-rules modal (Ctrl+Shift+F1)
 	openTradeBuilder?: () => void; // Opens the player-to-player trade builder modal
-	reenterAuction?: () => void; // Reopens the auction modal I'm still part of (after dismissing it)
+	reenterAuction?: () => void; // Puts focus back in the auction modal I'm still part of
 	history?: { prev: () => void; next: () => void; first: () => void; last: () => void }; // Announcement history navigation
 	onInvalidSquareNumber?: (n: number) => void; // Typed a square number out of range
 	// Panel navigation (Ctrl+F6 / Ctrl+Shift+F6 across landmark regions, Ctrl+Shift+A to the action
