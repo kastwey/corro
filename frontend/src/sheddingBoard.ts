@@ -6,7 +6,7 @@
 // players; the same story speaks through sheddingStatusText (S / Shift+S / the players
 // panel). There is deliberately NO one-card-left shout: counts are on-demand.
 
-import { HandPanel, type HandCard } from './handPanel.js';
+import { HandPanel, type HandCard, type HandSorting } from './handPanel.js';
 import { genericCardArtHtml, genericCardBackHtml, genericEmptyCardHtml } from './cardArt.js';
 import { popupMenu } from './popupMenu.js';
 import { escapeHtml } from './escapeHtml.js';
@@ -23,6 +23,59 @@ import { showGameRulesDialog } from './gameRulesDialog.js';
 import { buildSheddingRulesLines } from './rulesSummaries.js';
 import type { GameState } from './models.js';
 import type { HelpShortcut } from './shortcuts.js';
+
+/** Where each action card sits once the numbers run out. The family's own types (models.ts),
+ *  never a package's cards, so themed decks inherit the order for free.
+ *  Reported from play: with every action weighing the same, a hand held two draw-twos that
+ *  never met — they landed wherever the deal had left them, and no sort could bring them
+ *  together. Ordering them by their bite (lose a turn < turn around < draw two) puts the
+ *  colourless pair last, where the hand ends. */
+const SHEDDING_ACTION_RANK: Readonly<Record<string, number>> = {
+	skip: 1, reverse: 2, drawTwo: 3, wild: 4, wildDrawFour: 5,
+};
+
+/** One learnable figure per card: its own number, or ten-and-up by action rank. The panel's
+ *  generic weight calls every action a 10, which is why they used to tie. */
+const sheddingWeight = (card: HandCard): number =>
+	card.typeKey === 'number' ? card.value : 10 + (SHEDDING_ACTION_RANK[card.typeKey] ?? 0);
+
+/** Cuatro Colores answers two questions, so it offers two axes and drops the generic
+ *  "by type": with actions ranked, ordering by value ALREADY groups every draw two with
+ *  every draw two, whatever their colours. Ids match the generic ones so the wording and a
+ *  player's saved choice both carry over. */
+const SHEDDING_HAND_SORTING: HandSorting = {
+	preferenceScope: 'shedding',
+	defaultId: 'value',
+	options: [
+		{
+			id: 'value',
+			labelKey: 'game.hand_sort_by_value',
+			announcementKey: 'game.hand_sorted_value',
+			compare: (a, b) => sheddingWeight(b) - sheddingWeight(a),
+		},
+		{
+			id: 'valueAsc',
+			labelKey: 'game.hand_sort_by_value_asc',
+			announcementKey: 'game.hand_sorted_valueAsc',
+			compare: (a, b) => sheddingWeight(a) - sheddingWeight(b),
+		},
+		{
+			// Numbers first and in order, then the actions — a colour reads as a small hand of
+			// its own. Wilds carry no colour, so they pool at the end.
+			id: 'colour',
+			labelKey: 'game.hand_sort_by_colour',
+			announcementKey: 'game.hand_sorted_colour',
+			compare: (a, b) => (a.colourOrder ?? Number.MAX_SAFE_INTEGER) - (b.colourOrder ?? Number.MAX_SAFE_INTEGER)
+				|| sheddingWeight(a) - sheddingWeight(b),
+		},
+		{
+			id: 'hand',
+			labelKey: 'game.hand_sort_hand',
+			announcementKey: 'game.hand_sorted_hand',
+			compare: () => 0,
+		},
+	],
+};
 
 export interface SheddingBoardDeps {
 	getGameState: () => GameState | null;
@@ -178,6 +231,7 @@ export class SheddingBoard {
 
 		this.hand.init(handMount, {
 			getCards: () => this.myHandCards(),
+			sorting: SHEDDING_HAND_SORTING,
 			// Space: draw — or, mid drawn-card pause, KEEP the card and pass. The gate
 			// words the refusal; the panel never disables anything.
 			canDraw: () => this.canDrawNow(),

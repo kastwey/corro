@@ -98,6 +98,18 @@ test('shedding: matches, the drawn-card pause, a penalty and the on-demand count
 	await flushAxeAudit(berto);
 	await berto.locator('.hand-panel__list-actions [data-focus-id="show-all-cards"]').click();
 
+	// ── The family brings its own orderings: two by value, one by colour and the deal order.
+	// "By type" is deliberately absent — with the action cards ranked, ordering by value
+	// already groups every draw two with every draw two. ──
+	const tools = berto.locator('.hand-panel__list-actions');
+	for (const id of ['sort-value', 'sort-valueAsc', 'sort-colour', 'sort-hand']) {
+		await expect(tools.locator(`[data-focus-id="${id}"]`)).toHaveCount(1);
+	}
+	await expect(tools.locator('[data-focus-id="sort-type"]')).toHaveCount(0);
+	await tools.locator('[data-focus-id="sort-valueAsc"]').click();
+	await expectAnnouncement(berto, /Ordenadas por valor, de menor a mayor/);
+	await flushAxeAudit(berto);
+
 	// Berto DRAWS (Space) — and the drawn Azul 2
 	// matches by value, so the game pauses on his play-it-or-keep-it choice. ──
 	await berto.locator('#board').focus();
