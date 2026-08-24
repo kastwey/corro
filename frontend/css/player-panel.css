@@ -229,35 +229,8 @@
   outline-offset: 2px;
 }
 
-/* Accessible context menu (Shift+F10 / Applications key) mirroring a row's actions. */
-.player-context-menu {
-  position: fixed;
-  z-index: 1100;
-  min-width: 200px;
-  display: flex;
-  flex-direction: column;
-  padding: 4px;
-  background: var(--panel, #1b2030);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
-}
-.player-context-menu-item {
-  background: none;
-  border: none;
-  text-align: left;
-  padding: 0.5rem 0.75rem;
-  font: inherit;
-  color: var(--text);
-  border-radius: 6px;
-  cursor: pointer;
-}
-.player-context-menu-item:hover,
-.player-context-menu-item:focus-visible {
-  background: var(--accent);
-  color: var(--on-accent);
-  outline: none;
-}
+/* The Shift+F10 context menu these rows open lives in css/context-menu.css: the same widget is
+   opened from the lobby too, which does not load this file. */
 
 /* ---- Player detail modal (native <dialog>) ------------------------------ */
 #player-detail-dialog {

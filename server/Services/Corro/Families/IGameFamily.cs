@@ -93,6 +93,17 @@ public interface IGameFamily
 	IReadOnlyList<string> ContentLanguages(GameDefinition definition) => Array.Empty<string>();
 
 	/// <summary>
+	/// What this match took from its deck. The table remembers it (see
+	/// <see cref="FamilyStartContext.AlreadyDealt"/>) so the next match on the same table deals
+	/// what nobody has seen yet.
+	///
+	/// <see cref="MatchDeal.None"/> — the default — opts a family out entirely: no memory is kept
+	/// and nothing changes. A family whose content is language-split keeps one memory per content
+	/// language, because two decks share no cards.
+	/// </summary>
+	MatchDeal CardsDealt(GameState state) => MatchDeal.None;
+
+	/// <summary>
 	/// The number of teams this family REQUIRES the lobby to arrange, or null (the default) when
 	/// team play is optional and the host picks. A family that answers N is only playable as N
 	/// equal teams: the lobby rejects any other team count, and any table size that cannot split
@@ -119,6 +130,22 @@ public interface IGameFamily
 	/// through <see cref="GameStateHelper.NextTurn"/>).
 	/// </summary>
 	Task OnPlayerRetiredAsync(Player player, GameContext context) => Task.CompletedTask;
+}
+
+/// <summary>
+/// What one match took from its deck: the cards it actually DEALT, by package id — not the whole
+/// deck it shuffled — and the size of the deck they came from.
+///
+/// The two travel together on purpose. The size is what tells the table it has been round the
+/// entire deck and its memory should start a new cycle; a family that reported the cards and
+/// forgot the size would saturate its memory and then reshuffle everything for every match after
+/// that, which is the repetition the memory exists to stop. Answering one without the other is
+/// not possible here.
+/// </summary>
+public readonly record struct MatchDeal(IReadOnlyList<string> CardIds, int DeckSize)
+{
+	/// <summary>A match that dealt nothing — and the answer of a family that keeps no memory.</summary>
+	public static MatchDeal None => new(Array.Empty<string>(), 0);
 }
 
 /// <summary>Marker for the per-family runtime (board + rules) carried by
@@ -158,6 +185,13 @@ public sealed record FamilyStartContext
 	/// (journey decks). Null falls back to real randomness; the E2E environment's scripted
 	/// source shuffles as the identity, keeping decks in cards.json order there.</summary>
 	public Services.Rules.IRandomSource? Random { get; init; }
+
+	/// <summary>
+	/// Card ids this TABLE has already been dealt from this deck, across earlier matches. A family
+	/// that shuffles a content deck deals the unseen ones first, so a group playing several matches
+	/// in a row stops meeting the same cards. Empty for a table that has never played this deck.
+	/// </summary>
+	public IReadOnlyCollection<string> AlreadyDealt { get; init; } = Array.Empty<string>();
 }
 
 /// <summary>What a family hands back at game start. Null members keep the service defaults.</summary>

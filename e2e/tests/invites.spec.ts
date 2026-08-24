@@ -113,12 +113,19 @@ test('a table you are already at never asks you to join it', async ({ browser })
 	await flushAxeAudit(ana);
 });
 
-// Nobody should have to know a public name by heart to ask a friend to play.
-test('a friend can be invited from a list instead of by typing their name', async ({ browser }) => {
+// Nobody should have to know a public name by heart to ask somebody to play — and nobody should be
+// offered a name that would only be refused. The list and the field are ONE control: it opens
+// showing who is available and narrows as a name is typed.
+test('anybody connected and open to invitations can be picked from a list, and typing narrows it',
+	async ({ browser }) => {
 	const ana = await member(browser, 'inv-picker-host', 'invpickerhost');
 	const berto = await member(browser, 'inv-picker-friend', 'invpickerfriend');
+	// A stranger, never befriended, who simply accepts invitations from anybody. Under the old
+	// friends-only list they were unreachable without knowing their name by heart.
+	const carla = await member(browser, 'inv-picker-stranger', 'invpickerstranger');
+	await gotoLobbyHome(carla);
 
-	// They become friends the ordinary way, from the room.
+	// Ana and Berto become friends the ordinary way, from the room.
 	await gotoLobbyHome(berto);
 	await berto.locator('#go-online-btn').click();
 	await berto.locator('#online-list .online-player').filter({ hasText: 'invpickerhost' })
@@ -134,19 +141,95 @@ test('a friend can be invited from a list instead of by typing their name', asyn
 
 	// A real listbox, not loose buttons: without the roles each one is announced alone, with no
 	// position and no idea how many more there are.
-	const picker = ana.locator('#table-invite-friends');
+	const picker = ana.locator('#table-invite-people');
 	await expect(picker).toHaveRole('listbox');
-	const options = picker.getByRole('option');
-	await expect(options).toHaveCount(1);
-	await expect(options.first()).toHaveText('invpickerfriend');
+	// Both are offered — the friend AND the stranger who takes invitations from anyone. Asserted by
+	// name rather than by count: everybody else connected to this server belongs here too.
+	await expect(picker.getByRole('option').filter({ hasText: 'invpickerfriend' })).toHaveCount(1);
+	await expect(picker.getByRole('option').filter({ hasText: 'invpickerstranger' })).toHaveCount(1);
 	await flushAxeAudit(ana);
 
-	// One tab stop, arrows inside, and choosing invites without anybody typing a name.
-	await expect(options.first()).toHaveAttribute('tabindex', '0');
-	await options.first().click();
+	// Typing narrows the SAME list rather than replacing it, and says how many are left.
+	await ana.locator('#table-invite-handle').fill('invpickerfr');
+	await expect(picker.getByRole('option')).toHaveCount(1);
+	await expect(ana.locator('#table-invite-status')).toContainText(/1/);
+	await flushAxeAudit(ana);
+
+	// One tab stop, and choosing invites without anybody typing the rest of a name.
+	const chosen = picker.getByRole('option').first();
+	await expect(chosen).toHaveAttribute('tabindex', '0');
+	await chosen.click();
 	await expectAnnouncement(
 		ana, new RegExp(table.inviteSent.replace('{{handle}}', 'invpickerfriend')));
 
 	await gotoLobbyHome(berto);
+	await expect(berto.locator('#lobby-invites-list .lobby-invite')).toHaveCount(1);
+});
+
+// Seeing comes first and on its own: the picker must never become a way around the presence
+// setting. Somebody hidden is still invitable BY NAME, which is what keeps the two ways distinct.
+test('somebody hidden from you is not offered, but can still be invited by name',
+	async ({ browser }) => {
+	const ana = await member(browser, 'inv-hidden-host', 'invhiddenhost');
+	const berto = await member(browser, 'inv-hidden-guest', 'invhiddenguest');
+	// Somebody ordinary, offered as usual. She is here to prove the list actually ANSWERED:
+	// asserting only that Berto is absent would pass just as well against a picker that never
+	// loaded, which is the one way this test could go quietly false.
+	const carla = await member(browser, 'inv-hidden-watcher', 'invhiddenwatcher');
+	await gotoLobbyHome(carla);
+
+	// Berto takes invitations from anybody, but shows himself to nobody.
+	await openAccountSettings(berto);
+	await berto.locator('#account-visibility-nobody').check();
+	await expect(berto.locator('#account-settings-status')).toBeVisible();
+	await closeAccountSettings(berto);
+	await gotoLobbyHome(berto);
+
+	await createGame(ana, 'Ana', 'snakes-and-ladders');
+	await expect(ana.locator('#table-view')).toBeVisible();
+	const picker = ana.locator('#table-invite-people');
+	// Wait for the list to have ANSWERED before reading anything into what is missing from it.
+	await expect(picker.getByRole('option').filter({ hasText: 'invhiddenwatcher' }))
+		.toHaveCount(1);
+	await expect(picker.getByRole('option').filter({ hasText: 'invhiddenguest' }))
+		.toHaveCount(0);
+
+	// The name still reaches him: the field answers "I know who I want", the list "who is about?".
+	await ana.locator('#table-invite-handle').fill('invhiddenguest');
+	await ana.locator('#table-invite-send').click();
+	await expectAnnouncement(
+		ana, new RegExp(table.inviteSent.replace('{{handle}}', 'invhiddenguest')));
+	await flushAxeAudit(ana);
+
+	await gotoLobbyHome(berto);
+	await expect(berto.locator('#lobby-invites-list .lobby-invite')).toHaveCount(1);
+});
+
+// An invitation has to reach somebody wherever they are standing, and the lobby is several screens
+// now. Regression: the arrival was written into the status line under the invitations block, which
+// lives on the home page — hidden, and therefore silent, from every other screen. Silence is the
+// one thing a seat that expires cannot afford.
+test('an invitation is heard from another lobby screen, not only from home', async ({ browser }) => {
+	const ana = await member(browser, 'inv-elsewhere-host', 'invelsewherehost');
+	const berto = await member(browser, 'inv-elsewhere-guest', 'invelsewhereguest');
+
+	// Berto is in the lobby, but not on its home page: he is reading his messages, which is a
+	// screen people sit on rather than pass through.
+	await gotoLobbyHome(berto);
+	await berto.locator('#go-messages-btn').click();
+	await expect(berto.locator('#view-messages')).toBeVisible();
+
+	await createGame(ana, 'Ana', 'snakes-and-ladders');
+	await expect(ana.locator('#table-view')).toBeVisible();
+	await ana.locator('#table-invite-handle').fill('invelsewhereguest');
+	await ana.locator('#table-invite-send').click();
+	await expectAnnouncement(
+		ana, new RegExp(table.inviteSent.replace('{{handle}}', 'invelsewhereguest')));
+
+	await expectAnnouncement(berto, new RegExp(invites.arrived));
+	await flushAxeAudit(berto);
+
+	// …and it is waiting for him on the home page when he goes back for it.
+	await berto.locator('#messages-back-btn').click();
 	await expect(berto.locator('#lobby-invites-list .lobby-invite')).toHaveCount(1);
 });

@@ -230,4 +230,25 @@ public class GameServicePackageTests
 		Assert.Equal("JOURNEY_ILLEGAL_PLAY", error.Code); // overshooting the CHOSEN 700 km goal
 		Assert.Equal(650, restored.GameState!.Journey!.Seats.First(s => s.PlayerId == "a").Km);
 	}
+
+	[Fact]
+	public async Task The_tables_deck_memory_travels_from_the_service_into_the_family()
+	{
+		// The wiring between "what this table has already been dealt" and the deck a match is
+		// built from: without it the family shuffles as if every match were the table's first.
+		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+		var svc = new GameService(new CorroRulebook(), new AuctionRulebook());
+		var players = Enumerable.Range(0, 4)
+			.Select(index => new Player { Id = $"p{index}", Name = $"P{index}", Token = $"t{index}" })
+			.ToList();
+		var seen = definition.ForbiddenWords!["es"].Take(400).Select(word => word.Id).ToList();
+
+		await svc.InitializeFromDefinitionAsync(players, definition, lang: "es",
+			teams: new List<List<string>> { new() { "p0", "p1" }, new() { "p2", "p3" } },
+			alreadyDealt: seen);
+
+		// Everything a short match will reach is a word this table has never had.
+		var opening = svc.GameState!.ForbiddenDeck!.Take(50).Select(word => word.Id);
+		Assert.Empty(opening.Intersect(seen));
+	}
 }

@@ -40,6 +40,13 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 	// Commands are serialized by _commandLock, so this needs no extra synchronization.
 	private List<AnnouncementDispatch>? _pendingBatch;
 
+	// Table-wide responses the rulebook raised during this command (IGamePresenter.BroadcastAsync).
+	// Held rather than sent at once so they ship AFTER the announcement batch: one of these opens
+	// a dialog, and a dialog that steals focus mid-narration talks over the voice the table is
+	// still hearing. Null outside a command, where there is no batch to wait for and they go
+	// straight out. Commands are serialized by _commandLock, so this needs no synchronization.
+	private List<ServerResponse>? _pendingBroadcasts;
+
 	public GameState? GameState => _gameState;
 	public GameSettings Settings => _settings;
 
@@ -56,8 +63,8 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 
 	public event Func<GameState, Task> OnGameStateChanged = delegate { return Task.CompletedTask; };
 	public event Func<IReadOnlyList<AnnouncementDispatch>, Task> OnGameEvents = delegate { return Task.CompletedTask; };
-	public event Func<Square, Task> OnSquareChanged = delegate { return Task.CompletedTask; };
 	public event Func<CardDrawnNotification, Task> OnCardDrawn = delegate { return Task.CompletedTask; };
+	public event Func<ServerResponse, Task> OnBroadcast = delegate { return Task.CompletedTask; };
 
 	/// <summary>
 	/// Constructor with dependency injection (preferred for testing)
@@ -95,7 +102,7 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 	/// and rent rules all come from the package (board names resolved for <paramref name="lang"/>,
 	/// with the per-locale names carried for the client). The rulebook then drives it generically.
 	/// </summary>
-	public async Task InitializeFromDefinitionAsync(List<Player> players, GameDefinition definition, string lang = "en", GameSettings? settings = null, bool raceTeams = false, Dictionary<string, System.Text.Json.JsonElement>? ruleValues = null, List<List<string>>? teams = null)
+	public async Task InitializeFromDefinitionAsync(List<Player> players, GameDefinition definition, string lang = "en", GameSettings? settings = null, bool raceTeams = false, Dictionary<string, System.Text.Json.JsonElement>? ruleValues = null, List<List<string>>? teams = null, IReadOnlyCollection<string>? alreadyDealt = null)
 	{
 		if (IsGameActive)
 		{
@@ -115,6 +122,7 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 			RuleValues = ruleValues,
 			Teams = teams,
 			Random = _random,
+			AlreadyDealt = alreadyDealt ?? Array.Empty<string>(),
 		});
 
 		_gameState = game.State;
@@ -202,6 +210,7 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 		// checkpoint (CheckpointTurnSegmentAsync) may swap in a fresh list mid-command to
 		// close a segment, so the finally flushes the CURRENT _pendingBatch, not this one.
 		_pendingBatch = new List<AnnouncementDispatch>();
+		_pendingBroadcasts = new List<ServerResponse>();
 		try
 		{
 			// Create context for command handlers
@@ -264,6 +273,10 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 				try { await OnGameEvents(remaining); }
 				catch (Exception ex) { _logger?.LogError(ex, "ExecuteCommandAsync: failed to flush announcement batch"); }
 			}
+			// Then the table-wide responses, so the voice is out before anything opens a dialog.
+			var broadcasts = _pendingBroadcasts;
+			_pendingBroadcasts = null;
+			await FlushBroadcastsAsync(broadcasts);
 			_commandLock.Release();
 		}
 	}
@@ -348,16 +361,50 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 		// command's finally flushes it. Swap BEFORE flushing so the sink never re-enters
 		// the list we are about to ship.
 		_pendingBatch = new List<AnnouncementDispatch>();
+		var broadcasts = _pendingBroadcasts;
+		_pendingBroadcasts = _pendingBroadcasts == null ? null : new List<ServerResponse>();
 		if (segment != null && segment.Count > 0)
 		{
 			await OnGameEvents(segment);
 		}
+		// This segment's table-wide responses belong to it: after its voice, before its state,
+		// the same order the whole command keeps.
+		await FlushBroadcastsAsync(broadcasts);
 
 		await NotifyStateChangedAsync();
 	}
 
-	/// <summary>Notifies clients that a single square's visual state changed (IGamePresenter).</summary>
-	public Task NotifySquareChangedAsync(Square square) => OnSquareChanged(square);
+	/// <summary>
+	/// Queues a table-wide response for this command (IGamePresenter). Held until the
+	/// announcement batch has been flushed, so the voice always precedes it — see
+	/// <see cref="_pendingBroadcasts"/>. Outside a command there is no batch to wait for, so it
+	/// goes straight out.
+	/// </summary>
+	public Task BroadcastAsync(ServerResponse response)
+	{
+		if (_pendingBroadcasts is { } pending)
+		{
+			pending.Add(response);
+			return Task.CompletedTask;
+		}
+		return OnBroadcast(response);
+	}
+
+	/// <summary>Ships the responses queued during a command (or segment). The caller has already
+	/// swapped the queue, exactly as it does for the announcement batch. A failed send must not
+	/// break command serialization, so it is logged, not thrown.</summary>
+	private async Task FlushBroadcastsAsync(List<ServerResponse>? pending)
+	{
+		if (pending == null)
+		{
+			return;
+		}
+		foreach (var response in pending)
+		{
+			try { await OnBroadcast(response); }
+			catch (Exception ex) { _logger?.LogError(ex, "Failed to broadcast a {Type} to the table", response.Type); }
+		}
+	}
 
 	/// <summary>Reveals a drawn Chance / Community card to clients (IGamePresenter).</summary>
 	public Task NotifyCardDrawnAsync(CardDrawnNotification notification) => OnCardDrawn(notification);

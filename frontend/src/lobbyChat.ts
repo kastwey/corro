@@ -5,8 +5,10 @@
 // message goes to the people it NAMES, with "@", and a line that names nobody is refused with the
 // reason rather than sent somewhere surprising.
 //
-// The panel is permanent rather than a dialog. A message arriving must not steal focus or open
-// anything, and somebody who wants to write should not have to remember a chord first.
+// Messages are a lobby SCREEN of their own (view-messages), reached from the home page's People
+// block, and never a dialog: a message arriving must not steal focus or open anything. What
+// arrives while somebody is elsewhere is said once through the lobby's live region and counted in
+// the name of the way in, so nothing has to interrupt to be noticed.
 //
 // Nothing is stored on the server (see GameHub.DirectMessages). What has been said this session is
 // kept in sessionStorage — per tab, gone when it closes — so a reload does not silently lose a
@@ -178,7 +180,8 @@ export class LobbyChat {
 			menuLabel: () => this.deps.t('lobby.chat.menuLabel'),
 			menuClass: 'player-context-menu',
 			menuItemClass: 'player-context-menu-item',
-			menuHost: () => this.deps.log.closest('.lobby-chat'),
+			// The popup lives inside the screen that owns the log, never as an orphan under <body>.
+			menuHost: () => this.deps.log.closest('.lobby-view'),
 		});
 	}
 

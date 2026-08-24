@@ -112,7 +112,7 @@ internal sealed class FakeGameService : IGameService
 	public string GameId => "g";
 	public bool IsGameActive => true;
 	public Task<GameState> GetGameStateAsync() => Task.FromResult(new GameState());
-	public Task InitializeFromDefinitionAsync(List<Player> players, CorroServer.Models.Corro.GameDefinition definition, string lang = "en", GameSettings? settings = null, bool raceTeams = false, Dictionary<string, System.Text.Json.JsonElement>? ruleValues = null, List<List<string>>? teams = null) => Task.CompletedTask;
+	public Task InitializeFromDefinitionAsync(List<Player> players, CorroServer.Models.Corro.GameDefinition definition, string lang = "en", GameSettings? settings = null, bool raceTeams = false, Dictionary<string, System.Text.Json.JsonElement>? ruleValues = null, List<List<string>>? teams = null, IReadOnlyCollection<string>? alreadyDealt = null) => Task.CompletedTask;
 	public void ConfigureSettings(GameSettings settings) { }
 	public Task EndGameAsync() => Task.CompletedTask;
 	public Task RestoreGameAsync(GameState savedState) => Task.CompletedTask;
@@ -129,8 +129,18 @@ internal sealed class FakeGameService : IGameService
 	public Task RaiseGameEventsAsync(IReadOnlyList<AnnouncementDispatch> batch)
 		=> _onGameEvents?.Invoke(batch) ?? Task.CompletedTask;
 
-	public event Func<Square, Task>? OnSquareChanged { add { } remove { } }
 	public event Func<CardDrawnNotification, Task>? OnCardDrawn { add { } remove { } }
+
+	// Real, raisable too: the registry subscribes to this one, so a test can prove the trip from
+	// a rulebook's table-wide response to the group without going through a whole property game.
+	private Func<ServerResponse, Task>? _onBroadcast;
+	public event Func<ServerResponse, Task>? OnBroadcast
+	{
+		add => _onBroadcast += value;
+		remove => _onBroadcast -= value;
+	}
+	public Task RaiseBroadcastAsync(ServerResponse response)
+		=> _onBroadcast?.Invoke(response) ?? Task.CompletedTask;
 }
 
 internal sealed class FakeGameServiceFactory : IGameServiceFactory

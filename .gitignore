@@ -638,3 +638,7 @@ frontend/sound-test.html
 
 # Local-only Azure deployment metadata.
 server/Properties/ServiceDependencies/
+
+# The build stamp is written into a published application by tools/build-version.ps1; it
+# describes one release and never belongs to the source tree.
+buildinfo.json

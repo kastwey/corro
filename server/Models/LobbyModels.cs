@@ -161,8 +161,12 @@ public record CreateGameResponse
 	public required string InviteCode { get; init; }
 	public required GameDocument Game { get; init; }
 	public required string HostSecretId { get; init; }
-	/// <summary>The host's personal re-entry code (private to the caller).</summary>
-	public required string HostRejoinCode { get; init; }
+	/// <summary>
+	/// The host's personal re-entry code (private to the caller), or null when they are signed in
+	/// and the account is their way back instead. Required so the caller has to answer the
+	/// question; nullable because "there is none" is one of the answers.
+	/// </summary>
+	public required string? HostRejoinCode { get; init; }
 }
 
 public record JoinGameRequest
@@ -179,8 +183,11 @@ public record JoinGameResponse
 	public required string PlayerId { get; init; }
 	public required string PlayerSecretId { get; init; }
 	public required GameDocument Game { get; init; }
-	/// <summary>The joiner's personal re-entry code (private to the caller).</summary>
-	public required string RejoinCode { get; init; }
+	/// <summary>
+	/// The joiner's personal re-entry code (private to the caller), or null when they are signed
+	/// in and the account is their way back instead. See CreateGameResponse.HostRejoinCode.
+	/// </summary>
+	public required string? RejoinCode { get; init; }
 }
 
 /// <summary>A seat successfully reclaimed with a re-entry code: the FULL fresh session.

@@ -209,12 +209,6 @@
 
 .categories-sheet-item {
   display: grid;
-}
-
-/* The named group around each field. It exists for the accessible name — the category and the
-   round's letter — so it must not add a box of its own to the layout. */
-.categories-sheet-group {
-  display: grid;
   gap: 6px;
 }
 
@@ -340,6 +334,19 @@
 
 .categories-last-ruling__item--rejected {
   border-left-color: var(--danger);
+}
+
+/* The answer to a shortcut this player pressed. Quiet on purpose: it is personal, it never
+   leaves this browser, it replaces itself rather than stacking up, and it goes away on its
+   own — the seconds it reported were only true at the instant they were asked for. */
+.categories-echo {
+  margin: 12px 0 0;
+  padding: 8px 11px;
+  border-left: 4px solid var(--accent);
+  background: var(--surface-3);
+  color: var(--text);
+  font-weight: 650;
+  line-height: 1.45;
 }
 
 .categories-timer {

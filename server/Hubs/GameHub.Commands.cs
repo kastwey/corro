@@ -83,45 +83,7 @@ public partial class GameHub
 		// ordered CheckpointTurnSegmentAsync path instead.
 		await gameService.NotifyStateChangedAsync();
 
-		// Declining a pending purchase (by ending the turn or re-rolling) can start an
-		// auction. That must reach EVERY player so their auction UI opens and the timers
-		// run, so we broadcast it to the whole group here rather than only to the caller.
-		if (response is PropertyDeclinedResponse { AuctionStarted: true })
-		{
-			await BroadcastAuctionStartAsync(gameId, gameService);
-		}
-
 		// Free finished games so they don't accumulate in memory.
 		await _registry.CleanupIfGameOverAsync(gameId, gameService);
-	}
-
-	/// <summary>
-	/// Broadcasts an AUCTION_STARTED event to every player in the game. An auction begins as a
-	/// side effect of declining a pending purchase (by ending the turn or re-rolling after the buy
-	/// offer), so — unlike most command responses — it must reach the whole group, not just the
-	/// caller. Purely the broadcast: the bid timer is armed off the state change, which has
-	/// already fired by the time this runs (see <c>GameSessionRegistry.ArmOrCancelAuctionTimer</c>).
-	/// </summary>
-	private async Task BroadcastAuctionStartAsync(string gameId, IGameService gameService)
-	{
-		var auction = gameService.GameState?.ActiveAuction;
-		if (auction == null || !auction.IsActive)
-		{
-			return;
-		}
-
-		var initiator = gameService.GameState!.Players.FirstOrDefault(p => p.Id == auction.InitiatorPlayerId);
-		var auctionStartedEvent = new AuctionStartedResponse
-		{
-			SquareIndex = auction.SquareIndex,
-			SquareName = auction.SquareName,
-			StartingPrice = auction.StartingPrice,
-			InitiatorPlayerId = auction.InitiatorPlayerId,
-			InitiatorPlayerName = initiator?.Name ?? "Unknown",
-			BidTimeoutSeconds = (int)auction.BidTimeout.TotalSeconds
-		};
-
-		await Clients.Group(gameId).SendAsync("CommandResponse", auctionStartedEvent);
-		_logger?.LogInformation("Auction started broadcast to all players in game {GameId}", gameId);
 	}
 }

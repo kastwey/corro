@@ -259,75 +259,95 @@ public partial class GameHub
 				return;
 			}
 
-			// Still playing? Then this is a forfeit as well as a departure.
-			if (_registry.TryGetService(gameId!, out var service)
-				&& service.GameState is { IsGameOver: false } state
-				&& state.Players.Any(p => p.Id == playerId && !p.IsBankrupt))
-			{
-				await RunCommandAsync(gameId!, service, new DeclareBankruptcyCommand { PlayerId = playerId! });
-			}
-
-			string? leaverName = null;
-			string? newHostId = null;
-			// Under the per-game lock: two people leaving at the same instant must not each save a
-			// table that still seats the other.
-			var saved = await _registry.MutateDocumentAsync(gameId!, document =>
-			{
-				var leaver = document.Players.FirstOrDefault(p => p.Id == playerId);
-				if (leaver is null)
-				{
-					return null; // already gone (a double click, a retried call)
-				}
-				leaverName = leaver.Name;
-				var remaining = document.Players.Where(p => p.Id != playerId).ToList();
-				// The sceptre passes to the next HUMAN by arrival order — the roster IS arrival
-				// order. A bot cannot host, and a player who is merely disconnected still holds
-				// their seat, so being away does not cost them their place in that queue.
-				newHostId = document.HostId == playerId
-					? remaining.FirstOrDefault(p => !p.IsBot)?.Id
-					: document.HostId;
-				return document with
-				{
-					Players = remaining.Select(p => p with { IsHost = p.Id == newHostId }).ToList(),
-					HostId = newHostId ?? document.HostId,
-				};
-			});
-
-			if (saved is null)
+			if (!await DepartTableAsync(gameId!, playerId!))
 			{
 				await Clients.Caller.SendAsync("Error", "GAME_NOT_FOUND");
-				return;
 			}
-
-			// Nobody human left: the table goes with them. A table of bots is not a table, and an
-			// empty one would only sit there until the retention sweep noticed.
-			if (!saved.Players.Any(p => !p.IsBot))
-			{
-				await Clients.Group(gameId!).SendAsync("GameDeleted", new { GameId = gameId });
-				await Clients.Group($"lobby_{gameId}").SendAsync("GameDeleted", new { GameId = gameId });
-				await _registry.DeleteGameAsync(gameId!, saved);
-				_logger?.LogInformation("Table {GameId} deleted: its last player left", gameId);
-				return;
-			}
-
-			// The table hears who left, and who is holding the sceptre now.
-			var newHostName = saved.Players.FirstOrDefault(p => p.Id == saved.HostId)?.Name;
-			await Clients.Group(gameId!).SendAsync("PlayerLeftTable", new
-			{
-				GameId = gameId,
-				PlayerId = playerId,
-				PlayerName = leaverName,
-				NewHostId = newHostId != null && newHostId != playerId ? saved.HostId : null,
-				NewHostName = newHostId != null && newHostId != playerId ? newHostName : null,
-			});
-			await Clients.Group(gameId!).SendAsync("LobbyUpdated", saved.Sanitized());
-			await Clients.Group($"lobby_{gameId}").SendAsync("LobbyUpdated", saved.Sanitized());
 		}
 		catch (Exception ex)
 		{
 			_logger?.LogError(ex, "Error in LeaveTable");
 			await Clients.Caller.SendAsync("Error", "LEAVE_TABLE_FAILED");
 		}
+	}
+
+	/// <summary>
+	/// Give up a seat, from wherever the player is standing when they decide to.
+	///
+	/// The body of <see cref="LeaveTable"/>, lifted out because leaving is also something you do
+	/// from the LOBBY — from a list that shows tables this browser never stored, where there is no
+	/// authenticated connection to that table to leave it through (see
+	/// <see cref="LeaveTableFromLobby"/>). Who is allowed to do it is the caller's business; this
+	/// is what leaving IS.
+	///
+	/// Returns false when the seat is already gone (a double click, a retried call), which is not
+	/// an error to anybody but the caller who wants to say so.
+	/// </summary>
+	private async Task<bool> DepartTableAsync(string gameId, string playerId)
+	{
+		// Still playing? Then this is a forfeit as well as a departure.
+		if (_registry.TryGetService(gameId!, out var service)
+			&& service.GameState is { IsGameOver: false } state
+			&& state.Players.Any(p => p.Id == playerId && !p.IsBankrupt))
+		{
+			await RunCommandAsync(gameId!, service, new DeclareBankruptcyCommand { PlayerId = playerId! });
+		}
+
+		string? leaverName = null;
+		string? newHostId = null;
+		// Under the per-game lock: two people leaving at the same instant must not each save a
+		// table that still seats the other.
+		var saved = await _registry.MutateDocumentAsync(gameId!, document =>
+		{
+			var leaver = document.Players.FirstOrDefault(p => p.Id == playerId);
+			if (leaver is null)
+			{
+				return null; // already gone (a double click, a retried call)
+			}
+			leaverName = leaver.Name;
+			var remaining = document.Players.Where(p => p.Id != playerId).ToList();
+			// The sceptre passes to the next HUMAN by arrival order — the roster IS arrival
+			// order. A bot cannot host, and a player who is merely disconnected still holds
+			// their seat, so being away does not cost them their place in that queue.
+			newHostId = document.HostId == playerId
+				? remaining.FirstOrDefault(p => !p.IsBot)?.Id
+				: document.HostId;
+			return document with
+			{
+				Players = remaining.Select(p => p with { IsHost = p.Id == newHostId }).ToList(),
+				HostId = newHostId ?? document.HostId,
+			};
+		});
+
+		if (saved is null)
+		{
+			return false;
+		}
+
+		// Nobody human left: the table goes with them. A table of bots is not a table, and an
+		// empty one would only sit there until the retention sweep noticed.
+		if (!saved.Players.Any(p => !p.IsBot))
+		{
+			await Clients.Group(gameId!).SendAsync("GameDeleted", new { GameId = gameId });
+			await Clients.Group($"lobby_{gameId}").SendAsync("GameDeleted", new { GameId = gameId });
+			await _registry.DeleteGameAsync(gameId!, saved);
+			_logger?.LogInformation("Table {GameId} deleted: its last player left", gameId);
+			return true;
+		}
+
+		// The table hears who left, and who is holding the sceptre now.
+		var newHostName = saved.Players.FirstOrDefault(p => p.Id == saved.HostId)?.Name;
+		await Clients.Group(gameId!).SendAsync("PlayerLeftTable", new
+		{
+			GameId = gameId,
+			PlayerId = playerId,
+			PlayerName = leaverName,
+			NewHostId = newHostId != null && newHostId != playerId ? saved.HostId : null,
+			NewHostName = newHostId != null && newHostId != playerId ? newHostName : null,
+		});
+		await Clients.Group(gameId!).SendAsync("LobbyUpdated", saved.Sanitized());
+		await Clients.Group($"lobby_{gameId}").SendAsync("LobbyUpdated", saved.Sanitized());
+		return true;
 	}
 
 	/// <summary>
@@ -1253,7 +1273,10 @@ public partial class GameHub
 				raceTeams: game.RaceTeams,
 				// Families whose rules live outside GameSettings (journey) apply these themselves.
 				ruleValues: game.RuleValues,
-				teams: arrangedTeams);
+				teams: arrangedTeams,
+				// What this table has already been dealt from this deck, so a group playing several
+				// matches in a row is dealt what it has not seen before it meets a repeat.
+				alreadyDealt: game.DealtFrom(definition.Manifest.GameType, game.Language));
 			if (gameService.GameState is { } packageState)
 			{
 				packageState.PackageToken = packageToken; // released with the table; the client's sound pack id
@@ -1261,8 +1284,10 @@ public partial class GameHub
 			}
 
 			_registry.RegisterService(request.GameId, gameService);
-			// Bot seats (if any) come alive: the driver observes from OUTSIDE the engine.
-			_botDriver?.Attach(request.GameId, gameService);
+			// Bot seats (if any) come alive: the driver observes from OUTSIDE the engine — and its
+			// moves end a match exactly like a human's, so it retires the table the same way.
+			_botDriver?.Attach(request.GameId, gameService,
+				() => _registry.CleanupIfGameOverAsync(request.GameId, gameService));
 
 			var updatedGame = game with
 			{
@@ -1418,9 +1443,81 @@ public partial class GameHub
 	private const int MyTablesLimit = 50;
 
 	/// <summary>
+	/// Whether this caller holds that seat: the two ways the lobby can prove it, for the two
+	/// things it offers a seat's holder — deleting your own table, and leaving somebody else's.
+	///
+	/// The seat's secret is one proof and the account that OWNS the seat is the other, and the
+	/// second one is not a relaxation: an account holder can already take the seat back with
+	/// <see cref="ClaimSeatAsAccount"/>, secret and all, so refusing them here only made them walk
+	/// a longer road to the same place. Refusing them was in fact worse than pointless — the lobby
+	/// lists the tables an account holds from any device, offers their buttons, and the buttons
+	/// then failed or did nothing at all.
+	///
+	/// Both proofs are exact and neither is optional: an empty secret matches nothing (a seat
+	/// always has one), and an anonymous caller has no account id to match, so a caller with
+	/// neither is refused exactly as before. Pure and static so the rule can be tested on its own,
+	/// which is where a mistake here would be expensive.
+	/// </summary>
+	internal static bool MayActAsSeat(LobbyPlayer seat, string? presentedSecret, string? callerUserId)
+	{
+		var bySecret = !string.IsNullOrEmpty(presentedSecret) && seat.PlayerSecretId == presentedSecret;
+		var byAccount = !string.IsNullOrEmpty(callerUserId) && seat.UserId == callerUserId;
+		return bySecret || byAccount;
+	}
+
+	/// <summary>
+	/// Give up a seat from the LOBBY, at a table this browser may never have stored.
+	///
+	/// The list a signed-in player sees comes from two places — the seats this browser holds and
+	/// the seats the account holds — and only the first has a session behind it. So this is the
+	/// same departure as <see cref="LeaveTable"/> (the seat goes, the sceptre passes, an empty
+	/// table is deleted) reached without one, authorised by the seat itself: its secret, or the
+	/// account it belongs to.
+	///
+	/// The row this backs used to say "remove from list" and only cleared this browser's storage,
+	/// which for a table the ACCOUNT was holding meant clearing nothing at all: the row came back
+	/// on the next refresh. A button that cannot do what it says is worse than no button.
+	/// </summary>
+	public async Task LeaveTableFromLobby(string gameId, string playerId, string playerSecretId)
+	{
+		try
+		{
+			var game = await _gameRepository.LoadGameAsync(gameId);
+			var seat = game?.Players.FirstOrDefault(p => p.Id == playerId);
+			if (game == null || seat == null)
+			{
+				// Already gone, from a table already gone: confirm so the caller prunes its list.
+				await Clients.Caller.SendAsync("TableLeft", new { GameId = gameId });
+				return;
+			}
+
+			if (!MayActAsSeat(seat, playerSecretId, SignedInUserId()))
+			{
+				_logger?.LogWarning("SECURITY: Leave attempt for seat {PlayerId} in {GameId} by somebody who does not hold it",
+					playerId, gameId);
+				await Clients.Caller.SendAsync("Error", "NOT_AUTHENTICATED");
+				return;
+			}
+
+			await DepartTableAsync(gameId, playerId);
+			await Clients.Caller.SendAsync("TableLeft", new { GameId = gameId });
+			_logger?.LogInformation("Seat {PlayerId} left table {GameId} from the lobby", playerId, gameId);
+		}
+		catch (Exception ex)
+		{
+			_logger?.LogError(ex, "Error in LeaveTableFromLobby");
+			await Clients.Caller.SendAsync("Error", "LEAVE_TABLE_FAILED");
+		}
+	}
+
+	/// <summary>
 	/// Permanently delete a game. Only the host may do this. Everyone currently connected
 	/// to the game (or its lobby) is told via "GameDeleted" and detached from the group,
 	/// losing any in-progress state; the game document and its live service are removed.
+	///
+	/// Two ways to BE the host, because there are two ways to be holding the seat (see
+	/// <see cref="MayDeleteAsHost"/>): the seat's stored secret, which is what a browser has, and
+	/// the account the seat belongs to, which is what a device that has never seen this table has.
 	/// </summary>
 	public async Task DeleteGameLobby(string gameId, string hostId, string hostSecretId)
 	{
@@ -1434,9 +1531,9 @@ public partial class GameHub
 				return;
 			}
 
-			// Host-only, authenticated by the host's secret id (never publicly exposed).
 			var host = game.Players.FirstOrDefault(p => p.Id == hostId && p.IsHost);
-			if (game.HostId != hostId || host == null || host.PlayerSecretId != hostSecretId)
+			if (game.HostId != hostId || host == null
+				|| !MayActAsSeat(host, hostSecretId, SignedInUserId()))
 			{
 				_logger?.LogWarning("SECURITY: Non-host delete attempt for game {GameId} by {HostId}", gameId, hostId);
 				await Clients.Caller.SendAsync("Error", "HOST_ONLY");

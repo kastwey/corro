@@ -12,7 +12,14 @@
     "activity": "{{tables}}, {{players}}.",
     "corroNewWindowLabel": "Corro on GitHub, opens in a new window",
     "licenseNewWindowLabel": "AGPL-3.0 license, opens in a new window",
-    "privacy": "Privacy"
+    "privacy": "Privacy",
+    "version": "Version {{version}}",
+    "versionTitle": "About this version",
+    "versionDeployed": "Version {{version}}, deployed on {{date}}.",
+    "versionOnly": "Version {{version}}.",
+    "versionCommit": "See commit {{commit}} on GitHub",
+    "versionCommitNewWindowLabel": "See commit {{commit}} on GitHub, opens in a new window",
+    "versionCommitPlain": "Built from commit {{commit}}."
   },
   "privacyPage": {
     "browserTitle": "Privacy notice — All Welcome",
@@ -38,6 +45,7 @@
   "account": {
     "signInPrompt": "Sign in to keep your games, unlock codes and friends on any device.",
     "signInWith": "Sign in with {{provider}}",
+    "providersLabel": "Ways to sign in",
     "signedInAs": "Signed in as {{name}}.",
     "signedIn": "Signed in.",
     "signOut": "Sign out",
@@ -90,6 +98,7 @@
       "eraseExplanation": "This removes your profile and every way of signing in to it. Games you played stay with the other players, but they stop being linked to you. It cannot be undone.",
       "erase": "Erase my account",
       "eraseConfirm": "Erase your account for good?",
+      "eraseGroupLabel": "Confirm erasing your account",
       "eraseCancel": "Keep my account",
       "eraseConfirmButton": "Yes, erase it",
       "visibilityLegend": "Who can see that you are connected?",
@@ -133,13 +142,18 @@
   "lobby": {
     "backToHome": "Back to home",
     "home": {
+      "heading": "Home",
+      "playHeading": "Play",
+      "peopleHeading": "People",
       "createButton": "Create a table",
       "joinButton": "Join with a code",
       "onlineButton": "Who is online",
       "friendsButton": "Friends",
       "friendsButtonWaiting": "Friends, {{count}} waiting",
       "friendsButtonWaiting_one": "Friends, 1 waiting",
-      "settingsButton": "Settings"
+      "messagesButton": "Messages",
+      "messagesButtonUnread": "Messages, {{count}} unread",
+      "messagesButtonUnread_one": "Messages, 1 unread"
     },
     "createGame": "Create a new table",
     "joinGame": "Join a table",
@@ -274,6 +288,7 @@
       "copyLink": "Could not copy link",
       "copyCode": "Could not copy the code",
       "deleteGame": "Could not delete the game",
+      "leaveTable": "You could not be taken off that table. Try again in a moment.",
       "disconnected": "You have been disconnected from the server"
     },
     "aria": {
@@ -356,6 +371,7 @@
     "chat": {
       "heading": "Messages",
       "hint": "Write to somebody by naming them with @. There is no general channel here.",
+      "arrived": "{{from}} has written to you.",
       "logLabel": "Messages received and sent",
       "inputLabel": "Your message",
       "send": "Send",
@@ -432,7 +448,7 @@
       "empty": "You don't have any tables yet. Create one or join with a code.",
       "resume": "Resume",
       "delete": "Delete the table",
-      "remove": "Remove from list",
+      "leave": "Leave the table",
       "connectedCount": "{{connected}}/{{total}} connected",
       "created": "Created on {{date}}",
       "status": {
@@ -443,6 +459,12 @@
         "completed": "Finished",
         "abandoned": "Abandoned",
         "unknown": "Unknown"
+      },
+      "leaveConfirm": {
+        "title": "Leave the table",
+        "message": "Your seat goes back to the table and you cannot take it up again. If a match is running there, leaving forfeits it.",
+        "confirm": "Leave",
+        "cancel": "Stay at the table"
       },
       "deleteConfirm": {
         "title": "Delete game",
@@ -970,6 +992,7 @@
     "forbidden_card_label": "Words",
     "forbidden_card_target_line": "Target word: {{target}}.",
     "forbidden_card_words_heading": "Forbidden words:",
+    "forbidden_card_waiting": "The word appears when the turn starts.",
     "forbidden_start_button": "Start the timer",
     "forbidden_correct_button": "Correct, next card",
     "forbidden_pass_button": "Pass",
@@ -1011,6 +1034,7 @@
     "forbidden_rules_target": "The first team to {{score}} points wins",
     "help_cmd_forbidden_enter": "From the words, start the timer or mark the word guessed",
     "help_cmd_forbidden_card": "Go back to the words",
+    "help_cmd_forbidden_pass": "Pass the current word when you are the clue-giver",
     "help_cmd_forbidden_timer": "Announce the time remaining on the timer",
     "help_cmd_forbidden_violation": "Report the target or a forbidden word when you are the monitor",
     "help_cmd_forbidden_controls": "Move between your private card and available role actions",
@@ -1073,7 +1097,12 @@
     "help_cmd_categories_timer": "Announce the time remaining on the clock",
     "help_cmd_categories_answers": "Move between the answers being judged",
     "help_cmd_categories_verdicts": "Enter and leave the verdicts for the answer you are on",
-    "categories_sheet_group": "{{category}}, with the letter {{letter}}.",
+    "categories_letter_label": "This round's letter is {{letter}}.",
+    "help_typing_prefix": "Inside a text box the letters type themselves, so press {{keys}} first and then the key you would press anywhere else.",
+    "typing_command_armed": "Command.",
+    "typing_command_cancelled": "Cancelled.",
+    "typing_command_unknown": "{{key}} is not a shortcut here.",
+    "help_cmd_categories_letter": "Announce the letter every answer has to start with",
     "categories_last_ruling": "Just ruled — {{category}}:",
     "categories_last_ruling_line": "{{player}} wrote {{answer}}: {{verdict}}.",
     "categories_last_ruling_blank": "nothing",
@@ -1467,6 +1496,8 @@
     "shedding_status_cards": "{{count}} cards",
     "shedding_status_cards_one": "1 card",
     "shedding_status_top": "top $t({{card}}), $t({{color}}) in force",
+    "shedding_top_readout": "$t({{card}}), $t({{color}}).",
+    "shedding_top_readout_plain": "$t({{card}}).",
     "shedding_status_reversed": "direction reversed",
     "shedding_status_score": "{{total}} points",
     "shedding_status_score_penalty": "{{total}} penalty points",
@@ -1506,6 +1537,7 @@
     "help_cmd_last_card_catch": "Catch a rival who forgot to declare",
     "help_cmd_last_card_watch": "Read who is about to win (the watch list)",
     "help_cmd_shedding_piles": "Read the deck, top card and colour in force",
+    "help_cmd_shedding_top": "Read the top card, plus the ruling colour after a wild",
     "help_cmd_shedding_colour_jump": "Jump to the next card of a colour: r red, g green, b blue, y yellow",
     "help_cmd_shedding_colour_jump_back": "Jump to the previous card of that colour",
     "help_cmd_shedding_number_jump": "Jump to the next card with that number (0 to 9)",
@@ -2041,9 +2073,11 @@
     "inviteWhoLabel": "Public name of who you want to invite",
     "joinRequestAdmitted": "{{handle}} is in.",
     "joinRequestRefused": "{{handle}} was refused.",
-    "inviteFriendsHint": "Or ask one of your friends who is free right now.",
-    "inviteFriendsLabel": "Friends you can invite",
-    "inviteFriend": "Invite {{handle}}"
+    "invitePeopleHint": "Or pick somebody who is connected and open to invitations.",
+    "invitePeopleLabel": "People you can invite",
+    "inviteMatches": "{{count}} players you can invite. Press Down arrow to walk them.",
+    "inviteMatches_one": "1 player you can invite. Press Down arrow to reach them.",
+    "invitePerson": "Invite {{handle}}"
   },
   "common": {
     "ok": "OK",

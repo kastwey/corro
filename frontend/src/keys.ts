@@ -29,7 +29,7 @@ export interface BoardNavigator {
 }
 import { GameCommands } from './gameCommands.js';
 import type { GameManager } from './gameManager.js';
-import { isSimultaneousFamily } from './familyTraits.js';
+import { isSimultaneousFamily, isToolbarlessFamily } from './familyTraits.js';
 
 export interface KeyHandlersOptions {
 	board: HTMLElement;
@@ -93,7 +93,7 @@ function normalizeKeySpec(ev: KeyboardEvent) {
 
 /** Canonical, keymap-friendly name for a key. The space bar reports " " (or the
  *  legacy "Spacebar"); we expose it as "space" so it can be mapped in keymap.json. */
-function normalizeKeyName(rawKey: string): string {
+export function normalizeKeyName(rawKey: string): string {
 	const k = rawKey.toLowerCase();
 	return k === ' ' || k === 'spacebar' ? 'space' : k;
 }
@@ -140,8 +140,11 @@ const BOARD_MOVEMENT_COMMANDS = new Set([
  *  to walk (Move*, GoToStart, NextOccupied), no piece to jump to (GoToMe), no dice
  *  (RollDice) and no circuit landmarks (GoToMyStart/GoToBarrier — race-tagged anyway).
  *  Their own S key is the documented "how am I doing?", so C (AnnounceMyStatus) is a
- *  redundant alias here and is dropped too. All still route at runtime — they simply
- *  don't belong in this game's shortcut list. */
+ *  redundant alias here and is dropped too — and, unlike the rest of this list, C does not
+ *  route at runtime either (see the executor): a card board may bind that letter itself,
+ *  and a key that answered one question on the board and another from the players panel
+ *  could not be documented honestly. The others still route; they simply don't belong in
+ *  this game's shortcut list. */
 export const CARD_FAMILY_HIDDEN_COMMANDS = new Set<string>([
 	...PROPERTY_ONLY_COMMANDS,
 	...BOARD_MOVEMENT_COMMANDS,
@@ -204,6 +207,12 @@ function createCommandExecutor(opts: KeyHandlersOptions) {
 					// One key, one question — "how am I doing?" — answered per family:
 					// your cash on a property board; your squadron / piece colour on the
 					// others, where money is meaningless and used to leave C dead.
+					// A CARD family answers it with S on its own surface — literally the same
+					// text, since the family status line fed both — so C is inert there and
+					// the board is free to bind it (Four Colours: the card on the table).
+					// Routing it anyway made C answer two different questions depending on
+					// where focus was, and the shortcuts help could only describe one.
+					if (isToolbarlessFamily(familyOf(opts))) return false;
 					return familyOf(opts) === 'property'
 						? opts.gameCommands.announceCurrentPlayerMoney()
 						: opts.onAnnounceIdentity?.() ?? false;
@@ -391,6 +400,21 @@ function createCommandExecutor(opts: KeyHandlersOptions) {
 	};
 }
 
+/**
+ * The MODAL dialog owning a target, when there is one. Every dialog is a native `<dialog>`
+ * (div-based `role="dialog"` surfaces are forbidden — see AGENTS.md), and a NON-modal one
+ * (`data-modal="false"`) does not trap focus: it behaves like one more panel, so global
+ * shortcuts keep working from inside it and it does not count here.
+ *
+ * Shared so that everything gating on "a modal dialog owns focus" — the global key layer and
+ * the typing command prefix — asks the same question the same way.
+ */
+export function owningModalDialog(target: EventTarget | null): HTMLElement | null {
+	const element = target instanceof HTMLElement ? target : null;
+	const dialog = element?.closest('dialog[open]') as HTMLElement | null;
+	return dialog && dialog.dataset.modal !== 'false' ? dialog : null;
+}
+
 export function attachKeyHandlers(opts: KeyHandlersOptions) {
 	const execute = createCommandExecutor(opts);
 
@@ -458,13 +482,11 @@ export function attachKeyHandlers(opts: KeyHandlersOptions) {
 		));
 		if (isInteractive && isActivationKey) return;
 
-		// check if focus is inside a dialog (every dialog is a native <dialog>; div-based
-		// role="dialog" surfaces are forbidden — see copilot-instructions Accessibility).
-		// A NON-modal dialog (data-modal="false") does not trap focus: it behaves like one
-		// more panel, so global shortcuts (Ctrl+F6 cycling, Escape back to the board, Ctrl+D)
-		// keep working from inside it and it is skipped here.
+		// Is focus inside a dialog? A NON-modal one is skipped (see owningModalDialog), so
+		// global shortcuts — Ctrl+F6 cycling, Escape back to the board, Ctrl+D — keep working
+		// from inside it. The dialog itself is still wanted below, for the picker's minimize.
 		const openDialog = target?.closest('dialog[open]') as HTMLElement | null;
-		const isInDialog = !!openDialog && openDialog.dataset.modal !== 'false';
+		const isInDialog = !!owningModalDialog(target);
 
 		// While a modal dialog owns focus we ignore global shortcuts so they can't disrupt
 		// the flow — EXCEPT read-only "announce" queries (money, release passes, Free Parking

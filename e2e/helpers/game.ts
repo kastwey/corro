@@ -34,6 +34,23 @@ export async function resetDice(): Promise<void> {
 	if (!res.ok) throw new Error(`resetDice failed: HTTP ${res.status}`);
 }
 
+/**
+ * End the running round clock now, as the server would when it reaches zero. A timed turn cannot
+ * be ended any other way, so a scenario that needs a FINISHED match would otherwise wait a real
+ * minute per turn.
+ */
+export async function expireRoundClock(gameId: string): Promise<void> {
+	const res = await fetch(`${E2E_BASE_URL}/e2e/games/${encodeURIComponent(gameId)}/round-clock/expire`, {
+		method: 'POST',
+	});
+	const body = await res.text();
+	// A turn that did not actually end would leave the scenario waiting on a button nobody has,
+	// and the failure would point anywhere but here.
+	if (!res.ok || !body.includes('"expired":true')) {
+		throw new Error(`expireRoundClock(${gameId}) failed: HTTP ${res.status} ${body}`);
+	}
+}
+
 // ── Package / app i18n (assert against the source of truth, don't hardcode) ──
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
@@ -351,8 +368,8 @@ export async function createGame(
 	hostName: string,
 	boardId: string,
 	opts: {
-		/** Toggle rules by boolean; a CHOICE rule by the option id to select. */
-		houseRules?: Record<string, boolean | string>;
+		/** Toggle rules by boolean; a CHOICE rule by the option id to select; a NUMBER by its value. */
+		houseRules?: Record<string, boolean | string | number>;
 		seat?: string;
 		maxPlayers?: number;
 		teamCount?: number;
@@ -397,6 +414,15 @@ export async function createGame(
 				continue;
 			}
 			const box = page.locator(`#package-rules [data-rule-id="${ruleId}"]`);
+			if (typeof value === 'number') {
+				// A number field: set it and announce the change the way typing would, since the
+				// lobby keeps the conditional rules in step by listening for it.
+				await box.evaluate((el, figure) => {
+					(el as HTMLInputElement).value = String(figure);
+					el.dispatchEvent(new Event('change', { bubbles: true }));
+				}, value);
+				continue;
+			}
 			if (await box.isChecked() !== value) await box.dispatchEvent('click');
 		}
 	}

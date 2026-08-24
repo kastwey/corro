@@ -42,9 +42,11 @@ import {
 	actionsForInvitation, asInviteResult, describeInvitation, parsePendingInvitations, resultText,
 } from '../tableInvites.js';
 import { FriendsList } from '../friendsList.js';
+import { isOwnEcho, messagesButtonLabel, unreadAfterArrival } from './unreadMessages.js';
 import { fetchFriends, type FriendEntry } from '../friends.js';
 import { listenForShake, requestShakePermission } from '../shakeGesture.js';
 import { initializeSiteMetrics, renderActivity } from '../siteMetrics.js';
+import { initializeBuildVersion } from '../buildVersion.js';
 import { showSecondAccountNotice } from '../secondAccountNotice.js';
 import { showMergedNotice } from '../mergedNotice.js';
 import { applyRuleSettings, readRuleSettings } from './ruleFields.js';
@@ -80,6 +82,10 @@ class UnifiedLobbyUI {
 	/** Whether this page has a session, so unlock codes know if there is an account to reach. */
 	private signedIn = false;
 	private lobbyChat: LobbyChat | null = null;
+	/** Messages that landed while this player was somewhere else in the lobby. */
+	private unreadMessages = 0;
+	/** This reader's own public name, so their own lines coming back are recognised as theirs. */
+	private myHandle: string | null = null;
 	private invitesRoster: FriendRoster | null = null;
 	private friendsTabs: Tabs | null = null;
 	private settingsTabs: Tabs | null = null;
@@ -117,6 +123,12 @@ class UnifiedLobbyUI {
 		void initializeSiteMetrics(
 			document.getElementById('site-activity'),
 			(key, vars) => i18nBinder.tSync(key, vars));
+		// And which build this is, on the same terms: worth knowing on arrival, never worth
+		// waiting for. A build that was never stamped shows no version at all.
+		void initializeBuildVersion(
+			document.getElementById('site-version'),
+			(key, vars) => i18nBinder.tSync(key, vars),
+			() => i18nBinder.getCurrentLanguage());
 		await this.connectToServer();
 		await this.fetchLobbyOptions();
 		this.checkExistingSession();
@@ -185,17 +197,13 @@ class UnifiedLobbyUI {
 			signInFailed,
 			onManageAccount: () => openSettings(),
 		}).then(session => {
-			// The list of who is connected is members-only, so the way in is only offered to
-			// somebody who can actually get through: a button that always answers "sign in first"
-			// is a dead end with extra steps.
-			const online = getElement('go-online-btn');
-			if (online) online.hidden = !session.signedIn;
-			const friends = getElement('go-friends-btn');
-			if (friends) friends.hidden = !session.signedIn;
-			// Writing to people needs an account on both ends, so the panel is only offered to
-			// somebody who has one.
-			const chat = getElement('lobby-chat');
-			if (chat) chat.hidden = !session.signedIn;
+			// The home's People block — who is connected, friends, messages — is members-only from
+			// end to end: the room list turns anonymous callers away, and writing to somebody needs
+			// an account on both ends. It is revealed or hidden as ONE block, because a button that
+			// always answers "sign in first" is a dead end with extra steps, and a "People" heading
+			// with nothing under it is worse than no heading at all.
+			const people = getElement('home-people');
+			if (people) people.hidden = !session.signedIn;
 			if (session.signedIn) {
 				this.startLobbyChat(session);
 				this.listenForPeople();
@@ -819,9 +827,8 @@ class UnifiedLobbyUI {
 			requestsEmpty: getElement('friends-requests-empty'),
 			status: getElement('friends-status'),
 			t: (key, vars) => i18nBinder.tSync(key, vars),
-			// Writing to a friend starts in the message box that is already on the home page, with
-			// their name in it — rather than a second place to type that would have to learn all the
-			// same tricks.
+			// Writing to a friend opens the messages screen with their name already in the box —
+			// rather than a second place to type that would have to learn all the same tricks.
 			writeTo: handle => this.startWritingTo(handle),
 			askToJoin: (gameId, handle) => this.askToJoinTable(gameId, handle),
 			onRefreshed: entries => this.labelFriendsSurfaces(entries),
@@ -830,6 +837,26 @@ class UnifiedLobbyUI {
 		if (tablist) this.friendsTabs ??= new Tabs({ tablist });
 
 		await this.friendsList.refresh();
+	}
+
+	/**
+	 * Writing to people. A screen of its own, like the two above: a log, a box and a list of names
+	 * are a place you go to, not something to read past on the way to your tables.
+	 *
+	 * Opening it IS reading what arrived, so the count it carried goes back to nothing. Focus lands
+	 * on the heading (showView), not in the box: somebody who came to READ should not have to leave
+	 * a text field first.
+	 */
+	private showMessagesView(): void {
+		// The startup settles the view LAST (checkExistingSession), and the way in here appears as
+		// soon as the account answers — which is earlier. Without this, opening the messages while
+		// the boards are still loading is undone a second later, taking with it a count already
+		// cleared and, from the friends list, a half-written line and the keyboard with it.
+		this.viewClaimed = true;
+		showView('view-messages');
+		window.history.pushState({ view: 'view-messages' }, '');
+		this.unreadMessages = 0;
+		this.labelMessagesButton();
 	}
 
 	/**
@@ -969,6 +996,10 @@ class UnifiedLobbyUI {
 		const suggestions = getElement('lobby-chat-suggestions');
 		if (!log || !input || !send || !suggestions || this.lobbyChat) return;
 
+		// Kept here as well as inside the panel, because telling this reader's OWN lines from
+		// somebody else's is what decides whether an arriving message is news at all.
+		this.myHandle = session.user?.handle ?? null;
+
 		this.lobbyChat = new LobbyChat({
 			log, input, send, suggestions,
 			status: getElement('lobby-chat-status'),
@@ -982,18 +1013,50 @@ class UnifiedLobbyUI {
 		void this.refreshChatCandidates();
 	}
 
-	/** A message that arrived: added to the panel's log, never spoken over anything. */
+	/**
+	 * A message that arrived: added to the log, never spoken over anything and never opening
+	 * anything. Since the log lives on its own screen now, an arrival elsewhere in the lobby says
+	 * WHO wrote — once, quietly, and without the message itself — and the count waits in the name
+	 * of the home button. Silence plus an off-screen log would mean somebody listening never
+	 * learns there was anything to go and read.
+	 */
 	private receiveDirectMessage(data: unknown): void {
 		const message = data as { from?: unknown; to?: unknown; text?: unknown } | null;
 		if (typeof message?.from !== 'string' || typeof message.text !== 'string') return;
+		// The server sends a copy to the sender's OTHER tabs, so the conversation reads the same
+		// everywhere (GameHub.DirectMessages). That copy is this reader's own line coming back: it
+		// belongs in the log written as theirs, and it is not news. Announcing it would tell
+		// somebody they have written to themselves, and counting it would leave an unread mark on
+		// a message they wrote.
+		const mine = isOwnEcho(message.from, this.myHandle);
 		this.lobbyChat?.receive({
 			from: message.from,
 			to: Array.isArray(message.to)
 				? message.to.filter((h: unknown): h is string => typeof h === 'string')
 				: [],
 			text: message.text,
-			mine: false,
+			mine,
 		});
+		if (mine) return;
+		const viewing = this.viewingMessages();
+		this.unreadMessages = unreadAfterArrival(this.unreadMessages, viewing);
+		this.labelMessagesButton();
+		if (!viewing) {
+			this.announceInLobby(i18nBinder.tSync('lobby.chat.arrived', { from: message.from }));
+		}
+	}
+
+	/** Whether the messages screen is the one on show. */
+	private viewingMessages(): boolean {
+		return getElement('view-messages')?.hidden === false;
+	}
+
+	/** The way in says what is waiting behind it, by name rather than by badge. */
+	private labelMessagesButton(): void {
+		const button = getElement('go-messages-btn');
+		if (!button) return;
+		button.textContent = messagesButtonLabel(
+			this.unreadMessages, (key, vars) => i18nBinder.tSync(key, vars));
 	}
 
 	/** Who the @ autocomplete offers: the room this reader can see, plus their friends. */
@@ -1013,9 +1076,10 @@ class UnifiedLobbyUI {
 	/**
 	 * Tables waiting on this player. Read once on arrival, and refreshed when one lands while they
 	 * are here — never polled, for the same reason the online list is not: a page you visit, not a
-	 * ticker. An invitation IS addressed to them personally, though, so a new one says so once.
+	 * ticker. Saying that one HAS landed is the caller's job (listenForPeople), because it has to be
+	 * said from wherever the reader is standing rather than into this block.
 	 */
-	private async refreshInvitations(announce?: string): Promise<void> {
+	private async refreshInvitations(): Promise<void> {
 		const list = getElement('lobby-invites-list');
 		const section = getElement('lobby-invites');
 		if (!list || !section) return;
@@ -1044,8 +1108,6 @@ class UnifiedLobbyUI {
 				onClick: () => void this.answerInvitation(invitation.gameId, action === 'accept'),
 			})),
 		})));
-
-		if (announce) this.sayInvite(announce);
 	}
 
 	/** A shipped board's name in this player's language, or null when it cannot be named. */
@@ -1091,11 +1153,15 @@ class UnifiedLobbyUI {
 		if (status) status.textContent = text;
 	}
 
-	/** Put somebody's name in the message box and hand the keyboard to it. */
+	/**
+	 * Put somebody's name in the message box and hand the keyboard to it. Chosen from the friends
+	 * list, so it goes STRAIGHT to the messages screen: the person asked to write, and landing them
+	 * on the home page to find the way in themselves would be an answer with a step missing.
+	 */
 	private startWritingTo(handle: string): void {
 		const input = getElement<HTMLTextAreaElement>('lobby-chat-input');
 		if (!input) return;
-		this.showHome();
+		this.showMessagesView();
 		const prefix = `@${handle} `;
 		if (!input.value.startsWith(prefix)) input.value = prefix + input.value;
 		input.focus();
@@ -1177,8 +1243,17 @@ class UnifiedLobbyUI {
 
 		// Something landing while they are here is worth saying once — unlike the room changing
 		// around them, an invitation is addressed to them personally.
-		gameClient.on('tableInvitation', () => void this.refreshInvitations(
-			i18nBinder.tSync('lobby.invites.arrived')));
+		//
+		// Said through the lobby's OWN live region rather than the status line under the
+		// invitations: that line lives on the home page, and home is hidden while the reader is on
+		// any other screen — the messages one most of all, now that it is somewhere people sit. A
+		// live region inside a hidden view is not a quiet announcement, it is no announcement, and
+		// a seat expires while a message does not. The list itself is what says it on screen; the
+		// status line stays for the outcome of the reader's own answer.
+		gameClient.on('tableInvitation', () => {
+			this.announceInLobby(i18nBinder.tSync('lobby.invites.arrived'));
+			void this.refreshInvitations();
+		});
 		gameClient.on('joinRequestAccepted', (data: unknown) => {
 			const code = (data as { inviteCode?: unknown } | null)?.inviteCode;
 			if (typeof code === 'string' && code.length > 0) void this.enterTableByCode(code);
@@ -1229,6 +1304,8 @@ class UnifiedLobbyUI {
 		getElement('online-back-btn')?.addEventListener('click', () => window.history.back());
 		getElement('go-friends-btn')?.addEventListener('click', () => void this.showFriendsView());
 		getElement('friends-back-btn')?.addEventListener('click', () => window.history.back());
+		getElement('go-messages-btn')?.addEventListener('click', () => this.showMessagesView());
+		getElement('messages-back-btn')?.addEventListener('click', () => window.history.back());
 		getElement('settings-back-btn')?.addEventListener('click', () => window.history.back());
 		// The in-page "Back" buttons unwind history so the on-screen button and the browser's
 		// Back button traverse the same stack (create/join → home) — never off the site.
@@ -1682,16 +1759,17 @@ class UnifiedLobbyUI {
 			deleteBtn.addEventListener('click', () => this.confirmDeleteSavedGame(game));
 			actions.appendChild(deleteBtn);
 		} else {
-			const removeBtn = document.createElement('button');
-			removeBtn.type = 'button';
-			removeBtn.className = 'btn btn-secondary saved-game-remove';
-			removeBtn.textContent = t('lobby.savedGames.remove', 'Remove from list');
-			removeBtn.setAttribute('aria-label', `${t('lobby.savedGames.remove', 'Remove from list')} ${boardName || game.gameId}`);
-			removeBtn.addEventListener('click', () => {
-				GameSessionStore.removeGame(game.gameId);
-				void this.refreshSavedGames();
-			});
-			actions.appendChild(removeBtn);
+			// Somebody else's table: you cannot delete it, you leave it. This said "remove from
+			// list" and only cleared this browser's storage — which for a table the ACCOUNT was
+			// holding cleared nothing at all, so the row came back on the next refresh. Leaving is
+			// what the row was always for, and it is the same thing from every device.
+			const leaveBtn = document.createElement('button');
+			leaveBtn.type = 'button';
+			leaveBtn.className = 'btn btn-secondary saved-game-leave';
+			leaveBtn.textContent = t('lobby.savedGames.leave', 'Leave the table');
+			leaveBtn.setAttribute('aria-label', `${t('lobby.savedGames.leave', 'Leave the table')} ${boardName || game.gameId}`);
+			leaveBtn.addEventListener('click', () => this.confirmLeaveSavedGame(game));
+			actions.appendChild(leaveBtn);
 		}
 
 		li.appendChild(actions);
@@ -1786,6 +1864,36 @@ class UnifiedLobbyUI {
 					console.error('Error deleting game:', error);
 					showError(t('lobby.errors.deleteGame', 'Could not delete the game'));
 				}
+			}
+		});
+	}
+
+	/**
+	 * Giving up a seat is asked first, like deleting is: it is not reversible, the rest of the
+	 * table sees it, and mid-match it forfeits. The confirmation says so rather than leaving it to
+	 * be discovered.
+	 */
+	private confirmLeaveSavedGame(game: SavedGame): void {
+		dialogManager.init();
+		dialogManager.showConfirm({
+			title: 'Leave the table',
+			titleI18nKey: 'lobby.savedGames.leaveConfirm.title',
+			message: 'Your seat goes back to the table and you cannot take it up again.',
+			messageI18nKey: 'lobby.savedGames.leaveConfirm.message',
+			confirmI18nKey: 'lobby.savedGames.leaveConfirm.confirm',
+			cancelI18nKey: 'lobby.savedGames.leaveConfirm.cancel',
+			onConfirm: async () => {
+				try {
+					// The stored secret when this browser has one, and nothing when the table is
+					// here only because the account holds the seat — the server takes either.
+					await gameClient.leaveTableFromLobby(
+						game.gameId, game.playerId, game.playerSecretId ?? '');
+					GameSessionStore.removeGame(game.gameId);
+				} catch (error) {
+					console.error('Error leaving the table:', error);
+					showError(t('lobby.errors.leaveTable', 'Could not leave the table'));
+				}
+				await this.refreshSavedGames();
 			}
 		});
 	}

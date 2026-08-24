@@ -258,8 +258,17 @@ test('the ways in are a named list, without adding a landmark', async () => {
 	assert.equal(list.querySelectorAll(':scope > li > a.account-signin-link').length, 2,
 		'one item per provider, each holding its link');
 
-	const labelledBy = list.getAttribute('aria-labelledby')!;
-	assert.ok(document.getElementById(labelledBy)?.textContent, 'the list label resolves to real text');
+	// Regression, reported from Safari with VoiceOver: the list used to be named from the prompt
+	// paragraph above it, which made that whole sentence the list's accessible name — so it was
+	// spoken twice in a row, once as the prose it is and once on entering the list. The list gets
+	// a short name of its own; the sentence stays a sentence, said once.
+	assert.equal(list.getAttribute('aria-labelledby'), null,
+		'no visible sentence doubles as this list name');
+	assert.equal(list.getAttribute('aria-label'), 'Ways to sign in');
+	const prompt = el.querySelector('.account-prompt')!;
+	assert.equal(prompt.textContent, 'Sign in to keep your games, unlock codes and friends on any device.');
+	assert.ok(!prompt.id, 'nothing points at it any more, so it carries no id either');
+
 	assert.equal(el.querySelectorAll('section, [role="region"]').length, 0);
 });
 

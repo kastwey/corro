@@ -15,6 +15,7 @@ import {
 	chooseContentLanguage, contentLanguageName, fillContentLanguageSelect,
 } from './lobby/contentLanguage.js';
 import { familyHasBots } from './familyTraits.js';
+import { MentionList } from './mentionList.js';
 import { winningSide } from './endScreen.js';
 import {
 	applyHouseRuleValues, readHouseRuleValues, renderHouseRules, syncHouseRuleVisibility,
@@ -88,7 +89,14 @@ export interface TableViewDeps {
 	 * Friends who could actually come: connected, and not already playing. Read when the table is
 	 * shown, so nobody has to know a public name by heart to ask a friend.
 	 */
-	invitableFriends?: () => Promise<string[]>;
+	/**
+	 * Who could be asked to this table right now: connected, visible to this player, and open to
+	 * an invitation. The SERVER decides who qualifies — a client filtering a wider list would be a
+	 * second copy of a privacy rule, free to drift from the one that actually refuses.
+	 */
+	invitablePlayers?: () => Promise<string[]>;
+	/** Matching names, spoken when the list narrows. */
+	inviteMatchCount?: (count: number) => string;
 	/** Let somebody in who asked, or refuse them. */
 	answerJoinRequest?: (handle: string, accept: boolean) => Promise<void>;
 }
@@ -97,6 +105,9 @@ export class TableView {
 	private deps: TableViewDeps | null = null;
 	/** The invite controls are wired once; the table repaints often. */
 	private inviteWired = false;
+	/** Who can be asked, as the server last answered it. */
+	private invitable: string[] = [];
+	private invitePicker: MentionList | null = null;
 	private root: HTMLElement | null = null;
 	private gameSurface: HTMLElement | null = null;
 	private surfaceIntro: HTMLElement | null = null;
@@ -190,6 +201,11 @@ export class TableView {
 		this.deckSelect?.addEventListener('change', event => {
 			void this.deps?.setContentLanguage?.((event.target as HTMLSelectElement).value);
 		});
+		// The panel is filled elsewhere (renderRules) but wired HERE, with the other fixed
+		// elements: it is obtained once and never replaced, only refilled, so its listener belongs
+		// where the ones that never change do. It delegates, so it reaches whatever was rendered
+		// into it last.
+		this.rulesFields?.addEventListener('change', () => void this.saveRules());
 	}
 
 	isVisible(): boolean {
@@ -261,7 +277,6 @@ export class TableView {
 			}
 			this.rulesFields.innerHTML = renderHouseRules(
 				pkg!.ruleGroups ?? [], rules, key => this.deps!.t(key));
-			this.rulesFields.addEventListener('change', () => void this.saveRules());
 			watchHouseRuleVisibility(this.rulesFields);
 			this.rulesBox.hidden = false;
 		}
@@ -389,48 +404,86 @@ export class TableView {
 			submit();
 		});
 
-		void this.showInvitableFriends();
+		this.wireInvitePicker(input);
 	}
 
 	/**
-	 * The friends who could come, as options. Hidden entirely when there are none — an empty list
-	 * with a heading is a stop that answers nothing.
+	 * The people who could come, as ONE listbox that is both the browse list and the autocomplete.
+	 *
+	 * Knowing the name and knowing only that somebody is about are the same task from the keyboard,
+	 * so they are the same control: the list opens showing everyone available, and typing narrows
+	 * it instead of replacing it. Down walks in from the field, Enter invites, Left/Right hand the
+	 * text back to be read a character at a time — the interaction the chat's name list already
+	 * taught, because a third hand-rolled option list is a third chance to get it wrong.
 	 */
-	private async showInvitableFriends(): Promise<void> {
-		const block = this.root?.querySelector<HTMLElement>('#table-invite-friends-block');
-		const list = this.root?.querySelector<HTMLElement>('#table-invite-friends');
-		if (!block || !list || !this.deps?.invitableFriends || !this.deps.invite) return;
+	private wireInvitePicker(input: HTMLInputElement): void {
+		const block = this.root?.querySelector<HTMLElement>('#table-invite-people-block');
+		const list = this.root?.querySelector<HTMLElement>('#table-invite-people');
+		if (!block || !list || !this.deps?.invitablePlayers || !this.deps.invite) return;
 
-		const friends = await this.deps.invitableFriends();
-		block.hidden = friends.length === 0;
-		const t = this.deps.t;
-		list.replaceChildren(...friends.map((handle, index) => {
-			const option = document.createElement('li');
-			// role=option in a listbox is what turns "a button" into "2 of 5" for a screen reader.
-			option.setAttribute('role', 'option');
-			option.setAttribute('aria-selected', 'false');
-			option.className = 'lobby-chat__suggestion';
-			option.tabIndex = index === 0 ? 0 : -1;
-			option.textContent = handle;
-			option.setAttribute('aria-label', t('table.inviteFriend').replace('{{handle}}', handle));
-			option.addEventListener('click', () => void this.deps?.invite?.(handle));
-			option.addEventListener('keydown', (event: KeyboardEvent) => {
-				if (event.key === 'Enter' || event.key === ' ') {
-					event.preventDefault();
-					void this.deps?.invite?.(handle);
-					return;
-				}
-				if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-				event.preventDefault();
-				const options = Array.from(
-					list.querySelectorAll<HTMLElement>('[role="option"]'));
-				const next = (index + (event.key === 'ArrowDown' ? 1 : -1) + options.length)
-					% options.length;
-				options.forEach((o, i) => { o.tabIndex = i === next ? 0 : -1; });
-				options[next].focus();
-			});
-			return option;
-		}));
+		this.invitePicker = new MentionList({
+			list,
+			input,
+			announce: text => this.sayInviteStatus(text),
+			countText: count => this.deps?.inviteMatchCount?.(count) ?? '',
+			// Choosing IS inviting. This is a picker of people, not a speller of names: making
+			// somebody confirm a name they just picked off a list is a step that answers nothing.
+			onChoose: handle => {
+				input.value = '';
+				// Ask, THEN ask again who is left: the server drops somebody already invited, and a
+				// list still offering them would invite the same person twice on the next Enter.
+				void (async () => {
+					await this.deps?.invite?.(handle);
+					await this.loadInvitablePlayers();
+				})();
+			},
+			onTyped: () => this.refreshInvitePicker(),
+		});
+
+		input.addEventListener('input', () => this.refreshInvitePicker());
+		// People arrive and leave while the table sits open. Asking again when somebody actually
+		// reaches for the field costs one call at the moment it matters, and beats a picker quietly
+		// offering whoever was around when the view was built.
+		input.addEventListener('focus', () => void this.loadInvitablePlayers());
+		input.addEventListener('keydown', (event: KeyboardEvent) => {
+			if (event.key !== 'ArrowDown') return;
+			event.preventDefault();
+			// Down always means "into the list", including after an Escape closed it — otherwise
+			// dismissing it once would take the browse list away for good.
+			if (!this.invitePicker?.isOpen) this.refreshInvitePicker();
+			this.invitePicker?.focusFirst();
+		});
+
+		void this.loadInvitablePlayers();
+	}
+
+	/** Fetches who can be asked, then shows them without taking the keyboard. */
+	private async loadInvitablePlayers(): Promise<void> {
+		const block = this.root?.querySelector<HTMLElement>('#table-invite-people-block');
+		this.invitable = (await this.deps?.invitablePlayers?.()) ?? [];
+		// An empty list with a heading is a stop that answers nothing, so the whole block goes.
+		if (block) block.hidden = this.invitable.length === 0;
+		this.refreshInvitePicker({ announce: false });
+	}
+
+	/**
+	 * Show the candidates matching what has been typed so far. Silent on the first paint: a list
+	 * that appears with the view has not been ASKED for, and announcing it would talk over whatever
+	 * brought the player here.
+	 */
+	private refreshInvitePicker(options: { announce?: boolean } = {}): void {
+		const input = this.root?.querySelector<HTMLInputElement>('#table-invite-handle');
+		if (!input || !this.invitePicker) return;
+		const typed = input.value.trim().toLowerCase();
+		const matches = typed.length === 0
+			? this.invitable
+			: this.invitable.filter(handle => handle.toLowerCase().startsWith(typed));
+		this.invitePicker.show(matches, { takeFocus: false, silent: options.announce === false });
+	}
+
+	private sayInviteStatus(text: string): void {
+		const status = this.root?.querySelector<HTMLElement>('#table-invite-status');
+		if (status) status.textContent = text;
 	}
 
 	/**

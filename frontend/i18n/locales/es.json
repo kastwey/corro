@@ -12,7 +12,14 @@
     "activity": "{{tables}}, {{players}}.",
     "corroNewWindowLabel": "Corro en GitHub, se abre en una ventana nueva",
     "licenseNewWindowLabel": "Licencia AGPL-3.0, se abre en una ventana nueva",
-    "privacy": "Privacidad"
+    "privacy": "Privacidad",
+    "version": "Versión {{version}}",
+    "versionTitle": "Acerca de esta versión",
+    "versionDeployed": "Versión {{version}}, desplegada el {{date}}.",
+    "versionOnly": "Versión {{version}}.",
+    "versionCommit": "Ver el commit {{commit}} en GitHub",
+    "versionCommitNewWindowLabel": "Ver el commit {{commit}} en GitHub, se abre en una ventana nueva",
+    "versionCommitPlain": "Compilada a partir del commit {{commit}}."
   },
   "privacyPage": {
     "browserTitle": "Aviso de privacidad — All Welcome",
@@ -38,6 +45,7 @@
   "account": {
     "signInPrompt": "Inicia sesión para conservar tus partidas, tus códigos de desbloqueo y tus amistades en cualquier dispositivo.",
     "signInWith": "Iniciar sesión con {{provider}}",
+    "providersLabel": "Formas de iniciar sesión",
     "signedInAs": "Sesión iniciada como {{name}}.",
     "signedIn": "Sesión iniciada.",
     "signOut": "Cerrar sesión",
@@ -90,6 +98,7 @@
       "eraseExplanation": "Esto elimina tu perfil y todas sus formas de iniciar sesión. Las partidas que jugaste siguen con las demás personas, pero dejan de estar vinculadas a ti. No se puede deshacer.",
       "erase": "Borrar mi cuenta",
       "eraseConfirm": "¿Borrar tu cuenta definitivamente?",
+      "eraseGroupLabel": "Confirmar el borrado de tu cuenta",
       "eraseCancel": "Conservar mi cuenta",
       "eraseConfirmButton": "Sí, bórrala",
       "visibilityLegend": "¿Quién puede ver que estás conectado?",
@@ -133,13 +142,18 @@
   "lobby": {
     "backToHome": "Volver al inicio",
     "home": {
+      "heading": "Inicio",
+      "playHeading": "Jugar",
+      "peopleHeading": "Personas",
       "createButton": "Crear una mesa",
       "joinButton": "Unirse con un código",
       "onlineButton": "Quién está conectado",
       "friendsButton": "Amigos",
       "friendsButtonWaiting": "Amigos, {{count}} esperando",
       "friendsButtonWaiting_one": "Amigos, 1 esperando",
-      "settingsButton": "Ajustes"
+      "messagesButton": "Mensajes",
+      "messagesButtonUnread": "Mensajes, {{count}} sin leer",
+      "messagesButtonUnread_one": "Mensajes, 1 sin leer"
     },
     "createGame": "Crear una mesa nueva",
     "joinGame": "Unirse a una mesa",
@@ -274,6 +288,7 @@
       "copyLink": "No se pudo copiar el enlace",
       "copyCode": "No se pudo copiar el código",
       "deleteGame": "No se pudo eliminar la partida",
+      "leaveTable": "No se te ha podido sacar de esa mesa. Inténtalo de nuevo en un momento.",
       "disconnected": "Te has desconectado del servidor"
     },
     "aria": {
@@ -356,6 +371,7 @@
     "chat": {
       "heading": "Mensajes",
       "hint": "Escribe a alguien nombrándolo con @. Aquí no hay chat general.",
+      "arrived": "{{from}} te ha escrito.",
       "logLabel": "Mensajes recibidos y enviados",
       "inputLabel": "Tu mensaje",
       "send": "Enviar",
@@ -432,7 +448,7 @@
       "empty": "Aún no tienes mesas. Crea una o únete con un código.",
       "resume": "Reanudar",
       "delete": "Eliminar la mesa",
-      "remove": "Quitar de la lista",
+      "leave": "Salir de la mesa",
       "connectedCount": "{{connected}}/{{total}} conectados",
       "created": "Creada el {{date}}",
       "status": {
@@ -443,6 +459,12 @@
         "completed": "Terminada",
         "abandoned": "Abandonada",
         "unknown": "Desconocido"
+      },
+      "leaveConfirm": {
+        "title": "Salir de la mesa",
+        "message": "Tu asiento vuelve a la mesa y no podrás recuperarlo. Si allí hay una partida en marcha, salir la abandona.",
+        "confirm": "Salir",
+        "cancel": "Quedarme en la mesa"
       },
       "deleteConfirm": {
         "title": "Eliminar partida",
@@ -970,6 +992,7 @@
     "forbidden_card_label": "Palabras",
     "forbidden_card_target_line": "Palabra objetivo: {{target}}.",
     "forbidden_card_words_heading": "Palabras prohibidas:",
+    "forbidden_card_waiting": "La palabra aparece al empezar el turno.",
     "forbidden_start_button": "Iniciar el temporizador",
     "forbidden_correct_button": "Correcta, siguiente carta",
     "forbidden_pass_button": "Pasar",
@@ -1011,6 +1034,7 @@
     "forbidden_rules_target": "Gana el equipo que llegue a {{score}} puntos",
     "help_cmd_forbidden_enter": "Desde las palabras, iniciar el temporizador o marcar la palabra como adivinada",
     "help_cmd_forbidden_card": "Volver a las palabras",
+    "help_cmd_forbidden_pass": "Pasar la palabra actual cuando eres quien da las pistas",
     "help_cmd_forbidden_timer": "Anunciar el tiempo que queda en el temporizador",
     "help_cmd_forbidden_violation": "Señalar el objetivo o una palabra prohibida cuando eres el supervisor",
     "help_cmd_forbidden_controls": "Moverte entre tu carta privada y las acciones de tu función",
@@ -1073,7 +1097,12 @@
     "help_cmd_categories_timer": "Anunciar el tiempo que queda en el reloj",
     "help_cmd_categories_answers": "Moverte entre las respuestas que se están juzgando",
     "help_cmd_categories_verdicts": "Entrar y salir de los veredictos de la respuesta en la que estás",
-    "categories_sheet_group": "{{category}}, con la letra {{letter}}.",
+    "categories_letter_label": "La letra de esta ronda es {{letter}}.",
+    "help_typing_prefix": "Dentro de un cuadro de texto las letras se escriben, así que pulsa antes {{keys}} y luego la tecla que pulsarías en cualquier otro sitio.",
+    "typing_command_armed": "Comando.",
+    "typing_command_cancelled": "Cancelado.",
+    "typing_command_unknown": "{{key}} no es un atajo aquí.",
+    "help_cmd_categories_letter": "Anunciar la letra por la que tienen que empezar las respuestas",
     "categories_last_ruling": "Recién decidida — {{category}}:",
     "categories_last_ruling_line": "{{player}} escribió {{answer}}: {{verdict}}.",
     "categories_last_ruling_blank": "nada",
@@ -1467,6 +1496,8 @@
     "shedding_status_cards": "{{count}} cartas",
     "shedding_status_cards_one": "1 carta",
     "shedding_status_top": "arriba $t({{card}}), color en vigor $t({{color}})",
+    "shedding_top_readout": "$t({{card}}), $t({{color}}).",
+    "shedding_top_readout_plain": "$t({{card}}).",
     "shedding_status_reversed": "sentido invertido",
     "shedding_status_score": "{{total}} puntos",
     "shedding_status_score_penalty": "{{total}} puntos de castigo",
@@ -1506,6 +1537,7 @@
     "help_cmd_last_card_catch": "Pillar a un rival que no declaró",
     "help_cmd_last_card_watch": "Leer quién va a ganar (la lista de vigilancia)",
     "help_cmd_shedding_piles": "Leer el mazo, la carta de arriba y el color en vigor",
+    "help_cmd_shedding_top": "Leer la carta de arriba, con el color que manda si es un comodín",
     "help_cmd_shedding_colour_jump": "Ir a la siguiente carta de un color: r rojo, g verde, b azul, y amarillo",
     "help_cmd_shedding_colour_jump_back": "Ir a la carta anterior de ese color",
     "help_cmd_shedding_number_jump": "Ir a la siguiente carta con ese número (0 a 9)",
@@ -2041,9 +2073,11 @@
     "inviteWhoLabel": "Nombre público de quien quieres invitar",
     "joinRequestAdmitted": "{{handle}} ya está dentro.",
     "joinRequestRefused": "Has rechazado a {{handle}}.",
-    "inviteFriendsHint": "O pídeselo a uno de tus amigos que está libre ahora mismo.",
-    "inviteFriendsLabel": "Amigos a los que puedes invitar",
-    "inviteFriend": "Invitar a {{handle}}"
+    "invitePeopleHint": "O elige a alguien de quienes están conectados y aceptan invitaciones.",
+    "invitePeopleLabel": "Personas a las que puedes invitar",
+    "inviteMatches": "{{count}} personas a las que puedes invitar. Pulsa flecha abajo para recorrerlas.",
+    "inviteMatches_one": "1 persona a la que puedes invitar. Pulsa flecha abajo para llegar a ella.",
+    "invitePerson": "Invitar a {{handle}}"
   },
   "common": {
     "ok": "Aceptar",

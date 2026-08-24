@@ -6,33 +6,8 @@
 
 import { dialogManager } from './dialogManager.js';
 import { tSync } from './i18nBinder.js';
-import type { HelpShortcut } from './shortcuts.js';
-
-/** Turns a key spec like "ctrl+p" or "arrowleft" into a readable label. */
-function humanizeKeyPart(part: string): string {
-	switch (part) {
-		case 'ctrl': return tSync('game.key_ctrl');
-		case 'shift': return tSync('game.key_shift');
-		case 'alt': return tSync('game.key_alt');
-		case 'meta': return tSync('game.key_meta');
-		case 'enter': return tSync('game.key_enter');
-		case 'space': return tSync('game.key_space');
-		case 'delete': return tSync('game.key_delete');
-		case 'home': return tSync('game.key_home');
-		case 'arrowup': return tSync('game.key_arrowup');
-		case 'arrowdown': return tSync('game.key_arrowdown');
-		case 'arrowleft': return tSync('game.key_arrowleft');
-		case 'arrowright': return tSync('game.key_arrowright');
-		case 'end': return tSync('game.key_end');
-		default:
-			if (/^f\d+$/.test(part)) return part.toUpperCase(); // F1, F2...
-			return part.length === 1 ? part.toUpperCase() : part;
-	}
-}
-
-function humanizeKey(spec: string): string {
-	return spec.split('+').map(humanizeKeyPart).join(' + ');
-}
+import { TYPING_COMMAND_PREFIX, type HelpShortcut } from './shortcuts.js';
+import { humanizeKey } from './keyLabels.js';
 
 /** Maps a command (and optional args) to its localized description. `family` picks the
  *  phrasing where the same key means something different per family (e.g. GoToMe). */
@@ -135,7 +110,8 @@ function escapeHtml(s: string): string {
 
 /** One shortcut row: an already-humanized key label and its localized description. */
 function shortcutRow(keyLabel: string, desc: string): string {
-	return `<tr><th scope="row" class="help-shortcuts__key"><kbd>${escapeHtml(keyLabel)}</kbd></th><td>${escapeHtml(desc)}</td></tr>`;
+	return `<tr><th scope="row" class="help-shortcuts__key"><kbd>${escapeHtml(keyLabel)}</kbd></th>`
+		+ `<td>${escapeHtml(desc)}</td></tr>`;
 }
 
 export function showHelpDialog(keyMap: Record<string, any>, opts?: {
@@ -176,10 +152,18 @@ export function showHelpDialog(keyMap: Record<string, any>, opts?: {
 
 	// Only spatial boards have squares to jump to by number; the card families drop the row.
 	const numberNavRow = (opts?.showNumberNav ?? true)
-		? `<tr><th scope="row" class="help-shortcuts__key"><kbd>0 – 9</kbd></th><td>${escapeHtml(tSync('game.help_cmd_number_nav'))}</td></tr>`
+		? shortcutRow('0 – 9', tSync('game.help_cmd_number_nav'))
 		: '';
 
+	// How to reach any of these from inside a text box, said ONCE above the table. Every game
+	// has at least the chat box, so it always applies — and stating it once is what keeps the
+	// table itself free of per-row claims about what survives a text field.
+	const typingHint = escapeHtml(tSync('game.help_typing_prefix', {
+		keys: humanizeKey(TYPING_COMMAND_PREFIX),
+	}));
+
 	const content = `
+		<p class="help-typing-hint">${typingHint}</p>
 		<table class="help-shortcuts">
 			<thead>
 				<tr>

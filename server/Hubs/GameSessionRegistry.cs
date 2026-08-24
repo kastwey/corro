@@ -96,8 +96,16 @@ public sealed class GameSessionRegistry
 	public int CountActiveTables()
 	{
 		var tables = new HashSet<string>(StringComparer.Ordinal);
-		foreach (var gameId in _connectionGameMap.Values) tables.Add(gameId);
-		foreach (var gameId in _lobbyConnections.Values) tables.Add(gameId);
+		foreach (var gameId in _connectionGameMap.Values)
+		{
+			tables.Add(gameId);
+		}
+
+		foreach (var gameId in _lobbyConnections.Values)
+		{
+			tables.Add(gameId);
+		}
+
 		return tables.Count;
 	}
 
@@ -116,7 +124,11 @@ public sealed class GameSessionRegistry
 	public int CountConnectedPlayers()
 	{
 		var players = new HashSet<string>(StringComparer.Ordinal);
-		foreach (var playerId in _authenticatedConnections.Values) players.Add(playerId);
+		foreach (var playerId in _authenticatedConnections.Values)
+		{
+			players.Add(playerId);
+		}
+
 		return players.Count;
 	}
 
@@ -519,6 +531,7 @@ public sealed class GameSessionRegistry
 			GameState = null,
 			LastMatch = finalState,
 			MatchesPlayed = document.MatchesPlayed + 1,
+			DealtCards = RememberDealtCards(document, finalState),
 		});
 		_persistedDocuments[gameId] = saved;
 
@@ -539,6 +552,43 @@ public sealed class GameSessionRegistry
 		_logger?.LogInformation(
 			"Match {Number} retired for table {GameId}; the table remains", saved.MatchesPlayed, gameId);
 		return saved;
+	}
+
+	/// <summary>
+	/// The table's deck memory with this match's dealt cards added — or, when that completes a trip
+	/// round the whole deck, started over from this match's cards alone. Families that keep no
+	/// memory answer nothing and the document is left exactly as it was — including its absent
+	/// field, so a table that never plays a card game never grows one.
+	/// </summary>
+	internal static Dictionary<string, List<string>>? RememberDealtCards(GameDocument document, GameState finalState)
+	{
+		var deal = GameFamilies.For(finalState.GameType).CardsDealt(finalState);
+		if (deal.CardIds.Count == 0)
+		{
+			return document.DealtCards;
+		}
+
+		var key = GameDocument.DeckMemoryKey(finalState.GameType ?? string.Empty, document.Language);
+		var memory = document.DealtCards is null
+			? new Dictionary<string, List<string>>(StringComparer.Ordinal)
+			: new Dictionary<string, List<string>>(document.DealtCards, StringComparer.Ordinal);
+		var seen = memory.TryGetValue(key, out var existing)
+			? new List<string>(existing)
+			: new List<string>();
+		// A card already remembered is not remembered twice: the memory is a set of ids, and its
+		// size is weight the table's document carries on every lobby update.
+		var known = new HashSet<string>(seen, StringComparer.Ordinal);
+		seen.AddRange(deal.CardIds.Where(id => known.Add(id)));
+
+		// The table has now been round the entire deck, so the memory recycles: it keeps only what
+		// this match just dealt, the way you reshuffle a discard pile and leave the last trick out
+		// of it. A memory that only ever grew would saturate — 556 words at twenty a match, about
+		// twenty-eight matches — and from then on every match would reshuffle the whole deck again,
+		// exactly the repetition this memory exists to stop, on the tables that play most.
+		memory[key] = deal.DeckSize > 0 && seen.Count >= deal.DeckSize
+			? deal.CardIds.Distinct(StringComparer.Ordinal).ToList()
+			: seen;
+		return memory;
 	}
 
 	// ── Wiring (moved verbatim from the Hub's static callbacks) ───────────────
@@ -703,7 +753,9 @@ public sealed class GameSessionRegistry
 		}
 	}
 
-	private async Task ExpireRoundViaCommand(string gameId)
+	/// <summary>Internal so the E2E clock endpoint drives the SAME path a real timeout takes —
+	/// command, broadcast and retirement — instead of a lookalike that could drift from it.</summary>
+	internal async Task ExpireRoundViaCommand(string gameId)
 	{
 		try
 		{
@@ -776,8 +828,8 @@ public sealed class GameSessionRegistry
 			await _hub.Clients.Group(gameId).SendAsync("CommandResponse", response);
 
 			// Broadcast the full updated state so every board repaints ownership, money and turn after a
-			// timer-driven auction end (the per-square "SquareChanged" message has no client handler).
-			// NotifyStateChangedAsync also persists via the OnGameStateChanged subscription.
+			// timer-driven auction end. NotifyStateChangedAsync also persists via the
+			// OnGameStateChanged subscription.
 			await gameService.NotifyStateChangedAsync();
 
 			_logger?.LogInformation("EndAuctionViaCommand: Auction ended for {GameId}", gameId);
@@ -886,10 +938,13 @@ public sealed class GameSessionRegistry
 			_logger?.LogDebug("GameEvents batch ({Count} events) sent for game {GameId}", dispatches.Count, gameId);
 		};
 
-		gameService.OnSquareChanged += async (square) =>
-			await _hub.Clients.Group(gameId).SendAsync("SquareChanged", square);
-
 		gameService.OnCardDrawn += async (card) =>
 			await _hub.Clients.Group(gameId).SendAsync("CardDrawn", card);
+
+		// A response the rulebook addressed to the table rather than to whoever acted. It rides
+		// the same "CommandResponse" message every other response uses, so the client's existing
+		// handler for that type answers it with no new plumbing.
+		gameService.OnBroadcast += async (response) =>
+			await _hub.Clients.Group(gameId).SendAsync("CommandResponse", response);
 	}
 }

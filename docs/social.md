@@ -85,6 +85,15 @@ beside it, and that is an accessibility argument rather than a stylistic one: a 
 saying one sentence a trip between two controls. So `@` works anywhere in the line, several people
 can be named at once, and a bare `@` followed by a space means "whoever last wrote to me".
 
+Messages are a lobby SCREEN of their own (`view-messages`), reached from the People block on the
+home page, and never a dialog. Home is an entrance hall — what you can start, what is waiting on an
+answer, your tables, the people — and a log with a text box under it is a place you go to, not
+something to read past on the way to your tables. Nothing about that lets a message interrupt: one
+arriving while the reader is elsewhere is said once through the lobby's live region, naming who
+wrote and never what they wrote, and then waits in the NAME of the way in ("Messages, 3 unread"),
+exactly as the friends button carries its requests. Opening the screen is what clears it, because
+opening it is what reading them means.
+
 Nothing is stored on the server. A message is handed to the recipient's open connections and
 forgotten — no mailbox, no history, no record that two people ever wrote to each other. What was
 said this session is kept by the browser, per tab. A stored conversation would need retention, a way
@@ -107,8 +116,32 @@ that it exists.
 Accepting walks the ORDINARY join, with the invite code the server hands back. There is one way into
 a table rather than two that have to be kept in step.
 
-An invitation reaches you wherever you are: the lobby has a panel for it, and so does a table, since
+An invitation reaches you wherever you are: the lobby's home page has a block for it — before your
+own tables, because a seat expires and a table you already have does not — and so does a table, since
 sitting at one table is exactly where you are when a friend wants you at theirs.
+
+### Picking somebody instead of spelling them
+
+Asking somebody is one control, not two: a field with a list under it that opens showing everybody
+who could come and narrows as a name is typed. Knowing the name and knowing only that somebody is
+about are the same task from a keyboard, and splitting them would make the common case a trip
+between two controls. It is the chat's name list, reused — a third hand-rolled option list is a
+third chance to announce loose buttons with no position and no count.
+
+The candidates are the SERVER's answer (`GetInvitablePlayers`), never a filter applied by the
+client, and the two questions are asked in order: can this caller SEE them, and do they accept being
+asked. Seeing comes first and on its own, so the picker can never become a way around the presence
+setting — somebody hidden is absent from it whatever their message policy says, and is still
+reachable by typing their name. That is what keeps the two ways distinct: "who is about?" and "I
+know who I want".
+
+**This is the one place a message policy becomes observable without an attempt**, and it was weighed
+rather than overlooked. For somebody the caller can already see in the room, the policy is deducible
+today with one invitation: away and unknown-name are both ruled out by their being visibly present,
+so a refusal there can only be the policy. What changes is the cost — this can be read on a timer
+without the target ever being asked. It was chosen anyway, because a picker of people who cannot be
+picked is not a feature, and the only thing learned about somebody already visible is that they did
+not choose "anyone".
 
 ## What never travels
 
@@ -129,7 +162,8 @@ found among strangers, and the people you dealt into a game are not strangers.
 | Presence | `Hubs/PresenceRegistry.cs`, `Controllers/PresenceController.cs` | `onlinePlayers.ts` |
 | Friendships | `Services/Accounts/FriendshipService.cs`, `FriendshipKey.cs`, `Controllers/FriendsController.cs` | `friends.ts`, `friendsList.ts` |
 | Messages | `Hubs/GameHub.DirectMessages.cs` | `lobbyChat.ts`, `mentions.ts` |
-| Invitations | `Hubs/GameHub.Invitations.cs` | `tableInvites.ts` |
+| Invitations | `Hubs/GameHub.Invitations.cs` | `tableInvites.ts`, `tableView.ts` |
+| Who may see / be reached | `Services/Accounts/ReachRules.cs` | — |
 | Shared widgets | — | `friendRoster.ts`, `mentionList.ts`, `tabs.ts` |
 | Settings screen | `Controllers/AuthController.cs` | `accountSettings.ts`, `lobbyNotices.ts` |
 

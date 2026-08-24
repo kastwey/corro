@@ -1,7 +1,9 @@
+using CorroServer.Models;
 using CorroServer.Services;
 using CorroServer.Services.Accounts;
 using CorroServer.Hubs;
 using CorroServer.Services.Corro;
+using CorroServer.Services.Corro.Families;
 using CorroServer.Services.Rules;
 using CorroServer.Services.Voice;
 
@@ -108,6 +110,37 @@ public static class E2EExtensions
 				}
 				player.LapsCompleted = Math.Max(0, laps);
 				return Results.Ok(new { playerId = player.Id, player.LapsCompleted });
+			});
+
+		// Age the running round clock until its deadline has passed, then let the family close the
+		// turn through its own timeout command — exactly what the clock service does at zero. The
+		// server still refuses to end a turn that has time left (the rules are not bypassed, the
+		// CLOCK is moved), so a scenario needing a FINISHED match no longer sits through a real
+		// minute per turn. Test-only, like the lap endpoint above.
+		app.MapPost("/e2e/games/{gameId}/round-clock/expire",
+			async (string gameId, GameSessionRegistry registry) =>
+			{
+				if (!registry.TryGetService(gameId, out var service) || service.GameState is not { } state)
+				{
+					return Results.NotFound();
+				}
+				if (state.Forbidden?.Turn is { Phase: ForbiddenTurnPhase.Active } turn)
+				{
+					turn.StartedAt = DateTime.UtcNow.AddSeconds(-turn.DurationSeconds - 1);
+				}
+				else
+				{
+					return Results.BadRequest(new { error = "no timed turn is running" });
+				}
+				// The registry's own timeout path: it runs the command, broadcasts the new state and
+				// retires the match if that turn ended it. Calling the command directly would skip
+				// the last two, and a scenario would be left waiting on a screen nobody updated.
+				await registry.ExpireRoundViaCommand(gameId);
+				var stillRunning = registry.TryGetService(gameId, out var after)
+					&& after.GameState?.Forbidden?.Turn.Phase == ForbiddenTurnPhase.Active;
+				return stillRunning
+					? Results.BadRequest(new { error = "the turn is still active" })
+					: Results.Ok(new { expired = true });
 			});
 
 		return app;

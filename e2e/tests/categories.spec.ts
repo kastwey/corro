@@ -86,11 +86,13 @@ test('a shared Spanish deck, per-player interfaces and one full judged round', a
 	await flushAxeAudit(ana);
 
 	// ── Writing ───────────────────────────────────────────────────────────────
-	// Every field sits in a group naming its category AND the round's letter, so arriving at
-	// the tenth box still says which letter the answer has to start with.
-	const firstGroup = berto.locator('.categories-sheet-group').first();
-	await expect(firstGroup).toHaveAttribute('role', 'group');
-	await expect(firstGroup).toHaveAttribute('aria-label', new RegExp(`Un animal.*letra ${LETTER}`));
+	// ONE named group holds the whole sheet, and it borrows the heading's words rather than
+	// paraphrasing them — entering the sheet must not say the same fact twice.
+	const sheetGroup = berto.locator('.categories-sheet-group');
+	await expect(sheetGroup).toHaveAttribute('role', 'group');
+	await expect(sheetGroup).toHaveAttribute('aria-labelledby', 'categories-sheet-title');
+	await expect(berto.getByRole('group')).toHaveAccessibleName(new RegExp(`empezando por ${LETTER}`));
+	await expect(berto.locator('.categories-sheet [role="group"]')).toHaveCount(1);
 
 	// Enter walks the sheet and stops ON the finish button rather than pressing it.
 	await sheetInput(berto, 0).focus();
@@ -219,6 +221,44 @@ test('the surface answers the reading keys without a screen reader having to hun
 	await expect(ana.locator('.categories-timer')).toBeVisible();
 	await ana.keyboard.press('r');
 	await expectAnnouncement(ana, /seconds remaining/i);
+
+	// L says the round's letter, and what you asked for is also shown — quietly, and hidden
+	// from assistive technology, because the live region has already said it.
+	await ana.keyboard.press('l');
+	await expectAnnouncement(ana, new RegExp(`letter is ${LETTER}`, 'i'));
+	const echo = ana.locator('.categories-echo');
+	await expect(echo).toBeVisible();
+	await expect(echo).toHaveAttribute('aria-hidden', 'true');
+	await expect(echo).toContainText(LETTER);
+
+	// Inside an answer box the bare letters type themselves. The command prefix arms exactly
+	// one keystroke and it acts from right there, without ever reaching the field. This is the
+	// only place it can be proven: a real focused text box in a real browser.
+	const field = berto.locator('.categories-sheet-input').first();
+	await field.focus();
+	await berto.keyboard.type('l');
+	await expect(field).toHaveValue('l');
+	await berto.keyboard.press('Control+Shift+Space');
+	await berto.keyboard.press('l');
+	await expectAnnouncement(berto, new RegExp(`letter is ${LETTER}`, 'i'));
+	await berto.keyboard.press('Control+Shift+Space');
+	await berto.keyboard.press('r');
+	await expectAnnouncement(berto, /seconds remaining/i);
+	await expect(field).toHaveValue('l', 'neither the prefix nor the command typed anything');
+
+	// One keystroke only: the letter after a spent prefix is a letter again.
+	await berto.keyboard.press('r');
+	await expect(field).toHaveValue('lr');
+
+	// The shortcuts list says how to do that once, above the table, and the table itself keeps
+	// to two columns — it describes what a key does, never what it does while typing.
+	await berto.keyboard.press('Control+F1');
+	const help = berto.locator('.help-shortcuts');
+	await expect(help).toBeVisible();
+	await expect(help.locator('thead th')).toHaveCount(2);
+	await expect(berto.locator('.help-typing-hint')).toContainText('Ctrl + Shift + Space');
+	await flushAxeAudit(berto);
+	await berto.keyboard.press('Escape');
 	await flushAxeAudit(ana);
 	await flushAxeAudit(berto);
 	await flushAxeAudit(carla);

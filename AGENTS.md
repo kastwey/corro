@@ -8,6 +8,13 @@ For **how the system is built** (architecture, client, accessibility, server, ga
 families, end-to-end flows), see the prose docs in [docs/](docs/README.md). This file is
 the *rules*; those docs are the *map*.
 
+Repeatable multi-step procedures — running and narrowing the test suites, proving that a
+regression test actually fails without its fix — live as skills in
+[.claude/skills/](.claude/skills/). They carry the *steps* and point back here for the rules, so
+this file stays the single place a rule is written. Claude Code loads a skill only when it is
+relevant, which keeps procedure out of every session's context; anyone else can read one as
+ordinary markdown.
+
 ## What this project is
 
 Multiplayer, **accessibility-first** Corro for screen-reader users (JAWS,
@@ -53,6 +60,17 @@ which `affected.mjs` enforces — but it does throw away the speed-up. Never han
 Always finish a change by running the frontend tests (incl. translation parity)
 **and** `dotnet test`; run the E2E suite when the change touches a flow it covers
 (lobby, trades, purchases, announcements).
+
+### Remote sessions (Claude Code on the web)
+
+A cloud session starts from a bare container: repository and Node, and none of the four gates
+above except the frontend one. `.claude/hooks/session-start.sh` (registered in
+`.claude/settings.json`) installs the rest before the session begins — PowerShell, the .NET SDK,
+both `node_modules`, the Playwright browser — and compiles the server once so the first
+`dotnet test` is a test run. It does nothing on a local machine (`$CLAUDE_CODE_REMOTE`), where
+`tools/dev.ps1` owns that job, and nothing on a second run: about half a minute from empty, a few
+seconds once the container image has it. **An agent in a remote session has no excuse for an
+unrun gate** — if one of them will not start, say what failed rather than skipping it.
 
 ### Pre-push hook (blocks a red push)
 

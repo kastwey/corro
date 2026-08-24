@@ -86,6 +86,47 @@ for (const lang of ['en', 'es'] as const) {
 // Live-play confusion: in a single-piece family the multi-piece phrasing ("your NEXT
 // piece") read as if M cycled your properties — that cycle lives on H/Shift+H. Only the
 // race family fields several pieces, so only it keeps the next/previous wording.
+test('the table says what a key does, and never claims anything about typing', async () => {
+	installFakeI18next('en');
+	const { dialogManager } = await import('../src/dialogManager.js');
+	dialogManager.init();
+
+	// A game with text boxes on its surface and one without: the table is the same shape in
+	// both. A third column would have to claim something for every row, and most of those
+	// claims would be false — a bare letter does NOT survive a text field, whichever game it
+	// belongs to.
+	for (const family of ['categories', 'shedding']) {
+		showHelpDialog(keyMap, {
+			activeFamily: family,
+			extraShortcuts: SHEDDING_SHORTCUTS,
+			showNumberNav: false,
+		});
+		const headers = [...document.querySelectorAll('.help-shortcuts thead th')].map(h => h.textContent);
+		assert.equal(headers.length, 2, family);
+		for (const row of document.querySelectorAll('.help-shortcuts tbody tr')) {
+			assert.equal(row.children.length, 2, `${family}: ${row.textContent}`);
+		}
+		dialogManager.close();
+	}
+});
+
+test('reaching a shortcut from inside a text box is stated once, above the table', async () => {
+	for (const [lang, keys] of [['en', 'Ctrl + Shift + Space'], ['es', 'Ctrl + Mayús + Espacio']] as const) {
+		installFakeI18next(lang);
+		const { dialogManager } = await import('../src/dialogManager.js');
+		dialogManager.init();
+		showHelpDialog(keyMap, { activeFamily: 'categories', extraShortcuts: SHEDDING_SHORTCUTS });
+
+		const hints = [...document.querySelectorAll('.help-typing-hint')];
+		assert.equal(hints.length, 1, lang);
+		assert.ok(hints[0].textContent?.includes(keys), `${lang}: ${hints[0].textContent}`);
+		// Above the table, so it is read before the keys it applies to.
+		assert.equal(hints[0].nextElementSibling?.classList.contains('help-shortcuts'), true, lang);
+		dialogManager.close();
+	}
+});
+
+
 test('GoToMe reads singular off the race family, next/previous on it', () => {
 	installFakeI18next('en');
 	const single = describeCommand('GoToMe', { forward: true }, 'property');

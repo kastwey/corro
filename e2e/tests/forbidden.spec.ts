@@ -11,6 +11,7 @@ import {
 	appI18n,
 	createGame,
 	expectAnnouncement,
+	expireRoundClock,
 	joinGame,
 	newPlayerPage,
 	resetDice,
@@ -142,10 +143,10 @@ test('shared Spanish cards, per-player UI and authoritative role actions', async
 	await expect(carlaCard).toHaveAccessibleName('Palabras');
 	await expect(ana.locator('#forbidden-card-hint')).toHaveCount(0);
 	await expect(anaCard).not.toHaveAttribute('aria-describedby', /.*/);
-	await expect(anaCard).toHaveValue(
-		'Target word: faro.\nForbidden words:\nluz,\ncosta,\ntorre,\nmar,\nbarco.');
-	await expect(carlaCard).toHaveValue(
-		'Palabra objetivo: faro.\nPalabras prohibidas:\nluz,\ncosta,\ntorre,\nmar,\nbarco.');
+	// The turn has not started, so not even those two hold the words yet — the server keeps
+	// them until the clock runs. The card is there, saying so in each player's own language.
+	await expect(anaCard).toHaveValue('The word appears when the turn starts.');
+	await expect(carlaCard).toHaveValue('La palabra aparece al empezar el turno.');
 	await expect(bertoCard).toHaveValue('');
 	await expect(davidCard).toHaveValue('');
 
@@ -230,6 +231,15 @@ test('shared Spanish cards, per-player UI and authoritative role actions', async
 	await ana.keyboard.press('Enter');
 	await expect(anaCard).toBeFocused();
 
+	// Starting the clock is what delivers the card, to the clue-giver and the monitor alike,
+	// in the one shared deck language. Nobody else's projection gains anything.
+	await expect(anaCard).toHaveValue(
+		'Target word: faro.\nForbidden words:\nluz,\ncosta,\ntorre,\nmar,\nbarco.');
+	await expect(carlaCard).toHaveValue(
+		'Palabra objetivo: faro.\nPalabras prohibidas:\nluz,\ncosta,\ntorre,\nmar,\nbarco.');
+	await expect(bertoCard).toHaveValue('');
+	await expect(davidCard).toHaveValue('');
+
 	await expect(ana.locator('.forbidden-correct')).toBeVisible();
 	await expect(ana.locator('.forbidden-pass')).toBeVisible();
 	await expect(carla.locator('.forbidden-violation')).toBeVisible();
@@ -300,11 +310,27 @@ test('shared Spanish cards, per-player UI and authoritative role actions', async
 	await expect(ana.locator('.forbidden-score').first()).toContainText('1');
 	await flushAxeAudit(carla);
 
+	// P skips the word from the words themselves. Passing used to be the one clue-giver action
+	// that needed a tab away from the card, with the clock running.
 	const beforePass = await anaCard.inputValue();
-	await ana.locator('.forbidden-pass').click();
+	await anaCard.focus();
+	await ana.keyboard.press('p');
 	await expectAnnouncement(berto, /Ana pasa/);
 	await expect(anaCard).not.toHaveValue(beforePass);
+	await expect(anaCard).toBeFocused();
 	await expect(ana.locator('.forbidden-score').first()).toContainText('1');
+
+	// The button is the same action for a mouse or a switch, and the turn allows three passes.
+	// Counting the lines rather than waiting for one more: `expectAnnouncement` scans the whole
+	// log, so a second wait for "Ana pasa" would match the keyboard one and prove nothing.
+	const beforeSecondPass = await anaCard.inputValue();
+	await ana.locator('.forbidden-pass').click();
+	await expect(anaCard).not.toHaveValue(beforeSecondPass);
+	await expect(anaCard).toBeFocused();
+	await expect.poll(async () => {
+		const heard: string[] = await berto.evaluate(() => (window as any).__announcements ?? []);
+		return heard.filter(line => /Ana pasa/.test(line)).length;
+	}).toBe(2);
 
 	// Reach a narrow, dark rendering of the live monitor state and verify it neither clips
 	// horizontally nor loses its role control. Automatic teardown audits the final state too.
@@ -377,4 +403,109 @@ test('the host can deal the whole room into the teams in one move', async ({ bro
 	await startGame(ana, [ana, berto, carla, david]);
 	// A random deal may or may not put Ana on the team that opens, so only the team is asserted.
 	await expect(ana.locator('.forbidden-now__line')).toContainText('Equipo Rojo va a jugar.');
+});
+
+test('a second match at the same table is dealt words the first one never used', async ({ browser }) => {
+	// Reported from play: a group playing several matches in a row kept meeting the same words.
+	// Every match reshuffled the whole deck as if it were the table's first, so with a short match
+	// spending a handful of cards out of 556 a repeat was roughly even odds. The table now
+	// remembers what it has been dealt and the next match starts with what is left.
+	const pages = await Promise.all([
+		newPlayerPage(browser, 'es-ES'),
+		newPlayerPage(browser, 'es-ES'),
+		newPlayerPage(browser, 'es-ES'),
+		newPlayerPage(browser, 'es-ES'),
+	]);
+	const [ana, berto, carla, david] = pages;
+
+	// One rotation, chosen here rather than inherited: what this test needs is the SHORTEST match
+	// the rules allow, and the package's own figure is free to change — it went from 1 to 5 and
+	// left this loop playing half a match. The lobby offers the rule, so the spec states it.
+	const code = await createGame(ana, 'Ana', BOARD, {
+		maxPlayers: 4, teamCount: 2, contentLanguage: 'es', houseRules: { forbiddenCycles: 1 },
+	});
+	await joinGame(berto, code, 'Berto');
+	await joinGame(carla, code, 'Carla');
+	await joinGame(david, code, 'David');
+	await assign(ana, 0, 'Ana');
+	await assign(ana, 0, 'Berto');
+	await assign(ana, 1, 'Carla');
+	await assign(ana, 1, 'David');
+
+	const tableId = new URL(ana.url()).searchParams.get('gameId')!;
+	expect(tableId, 'the table id is in the page URL').toBeTruthy();
+
+	/**
+	 * Whoever holds the clue-giver's start button right now — the role rotates between teams, so
+	 * it is a different page every turn — or null once the match has ended instead.
+	 */
+	async function clueGiver(): Promise<Page | null> {
+		const deadline = Date.now() + 15_000;
+		while (Date.now() < deadline) {
+			for (const page of pages) {
+				if (await page.locator('.forbidden-start').isVisible()) return page;
+				if (await page.locator('.end-screen').isVisible()) return null;
+			}
+			await ana.waitForTimeout(100);
+		}
+		const seen = [];
+		for (const page of pages) {
+			seen.push({
+				duty: await page.locator('.forbidden-role-detail').textContent(),
+				summary: await page.locator('.forbidden-turn-summary').textContent(),
+				controls: await page.locator('.forbidden-controls button:not([hidden])').allTextContents(),
+				end: await page.locator('.end-screen').count(),
+			});
+		}
+		throw new Error(`no start button and no end screen anywhere: ${JSON.stringify(seen, null, 1)}`);
+	}
+
+	/** The target word on a page's private card, once the clock is running. */
+	async function targetWord(page: Page): Promise<string> {
+		const value = await page.locator('.forbidden-secret__text').inputValue();
+		return /^Palabra objetivo: (.+)\.$/m.exec(value)?.[1]
+			?? `unparsed:${value.slice(0, 40)}`;
+	}
+
+	/** Play a whole match by starting each turn and letting its clock run out. */
+	async function playAMatch(): Promise<string[]> {
+		const words: string[] = [];
+		for (let turn = 0; turn < 8; turn++) {
+			const giver = await clueGiver();
+			if (!giver) break; // the match ended instead of offering another turn
+			await giver.locator('.forbidden-start').click();
+			await expect(giver.locator('.forbidden-correct')).toBeVisible();
+			words.push(await targetWord(giver));
+			// The opening team banks one word. Without a single point the rotation ends 0-0, and a
+			// tie adds another COMPLETE rotation — a match that can never finish.
+			if (turn === 0) {
+				await giver.locator('.forbidden-correct').click();
+				await expect(giver.locator('.forbidden-secret__text'))
+					.not.toHaveValue(new RegExp(`objetivo: ${words[0]}\\.`));
+				words.push(await targetWord(giver));
+			}
+			await expireRoundClock(tableId);
+		}
+		return words;
+	}
+
+	await startGame(ana, pages);
+	const first = await playAMatch();
+	expect(first.length, 'the first match dealt at least one word').toBeGreaterThan(0);
+	await expect(ana.locator('.end-screen')).toBeVisible();
+	await flushAxeAudit(ana);
+
+	// Back to the table, and away again: the same group, the same teams, the same deck.
+	const backToTable = appI18n('es').game.end_back_to_table as string;
+	for (const page of pages) {
+		await page.getByRole('button', { name: backToTable }).click();
+		await expect(page.locator('.end-screen')).toBeHidden();
+	}
+	await startGame(ana, pages);
+
+	const second = await playAMatch();
+	expect(second.length).toBeGreaterThan(0);
+	expect(second.filter(word => first.includes(word)),
+		`the second match repeated ${JSON.stringify(second.filter(w => first.includes(w)))} from ${JSON.stringify(first)}`,
+	).toEqual([]);
 });

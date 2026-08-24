@@ -175,19 +175,135 @@ test('the letter die shows the round letter and re-rolls only when a new round d
 	assert.equal(die.classList.contains('categories-die--rolling'), true);
 });
 
-test('each answer field sits in a group naming its category AND the round letter', () => {
+test('the whole sheet is ONE named group, named by the heading it sits under', () => {
 	const h = harness('p1');
 
-	const groups = Array.from(h.element.querySelectorAll<HTMLElement>('.categories-sheet-group'));
+	const group = h.element.querySelector<HTMLElement>('.categories-sheet-group')!;
+	const heading = h.element.querySelector<HTMLElement>('#categories-sheet-title')!;
 
-	assert.equal(groups.length, 2, 'one group per category, not one for the whole sheet');
-	assert.equal(groups[0].getAttribute('role'), 'group');
-	// Arriving at the field announces the group: the letter is repeated at every box instead of
-	// being read once at the top of a long sheet.
-	assert.match(groups[0].getAttribute('aria-label')!, /An animal/);
-	assert.match(groups[0].getAttribute('aria-label')!, /\bR\b/);
-	assert.ok(groups[0].querySelector('input.categories-sheet-input'), 'the field is inside its group');
-	assert.ok(groups[0].querySelector('label'), 'and so is its label');
+	assert.equal(group.getAttribute('role'), 'group');
+	// Borrowed, not paraphrased: a second sentence saying the same thing in slightly other
+	// words is read out immediately after this one, and one of them has to go.
+	assert.equal(group.getAttribute('aria-labelledby'), 'categories-sheet-title');
+	assert.equal(group.getAttribute('aria-label'), null);
+	assert.match(heading.textContent!, /\bR\b/, 'and the name still carries the round letter');
+	// One group for twelve related fields, not twelve groups of one. Scoped to the sheet: what
+	// the rest of the page does with groups is not this test's business.
+	assert.equal(h.element.querySelectorAll('.categories-sheet [role="group"]').length, 1);
+	// It WRAPS the list: role="group" on the <ol> itself would orphan every <li> inside it.
+	assert.ok(group.querySelector('ol.categories-sheet-list'), 'the list keeps its own semantics');
+	assert.equal(inputs(h).length, 2, 'and the fields still live inside it');
+});
+
+test('L says the letter and R the clock, and neither steals a keystroke from an answer', () => {
+	const h = harness('p1', 'writing');
+	h.board.handleTimerTick(42);
+	const [first] = inputs(h);
+
+	const press = (target: EventTarget, key: string) => {
+		const event = new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+		target.dispatchEvent(event);
+		return event;
+	};
+
+	// Bare letters, from anywhere that is not a text box.
+	press(h.element, 'l');
+	assert.match(h.announced.at(-1)!, /\bR\b/);
+	press(h.element, 'r');
+	assert.match(h.announced.at(-1)!, /42/);
+
+	// Inside a field they type instead of acting. Reaching them from there is the command
+	// prefix's job (Ctrl+Shift+Space, then the letter), which replays the keystroke on the
+	// surface — the very case covered above — so this handler needs no form of its own.
+	h.announced.length = 0;
+	first.focus();
+	for (const key of ['l', 'r']) {
+		assert.equal(press(first, key).defaultPrevented, false, key);
+	}
+	assert.deepEqual(h.announced, []);
+});
+
+const ask = (h: Harness, key: string) =>
+	h.element.dispatchEvent(new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+
+test('a personal answer is also shown, quietly, and never twice to a screen reader', () => {
+	const h = harness('p1', 'writing');
+	const echo = h.element.querySelector<HTMLElement>('.categories-echo')!;
+
+	assert.equal(echo.hidden, true, 'nothing to echo before anything is asked');
+
+	ask(h, 'l');
+
+	assert.equal(echo.hidden, false);
+	assert.equal(echo.textContent, h.announced.at(-1));
+	// The live region already said it; showing it must not make it speak again.
+	assert.equal(echo.getAttribute('aria-hidden'), 'true');
+
+	ask(h, 'r');
+	assert.equal(echo.textContent, h.announced.at(-1), 'it replaces itself instead of stacking');
+});
+
+test('a shown answer expires on its own, and speaks no second time when it goes', () => {
+	const h = harness('p1', 'writing');
+	const echo = h.element.querySelector<HTMLElement>('.categories-echo')!;
+	ask(h, 'r');
+	const spoken = h.announced.length;
+
+	h.runTimers();
+
+	// "23 seconds remaining" was true when it was asked and false a second later; left on
+	// screen it would be read as the current state.
+	assert.equal(echo.hidden, true);
+	assert.equal(echo.textContent, '');
+	assert.equal(h.announced.length, spoken, 'the visible half is visual only, coming AND going');
+});
+
+test('a new round takes the previous round\'s answer off the screen', () => {
+	const h = harness('p1', 'writing');
+	const echo = h.element.querySelector<HTMLElement>('.categories-echo')!;
+	ask(h, 'l');
+	assert.equal(echo.hidden, false);
+
+	// The letter of round 1 is not an old answer once round 2 has its own: it is a wrong one.
+	(h.state as any).categories.round.roundNumber += 1;
+	(h.state as any).categories.round.letter = 'M';
+	h.render();
+
+	assert.equal(echo.hidden, true);
+	assert.equal(echo.textContent, '');
+});
+
+test('a phase change clears it too', () => {
+	const h = harness('p1', 'writing');
+	const echo = h.element.querySelector<HTMLElement>('.categories-echo')!;
+	ask(h, 'l');
+
+	(h.state as any).categories.round.phase = 'review';
+	h.render();
+
+	assert.equal(echo.hidden, true, 'the duty it answered is over');
+});
+
+test('an answer with nothing in it draws nothing at all', () => {
+	const h = harness('p1', 'writing');
+	const echo = h.element.querySelector<HTMLElement>('.categories-echo')!;
+	const finish = h.element.querySelector<HTMLElement>('.categories-finish')!;
+	finish.setAttribute('aria-disabled', 'true');
+	h.element.querySelector<HTMLElement>('#categories-finish-hint')!.textContent = '';
+
+	finish.click();
+
+	// An empty bordered box reads as a rendering bug to the player it was drawn for.
+	assert.equal(echo.hidden, true);
+});
+
+test('the surface declares both queries to the shortcuts help', () => {
+	const h = harness('p1');
+
+	const shortcuts = h.board.helpShortcuts();
+
+	assert.ok(shortcuts.find(s => s.keys === 'l'), 'the round letter');
+	assert.ok(shortcuts.find(s => s.keys === 'r'), 'the clock');
 });
 
 test('the round heading names the letter every answer has to start with', () => {
