@@ -198,10 +198,10 @@ export class TableView {
 		this.deckSelect?.addEventListener('change', event => {
 			void this.deps?.setContentLanguage?.((event.target as HTMLSelectElement).value);
 		});
-		// Wired HERE, with the other fixed elements, and not beside the render that fills it: the
-		// panel is one element that outlives every board shown in it, so wiring it per render made
-		// a host who had seen three boards send three identical writes for one change. It
-		// delegates, so it reaches whatever was rendered last.
+		// The panel is filled elsewhere (renderRules) but wired HERE, with the other fixed
+		// elements: it is obtained once and never replaced, only refilled, so its listener belongs
+		// where the ones that never change do. It delegates, so it reaches whatever was rendered
+		// into it last.
 		this.rulesFields?.addEventListener('change', () => void this.saveRules());
 	}
 

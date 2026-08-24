@@ -427,32 +427,6 @@ test('the rules panel is re-translated when the package words arrive late', asyn
 	assert.ok(translated.length >= 2, 'every table re-resolves the panel, not only the first');
 });
 
-// The panel is ONE element and the view outlives every table shown in it — a player moves
-// between tables without the page ever reloading. Wiring the save beside the render meant each
-// new board added another listener to the same element, so one click on a rule sent as many
-// identical writes as boards that host had seen.
-test('a host who has seen three boards still saves a rule change once', async () => {
-	const saved: Record<string, boolean | number | string>[] = [];
-	const view = newView({
-		isHost: () => true,
-		loadRules: async () => ({ houseRules: [{ id: 'auctions', type: 'toggle', default: true }] }) as any,
-		saveRules: async values => { saved.push(values); },
-	});
-
-	for (const packageToken of ['pkg-a', 'pkg-b', 'pkg-c']) {
-		view.setTable(table({ packageToken }));
-		await new Promise(resolve => setTimeout(resolve, 0));
-	}
-
-	const auctions = document.querySelector<HTMLInputElement>('#table-rules-fields [data-rule-id="auctions"]')!;
-	auctions.checked = false;
-	auctions.dispatchEvent(new (globalThis as any).window.Event('change', { bubbles: true }));
-	await new Promise(resolve => setTimeout(resolve, 0));
-
-	assert.equal(saved.length, 1);
-	assert.equal(saved[0].auctions, false);
-});
-
 test('a guest is never shown the rule editor, and neither is a board that declares no rules', async () => {
 	const guest = newView({ isHost: () => false, loadRules: async () => ({ houseRules: [] }) as any, saveRules: async () => {} });
 	guest.setTable(table({ packageToken: 'pkg' }));

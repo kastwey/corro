@@ -208,6 +208,22 @@ it. A phase can be set and replaced a few statements later inside one method, in
 client ever sees it and the finding is about a situation the game does not have. The suites sit
 downstream of the rules: they can tell you a state is handled, never that it happens.
 
+**The same question points at the AUTHOR.** A PR that claims to fix a bug has to establish that
+the bug happens, not only that the fix works — an author can build an unreachable state as easily
+as you can, and then the change is correct, the suite is green, and the whole thing rests on
+something that never occurs. Reinstating the bug and watching the test fail does NOT answer this,
+which is what makes it dangerous: a test can discriminate perfectly over a scenario no session can
+produce. Ask what would have to be true for this to happen, then go and check that thing: a value
+written only at creation, an element that lives one page load, a view the app never shows twice.
+The answer is usually in the file the PR already touches — once, it was in a doc comment four
+lines above the change.
+
+**When a premise is disproved, re-derive the conclusion instead of resizing it.** Told that leaving
+a table reloads the page, the reflex was to keep the finding and shrink it — "not three tables,
+three boards" — when the question that mattered was whether anything survived at all. A correction
+to a premise invalidates everything built on it; salvaging the conclusion means the second version
+rests on nothing checked either.
+
 That makes the rulebook the authority — **unless the PR is changing the rulebook itself**, and
 then the code cannot vouch for its own correctness. There the question is not "what does this do"
 but "what should it do", and the answer lives outside the repository: the published rules of the
