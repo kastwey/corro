@@ -1530,7 +1530,7 @@
     "shedding_watch_none": "Nadie va corto",
     "shedding_watch_one": "{{name}}: una carta",
     "shedding_watch_cards": "{{name}}: {{count}} cartas",
-    "shedding_watch_undeclared": "{{name}}: una carta, ¡sin cantar!",
+    "shedding_watch_undeclared": "{{name}}: una carta, ¡sin declarar!",
     "help_cmd_last_card_declare": "Declarar tu última carta",
     "help_cmd_last_card_catch": "Pillar a un rival que no declaró",
     "help_cmd_last_card_watch": "Leer quién va a ganar (la lista de vigilancia)",
