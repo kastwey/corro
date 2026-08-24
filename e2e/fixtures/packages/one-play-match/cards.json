@@ -1,0 +1,42 @@
+[
+  {
+    "id": "blue-2",
+    "type": "number",
+    "color": "blue",
+    "value": 2,
+    "count": 1,
+    "nameKey": "cards.blue_2"
+  },
+  {
+    "id": "red-9",
+    "type": "number",
+    "color": "red",
+    "value": 9,
+    "count": 1,
+    "nameKey": "cards.red_9"
+  },
+  {
+    "id": "red-3",
+    "type": "number",
+    "color": "red",
+    "value": 3,
+    "count": 1,
+    "nameKey": "cards.red_3"
+  },
+  {
+    "id": "blue-9",
+    "type": "number",
+    "color": "blue",
+    "value": 9,
+    "count": 1,
+    "nameKey": "cards.blue_9"
+  },
+  {
+    "id": "red-5",
+    "type": "number",
+    "color": "red",
+    "value": 5,
+    "count": 1,
+    "nameKey": "cards.red_5"
+  }
+]
