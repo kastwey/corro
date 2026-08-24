@@ -53,7 +53,7 @@ test('shedding: matches, the drawn-card pause, a penalty and the on-demand count
 	// played on it. The engine's own C repeats S word for word here, so the board takes it.
 	await ana.keyboard.press('c');
 	// Just the card: no label, and no colour — yellow on yellow would only repeat itself.
-	await expectAnnouncement(ana, /^Amarillo 0\.$/);
+	await expectAnnouncement(ana, /^0 amarillo\.$/);
 	await expect(anaCards.first()).toBeFocused();
 
 	const cardOf = (page: typeof ana, name: RegExp) =>
