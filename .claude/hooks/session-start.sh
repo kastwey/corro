@@ -15,6 +15,10 @@
 #   5. the matching browser  -> …without which the Playwright suite cannot start
 #   6. a warm server build   -> so the first dotnet test is a test run, not a first build
 #
+# …and then points git at the repository's shared pre-push hook, which a fresh clone does not
+# inherit: core.hooksPath is per-CLONE config, so the gate that refuses a red push was simply
+# absent in every remote session until it was set here.
+#
 # The container is snapshotted once this finishes, so a later session starts with all of it
 # already in place: the cost is paid per snapshot, not per session. Every step is idempotent — a
 # second run finds the SDK installed, npm up to date and the browser present, and does nothing.
@@ -112,5 +116,21 @@ echo "[session-start] warming the server build"
 dotnet build "$ROOT/server/CorroServer.csproj" -p:SkipFrontendBuild=true --nologo >> "$LOG" 2>&1 \
 	|| echo "[session-start] server warm-up skipped; it will build on first use (see $LOG)"
 
+# ── And the shared pre-push hook ────────────────────────────────────────────────────────────
+# core.hooksPath is per-CLONE git config, so a fresh container never inherits it and
+# .githooks/pre-push — which refuses a push while the suites are red — was quietly doing nothing
+# in every remote session. This is the worst place to lose that net: nobody is watching the
+# terminal here to notice. AGENTS.md already asks every path that is not tools/dev.ps1 to enable
+# it once per clone; a remote session is one of those paths, and this is where it does it.
+#
+# It leaves the working tree alone: .githooks/pre-push is already mode 100755 in the index, so
+# the installer's chmod and update-index find nothing to change and stage nothing. Idempotent,
+# and deliberately NOT fatal — the hook is a local safety net (CI is the real gate), so a failure
+# here must not throw away the SDK, the packages and the browser installed above.
+echo "[session-start] pre-push hook"
+pwsh -NoProfile -File "$ROOT/tools/install-hooks.ps1" -RepositoryRoot "$ROOT" >> "$LOG" 2>&1 \
+	|| echo "[session-start] pre-push hook NOT installed; a push will not run the suites (see $LOG)"
+
 echo "[session-start] ready — dotnet $(dotnet --version), pwsh $PWSH_VERSION, node $(node --version)."
 echo "[session-start] All four gates in AGENTS.md can be run; E2E from e2e/, never the repo root."
+echo "[session-start] git push runs the frontend + backend suites and blocks a red push; RUN_E2E=1 adds E2E."

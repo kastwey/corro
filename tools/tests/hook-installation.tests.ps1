@@ -16,6 +16,7 @@ $tools = Split-Path -Parent $PSScriptRoot
 $root = Split-Path -Parent $tools
 $installer = Join-Path $tools 'install-hooks.ps1'
 $devScript = Join-Path $tools 'dev.ps1'
+$sessionStart = Join-Path $root '.claude/hooks/session-start.sh'
 $readme = Join-Path $root 'README.md'
 $tempRepo = Join-Path ([IO.Path]::GetTempPath()) ('corro-hook-test-' + [Guid]::NewGuid().ToString('N'))
 
@@ -48,6 +49,17 @@ try {
     $emulatorPosition = $devSource.IndexOf('"start-emulators.ps1"', [StringComparison]::Ordinal)
     Assert-True ($installPosition -ge 0) 'the development startup installs hooks'
     Assert-True ($installPosition -lt $emulatorPosition) 'hook setup precedes emulator startup'
+
+    # A REMOTE session is a fresh clone every time, and core.hooksPath is per-clone config, so
+    # the net is absent there unless the session-start hook installs it too. It was: a push from
+    # a cloud session ran no suites at all, silently, with nobody watching the terminal.
+    # Anchored on the invocation itself (a line that RUNS pwsh), so that merely naming the script
+    # in a comment can neither satisfy nor break these.
+    $sessionStartSource = Get-Content -LiteralPath $sessionStart -Raw
+    Assert-True ($sessionStartSource -match '(?m)^pwsh[^\n]*install-hooks\.ps1') 'the remote session start installs hooks'
+    # Never fatal there: the hook is a local convenience (CI is the real gate), and aborting the
+    # start-up over it would throw away the SDK, the packages and the browser the gates need.
+    Assert-True ($sessionStartSource -match '(?m)^pwsh[^\n]*install-hooks\.ps1[^\n]*\\\r?\n\s*\|\|') 'a failed hook install does not abort the session start'
 
     $readmeSource = Get-Content -LiteralPath $readme -Raw
     Assert-True ($readmeSource.Contains('pwsh -File ./tools/install-hooks.ps1')) 'the README documents manual setup'

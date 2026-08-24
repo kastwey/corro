@@ -67,7 +67,9 @@ A cloud session starts from a bare container: repository and Node, and none of t
 above except the frontend one. `.claude/hooks/session-start.sh` (registered in
 `.claude/settings.json`) installs the rest before the session begins — PowerShell, the .NET SDK,
 both `node_modules`, the Playwright browser — and compiles the server once so the first
-`dotnet test` is a test run. It does nothing on a local machine (`$CLAUDE_CODE_REMOTE`), where
+`dotnet test` is a test run. It also points the clone at the shared pre-push hook below, which a
+fresh container never inherits (`core.hooksPath` is per-clone config, so that gate was silently
+absent in every remote session). It does nothing on a local machine (`$CLAUDE_CODE_REMOTE`), where
 `tools/dev.ps1` owns that job, and nothing on a second run: about half a minute from empty, a few
 seconds once the container image has it. **An agent in a remote session has no excuse for an
 unrun gate** — if one of them will not start, say what failed rather than skipping it.
@@ -78,7 +80,8 @@ A shared `pre-push` hook (`.githooks/pre-push`) refuses to push to ANY branch wh
 are red: it always checks repository conventions, runs the frontend (build + `npm test`) and
 backend (build + `dotnet test`) suites, and runs E2E only when `RUN_E2E=1` (it needs a built
 server + installed Playwright browsers, so it stays opt-in). `tools/dev.ps1` installs it
-idempotently on startup; when using another development path, enable it once per clone:
+idempotently on startup, and so does the remote session-start hook above; when using another
+development path, enable it once per clone:
 
 ```bash
 pwsh -File tools/install-hooks.ps1        # sets core.hooksPath=.githooks
