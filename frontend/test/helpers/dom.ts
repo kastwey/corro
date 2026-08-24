@@ -46,7 +46,10 @@ export function setupDom(): JSDOM {
 			this.open = false;
 			this.removeAttribute('open');
 			// Real dialogs fire `close` (code relies on it for cleanup — e.g. a dragged
-			// dialog resets its position there); dispatch it like the platform would.
+			// dialog resets its position there), so dispatch it here too. One deliberate
+			// infidelity: the platform QUEUES that event and this fires it synchronously, which
+			// keeps every close-and-assert test straightforward. A test that needs the real
+			// order stages it by hand — see dialogFocusReturn.test.ts.
 			this.dispatchEvent(new dom.window.Event('close'));
 		};
 	}

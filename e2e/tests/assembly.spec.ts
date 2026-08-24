@@ -67,10 +67,14 @@ test('assembly: install, auto-targeted breakdown, refusal, face-down discard, re
 	await expect(helpDialog).toContainText(/4 sistemas distintos operativos/);
 	await helpDialog.locator('.btn-primary').click();
 	await expect(helpDialog).toBeHidden();
+	// Closing a card's help lands back ON THE CARD, so the next key plays it. Asserted from the
+	// bare close, with nothing focusing the board first: the dialog's close event arrives a few
+	// milliseconds LATE, and the opener restore riding on it used to undo this landing and leave
+	// the player on the row's Ayuda button — where Enter re-opened the help instead of playing.
+	// Re-focusing the board here repaired that silently, and hid it from this suite (issue #15).
+	await expect(anaCards.first()).toBeFocused();
 
 	// ── Ana installs her Reactor (Enter, no targeting) and hears her refill privately. ──
-	await ana.locator('#board').focus();
-	await expect(anaCards.first()).toBeFocused();
 	const finishInstallOrder = await watchAnnouncementBeforeHandUpdate(ana, /Instalas un módulo/);
 	await ana.keyboard.press('Enter');
 	await expectAnnouncement(berto, /Ana instala un módulo/);
