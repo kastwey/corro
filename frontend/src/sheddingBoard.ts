@@ -39,6 +39,11 @@ const SHEDDING_ACTION_RANK: Readonly<Record<string, number>> = {
 const sheddingWeight = (card: HandCard): number =>
 	card.typeKey === 'number' ? card.value : 10 + (SHEDDING_ACTION_RANK[card.typeKey] ?? 0);
 
+/** Shift+<letter> → the ordering it selects. C for colour and O for the original deal order
+ *  read the same in both languages; Shift+N is not here because it alternates rather than
+ *  selecting (see the keydown handler). */
+const SORT_KEYS: Readonly<Record<string, string>> = { c: 'colour', o: 'hand' };
+
 /** Cuatro Colores answers two questions, so it offers two axes and drops the generic
  *  "by type": with actions ranked, ordering by value ALREADY groups every draw two with
  *  every draw two, whatever their colours. Ids match the generic ones so the wording and a
@@ -147,6 +152,9 @@ export class SheddingBoard {
 		shortcuts.push({ keys: 'shift + 0 – 9', descKey: 'game.help_cmd_shedding_number_jump_back' });
 		shortcuts.push({ keys: 'i', descKey: 'game.help_cmd_shedding_special_jump' });
 		shortcuts.push({ keys: 'shift + i', descKey: 'game.help_cmd_shedding_special_jump_back' });
+		shortcuts.push({ keys: 'shift + n', descKey: 'game.help_cmd_shedding_sort_flip' });
+		shortcuts.push({ keys: 'shift + c', descKey: 'game.help_cmd_shedding_sort_colour' });
+		shortcuts.push({ keys: 'shift + o', descKey: 'game.help_cmd_shedding_sort_hand' });
 		if (this.deps.getGameState()?.sheddingRules?.lastCardCall) {
 			shortcuts.push(
 				{ keys: 'u', descKey: 'game.help_cmd_last_card_declare' },
@@ -310,6 +318,25 @@ export class SheddingBoard {
 				e.stopPropagation();
 				this.jumpBy(c => c.typeKey !== 'number', e.shiftKey, 'game.shedding_no_special_cards');
 			}
+		});
+
+		// Reordering the hand without walking into the Shift+F10 menu: Shift+N flips the two
+		// value ends (which one you want changes with the hand you hold), Shift+C groups by
+		// colour, Shift+O returns to the order the cards arrived in. The engine binds all three
+		// chords to its property/board commands, which a card family has no board for — they are
+		// inert here and already hidden from this family's help, so the letters are free
+		// (exploding shadows plain N the same way).
+		this.element.addEventListener('keydown', (e) => {
+			if (!e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
+			// Shift+N alternates rather than picking a side: from colour or deal order it enters
+			// at the default end, so one more press always walks back out.
+			const wanted = e.key.toLowerCase() === 'n'
+				? (this.hand.currentSort() === 'value' ? 'valueAsc' : 'value')
+				: SORT_KEYS[e.key.toLowerCase()];
+			if (!wanted) return;
+			e.preventDefault();
+			e.stopPropagation();
+			this.hand.applySort(wanted);
 		});
 
 		// Last-card keys (house rule): U declares, P catches a rival who forgot, V reads the

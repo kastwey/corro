@@ -59,6 +59,7 @@ juego. Pulsa **Ctrl+F1** para ver todos los atajos.
 - **C** dice la carta de arriba, y nada más: es la consulta rápida entre turno y turno. Tras un comodín añade el color que manda, porque ahí la carta no lo dice.
 - **D** anuncia el recuento del mazo, la carta superior y el color en vigor. **S** anuncia tu mano, el sentido y tus puntos; **Shift+S** repasa a los rivales.
 - **R**, **G**, **B** e **Y** saltan por cartas de ese color; los números saltan por cartas del mismo valor e **I** por cartas especiales. Añade **Shift** para recorrer hacia atrás.
+- **Shift+N** ordena la mano de menor a mayor, y otra pulsación al revés; **Shift+C** la agrupa por colores y **Shift+O** la devuelve al orden en que llegaron las cartas. Tu elección se recuerda, y **Shift+F10** ofrece lo mismo desde el menú.
 - Algunas reglas añaden teclas para jugar dobles o declarar la última carta. **Ctrl+F1** siempre muestra la lista exacta para la partida actual.
 
 ### Moverte entre zonas y usar el chat

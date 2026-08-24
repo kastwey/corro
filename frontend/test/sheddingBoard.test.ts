@@ -247,6 +247,9 @@ test('helpShortcuts reports the REAL wiring: Enter/Space + S/Shift+S, no discard
 		{ keys: 'shift + 0 – 9', descKey: 'game.help_cmd_shedding_number_jump_back' },
 		{ keys: 'i', descKey: 'game.help_cmd_shedding_special_jump' },
 		{ keys: 'shift + i', descKey: 'game.help_cmd_shedding_special_jump_back' },
+		{ keys: 'shift + n', descKey: 'game.help_cmd_shedding_sort_flip' },
+		{ keys: 'shift + c', descKey: 'game.help_cmd_shedding_sort_colour' },
+		{ keys: 'shift + o', descKey: 'game.help_cmd_shedding_sort_hand' },
 	]);
 });
 
@@ -548,6 +551,72 @@ test('an unsorted hand keeps the deal order, and the choice survives a repaint',
 	sortTool('valueAsc').click();
 	v.update(state); // a server echo must not throw the player back to the default
 	assert.equal(sortTool('valueAsc').getAttribute('aria-pressed'), 'true');
+});
+
+test('Shift+N flips between the two value orderings, saying which one it landed on', () => {
+	const { el, said } = boardWith({}, REPORTED_HAND);
+	assert.deepEqual(handNames().slice(0, 2), ['c.draw2Yellow', 'c.draw2Red'], 'highest first by default');
+
+	key(el, 'N', { shiftKey: true });
+	assert.deepEqual(handNames().slice(0, 2), ['c.red0', 'c.yellow2']);
+	assert.equal(said.at(-1), 'game.hand_sorted_valueAsc', 'the reorder is spoken, not just painted');
+
+	key(el, 'N', { shiftKey: true });
+	assert.deepEqual(handNames().slice(0, 2), ['c.draw2Yellow', 'c.draw2Red']);
+	assert.equal(said.at(-1), 'game.hand_sorted_value');
+});
+
+test('Shift+C groups by colour and Shift+O returns to the order the cards arrived in', () => {
+	const { el, said } = boardWith({}, REPORTED_HAND);
+
+	key(el, 'C', { shiftKey: true });
+	assert.equal(said.at(-1), 'game.hand_sorted_colour');
+	// Colours rank by their spoken NAME, which here is the untranslated key: colors.red before
+	// colors.yellow. Each colour then reads as a small hand — its numbers, then its actions.
+	assert.deepEqual(handNames(), [
+		'c.red0', 'c.red5', 'c.draw2Red',
+		'c.yellow2', 'c.yellow2', 'c.skipYellow', 'c.draw2Yellow',
+	]);
+
+	key(el, 'O', { shiftKey: true });
+	assert.equal(said.at(-1), 'game.hand_sorted_hand');
+	assert.deepEqual(handNames(), [
+		'c.red0', 'c.yellow2', 'c.yellow2', 'c.red5', 'c.draw2Yellow', 'c.skipYellow', 'c.draw2Red',
+	], 'the deal order, untouched');
+});
+
+test('Shift+N from colour or deal order enters at the default end, and walks back out', () => {
+	const { el } = boardWith({}, REPORTED_HAND);
+	sortTool('colour').click();
+
+	key(el, 'N', { shiftKey: true });
+	assert.equal(sortTool('value').getAttribute('aria-pressed'), 'true', 'colour → highest first');
+	key(el, 'N', { shiftKey: true });
+	assert.equal(sortTool('valueAsc').getAttribute('aria-pressed'), 'true', 'and back out the other side');
+});
+
+test('the bare letters and the modified chords are left to the engine', () => {
+	const { el } = boardWith({}, REPORTED_HAND);
+	const before = handNames();
+
+	key(el, 'n');                                        // the engine's own piece cycle
+	key(el, 'o');                                        // unbound: not ours to swallow
+	key(el, 'N', { shiftKey: true, ctrlKey: true });      // no board chord starts with Ctrl+Shift
+	key(el, 'C', { shiftKey: true, altKey: true });
+	assert.deepEqual(handNames(), before, 'only the bare Shift+ chords reorder the hand');
+
+	// C alone keeps answering what it always answered: the top card, not an ordering.
+	key(el, 'c');
+	assert.deepEqual(handNames(), before, 'plain C did not reorder anything');
+});
+
+test('the sort keys are documented where the player looks for them', () => {
+	const { view: v } = boardWith({}, REPORTED_HAND);
+	const rows = new Map(v.helpShortcuts().map(s => [s.keys, s.descKey]));
+	assert.equal(rows.get('shift + n'), 'game.help_cmd_shedding_sort_flip');
+	assert.equal(rows.get('shift + c'), 'game.help_cmd_shedding_sort_colour');
+	assert.equal(rows.get('shift + o'), 'game.help_cmd_shedding_sort_hand');
+	assert.equal(rows.get('c'), 'game.help_cmd_shedding_top', 'the plain letter still means the top card');
 });
 
 test('a drawn card lands in its ordered place, not at the end of the hand', () => {
