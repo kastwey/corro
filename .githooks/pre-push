@@ -40,6 +40,7 @@ step() {
 }
 
 step "repository conventions" "pwsh -NoProfile -File '$ROOT/tools/tests/repository-language.tests.ps1'"
+step "build stamp" "pwsh -NoProfile -File '$ROOT/tools/tests/build-version.tests.ps1'"
 step "frontend build + tests" "cd '$ROOT/frontend' && npm run build && npm test"
 
 # Release the .NET build lock: a running dev server holds CorroServer.dll (best-effort).

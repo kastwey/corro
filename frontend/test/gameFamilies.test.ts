@@ -55,7 +55,7 @@ test('race identity: the seat name is the panel line and the C announcement', ()
 	const gs = raceState();
 	const family = familyFor('race')!;
 	assert.equal(family.boardIdentity(gs, 'p1', () => null), 'Red squadron');
-	const said = family.identityAnnouncement(gs, 'p1', () => null);
+	const said = family.identityAnnouncement!(gs, 'p1', () => null);
 	assert.deepEqual(said, { key: 'game.identity_race', vars: { squadron: 'Red squadron' } });
 });
 
@@ -63,7 +63,7 @@ test('race identity yields nothing for a player without a seat', () => {
 	const gs = raceState();
 	const family = familyFor('race')!;
 	assert.equal(family.boardIdentity(gs, 'ghost', () => null), null);
-	assert.equal(family.identityAnnouncement(gs, 'ghost', () => null), null);
+	assert.equal(family.identityAnnouncement!(gs, 'ghost', () => null), null);
 });
 
 test('track identity: the token name is the panel line; C speaks token + colour word', () => {
@@ -74,7 +74,7 @@ test('track identity: the token name is the panel line; C speaks token + colour 
 
 	assert.equal(family.boardIdentity(gs, 'p1', getPlayer), 'the duck');
 
-	const said = family.identityAnnouncement(gs, 'p1', getPlayer)!;
+	const said = family.identityAnnouncement!(gs, 'p1', getPlayer)!;
 	// The engine palette hex resolves to a spoken colour WORD ("your colour is #e53935"
 	// would be meaningless aloud).
 	assert.equal(said.key, 'game.identity_track');
@@ -85,6 +85,16 @@ test('track identity: the token name is the panel line; C speaks token + colour 
 test('track identity without an engine colour uses the plain phrasing', () => {
 	const family = familyFor('track')!;
 	const me = { id: 'p1', token: 'duck' } as any;
-	const said = family.identityAnnouncement({ gameType: 'track' } as any, 'p1', () => me)!;
+	const said = family.identityAnnouncement!({ gameType: 'track' } as any, 'p1', () => me)!;
 	assert.equal(said.key, 'game.identity_track_plain');
+});
+
+// The card families deliberately leave C alone: their status line is what S reads, so an
+// identity announcement here would only be the same sentence under a second key — and the
+// key layer no longer routes C to them at all. A new card family that adds one back would
+// resurrect the ambiguity this test exists to prevent.
+test('card families offer no C identity announcement: S already is that sentence', () => {
+	for (const gameType of ['journey', 'assembly', 'draft', 'shedding', 'exploding', 'forbidden', 'categories']) {
+		assert.equal(familyFor(gameType)?.identityAnnouncement, undefined, gameType);
+	}
 });

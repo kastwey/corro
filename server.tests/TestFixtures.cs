@@ -53,7 +53,7 @@ internal static class TestFixtures
 
 	/// <summary>
 	/// Presenter test double that records every client-facing notification so tests can
-	/// assert on state refreshes, square repaints and card reveals. An optional callback
+	/// assert on state checkpoints, card reveals and table-wide responses. An optional callback
 	/// lets a test react to a card reveal (kept for back-compat with NewContext).
 	/// </summary>
 	public sealed class CapturingPresenter : IGamePresenter
@@ -63,18 +63,19 @@ internal static class TestFixtures
 		public CapturingPresenter(Func<CardDrawnNotification, Task>? onCardDrawn = null) => _onCardDrawn = onCardDrawn;
 
 		public int CheckpointCount { get; private set; }
-		public List<Square> SquareChanges { get; } = new();
 		public List<CardDrawnNotification> CardsDrawn { get; } = new();
+		/// <summary>Responses the rulebook addressed to the whole table (IGamePresenter.BroadcastAsync).</summary>
+		public List<ServerResponse> Broadcasts { get; } = new();
+
+		public Task BroadcastAsync(ServerResponse response)
+		{
+			Broadcasts.Add(response);
+			return Task.CompletedTask;
+		}
 
 		public Task CheckpointTurnSegmentAsync()
 		{
 			CheckpointCount++;
-			return Task.CompletedTask;
-		}
-
-		public Task NotifySquareChangedAsync(Square square)
-		{
-			SquareChanges.Add(square);
 			return Task.CompletedTask;
 		}
 

@@ -249,6 +249,9 @@ public class GameRulesSettingsTests
 		Assert.Equal("a", state.CurrentTurn);
 		var announcer = TestFixtures.Announcer(context);
 		Assert.DoesNotContain(announcer.Sent, x => x.Key == "game.turn_of");
+		// And nothing is put to the table: with no auction, the decline concerns only the player
+		// who made it.
+		Assert.Empty(TestFixtures.Presenter(context).Broadcasts);
 	}
 
 	[Fact]
@@ -269,6 +272,18 @@ public class GameRulesSettingsTests
 
 		Assert.True(outcome.AuctionStarted);
 		Assert.NotNull(state.ActiveAuction);
+
+		// The auction is the table's business, not the decliner's: the players who must bid in it
+		// sent no command, so the decline's own response cannot carry it. The rulebook addresses
+		// it to everyone, beside the voice that already announces it — which is what makes it
+		// arrive however the decline was made, a person's command or a bot's.
+		var broadcast = Assert.Single(TestFixtures.Presenter(context).Broadcasts);
+		var started = Assert.IsType<AuctionStartedResponse>(broadcast);
+		Assert.Equal(1, started.SquareIndex);
+		Assert.Equal("Baltic", started.SquareName);
+		Assert.Equal("a", started.InitiatorPlayerId);
+		Assert.Equal(a.Name, started.InitiatorPlayerName);
+		Assert.Equal(context.Settings.AuctionBidTimeoutSeconds, started.BidTimeoutSeconds);
 	}
 
 	// ── Rent collection while in holding ────────────────────────────────────────

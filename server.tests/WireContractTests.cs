@@ -74,8 +74,14 @@ public class WireContractTests
 		var start = header.Index + header.Length;
 		for (var i = start - 1; i < source.Length; i++)
 		{
-			if (source[i] == '{') depth++;
-			else if (source[i] == '}' && --depth == 0) return source[start..i];
+			if (source[i] == '{')
+			{
+				depth++;
+			}
+			else if (source[i] == '}' && --depth == 0)
+			{
+				return source[start..i];
+			}
 		}
 		throw new InvalidOperationException($"interface '{interfaceName}' is never closed in models.ts.");
 	}

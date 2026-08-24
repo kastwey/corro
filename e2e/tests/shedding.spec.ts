@@ -49,6 +49,12 @@ test('shedding: matches, the drawn-card pause, a penalty and the on-demand count
 	await ana.keyboard.press('d');
 	await expectAnnouncement(ana, /Mazo: 93\. Arriba: 0 amarillo, color en vigor amarillo\./);
 	await expect(anaCards.first()).toBeFocused();
+	// C is the same question without the preamble: what is on the table, and what may be
+	// played on it. The engine's own C repeats S word for word here, so the board takes it.
+	await ana.keyboard.press('c');
+	// Just the card: no label, and no colour — yellow on yellow would only repeat itself.
+	await expectAnnouncement(ana, /^Amarillo 0\.$/);
+	await expect(anaCards.first()).toBeFocused();
 
 	const cardOf = (page: typeof ana, name: RegExp) =>
 		page.locator('.hand-card:not(.hand-card--info)', { hasText: name }).first();
@@ -166,5 +172,21 @@ test('shedding: the penalty scoring house rule words the points against their ho
 	await expect(lines.filter({ hasText: 'Llegar a 500 puntos hace perder la partida' })).toHaveCount(1);
 	await expect(lines.filter({ hasText: 'Puntos para ganar' })).toHaveCount(0);
 	await flushAxeAudit(ana);
+
+	// With the dialog holding the keyboard, the surface's read-only keys still answer: keys.ts
+	// keeps the engine's own queries alive here so "a blind player can check their situation
+	// without first dismissing the dialog", and a card family's S is the same kind of question.
+	// (A screen reader in browse mode swallows the letter first — that half is the reader's
+	// mode switch, and the same one every engine query already asks for.)
+	// Counted, not awaited: expectAnnouncement scans the whole log, and Shift+S above already
+	// put a matching line in it — a plain wait would pass with this route removed.
+	const myStatus = /^\d+ cartas?, arriba /;
+	const before = (await ana.evaluate(() => (window as any).__announcements ?? []) as string[])
+		.filter(line => myStatus.test(line)).length;
+	await ana.keyboard.press('s');
+	await expect.poll(async () => {
+		const heard: string[] = await ana.evaluate(() => (window as any).__announcements ?? []);
+		return heard.filter(line => myStatus.test(line)).length;
+	}).toBe(before + 1);
 	await rules.locator('.btn-primary').click();
 });

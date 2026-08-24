@@ -117,7 +117,7 @@ public class ForbiddenFamilyTests
 	}
 
 	[Fact]
-	public async Task Projection_reveals_the_private_card_only_to_clue_giver_and_monitor()
+	public async Task Projection_reveals_the_private_card_only_to_clue_giver_and_monitor_and_only_once_the_clock_runs()
 	{
 		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
 		var family = new ForbiddenFamily();
@@ -126,22 +126,57 @@ public class ForbiddenFamilyTests
 			Players = Players(), Definition = definition, Lang = "en", Teams = Teams(),
 		}).State;
 		var turn = full.Forbidden!.Turn;
+		Assert.Equal(ForbiddenTurnPhase.Preparing, turn.Phase);
 
-		var giver = family.ProjectFor(full, turn.ClueGiverId);
-		var monitor = family.ProjectFor(full, turn.MonitorId);
-		var guesser = family.ProjectFor(full, turn.GuesserId);
-		var spectator = family.ProjectFor(full, "p3");
-		var publicView = family.ProjectFor(full, null);
+		// Reported from play: the card was dealt with the turn, so the clue-giver could plan
+		// clues for as long as they liked before starting the clock and the monitor could learn
+		// the forbidden list by heart. Role alone never authorised the words — the turn has to
+		// be running too, and it is the SERVER that withholds them, not the screen.
+		foreach (var everyone in new[]
+		{
+			family.ProjectFor(full, turn.ClueGiverId),
+			family.ProjectFor(full, turn.MonitorId),
+			family.ProjectFor(full, turn.GuesserId),
+			family.ProjectFor(full, "p3"),
+			family.ProjectFor(full, null),
+		})
+		{
+			Assert.Null(everyone.Forbidden!.Turn.Target);
+			Assert.Null(everyone.Forbidden.Turn.CardId);
+			Assert.Empty(everyone.Forbidden.Turn.ForbiddenWords);
+			Assert.Null(everyone.ForbiddenDeck);
+		}
+
+		var running = full with
+		{
+			Forbidden = full.Forbidden with { Turn = turn with { Phase = ForbiddenTurnPhase.Active } },
+		};
+		var giver = family.ProjectFor(running, turn.ClueGiverId);
+		var monitor = family.ProjectFor(running, turn.MonitorId);
 
 		Assert.Equal("lighthouse", giver.Forbidden!.Turn.Target);
 		Assert.Equal("lighthouse", monitor.Forbidden!.Turn.Target);
-		foreach (var hidden in new[] { guesser, spectator, publicView })
+		Assert.NotEmpty(giver.Forbidden.Turn.ForbiddenWords);
+		foreach (var hidden in new[]
+		{
+			family.ProjectFor(running, turn.GuesserId),
+			family.ProjectFor(running, "p3"),
+			family.ProjectFor(running, null),
+		})
 		{
 			Assert.Null(hidden.Forbidden!.Turn.Target);
 			Assert.Null(hidden.Forbidden.Turn.CardId);
 			Assert.Empty(hidden.Forbidden.Turn.ForbiddenWords);
 			Assert.Null(hidden.ForbiddenDeck);
 		}
+
+		// A finished turn takes the words back: the deck never becomes public by expiring.
+		var over = full with
+		{
+			Forbidden = full.Forbidden with { Turn = turn with { Phase = ForbiddenTurnPhase.Finished } },
+		};
+		Assert.Null(family.ProjectFor(over, turn.ClueGiverId).Forbidden!.Turn.Target);
+
 		Assert.NotNull(full.ForbiddenDeck); // projection never mutates persistence state
 		Assert.Equal("lighthouse", full.Forbidden.Turn.Target);
 	}
@@ -212,5 +247,121 @@ public class ForbiddenFamilyTests
 
 		Assert.True(finish.GameOver);
 		Assert.Equal(0, finish.WinnerTeamIndex);
+	}
+
+	private static List<ForbiddenWordDef> Deck(int count)
+		=> Enumerable.Range(0, count)
+			.Select(index => new ForbiddenWordDef
+			{
+				Id = $"w{index}",
+				Target = $"target{index}",
+				Forbidden = new List<string> { "a", "b", "c" },
+			})
+			.ToList();
+
+	[Fact]
+	public void A_table_is_dealt_what_it_has_never_seen_before_it_meets_a_repeat()
+	{
+		var deck = Deck(10);
+		var seen = new[] { "w0", "w1", "w2" };
+
+		var ordered = ForbiddenFamily.OrderDeck(deck, seen, random: null);
+
+		// Same cards, none lost or duplicated — only the priority changes.
+		Assert.Equal(deck.Select(word => word.Id).OrderBy(id => id), ordered.Select(word => word.Id).OrderBy(id => id));
+		// The seven unseen ones come first; the three already dealt wait at the back.
+		Assert.DoesNotContain(ordered.Take(7).Select(word => word.Id), id => seen.Contains(id));
+		Assert.Equal(seen.OrderBy(id => id), ordered.Skip(7).Select(word => word.Id).OrderBy(id => id));
+	}
+
+	[Fact]
+	public void A_table_that_has_seen_the_whole_deck_starts_a_clean_cycle()
+	{
+		var deck = Deck(5);
+
+		var ordered = ForbiddenFamily.OrderDeck(deck, deck.Select(word => word.Id).ToList(), random: null);
+
+		// Nothing unseen is left, so the deck is dealt again rather than the match starting empty.
+		Assert.Equal(5, ordered.Count);
+		Assert.Equal(deck.Select(word => word.Id).OrderBy(id => id), ordered.Select(word => word.Id).OrderBy(id => id));
+	}
+
+	[Fact]
+	public void A_table_with_no_memory_is_dealt_the_whole_deck()
+	{
+		var deck = Deck(4);
+
+		var ordered = ForbiddenFamily.OrderDeck(deck, Array.Empty<string>(), random: null);
+
+		Assert.Equal(deck.Select(word => word.Id), ordered.Select(word => word.Id));
+	}
+
+	[Fact]
+	public async Task A_match_reports_the_cards_it_dealt_not_the_deck_it_shuffled()
+	{
+		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+		var family = new ForbiddenFamily();
+		var state = family.CreateGame(new FamilyStartContext
+		{
+			Players = Players(), Definition = definition, Lang = "en", Teams = Teams(),
+		}).State;
+
+		// One card is dealt with the opening turn.
+		Assert.Equal(new[] { state.ForbiddenDeck![0].Id }, family.CardsDealt(state).CardIds);
+
+		ForbiddenRulebook.DealNextCard(state.Forbidden!, state.ForbiddenDeck!);
+		ForbiddenRulebook.DealNextCard(state.Forbidden!, state.ForbiddenDeck!);
+		Assert.Equal(state.ForbiddenDeck!.Take(3).Select(word => word.Id), family.CardsDealt(state).CardIds);
+		// The rest of the deck was shuffled, not seen: remembering it would burn the whole deck
+		// on a table's first evening.
+		Assert.True(state.ForbiddenDeck!.Count > 3);
+
+		// The deck's size travels with them, and it is the WHOLE deck: without it the table could
+		// never tell that it had been round the lot and its memory should start a new trip.
+		Assert.Equal(state.ForbiddenDeck!.Count, family.CardsDealt(state).DeckSize);
+	}
+
+	[Fact]
+	public void A_match_that_dealt_nothing_reports_no_deal_at_all()
+	{
+		// Nothing to remember and nothing to measure against: a table whose match never got going
+		// must not be told it has been round a deck of zero cards.
+		var deal = new ForbiddenFamily().CardsDealt(new GameState { GameType = "forbidden" });
+		Assert.Empty(deal.CardIds);
+		Assert.Equal(0, deal.DeckSize);
+	}
+
+	[Fact]
+	public async Task The_second_match_at_a_table_deals_words_the_first_one_did_not()
+	{
+		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+		var family = new ForbiddenFamily();
+		var random = new SystemRandomSource(seed: 7);
+
+		var first = family.CreateGame(new FamilyStartContext
+		{
+			Players = Players(), Definition = definition, Lang = "es", Teams = Teams(), Random = random,
+		}).State;
+		// Play through twenty cards, roughly a short match.
+		for (var card = 1; card < 20; card++)
+		{
+			ForbiddenRulebook.DealNextCard(first.Forbidden!, first.ForbiddenDeck!);
+		}
+		var dealtFirst = family.CardsDealt(first).CardIds;
+		Assert.Equal(20, dealtFirst.Count);
+
+		var second = family.CreateGame(new FamilyStartContext
+		{
+			Players = Players(), Definition = definition, Lang = "es", Teams = Teams(),
+			Random = random, AlreadyDealt = dealtFirst.ToList(),
+		}).State;
+		for (var card = 1; card < 20; card++)
+		{
+			ForbiddenRulebook.DealNextCard(second.Forbidden!, second.ForbiddenDeck!);
+		}
+
+		// Reported from play: reshuffling the whole deck for every match made a group of four meet
+		// words they had just had. With 556 cards and twenty a match, that was about even odds.
+		Assert.Empty(family.CardsDealt(second).CardIds.Intersect(dealtFirst));
 	}
 }

@@ -1,7 +1,7 @@
 // app.ts — frontend (server mode only)
 
 import { createAnnouncer } from './announcer.js';
-import { fetchFriends, requestFriendAtTable } from './friends.js';
+import { requestFriendAtTable } from './friends.js';
 import {
 	asInviteResult, asSendInviteResult, parsePendingInvitations,
 	resultText as inviteResultText, sendResultText,
@@ -15,6 +15,7 @@ import {
 	recordAnnouncementHistory,
 } from './announcer.js';
 import { attachKeyHandlers, PROPERTY_ONLY_COMMANDS, CARD_FAMILY_HIDDEN_COMMANDS } from './keys.js';
+import { attachCommandPrefix } from './commandPrefix.js';
 import { buildGroupKeyMap, buildGroupSquareIndex } from './groupKeys.js';
 import { AUDIO_UNLOCK_EVENTS, shouldResumeAudioContext, tokenHopCue } from './audioGating.js';
 import { Board } from './board.js';
@@ -548,12 +549,11 @@ async function initBoard() {
 		selfPlayerId: () => playerSession.playerId,
 		// Friends who are connected and not already playing. The friends list says which of them
 		// is at a joinable table; anybody NOT deep in a game is somebody who could come here.
-		invitableFriends: async () => {
-			const friends = await fetchFriends(fetch);
-			return friends
-				.filter(friend => friend.relationship === 'Friends')
-				.map(friend => friend.handle);
-		},
+		// Who is connected, visible to this player and open to an invitation — the server's answer,
+		// not a filter applied here. It used to be "my accepted friends", which listed people who
+		// were asleep and hid people who would gladly have come.
+		invitablePlayers: () => gameClient.getInvitablePlayers(gameId),
+		inviteMatchCount: count => tSync('table.inviteMatches', { count }),
 		// An invitation to another table, answered from this one. Accepting LEAVES this table: the
 		// lobby takes it from there with the code the server hands back, so there is one way into a
 		// table rather than a second that would have to be kept in step with it.
@@ -2557,12 +2557,13 @@ async function initBoard() {
 	onAnnounceTurn: () => currentFamilyView()?.announceTurn?.() ?? false,
 	// C off the property board: "how am I doing?" is your board identity there —
 	// the race squadron, or the track piece and its colour. The family owns the phrasing.
+	// A card family answers with S instead and never gets here (the key layer stops C).
 	onAnnounceIdentity: () => {
 		const gs = gameManager.getCurrentGameState();
 		const myId = gameManager.getMyPlayerId();
 		const family = gs && familyFor(gs.gameType);
 		if (!gs || !myId || !family) return false;
-		const identity = family.identityAnnouncement(gs, myId, id => gameManager.getPlayer(id));
+		const identity = family.identityAnnouncement?.(gs, myId, id => gameManager.getPlayer(id));
 		if (!identity) return false;
 		announce(createAnnouncement(identity.key, identity.vars), { instant: true });
 		return true;
@@ -2589,6 +2590,17 @@ async function initBoard() {
 		globalAnnounce(createAnnouncement('game.square_not_found', {}), { instant: true });
 		boardToast.show(tSync('game.square_not_found'), 'loss');
 	}
+	});
+
+	// Inside a text box — an answer on the categories sheet, a line in the chat — a bare letter
+	// types itself instead of acting. The prefix arms exactly one keystroke and replays it on
+	// the board, so every shortcut above is reachable from a field without a second vocabulary
+	// to learn and without the help table having to claim anything per row.
+	attachCommandPrefix({
+	surface: () => document.getElementById('board'),
+	announce: announceText,
+	t: (key, vars) => tSync(key, vars),
+	cue: kind => soundEvents.playModeCue(kind === 'armed'),
 	});
 
 	// Keep keyboard focus inside the game page: Tab / Shift+Tab wrap around the board's

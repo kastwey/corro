@@ -85,25 +85,50 @@ export function showLoading(show: boolean): void {
 	}
 }
 
-/** Show error message with auto-hide */
+/** How long a refusal stays on screen before it is taken away again. */
+const ERROR_CLEAR_MS = 5000;
+
+/** Pending wipe, so a second error restarts the clock instead of inheriting the first one's. */
+let errorClearTimer: number | null = null;
+
+/**
+ * Say what went wrong.
+ *
+ * Two things this used to get wrong, both found from one report — a delete the server refused,
+ * with nothing to show for it on screen:
+ *
+ * - It TOGGLED the region's display. A live region that is revealed and filled in the same breath
+ *   is one a screen reader can miss entirely: the region has to be in the accessibility tree
+ *   before the text lands in it. The element is now permanent and empty, `.error:empty` keeps it
+ *   out of the layout, and writing text is the only thing that happens here.
+ * - It called focus() to "announce to screen readers", which is not what announces it (role=alert
+ *   is), does nothing at all while a modal dialog is open — exactly the case that reported this —
+ *   and drags the keyboard away from whatever somebody was doing when it does work.
+ *
+ * It is also scrolled into view, because the message is worth nothing where the eye is not: this
+ * rendered at the bottom of a page taller than the window and was four hundred pixels below the
+ * fold. The element now sits above the views, and this covers a page somebody has scrolled.
+ */
 export function showError(message: string): void {
 	const errorEl = document.getElementById('error-message');
 	if (errorEl) {
 		errorEl.textContent = message;
-		errorEl.classList.remove('hidden');
-		errorEl.style.display = 'block';
-		errorEl.focus(); // Announce to screen readers
-		setTimeout(() => hideError(), 5000);
+		errorEl.scrollIntoView({ block: 'nearest' });
+		if (errorClearTimer !== null) window.clearTimeout(errorClearTimer);
+		errorClearTimer = window.setTimeout(() => hideError(), ERROR_CLEAR_MS);
 	}
 	console.error('Error UI:', message);
 }
 
-/** Hide error message */
+/** Take the message away again. Emptied, never hidden — see showError. */
 export function hideError(): void {
+	if (errorClearTimer !== null) {
+		window.clearTimeout(errorClearTimer);
+		errorClearTimer = null;
+	}
 	const errorEl = document.getElementById('error-message');
 	if (errorEl) {
-		errorEl.classList.add('hidden');
-		errorEl.style.display = 'none';
+		errorEl.textContent = '';
 	}
 }
 
@@ -126,13 +151,16 @@ export function hideSection(sectionId: string): void {
 }
 
 /**
- * The four mutually-exclusive top-level lobby views. Only one is ever visible:
- * `view-home` (the games list + entry buttons), `view-create`, `view-join` and
- * `view-waiting` (the created/joined waiting room). Splitting the page this way keeps
- * the waiting room from showing the games list behind it.
+ * The mutually-exclusive top-level lobby views. Only one is ever visible: `view-home` (the
+ * entrance hall — what you can start, what is waiting, your tables, the people), the two forms
+ * (`view-create`, `view-join`), the three screens the home's People block leads to
+ * (`view-online`, `view-friends`, `view-messages`), `view-settings`, and `view-waiting` (the
+ * created/joined waiting room). Splitting the page this way keeps each screen to one subject:
+ * the waiting room never shows the games list behind it, and the home never becomes a place to
+ * read past a message log on the way to your tables.
  */
 export const LOBBY_VIEWS = ['view-home', 'view-create', 'view-join', 'view-online',
-	'view-friends',
+	'view-friends', 'view-messages',
 	'view-settings', 'view-waiting'] as const;
 export type LobbyView = typeof LOBBY_VIEWS[number];
 

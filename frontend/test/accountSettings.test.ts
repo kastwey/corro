@@ -243,6 +243,14 @@ test('erasing asks first, and the safe answer holds focus', async () => {
 	assert.ok(dialog.querySelector('#account-delete-confirm'));
 	assert.equal(document.activeElement, cancel, 'focus lands on keeping the account');
 	assert.equal(calls.some(c => c.method === 'DELETE'), false, 'nothing was erased yet');
+
+	// Same regression as the sign-in list: the group used to be named from the question inside it,
+	// which made VoiceOver read that question twice — once as the group's name, once as the
+	// paragraph. The group says what it IS; the question stays the thing you read, said once.
+	const group = dialog.querySelector('.account-erase-confirm')!;
+	assert.equal(group.getAttribute('aria-labelledby'), null);
+	assert.equal(group.getAttribute('aria-label'), 'Confirm erasing your account');
+	assert.equal(group.querySelector('p')?.textContent, 'Erase your account for good?');
 });
 
 test('backing out of erasing restores the button and returns focus to it', async () => {

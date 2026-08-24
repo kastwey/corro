@@ -439,9 +439,6 @@ public class AuctionRulebook : IAuctionRulebook
 				square.OwnerId = auction.HighestBidderId;
 				propertySold = true;
 
-				// Notify square changed
-				await context.Presenter.NotifySquareChangedAsync(square);
-
 				context.Logger?.LogInformation("AuctionRulebook: {WinnerName} bought {SquareName} for {Bid}", winner.Name, auction.SquareName, auction.CurrentBid);
 			}
 		}

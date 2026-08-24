@@ -26,6 +26,25 @@ The `deploy-production` job runs only after all three succeed. It:
 Deployments are serialized and never interrupted halfway through. There is no separate
 deployment workflow, so two successful jobs cannot race to overwrite one another.
 
+## The build stamp
+
+Corro ships continuously, so there is no release train and no semantic version to bump. Instead
+the publish step stamps the release with the day it was made and that day's ordinal —
+`20260823-001` — written by [`tools/build-version.ps1`](../tools/build-version.ps1) into a
+`buildinfo.json` beside the published application. The lobby footer shows it, and the dialog
+behind it states when the build went live and links to the commit on GitHub.
+
+Both halves come from the repository itself: the UTC day of the commit, and how many of that
+day's commits it is built on top of. The same commit therefore always produces the same stamp,
+and the deploy job checks out with `fetch-depth: 0` because a shallow clone could only ever
+report `-001` — the script refuses to stamp one rather than repeat a version.
+
+A build that was never stamped has no `buildinfo.json`, and then the lobby shows no version at
+all: a clone run from source has nothing true to say, and an invented number would be worse than
+silence. The same applies to a stamp that arrives malformed. For local work the values can be
+supplied as ordinary configuration instead (`Build__Version`, `Build__Commit`,
+`Build__RepositoryUrl`, `Build__DeployedAt`), which is how the E2E suite exercises the footer.
+
 ## Authentication and private packages
 
 [The deployment infrastructure](../infra/README.md) defines a dedicated user-assigned

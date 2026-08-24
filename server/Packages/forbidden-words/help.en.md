@@ -19,6 +19,8 @@ The host chooses one shared word language when creating the game and may change 
 
 The clue-giver checks that everyone is ready, then selects **Start the timer**. Ask through voice chat when playing remotely or speak directly when everyone is together in person; the guesser and monitor do not need to confirm anything in Corro.
 
+The word arrives when the clock starts, not before: until then the card says it will appear when the turn begins, for the monitor as well. Every turn is prepared with the same amount of time that way.
+
 The private card is a protected multiline text box. It cannot be changed, but cursor movement, screen-reader reading commands, selection and copying remain available.
 
 ## During the timer
@@ -37,6 +39,7 @@ The score is allowed to fall below zero. After every player has given clues once
 Focus enters the role table. The private card is this family's board: **Enter** does the one thing that is yours to do from there, **Escape** always comes back to it, and focus returns to the words after every action.
 
 - Press **Enter** on the private card to start the timer; once it is running, **Enter** marks the word guessed and deals the next one.
+- As clue-giver, press **P** to pass a word you cannot get out; the next one arrives without stopping the clock. If you have spent every pass in the turn, the key says so.
 - Press **Escape** from anywhere on the surface to come back to the words.
 - Press **S** on the game surface to hear your team, score and role.
 - Press **Shift+S** to hear the opposing team's score.

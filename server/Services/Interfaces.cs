@@ -86,8 +86,15 @@ public interface IGameCommandExecutor
 	/// earcons/visuals. The audience of each dispatch is preserved for per-player rendering.
 	/// </summary>
 	event Func<IReadOnlyList<AnnouncementDispatch>, Task> OnGameEvents;
-	event Func<Square, Task> OnSquareChanged;
 	event Func<CardDrawnNotification, Task> OnCardDrawn;
+
+	/// <summary>
+	/// Raised for a response the rulebook addressed to the whole table rather than to the
+	/// caller — a side effect nobody commanded, such as the auction that opens when a purchase
+	/// is declined. Raised from the SERVICE, so it reaches the table whoever ran the command:
+	/// the hub for a person, the bot driver for a bot.
+	/// </summary>
+	event Func<ServerResponse, Task> OnBroadcast;
 }
 
 /// <summary>
@@ -99,7 +106,7 @@ public interface IGameLifecycle
 	/// <paramref name="ruleValues"/> carries the host's house-rule choices for families whose
 	/// rules live outside <see cref="GameSettings"/> (journey); <paramref name="teams"/> the
 	/// journey team seating (each inner list one team, in turn order).</summary>
-	Task InitializeFromDefinitionAsync(List<Player> players, Models.Corro.GameDefinition definition, string lang = "en", GameSettings? settings = null, bool raceTeams = false, Dictionary<string, System.Text.Json.JsonElement>? ruleValues = null, List<List<string>>? teams = null);
+	Task InitializeFromDefinitionAsync(List<Player> players, Models.Corro.GameDefinition definition, string lang = "en", GameSettings? settings = null, bool raceTeams = false, Dictionary<string, System.Text.Json.JsonElement>? ruleValues = null, List<List<string>>? teams = null, IReadOnlyCollection<string>? alreadyDealt = null);
 	void ConfigureSettings(GameSettings settings);
 	Task EndGameAsync();
 

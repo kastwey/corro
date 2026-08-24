@@ -86,7 +86,6 @@ public partial class CorroRulebook
 		// Clear pending
 		context.GameState.PendingPurchase = null;
 
-		await context.Presenter.NotifySquareChangedAsync(square);
 		await context.Announce("game.property_purchased", new Dictionary<string, object>
 		{
 			["actorId"] = player.Id,
@@ -231,6 +230,20 @@ public partial class CorroRulebook
 		{
 			["property"] = SquareNameVar(square),
 			["player"] = player.Name
+		});
+
+		// And the same fact for the eyes. The decline's own response is private to whoever
+		// declined — it answers THEIR command — but an auction is the table's business, and the
+		// players who have to bid in it sent no command at all. Raised here, beside the voice
+		// that already carries it, so it reaches everyone however the decline was made.
+		await context.Presenter.BroadcastAsync(new AuctionStartedResponse
+		{
+			SquareIndex = auction.SquareIndex,
+			SquareName = auction.SquareName,
+			StartingPrice = auction.StartingPrice,
+			InitiatorPlayerId = auction.InitiatorPlayerId,
+			InitiatorPlayerName = player.Name,
+			BidTimeoutSeconds = (int)auction.BidTimeout.TotalSeconds
 		});
 
 		context.Logger?.LogInformation("Auction started for {SquareName}", square.Name);

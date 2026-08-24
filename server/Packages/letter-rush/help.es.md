@@ -20,7 +20,8 @@ Tu hoja es un cuadro de texto por categoría, cada uno con su categoría como et
 
 - Tus respuestas se guardan mientras escribes; no tienes que enviarlas.
 - **He terminado** cierra tu escritura antes de tiempo. Cuando todos han terminado, la ronda avanza sin esperar al reloj.
-- Pulsa **R** en cualquier momento para oír cuánto tiempo queda. Nada se cuenta atrás en voz alta.
+- Pulsa **L** para la letra de la ronda y **R** para el tiempo que queda. Nada se cuenta atrás en voz alta.
+- Dentro de un cuadro de respuesta esas letras se escriben, así que pulsa antes **Ctrl+Mayús+Espacio** y luego la letra: la siguiente pulsación es un comando en vez de un carácter. Un bitono ascendente avisa de que la próxima tecla es un comando, uno descendente de que se acabó, y dura exactamente una pulsación.
 
 ## Decidir
 
@@ -45,7 +46,7 @@ El foco entra en lo que te toque esta ronda: tu hoja mientras corre el reloj, la
 - **Flecha derecha** entra en los tres veredictos de la respuesta en la que estás —válida, no válida, repetida— y **flecha izquierda** o **Escape** sale de ahí. El veredicto en vigor se anuncia al llegar a él, así que la marca nunca depende de ver un color.
 - Cada categoría se abre ya marcada con lo que Corro ha podido deducir por su cuenta. Cambia lo que no compartas; solo cuenta tu decisión.
 - Pulsa **S** en la superficie del juego para oír tu puntuación y tu papel, y **Shift+S** para oír las puntuaciones de los demás.
-- Pulsa **R** para oír cuántos segundos quedan. Antes de empezar la ronda, confirma que el reloj no está en marcha.
+- Pulsa **L** para la letra de la ronda y **R** para los segundos que quedan; dentro de un cuadro de respuesta pulsa antes **Ctrl+Mayús+Espacio** y luego esa misma letra. Lo que preguntes se muestra además en pantalla, discretamente, para quien mira en vez de escuchar; desaparece a los pocos segundos, y también cuando cambia la ronda o la fase, para que nunca se confunda con el estado actual.
 - Pulsa **T** para oír en qué ronda estás, con qué letra y qué te toca hacer.
 - **Tab** y **Shift+Tab** siguen recorriendo los controles de la superficie. Los controles que no pueden actuar siguen siendo enfocables y explican qué falta.
 - Un reloj audible suena mientras se escribe la ronda y respeta los ajustes habituales de silencio y volumen. Nunca anuncia cada segundo, y la barra de progreso visual queda oculta para las ayudas técnicas para que no vaya pitando toda la ronda; usa **R** cuando necesites el tiempo exacto.

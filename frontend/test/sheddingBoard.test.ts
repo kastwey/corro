@@ -163,6 +163,56 @@ test('S speaks MY status; Shift+S the rivals: counts and scores on demand', () =
 	assert.equal(announced[1], 'N-r1: game.shedding_status_cards_one, game.shedding_status_score(240)');
 });
 
+// The engine's own queries survive an open modal dialog on purpose — keys.ts says so: "a blind
+// player can check their situation without first dismissing the dialog". A card family's queries
+// hang off the surface element, which a dialog takes the focus off, so they never did. It went
+// unnoticed while C still answered through the engine, and showed the moment C stopped.
+test('S, Shift+S and the table readouts still answer while a modal dialog holds the keyboard', () => {
+	const dialog = document.createElement('dialog');
+	dialog.setAttribute('open', '');
+	dialog.dataset.modal = 'true';
+	const content = document.createElement('div');
+	content.tabIndex = 0;
+	dialog.appendChild(content);
+	document.body.appendChild(dialog);
+	try {
+		key(content, 's');
+		assert.ok(announced.at(-1)?.includes('game.shedding_status_top(c.red5|colors.red)'),
+			'my own status, from inside the dialog');
+
+		key(content, 'S', { shiftKey: true });
+		assert.ok(announced.at(-1)?.includes('game.shedding_status_score(240)'),
+			'and the rivals');
+
+		key(content, 'c');
+		// Red on red: the colour in force is the card's own, so C reads it plain (see #9).
+		assert.equal(announced.at(-1), 'game.shedding_top_readout_plain(c.red5)',
+			'and the card on the table');
+	} finally {
+		dialog.remove();
+	}
+});
+
+// The other half of the bargain: a dialog that is NOT modal never needed this — the surface still
+// has the keyboard — and a key that ACTS must not reach a game whose player is looking at a yes/no
+// they have not answered. Only the announcing handlers take the second route.
+test('a key that acts stays out of an open dialog', () => {
+	const dialog = document.createElement('dialog');
+	dialog.setAttribute('open', '');
+	dialog.dataset.modal = 'true';
+	const content = document.createElement('div');
+	content.tabIndex = 0;
+	dialog.appendChild(content);
+	document.body.appendChild(dialog);
+	const before = played.length;
+	try {
+		key(content, 'Enter');
+		assert.equal(played.length, before, 'Enter does not play a card from inside the dialog');
+	} finally {
+		dialog.remove();
+	}
+});
+
 test('helpShortcuts reports the REAL wiring: Enter/Space + S/Shift+S, no discard', () => {
 	// The single source for the help dialog — derived from what the hand actually wired
 	// (play + draw, no discard in this genre) plus the shared status keys. The active-rules
@@ -174,6 +224,7 @@ test('helpShortcuts reports the REAL wiring: Enter/Space + S/Shift+S, no discard
 		{ keys: 's', descKey: 'game.help_cmd_status_mine' },
 		{ keys: 'shift+s', descKey: 'game.help_cmd_status_rivals' },
 		{ keys: 'd', descKey: 'game.help_cmd_shedding_piles' },
+		{ keys: 'c', descKey: 'game.help_cmd_shedding_top' },
 		{ keys: 'r / g / b / y', descKey: 'game.help_cmd_shedding_colour_jump' },
 		{ keys: 'shift + r / g / b / y', descKey: 'game.help_cmd_shedding_colour_jump_back' },
 		{ keys: '0 – 9', descKey: 'game.help_cmd_shedding_number_jump' },
@@ -189,6 +240,38 @@ test('D reads the deck, top card and colour in force (not the whole player statu
 	const line = announced.at(-1) ?? '';
 	assert.equal(line, 'game.shedding_status_piles(60|c.red5|colors.red)');
 	assert.ok(!line.includes('shedding_status_score'), 'not the hand/score bundle S reads');
+});
+
+test('C reads the top card alone — the fast check between turns', () => {
+	// In a game this quick, the one thing you need before your turn is what is on the table.
+	// D says it too, behind the deck count; S buries it between your hand and your score.
+	key(boardEl, 'c');
+	const line = announced.at(-1) ?? '';
+	// Red 5 on top with red in force: the colour would only repeat the card's own, so it is
+	// left out — this is the sentence heard dozens of times a game.
+	assert.equal(line, 'game.shedding_top_readout_plain(c.red5)');
+	assert.ok(!line.includes('60'), 'no deck count: that is what D is for');
+	assert.ok(!line.includes('shedding_status_cards'), 'and not the hand bundle S reads');
+});
+
+test('C names the colour in force when a wild has changed it', () => {
+	// The one case where the two disagree, and the only thing that says what may be played.
+	gs.shedding!.discardPile.push(inst('wild', 1));
+	gs.shedding!.currentColor = 'blue';
+	view.update(gs);
+	key(boardEl, 'c');
+	assert.equal(announced.at(-1), 'game.shedding_top_readout(c.wild|colors.blue)');
+});
+
+test('C never reaches the engine shortcut it used to duplicate', () => {
+	// AnnounceMyStatus repeats S word for word in a card family, which is why the shortcuts
+	// help already hides it. The board consumes C so the global binding cannot answer as well.
+	let leaked = 0;
+	const onDocument = () => { leaked++; };
+	document.addEventListener('keydown', onDocument);
+	key(boardEl, 'c');
+	document.removeEventListener('keydown', onDocument);
+	assert.equal(leaked, 0);
 });
 
 test('R/G/B/Y jump hand focus to the next card of that colour; wilds match nothing', () => {

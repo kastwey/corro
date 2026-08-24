@@ -74,8 +74,9 @@ public class GameContext
 	public required Func<string, Dictionary<string, object>?, Task> Announce { get; init; }
 
 	/// <summary>
-	/// Client-facing notification sink (state snapshots, single-square refreshes, card
-	/// reveals). Replaces the previous scattered notify callbacks. Wired by GameService.
+	/// Client-facing notification sink (ordered state checkpoints, card reveals, and responses
+	/// addressed to the whole table). Replaces the previous scattered notify callbacks. Wired by
+	/// GameService.
 	/// </summary>
 	public required IGamePresenter Presenter { get; init; }
 

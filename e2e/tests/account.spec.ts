@@ -11,7 +11,8 @@
 import { test, expect } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
 import {
-	appI18n, closeAccountSettings, createGame, gotoLobbyHome, newPlayerPage, openAccountSettings, signOutFromMenu,
+	appI18n, closeAccountSettings, createGame, gotoLobbyHome, joinGame, newPlayerPage,
+	openAccountSettings, signOutFromMenu,
 } from '../helpers/game';
 
 const es = appI18n('es').account as Record<string, string> & { provider: Record<string, string> };
@@ -351,4 +352,97 @@ test('a long account name is cut to fit a seat instead of blocking the table', a
 	const code = await createGame(page, 'ignored', 'snakes-and-ladders');
 	expect(code.length).toBeGreaterThan(0);
 	await flushAxeAudit(page);
+});
+
+// Reported from a real session: signed in, delete a table from the lobby, confirm — and the table
+// is still there. The signed-out path was covered (lobby-accessibility) and works; being signed in
+// adds a second source for that list, the seats the ACCOUNT holds, and this is the only test that
+// deletes a table with both sources answering.
+test('a signed-in host deletes a table and it is gone, in the list and after a reload', async ({ browser }) => {
+	const page = await newPlayerPage(browser);
+	await page.goto('/api/auth/signin/e2e?returnUrl=%2F&subject=delete-my-table');
+	await expect(page.locator('#account-bar .account-status')).toBeVisible();
+
+	await createGame(page, 'ignored', 'snakes-and-ladders');
+	await expect(page.locator('#table-view')).toBeVisible();
+	await page.locator('#table-back').click();
+	await expect(page.locator('#view-home')).toBeVisible();
+
+	const saved = page.locator('#your-games-list .saved-game-item');
+	await expect(saved).toHaveCount(1);
+	await saved.locator('.saved-game-delete').dispatchEvent('click');
+	const confirm = page.locator('.game-dialog.dialog-confirm');
+	await expect(confirm).toBeVisible();
+	await confirm.locator('.btn-primary').click();
+
+	// Gone from the list this browser is looking at…
+	await expect(page.locator('#your-games-empty')).toBeVisible();
+	await expect(saved).toHaveCount(0);
+	// …and gone from the account, which is the half that only a signed-in player has.
+	await gotoLobbyHome(page);
+	await expect(page.locator('#your-games-empty')).toBeVisible();
+	await expect(saved).toHaveCount(0);
+});
+
+// The cross-device half of the same story, and the one actually reported: the table is in the list
+// because the ACCOUNT holds a seat at it, not because this browser stored one. The row offers
+// Delete — the seat says it is the host — and there is no stored secret behind it.
+test('a signed-in host deletes a table this browser has never stored', async ({ browser }) => {
+	const first = await newPlayerPage(browser);
+	await first.goto('/api/auth/signin/e2e?returnUrl=%2F&subject=delete-from-elsewhere');
+	await expect(first.locator('#account-bar .account-status')).toBeVisible();
+	await createGame(first, 'ignored', 'snakes-and-ladders');
+	await expect(first.locator('#table-view')).toBeVisible();
+
+	// A second browser: same person, same account, nothing in its storage.
+	const other = await newPlayerPage(browser);
+	await other.goto('/api/auth/signin/e2e?returnUrl=%2F&subject=delete-from-elsewhere');
+	await expect(other.locator('#account-bar .account-status')).toBeVisible();
+	await gotoLobbyHome(other);
+
+	const saved = other.locator('#your-games-list .saved-game-item');
+	await expect(saved).toHaveCount(1);
+	await saved.locator('.saved-game-delete').dispatchEvent('click');
+	const confirm = other.locator('.game-dialog.dialog-confirm');
+	await expect(confirm).toBeVisible();
+	await confirm.locator('.btn-primary').click();
+
+	await expect(other.locator('#your-games-empty')).toBeVisible();
+	await gotoLobbyHome(other);
+	await expect(other.locator('#your-games-empty')).toBeVisible();
+});
+
+// The row a guest gets, at a table this browser never stored. It used to say "remove from list"
+// and only cleared this browser's storage — nothing at all here, so the row came straight back.
+// It leaves the table now, which is the same thing from every device.
+test('a signed-in guest leaves a table this browser has never stored', async ({ browser }) => {
+	const host = await newPlayerPage(browser);
+	const code = await createGame(host, 'Ana', 'snakes-and-ladders');
+
+	const guest = await newPlayerPage(browser);
+	await guest.goto('/api/auth/signin/e2e?returnUrl=%2F&subject=leave-from-elsewhere');
+	await expect(guest.locator('#account-bar .account-status')).toBeVisible();
+	// Signed in, the seat takes its name from the account rather than from the form — so the
+	// roster is checked by the name it actually shows.
+	await joinGame(guest, code, 'ignored');
+	const seatName = /leave-from-elsew/;
+	await expect(host.locator('#table-players')).toContainText(seatName);
+
+	// A second browser: same person, same account, nothing in its storage.
+	const other = await newPlayerPage(browser);
+	await other.goto('/api/auth/signin/e2e?returnUrl=%2F&subject=leave-from-elsewhere');
+	await expect(other.locator('#account-bar .account-status')).toBeVisible();
+	await gotoLobbyHome(other);
+
+	const saved = other.locator('#your-games-list .saved-game-item');
+	await expect(saved).toHaveCount(1);
+	await saved.locator('.saved-game-leave').dispatchEvent('click');
+	await other.locator('.game-dialog.dialog-confirm .btn-primary').click();
+
+	await expect(other.locator('#your-games-empty')).toBeVisible();
+	// Not a row hidden on one device: the seat is really given up, and the table says so.
+	await expect(host.locator('#table-players')).not.toContainText(seatName);
+	// …and it stays gone, which is what "remove from list" could never manage here.
+	await gotoLobbyHome(other);
+	await expect(other.locator('#your-games-empty')).toBeVisible();
 });

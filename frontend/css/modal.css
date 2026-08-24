@@ -576,6 +576,17 @@
 	overflow-y: auto;
 }
 
+/* How to reach a shortcut from inside a text box: said once, above the table, instead of a
+   third column repeating a claim on every row. */
+.help-typing-hint {
+	margin: 0 0 14px;
+	padding: 10px 12px;
+	border-left: 4px solid var(--accent);
+	background: var(--surface-2);
+	color: var(--text);
+	line-height: 1.45;
+}
+
 .help-shortcuts {
 	width: 100%;
 	border-collapse: collapse;
@@ -794,6 +805,51 @@
 	color: var(--text-muted);
 }
 
+/* Which build this is. Reads as part of the footer prose, so it is styled like the links beside
+   it — a real button underneath, keyboard-reachable and focusable, with the footer's own muted
+   ink rather than a dimmed copy of it. */
+.app-footer__version {
+	margin: 0.125rem 0 0;
+}
+
+.app-footer__version-btn {
+	/* Shrink to its words. Every button in this app is a full-width block (forms.css), which for
+	   a control that reads as part of a sentence would underline the whole line, ring the whole
+	   line on focus, and open the dialog from a click in the empty space beside the text. */
+	display: inline;
+	width: auto;
+	padding: 0;
+	border: 0;
+	background: none;
+	font: inherit;
+	color: var(--text-muted);
+	text-decoration: underline;
+	text-underline-offset: 0.15em;
+	cursor: pointer;
+}
+
+.app-footer__version-btn:hover {
+	color: var(--text);
+	/* The shared button lift would bounce the footer line; the links beside it do not move. */
+	transform: none;
+}
+
+.app-footer__version-btn:focus-visible {
+	outline: none;
+	box-shadow: var(--focus-ring);
+	border-radius: 0.25rem;
+}
+
+/* The dialog behind it: two short sentences and a link, so the only thing to arrange is that they
+   do not run together. */
+.version-details p {
+	margin: 0 0 0.5rem;
+}
+
+.version-details p:last-child {
+	margin-bottom: 0;
+}
+
 .app-footer__links {
 	display: flex;
 	justify-content: center;
@@ -810,12 +866,17 @@
 	text-underline-offset: 0.15em;
 }
 
-.app-footer__external-link {
+/* A link that leaves the site says so twice: the accessible name announces the new window, and
+   this mark shows it. The version dialog's commit link is the same promise made in the same way,
+   so it shares the rule rather than growing a second copy of it under another name. */
+.app-footer__external-link,
+.version-details__link {
 	display: inline-flex;
 	align-items: center;
 }
 
-.app-footer__external-icon {
+.app-footer__external-icon,
+.version-details__icon {
 	flex: 0 0 auto;
 	width: 1em;
 	height: 1em;

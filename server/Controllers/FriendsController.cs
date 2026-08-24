@@ -65,7 +65,10 @@ public class FriendsController : ControllerBase
 	[HttpGet]
 	public async Task<ActionResult<object>> GetFriends(CancellationToken ct)
 	{
-		if (SessionPrincipal.UserId(User) is not { Length: > 0 } userId) return Unauthorized();
+		if (SessionPrincipal.UserId(User) is not { Length: > 0 } userId)
+		{
+			return Unauthorized();
+		}
 
 		var entries = await _friendships.ListAsync(userId, ct);
 		var friends = new List<FriendEntry>();
@@ -87,9 +90,13 @@ public class FriendsController : ControllerBase
 	/// handles exist.
 	/// </summary>
 	[HttpPost("requests")]
-	public async Task<IActionResult> Request([FromBody] HandleRequest request, CancellationToken ct)
+	public async Task<IActionResult> RequestFriendship(
+		[FromBody] HandleRequest request, CancellationToken ct)
 	{
-		if (SessionPrincipal.UserId(User) is not { Length: > 0 } userId) return Unauthorized();
+		if (SessionPrincipal.UserId(User) is not { Length: > 0 } userId)
+		{
+			return Unauthorized();
+		}
 
 		var outcome = await _friendships.RequestAsync(
 			userId, request?.Handle ?? string.Empty, DateTime.UtcNow, ct);
@@ -122,20 +129,33 @@ public class FriendsController : ControllerBase
 	public async Task<IActionResult> RequestFromTable(
 		[FromBody] TableRequest request, CancellationToken ct)
 	{
-		if (SessionPrincipal.UserId(User) is not { Length: > 0 } userId) return Unauthorized();
-		if (request is null) return BadRequest(new { code = "NO_SUCH_SEAT" });
+		if (SessionPrincipal.UserId(User) is not { Length: > 0 } userId)
+		{
+			return Unauthorized();
+		}
+
+		if (request is null)
+		{
+			return BadRequest(new { code = "NO_SUCH_SEAT" });
+		}
 
 		// The live table first: a game in progress lives in the session registry and its document
 		// may be older than the seat arrangement.
 		var game = _sessions.TryGetDocument(request.GameId, out var live)
 			? live
 			: await _games.LoadGameAsync(request.GameId);
-		if (game is null) return NotFound(new { code = "NO_SUCH_SEAT" });
+		if (game is null)
+		{
+			return NotFound(new { code = "NO_SUCH_SEAT" });
+		}
 
 		// Sitting here is the whole authorisation. Note it is the ACCOUNT that must hold a seat:
 		// somebody who joined before signing in has no account on their seat and cannot ask this
 		// way, which is the safe direction to be wrong in.
-		if (!game.Players.Any(p => p.UserId == userId)) return Forbid();
+		if (!game.Players.Any(p => p.UserId == userId))
+		{
+			return Forbid();
+		}
 
 		var target = game.Players.FirstOrDefault(p => p.Id == request.PlayerId);
 		if (target?.UserId is not { Length: > 0 } targetUserId)
@@ -176,7 +196,10 @@ public class FriendsController : ControllerBase
 	[HttpDelete("{handle}")]
 	public async Task<IActionResult> RemoveFriend(string handle, CancellationToken ct)
 	{
-		if (SessionPrincipal.UserId(User) is not { Length: > 0 } userId) return Unauthorized();
+		if (SessionPrincipal.UserId(User) is not { Length: > 0 } userId)
+		{
+			return Unauthorized();
+		}
 
 		return await _friendships.RemoveFriendAsync(userId, handle, ct)
 			? NoContent()
@@ -194,15 +217,29 @@ public class FriendsController : ControllerBase
 		var friend = await _users.GetUserAsync(
 			(await _users.GetHandleClaimAsync(PlayerHandle.Normalize(handle), ct))?.UserId
 				?? string.Empty, ct);
-		if (friend is null) return null;
+		if (friend is null)
+		{
+			return null;
+		}
 
 		foreach (var connectionId in _presence.ConnectionsOf(friend.UserId))
 		{
-			if (!_sessions.TryLocateConnection(connectionId, out var gameId, out _)) continue;
+			if (!_sessions.TryLocateConnection(connectionId, out var gameId, out _))
+			{
+				continue;
+			}
+
 			var game = await _games.LoadGameAsync(gameId);
-			if (game is null || !game.HasRoom) continue;
+			if (game is null || !game.HasRoom)
+			{
+				continue;
+			}
 			// A table the reader is already sitting at is not one to ask to be let into.
-			if (game.Players.Any(p => p.UserId == readerId)) continue;
+			if (game.Players.Any(p => p.UserId == readerId))
+			{
+				continue;
+			}
+
 			return gameId;
 		}
 		return null;
@@ -211,7 +248,10 @@ public class FriendsController : ControllerBase
 	private async Task<IActionResult> Respond(
 		HandleRequest? request, bool accept, CancellationToken ct)
 	{
-		if (SessionPrincipal.UserId(User) is not { Length: > 0 } userId) return Unauthorized();
+		if (SessionPrincipal.UserId(User) is not { Length: > 0 } userId)
+		{
+			return Unauthorized();
+		}
 
 		var outcome = await _friendships.RespondAsync(
 			userId, request?.Handle ?? string.Empty, accept, DateTime.UtcNow, ct);

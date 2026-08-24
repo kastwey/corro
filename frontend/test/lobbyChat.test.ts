@@ -53,7 +53,7 @@ function harness(options: {
 	storage?: Storage;
 } = {}) {
 	document.body.innerHTML = `
-		<div class="lobby-chat">
+		<div class="lobby-view">
 			<ul id="chat-log" role="list"></ul>
 			<textarea id="chat-input"></textarea>
 			<button id="chat-send" type="button">Enviar</button>

@@ -429,7 +429,6 @@ public partial class CorroRulebook
 			}
 		}
 
-		await context.Presenter.NotifySquareChangedAsync(square);
 	}
 
 	// ============================================================

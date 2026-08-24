@@ -43,8 +43,11 @@ public class GameHubInvitationTests
 		/// <summary>An account with a public name, open to being asked by anybody unless told
 		/// otherwise.</summary>
 		public async Task<UserDocument> PlayerAsync(
-			string userId, string handle, MessagePolicy policy = MessagePolicy.Anyone)
+			string userId, string handle, MessagePolicy policy = MessagePolicy.Anyone,
+			PresenceVisibility visibility = PresenceVisibility.Everyone,
+			bool online = false)
 		{
+			if (online) { Presence.Add(userId, "c-" + userId); }
 			var normalized = PlayerHandle.Normalize(handle);
 			await Users.CreateOrGetHandleClaimAsync(new HandleClaimDocument
 			{
@@ -53,10 +56,10 @@ public class GameHubInvitationTests
 			return await Users.UpsertUserAsync(new UserDocument
 			{
 				Id = userId, UserId = userId, Handle = handle, MessagePolicy = policy,
-				// Findable by strangers, so these fixtures can befriend each other the ordinary
-				// way. A real new account is friends-only, which is right for people and unhelpful
-				// for a world of two.
-				Visibility = PresenceVisibility.Everyone,
+				// Findable by strangers by default, so these fixtures can befriend each other the
+				// ordinary way. A real new account is friends-only, which is right for people and
+				// unhelpful for a world of two.
+				Visibility = visibility,
 				CreatedAtUtc = Now, LastSignInUtc = Now,
 			});
 		}
@@ -481,5 +484,138 @@ public class GameHubInvitationTests
 	{
 		var world = new World();
 		Assert.Empty(await world.HubFor(null).GetMyTableInvitations());
+	}
+
+	// ── Who can be asked ──────────────────────────────────────────────────────────────────────
+	//
+	// The picker's candidates. Two rules decide, in this order: can this caller SEE them, and do
+	// they accept being asked. Both are the same rules the refusal applies, from ReachRules, so a
+	// name offered here cannot be one the invitation would then turn down.
+
+	[Fact]
+	public async Task The_connected_and_willing_are_offered()
+	{
+		var world = new World();
+		await world.PlayerAsync("u-host", "hostname", online: true);
+		await world.PlayerAsync("u-a", "aaa", online: true);
+		await world.PlayerAsync("u-b", "bbb", online: true);
+		await world.TableAsync("t1", seatedUserIds: "u-host");
+
+		var offered = await world.HubFor("u-host").GetInvitablePlayers("t1");
+
+		// Sorted, and never the caller themselves.
+		Assert.Equal(new[] { "aaa", "bbb" }, offered);
+	}
+
+	[Fact]
+	public async Task Somebody_who_is_not_connected_is_not_offered()
+	{
+		var world = new World();
+		await world.PlayerAsync("u-host", "hostname", online: true);
+		await world.PlayerAsync("u-away", "awayname");
+		await world.TableAsync("t1", seatedUserIds: "u-host");
+
+		Assert.Empty(await world.HubFor("u-host").GetInvitablePlayers("t1"));
+	}
+
+	// Seeing comes FIRST and on its own. Somebody hidden from this caller is not offered whatever
+	// their message policy says, or the picker would become a way around the presence setting.
+	[Fact]
+	public async Task Somebody_hidden_from_the_caller_is_not_offered_however_open_they_are()
+	{
+		var world = new World();
+		await world.PlayerAsync("u-host", "hostname", online: true);
+		await world.PlayerAsync(
+			"u-hidden", "hiddenname",
+			policy: MessagePolicy.Anyone, visibility: PresenceVisibility.Nobody, online: true);
+		await world.TableAsync("t1", seatedUserIds: "u-host");
+
+		Assert.Empty(await world.HubFor("u-host").GetInvitablePlayers("t1"));
+	}
+
+	[Fact]
+	public async Task Somebody_who_takes_nothing_from_strangers_is_not_offered_to_one()
+	{
+		var world = new World();
+		await world.PlayerAsync("u-host", "hostname", online: true);
+		await world.PlayerAsync("u-picky", "pickyname", policy: MessagePolicy.Friends, online: true);
+		await world.PlayerAsync("u-closed", "closedname", policy: MessagePolicy.Nobody, online: true);
+		await world.TableAsync("t1", seatedUserIds: "u-host");
+
+		Assert.Empty(await world.HubFor("u-host").GetInvitablePlayers("t1"));
+	}
+
+	// …and IS offered to a friend, which is what "only friends" means.
+	[Fact]
+	public async Task A_friend_only_player_is_offered_to_their_friend()
+	{
+		var world = new World();
+		await world.PlayerAsync("u-host", "hostname", online: true);
+		await world.PlayerAsync("u-picky", "pickyname", policy: MessagePolicy.Friends, online: true);
+		await world.Friendships.RequestAsync("u-host", "pickyname", Now);
+		await world.Friendships.RespondAsync("u-picky", "hostname", accept: true, Now);
+		await world.TableAsync("t1", seatedUserIds: "u-host");
+
+		Assert.Equal(new[] { "pickyname" }, await world.HubFor("u-host").GetInvitablePlayers("t1"));
+	}
+
+	[Fact]
+	public async Task Anybody_already_here_or_already_asked_is_not_offered_again()
+	{
+		var world = new World();
+		await world.PlayerAsync("u-host", "hostname", online: true);
+		await world.PlayerAsync("u-seated", "seatedname", online: true);
+		await world.PlayerAsync("u-asked", "askedname", online: true);
+		await world.TableAsync("t1", 4, GameStatus.WaitingForPlayers, "u-host", "u-seated");
+		await world.HubFor("u-host").InviteToTable(
+			new GameHub.TableInviteRequest { GameId = "t1", Handle = "askedname" });
+
+		Assert.Empty(await world.HubFor("u-host").GetInvitablePlayers("t1"));
+	}
+
+	// The same seat check InviteToTable makes. Without it this answers "who is around and reachable
+	// by me" for any table id somebody cared to guess.
+	[Fact]
+	public async Task Somebody_not_seated_here_is_told_nothing()
+	{
+		var world = new World();
+		await world.PlayerAsync("u-host", "hostname", online: true);
+		await world.PlayerAsync("u-stranger", "strangername", online: true);
+		await world.PlayerAsync("u-a", "aaa", online: true);
+		await world.TableAsync("t1", seatedUserIds: "u-host");
+
+		Assert.Empty(await world.HubFor("u-stranger").GetInvitablePlayers("t1"));
+		Assert.Empty(await world.HubFor(null).GetInvitablePlayers("t1"));
+		Assert.Empty(await world.HubFor("u-host").GetInvitablePlayers("no-such-table"));
+	}
+
+	// Nobody can be invited to a table with no seat left, so nobody is offered.
+	[Fact]
+	public async Task A_full_table_offers_nobody()
+	{
+		var world = new World();
+		await world.PlayerAsync("u-host", "hostname", online: true);
+		await world.PlayerAsync("u-a", "aaa", online: true);
+		await world.TableAsync("t1", maxPlayers: 1, seatedUserIds: "u-host");
+
+		Assert.Empty(await world.HubFor("u-host").GetInvitablePlayers("t1"));
+	}
+
+	// Whoever has no public name cannot invite at all (NEEDS_PUBLIC_NAME), so there is nobody to
+	// offer them — and nobody without one can be offered, since there would be nothing to type.
+	[Fact]
+	public async Task A_caller_with_no_public_name_is_offered_nobody()
+	{
+		var world = new World();
+		await world.Users.UpsertUserAsync(new UserDocument
+		{
+			Id = "u-nameless", UserId = "u-nameless", CreatedAtUtc = Now, LastSignInUtc = Now,
+			Visibility = PresenceVisibility.Everyone,
+		});
+		world.Presence.Add("u-nameless", "c-nameless");
+		await world.PlayerAsync("u-a", "aaa", online: true);
+		await world.TableAsync("t1", seatedUserIds: "u-nameless");
+
+		Assert.Empty(await world.HubFor("u-nameless").GetInvitablePlayers("t1"));
 	}
 }

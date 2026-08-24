@@ -84,7 +84,10 @@ public class PresenceController : ControllerBase
 		foreach (var userId in _presence.OnlineUserIds())
 		{
 			var user = await _users.GetUserAsync(userId, ct);
-			if (user is null) continue;
+			if (user is null)
+			{
+				continue;
+			}
 
 			// The reader sees THEMSELVES in the room, marked and offering nothing to do — whatever
 			// their own setting says, since hiding from others is not hiding from yourself. It is
@@ -96,7 +99,7 @@ public class PresenceController : ControllerBase
 				: relationships.GetValueOrDefault(userId, FriendshipService.Relationship.None);
 
 			if (relationship != FriendshipService.Relationship.Self
-				&& !CanSee(user, relationship))
+				&& !ReachRules.IsVisibleTo(user, relationship))
 			{
 				// Present, and not for this reader to see. Counted rather than named — see the
 				// summary at the top of this file for what that does and does not give away.
@@ -108,7 +111,11 @@ public class PresenceController : ControllerBase
 			// anonymous rather than a blank row.
 			if (user.Handle is not { Length: > 0 } handle)
 			{
-				if (userId != readerId) anonymous++;
+				if (userId != readerId)
+				{
+					anonymous++;
+				}
+
 				continue;
 			}
 
@@ -131,18 +138,6 @@ public class PresenceController : ControllerBase
 	}
 
 	/// <summary>
-	/// Whether one player's choice lets this reader see them. Each option means exactly what it
-	/// says — <see cref="PresenceVisibility.Nobody"/> hides them from friends too.
-	/// </summary>
-	private static bool CanSee(UserDocument user, FriendshipService.Relationship relationship) =>
-		user.EffectiveVisibility switch
-		{
-			PresenceVisibility.Everyone => true,
-			PresenceVisibility.Friends => relationship == FriendshipService.Relationship.Friends,
-			_ => false,
-		};
-
-	/// <summary>
 	/// What somebody is doing, from what the server already knows — nobody reports their own
 	/// status, so nobody can lie about it.
 	///
@@ -155,11 +150,18 @@ public class PresenceController : ControllerBase
 		var activity = PresenceRegistry.Activity.InLobby;
 		foreach (var connectionId in _presence.ConnectionsOf(userId))
 		{
-			if (!_sessions.TryLocateConnection(connectionId, out var gameId, out var onBoard)) continue;
+			if (!_sessions.TryLocateConnection(connectionId, out var gameId, out var onBoard))
+			{
+				continue;
+			}
+
 			var here = onBoard && _sessions.IsMatchRunning(gameId)
 				? PresenceRegistry.Activity.Playing
 				: PresenceRegistry.Activity.AtTable;
-			if (here > activity) activity = here;
+			if (here > activity)
+			{
+				activity = here;
+			}
 		}
 		return activity;
 	}

@@ -40,6 +40,12 @@ public static class ServiceCollectionExtensions
 		services.AddOptions<PublicMetricsOptions>()
 			.Bind(configuration.GetSection(PublicMetricsOptions.SectionName));
 
+		// Which build this is. Deliberately NOT validated on start: a version is a courtesy to the
+		// reader, and a malformed stamp is a reason to say nothing rather than a reason to refuse
+		// to serve a game (BuildInfoOptions.IsConfigured decides that, per field).
+		services.AddOptions<BuildInfoOptions>()
+			.Bind(configuration.GetSection(BuildInfoOptions.SectionName));
+
 		services.AddOptions<SiteBrandingOptions>()
 			.Bind(configuration.GetSection(SiteBrandingOptions.SectionName))
 			.Validate(options =>
