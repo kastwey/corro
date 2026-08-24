@@ -306,10 +306,20 @@ async function initBoard() {
 	// Standing on a buyable property you haven't bought? The turn-ADVANCING key forfeits it (auction or
 	// plain discard, per the house rule) — players do it by mistake and lose the property, so confirm
 	// first. The dialog opens focused on Cancel, so an accidental keypress never forfeits.
-	const confirmForfeitBuyable = (onConfirm: () => void) => {
+	//
+	// One question at a time. The confirmation closes BEFORE its answer goes out (see
+	// dialogManager), which hands focus back to the control that asked while the command is
+	// still travelling — and the client's state still shows the pending purchase that made us
+	// ask. A second activation in that window (Enter's key auto-repeat is enough) would be
+	// decided against that stale state and ask the SAME question again, this time on top of
+	// the auction the first answer just started: the page goes inert and the player is
+	// stranded outside the auction, which is the very failure closing first exists to prevent.
+	let forfeitAnswerInFlight = false;
+	const confirmForfeitBuyable = (onConfirm: () => Promise<void>) => {
+	if (forfeitAnswerInFlight) return;
 	const gs = gameManager.getCurrentGameState();
 	const pp = gs?.pendingPurchase ?? null;
-	if (!pp) { onConfirm(); return; }
+	if (!pp) { void onConfirm(); return; }
 	const auctions = !!gs?.settings?.auctionOnDecline;
 	dialogManager.showConfirm({
 		title: tSync('game.actions.confirm_pass_title'),
@@ -317,7 +327,10 @@ async function initBoard() {
 		message: tSync(auctions ? 'game.actions.confirm_pass_auction' : 'game.actions.confirm_pass_discard',
 		{ property: pp.squareName }),
 		confirmI18nKey: 'game.actions.confirm_pass_yes',
-		onConfirm,
+		onConfirm: () => {
+		forfeitAnswerInFlight = true;
+		return onConfirm().finally(() => { forfeitAnswerInFlight = false; });
+		},
 	});
 	};
 

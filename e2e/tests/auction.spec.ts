@@ -90,6 +90,51 @@ test('auction: declining opens it for all, a lone bidder wins at once, ownership
 	await expect(square(berto, 3)).toHaveAttribute('aria-label', new RegExp(`${sq3}.*${app.game.you_own_property}`));
 });
 
+test('answering the forfeit twice in a row does not ask again over the auction', async ({ browser }) => {
+	// The confirmation closes BEFORE the end-turn command goes out, so focus is back on the
+	// End turn button while it is still travelling — and the client's state still shows the
+	// pending purchase that caused the question. A second activation in that window used to be
+	// decided against that stale state and ask the SAME question again, this time on top of the
+	// auction the first answer had just started: the page goes inert and the player is stranded
+	// outside the auction, which is exactly the failure this whole flow exists to prevent.
+	// Enter's key auto-repeat is enough to produce it.
+	const ana = await newPlayerPage(browser);
+	const berto = await newPlayerPage(browser);
+
+	const code = await createGame(ana, 'Ana', BOARD);
+	await joinGame(berto, code, 'Berto');
+	await startGame(ana, [ana, berto]);
+
+	await roll(ana, 1, 2);
+	await actionButton(ana, 'endTurn').click();
+	const confirm = ana.locator('.game-dialog.dialog-confirm');
+	await expect(confirm).toBeVisible();
+
+	// The repeat has to land INSIDE the round trip, so it is fired from the page in the same
+	// task as the answer — a Playwright keypress round trip is slower than the server.
+	const restoredTo = await ana.evaluate(async () => {
+		(document.querySelector('.game-dialog.dialog-confirm .btn-primary') as HTMLButtonElement).click();
+		const restored = document.activeElement as HTMLElement;
+		restored?.click();                                   // the repeat, same task
+		await new Promise(r => setTimeout(r, 40));
+		(document.activeElement as HTMLElement)?.click();    // and again, mid-flight
+		return restored?.dataset?.actionId ?? null;
+	});
+	// Focus really did come back to the control that asked — the window this guards is real.
+	expect(restoredTo).toBe('endTurn');
+
+	// The question is not asked twice, and the auction has her.
+	await expect(ana.locator('.auction-dialog')).toBeVisible();
+	await expect(confirm).toBeHidden();
+	await expect(ana.locator('#auction-bid-input')).toBeFocused();
+
+	// Close the auction out so the match ends cleanly.
+	await ana.locator('.auction-dialog .auction-pass-btn').click();
+	await berto.locator('.auction-dialog #auction-bid-input').fill('10');
+	await berto.locator('.auction-dialog .auction-bid-btn').click();
+	await expect(ana.locator('.auction-dialog')).toBeHidden();
+});
+
 test('a rival SEES each bid instantly, and the next auction opens at the minimum bid', async ({ browser }) => {
 	// Two live-play bugs in one flow: (1) rivals only learned of a bid through the next
 	// 1-second timer tick, so the "current bid" looked frozen; a bid now broadcasts to the

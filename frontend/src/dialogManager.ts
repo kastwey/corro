@@ -519,9 +519,12 @@ class DialogManagerClass {
 					label: options.cancelLabel || 'Cancel',
 					i18nKey: options.cancelI18nKey || 'common.cancel',
 					variant: 'secondary',
+					// Close first here too, so the two answers behave alike and an onCancel that
+					// PLACES focus (the hand panel puts it back on the card) is not overridden a
+					// line later by the opener restore.
 					action: () => {
-						options.onCancel?.();
 						this.close();
+						options.onCancel?.();
 					}
 				},
 				{
