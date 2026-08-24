@@ -284,6 +284,79 @@ test('Four Colours offers the scoring direction as a named, accessible radio gro
 	await flushAxeAudit(page);
 });
 
+test('Four Colours lets the host say how the match ends, and with which number', async ({ browser }) => {
+	// Both endings existed in the engine; neither could be chosen without editing the package.
+	const page = await newPlayerPage(browser, 'es-ES');
+	await gotoLobbyHome(page);
+	await page.locator('#go-create-btn').click();
+	await chooseBoard(page, SHEDDING_BOARD);
+	const firstToken = packageManifest(SHEDDING_BOARD).tokens[0].id as string;
+	await expect(page.locator(`#create-form input.token-radio[value="${firstToken}"]`)).toBeAttached();
+	await page.locator('#rules-details').evaluate(el => { (el as HTMLDetailsElement).open = true; });
+
+	const ending = page.locator('#package-rules [data-rule-id="sheddingEndMode"]');
+	const group = page.locator('#package-rules fieldset.rule-choice', {
+		has: page.locator('[data-rule-id="sheddingEndMode"]'),
+	});
+	await expect(group.locator('legend')).toHaveText('Cuándo termina la partida');
+	await expect(ending).toHaveCount(2);
+	await expect(ending.nth(0)).toBeChecked(); // by points, as this game always did
+
+	// Only the number that decides THIS match is on the form. Reported from use: offering both
+	// leaves one control that changes nothing, and a host walking the form has to pass it.
+	const points = page.locator('#package-rules [data-rule-id="sheddingTargetScore"]');
+	const rounds = page.locator('#package-rules [data-rule-id="sheddingRounds"]');
+	await expect(points).toBeVisible();
+	await expect(rounds).toBeHidden();
+	await expect(points).toHaveValue('500');
+	await expect(points).toHaveAttribute('step', '1');
+	await expect(points).toHaveAttribute('min', '1'); // no zero, no negatives; no ceiling either
+	await expect(points).not.toHaveAttribute('max', /.*/);
+	await flushAxeAudit(page);
+
+	await ending.nth(1).dispatchEvent('click');
+	await expect(ending.nth(1)).toBeChecked();
+	await expect(rounds).toBeVisible();
+	await expect(points).toBeHidden();
+	await rounds.fill('7');
+	await expect(rounds).toHaveValue('7');
+	// Hidden, not emptied: the points keep the figure, so switching back needs no retyping.
+	await expect(points).toHaveValue('500');
+	await flushAxeAudit(page);
+});
+
+test('Forbidden Words offers the same ending choice, with its own numbers', async ({ browser }) => {
+	// The point of the rule: one mechanism, values that belong to each game. A party word game
+	// counts in tens of points and a handful of rotations, not in hundreds.
+	const page = await newPlayerPage(browser, 'es-ES');
+	await gotoLobbyHome(page);
+	await page.locator('#go-create-btn').click();
+	await chooseBoard(page, FORBIDDEN_BOARD);
+	const firstToken = packageManifest(FORBIDDEN_BOARD).tokens[0].id as string;
+	await expect(page.locator(`#create-form input.token-radio[value="${firstToken}"]`)).toBeAttached();
+	await page.locator('#rules-details').evaluate(el => { (el as HTMLDetailsElement).open = true; });
+
+	const ending = page.locator('#package-rules [data-rule-id="forbiddenEndMode"]');
+	const group = page.locator('#package-rules fieldset.rule-choice', {
+		has: page.locator('[data-rule-id="forbiddenEndMode"]'),
+	});
+	await expect(group.locator('legend')).toHaveText('Cuándo termina la partida');
+	await expect(ending.nth(0)).toBeChecked(); // by rounds, as this family always did
+	const cycles = page.locator('#package-rules [data-rule-id="forbiddenCycles"]');
+	const target = page.locator('#package-rules [data-rule-id="forbiddenTargetScore"]');
+	await expect(cycles).toBeVisible();
+	await expect(cycles).toHaveValue('5');
+	await expect(target).toBeHidden();
+	await flushAxeAudit(page);
+
+	await ending.nth(1).dispatchEvent('click');
+	await expect(ending.nth(1)).toBeChecked();
+	await expect(target).toBeVisible();
+	await expect(target).toHaveValue('30'); // tens of points, not hundreds: this game's own figure
+	await expect(cycles).toBeHidden();
+	await flushAxeAudit(page);
+});
+
 test('home, dark theme, runtime language and create/join validation states are Axe-clean', async ({ browser }) => {
 	const host = await newPlayerPage(browser);
 	await gotoLobbyHome(host);

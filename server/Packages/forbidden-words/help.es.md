@@ -32,7 +32,7 @@ El portavoz describe el objetivo en voz alta. El adivinante responde en voz alta
 - **Objetivo o palabra prohibida** solo está disponible para el supervisor. Resta un punto y reparte otra carta.
 - Cuando se agota el tiempo, Corro cierra el turno automáticamente y rota las funciones.
 
-La puntuación puede bajar de cero. Cuando todos han sido portavoces una vez, gana el equipo con más puntos. Un empate añade otra rotación completa —una ronda de muerte súbita—, de modo que ambos equipos siempre tienen el mismo número de turnos.
+La puntuación puede bajar de cero. Cómo termina la partida lo decide el anfitrión al crearla: **por rondas**, jugando las rotaciones que haya elegido y ganando entonces el equipo con más puntos —un empate añade otra rotación completa, una ronda de muerte súbita—, o **por puntos**, ganando el primer equipo que llegue a la cifra fijada. En ambos casos ambos equipos tienen siempre el mismo número de turnos: una partida por puntos no se corta en cuanto alguien cruza, sino cuando el otro equipo ha jugado sus turnos.
 
 ## Cómo jugar con lector de pantalla
 

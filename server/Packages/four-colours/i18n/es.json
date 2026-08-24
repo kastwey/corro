@@ -80,7 +80,12 @@
     "sheddingStackingNone": "Sin apilar (clásico: robas y pierdes el turno)",
     "sheddingStackingSameType": "Apilar del mismo tipo (+2 sobre +2, +4 sobre +4)",
     "sheddingStackingCross": "Apilar con cruces (+4 sobre +2 y viceversa)",
-    "sheddingLastCardCall": "Declarar la última carta (o te pillan)"
+    "sheddingLastCardCall": "Declarar la última carta (o te pillan)",
+    "sheddingEndMode": "Cuándo termina la partida",
+    "sheddingEndModeScore": "Al llegar a los puntos",
+    "sheddingEndModeRounds": "Al jugar las rondas",
+    "sheddingTargetScore": "Puntos para terminar",
+    "sheddingRounds": "Rondas que se juegan"
   },
   "bots": {
     "rombo": "Doña Rombo",

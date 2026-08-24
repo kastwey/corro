@@ -31,6 +31,52 @@
   ],
   "houseRules": [
     {
+      "id": "sheddingEndMode",
+      "group": "shedding",
+      "type": "choice",
+      "default": "score",
+      "options": [
+        {
+          "id": "score",
+          "nameKey": "rules.sheddingEndModeScore"
+        },
+        {
+          "id": "rounds",
+          "nameKey": "rules.sheddingEndModeRounds"
+        }
+      ],
+      "editableByHost": true,
+      "nameKey": "rules.sheddingEndMode"
+    },
+    {
+      "id": "sheddingTargetScore",
+      "group": "shedding",
+      "type": "number",
+      "default": 500,
+      "min": 1,
+      "step": 1,
+      "editableByHost": true,
+      "nameKey": "rules.sheddingTargetScore",
+      "showWhen": {
+        "rule": "sheddingEndMode",
+        "is": "score"
+      }
+    },
+    {
+      "id": "sheddingRounds",
+      "group": "shedding",
+      "type": "number",
+      "default": 15,
+      "min": 1,
+      "step": 1,
+      "editableByHost": true,
+      "nameKey": "rules.sheddingRounds",
+      "showWhen": {
+        "rule": "sheddingEndMode",
+        "is": "rounds"
+      }
+    },
+    {
       "id": "sheddingScoring",
       "group": "shedding",
       "type": "choice",

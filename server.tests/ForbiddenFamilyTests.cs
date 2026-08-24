@@ -1,4 +1,4 @@
-using CorroServer.Models;
+﻿using CorroServer.Models;
 using CorroServer.Models.Corro;
 using CorroServer.Services.Corro;
 using CorroServer.Services.Corro.Families;
@@ -99,6 +99,67 @@ public class ForbiddenFamilyTests
 		Assert.Equal("p0", game.State.Forbidden.Turn.ClueGiverId);
 		Assert.Equal("p1", game.State.Forbidden.Turn.GuesserId);
 		Assert.Equal("p2", game.State.Forbidden.Turn.MonitorId);
+	}
+
+	[Fact]
+	public async Task The_shipped_rules_and_the_defaults_the_lobby_offers_are_the_same_figures()
+	{
+		// One rule, two places to write its figure. The form always sends the host's value, so a
+		// mismatch plays right and only reads wrong — until the values do not arrive at all and the
+		// match falls back to the block below, the figure nobody kept up to date.
+		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+		var rules = definition.Manifest.ForbiddenRules!;
+		var offered = definition.Manifest.HouseRules.ToDictionary(rule => rule.Id, rule => rule.Default);
+
+		Assert.Equal(rules.EndMode, offered["forbiddenEndMode"]!.Value.GetString());
+		Assert.Equal(rules.Cycles, offered["forbiddenCycles"]!.Value.GetInt32());
+		Assert.Equal(rules.TargetScore, offered["forbiddenTargetScore"]!.Value.GetInt32());
+	}
+
+	[Fact]
+	public async Task The_host_chooses_how_the_match_ends_and_with_which_number()
+	{
+		// The path a real host takes, which the rulebook tests skip by building the rules by hand:
+		// the lobby's RuleValues reaching ForbiddenRulesConfig through CreateGame. This family
+		// refused house rules outright until the ending became the host's, so nothing else walks
+		// it — and a break here would leave the suite green while every match quietly played the
+		// package defaults.
+		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+		var byScore = new ForbiddenFamily().CreateGame(new FamilyStartContext
+		{
+			Players = Players(),
+			Definition = definition,
+			Lang = "en",
+			Teams = Teams(),
+			RuleValues = new Dictionary<string, System.Text.Json.JsonElement>
+			{
+				["forbiddenEndMode"] = System.Text.Json.JsonSerializer.SerializeToElement("score"),
+				["forbiddenTargetScore"] = System.Text.Json.JsonSerializer.SerializeToElement(12),
+				["forbiddenCycles"] = System.Text.Json.JsonSerializer.SerializeToElement(7),
+			},
+		});
+
+		var chosen = byScore.State.ForbiddenRules!;
+		Assert.Equal("score", chosen.EndMode);
+		Assert.Equal(12, chosen.TargetScore);
+		Assert.Equal(7, chosen.Cycles); // kept, simply not what ends this match
+		// The effective rules travel with the game, so the running match plays what the table
+		// agreed on rather than what the package ships.
+		Assert.Equal(chosen, Assert.IsType<ForbiddenRuntime>(byScore.Runtime).Rules);
+
+		// An ending the engine does not know leaves the family's own rotations standing.
+		var nonsense = new ForbiddenFamily().CreateGame(new FamilyStartContext
+		{
+			Players = Players(),
+			Definition = definition,
+			Lang = "en",
+			Teams = Teams(),
+			RuleValues = new Dictionary<string, System.Text.Json.JsonElement>
+			{
+				["forbiddenEndMode"] = System.Text.Json.JsonSerializer.SerializeToElement("whenever"),
+			},
+		}).State.ForbiddenRules!;
+		Assert.Equal("rounds", nonsense.EndMode);
 	}
 
 	[Fact]
@@ -247,6 +308,58 @@ public class ForbiddenFamilyTests
 
 		Assert.True(finish.GameOver);
 		Assert.Equal(0, finish.WinnerTeamIndex);
+	}
+
+	[Fact]
+	public void A_target_score_ends_the_match_only_once_both_teams_have_played_the_same_turns()
+	{
+		// The host's other ending. Stopping the instant a team crosses would hand the match to
+		// whoever happens to play first, so the crossing waits for the turns to be level — the
+		// same equal-opportunity rule that makes a tie add a WHOLE rotation.
+		var deck = Enumerable.Range(0, 12).Select(index => new ForbiddenWordDef
+		{
+			Id = $"w{index}", Target = $"word {index}", Forbidden = new() { "a", "b", "c" },
+		}).ToList();
+		var rules = new ForbiddenRulesConfig { EndMode = "score", TargetScore = 3, Cycles = 1 };
+		var teams = Teams().Select(team => (IReadOnlyList<string>)team).ToList();
+		var state = ForbiddenRulebook.CreateInitialState(teams, deck, rules);
+
+		state.Teams[0].Score = 3; // the opening team is already there…
+		Assert.False(ForbiddenRulebook.CompleteTurn(state, deck, rules).GameOver); // …but is one turn up
+		var finish = ForbiddenRulebook.CompleteTurn(state, deck, rules);
+		Assert.True(finish.GameOver);
+		Assert.Equal(0, finish.WinnerTeamIndex);
+	}
+
+	[Fact]
+	public void A_target_score_match_ignores_the_rotation_count_and_plays_on_through_a_tie()
+	{
+		var deck = Enumerable.Range(0, 12).Select(index => new ForbiddenWordDef
+		{
+			Id = $"w{index}", Target = $"word {index}", Forbidden = new() { "a", "b", "c" },
+		}).ToList();
+		var rules = new ForbiddenRulesConfig { EndMode = "score", TargetScore = 5, Cycles = 1 };
+		var teams = Teams().Select(team => (IReadOnlyList<string>)team).ToList();
+		var state = ForbiddenRulebook.CreateInitialState(teams, deck, rules);
+
+		// A complete rotation with nobody at the target decides nothing here: the rotation count
+		// is what the OTHER ending uses.
+		for (var turn = 0; turn < 4; turn++)
+		{
+			Assert.False(ForbiddenRulebook.CompleteTurn(state, deck, rules).GameOver);
+		}
+
+		// Level ON the target is not a win either — there is no winner to name yet.
+		state.Teams[0].Score = 5;
+		state.Teams[1].Score = 5;
+		Assert.False(ForbiddenRulebook.CompleteTurn(state, deck, rules).GameOver);
+		Assert.False(ForbiddenRulebook.CompleteTurn(state, deck, rules).GameOver);
+
+		state.Teams[1].Score = 7;
+		Assert.False(ForbiddenRulebook.CompleteTurn(state, deck, rules).GameOver); // turns uneven
+		var finish = ForbiddenRulebook.CompleteTurn(state, deck, rules);
+		Assert.True(finish.GameOver);
+		Assert.Equal(1, finish.WinnerTeamIndex);
 	}
 
 	private static List<ForbiddenWordDef> Deck(int count)

@@ -368,8 +368,8 @@ export async function createGame(
 	hostName: string,
 	boardId: string,
 	opts: {
-		/** Toggle rules by boolean; a CHOICE rule by the option id to select. */
-		houseRules?: Record<string, boolean | string>;
+		/** Toggle rules by boolean; a CHOICE rule by the option id to select; a NUMBER by its value. */
+		houseRules?: Record<string, boolean | string | number>;
 		seat?: string;
 		maxPlayers?: number;
 		teamCount?: number;
@@ -414,6 +414,15 @@ export async function createGame(
 				continue;
 			}
 			const box = page.locator(`#package-rules [data-rule-id="${ruleId}"]`);
+			if (typeof value === 'number') {
+				// A number field: set it and announce the change the way typing would, since the
+				// lobby keeps the conditional rules in step by listening for it.
+				await box.evaluate((el, figure) => {
+					(el as HTMLInputElement).value = String(figure);
+					el.dispatchEvent(new Event('change', { bubbles: true }));
+				}, value);
+				continue;
+			}
 			if (await box.isChecked() !== value) await box.dispatchEvent('click');
 		}
 	}

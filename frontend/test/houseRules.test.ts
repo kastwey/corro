@@ -1,7 +1,9 @@
 import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { setupDom } from './helpers/dom.js';
-import { renderHouseRules, readHouseRuleValues } from '../src/houseRules.js';
+import {
+	renderHouseRules, readHouseRuleValues, syncHouseRuleVisibility, watchHouseRuleVisibility,
+} from '../src/houseRules.js';
 
 const tr = (k: string) => (({
 	'rules.group.money': 'Money',
@@ -114,4 +116,106 @@ test('readHouseRuleValues reads a choice back as the selected option id (string)
 	cross.checked = true;
 
 	assert.equal(readHouseRuleValues(c).stacking, 'cross');
+});
+
+// A number that belongs to one branch of a choice — the points of a "play to a score" ending,
+// the rounds of a "play N rounds" one — is noise on the form for every host who chose the other
+// branch, and one more control to walk past. It appears only under the branch it belongs to.
+test('a conditional rule is shown only while its choice sits on the option it belongs to', () => {
+	const container = document.createElement('div');
+	container.innerHTML = renderHouseRules([], [
+		{
+			id: 'endMode', type: 'choice', default: 'score', editableByHost: true,
+			options: [{ id: 'score' }, { id: 'rounds' }],
+		},
+		{ id: 'target', type: 'number', default: 500, editableByHost: true, showWhen: { rule: 'endMode', is: 'score' } },
+		{ id: 'rounds', type: 'number', default: 15, editableByHost: true, showWhen: { rule: 'endMode', is: 'rounds' } },
+		{ id: 'always', type: 'toggle', default: false, editableByHost: true },
+	], k => k);
+	document.body.appendChild(container);
+	syncHouseRuleVisibility(container);
+	watchHouseRuleVisibility(container);
+
+	const box = (ruleId: string) => container.querySelector<HTMLElement>(
+		`.rule-conditional:has([data-rule-id="${ruleId}"])`)!;
+	assert.equal(box('target').hidden, false);
+	assert.equal(box('rounds').hidden, true);
+	// A rule with no condition is never wrapped: existing packages render exactly as before.
+	assert.equal(container.querySelector('.rule-conditional [data-rule-id="always"]'), null);
+
+	// Switching the choice swaps which number is offered.
+	const roundsRadio = container.querySelector<HTMLInputElement>('[data-rule-id="endMode"][value="rounds"]')!;
+	roundsRadio.checked = true;
+	roundsRadio.dispatchEvent(new window.Event('change', { bubbles: true }));
+	assert.equal(box('target').hidden, true);
+	assert.equal(box('rounds').hidden, false);
+
+	// Hidden, NOT emptied: switching back offers the figure the host typed, and both values are
+	// still read — the engine ignores the one its mode does not use.
+	const target = container.querySelector<HTMLInputElement>('[data-rule-id="target"]')!;
+	target.value = '300';
+	assert.deepEqual(readHouseRuleValues(container),
+		{ endMode: 'rounds', target: 300, rounds: 15, always: false });
+
+	container.remove();
+});
+
+// The panel is a FIXED element whose innerHTML is replaced, and both callers re-render it on
+// every board the host tries. Watching it once per render left one more listener behind each
+// time. Nothing visibly broke — the sync is idempotent — it just piled up.
+test('re-rendering the same panel does not stack another visibility listener', () => {
+	const container = document.createElement('div');
+	document.body.appendChild(container);
+	let listeners = 0;
+	const addEventListener = container.addEventListener.bind(container);
+	container.addEventListener = ((type: string, ...rest: unknown[]) => {
+		if (type === 'change') listeners++;
+		(addEventListener as (...args: unknown[]) => void)(type, ...rest);
+	}) as typeof container.addEventListener;
+
+	for (let board = 0; board < 3; board++) {
+		container.innerHTML = renderHouseRules([], [
+			{
+				id: 'endMode', type: 'choice', default: 'score', editableByHost: true,
+				options: [{ id: 'score' }, { id: 'rounds' }],
+			},
+			{ id: 'rounds', type: 'number', default: 15, editableByHost: true, showWhen: { rule: 'endMode', is: 'rounds' } },
+		], k => k);
+		syncHouseRuleVisibility(container);
+		watchHouseRuleVisibility(container);
+	}
+
+	assert.equal(listeners, 1);
+
+	// The one that survived is on the container, so it still reaches the LAST render's radios.
+	const roundsRadio = container.querySelector<HTMLInputElement>('[data-rule-id="endMode"][value="rounds"]')!;
+	roundsRadio.checked = true;
+	roundsRadio.dispatchEvent(new window.Event('change', { bubbles: true }));
+	assert.equal(container.querySelector<HTMLElement>('.rule-conditional')!.hidden, false);
+
+	container.remove();
+});
+
+test('focus never stays on a rule that is being hidden', () => {
+	const container = document.createElement('div');
+	container.innerHTML = renderHouseRules([], [
+		{
+			id: 'endMode', type: 'choice', default: 'score', editableByHost: true,
+			options: [{ id: 'score' }, { id: 'rounds' }],
+		},
+		{ id: 'target', type: 'number', default: 500, editableByHost: true, showWhen: { rule: 'endMode', is: 'score' } },
+	], k => k);
+	document.body.appendChild(container);
+	syncHouseRuleVisibility(container);
+	watchHouseRuleVisibility(container);
+
+	container.querySelector<HTMLInputElement>('[data-rule-id="target"]')!.focus();
+	const roundsRadio = container.querySelector<HTMLInputElement>('[data-rule-id="endMode"][value="rounds"]')!;
+	roundsRadio.checked = true;
+	roundsRadio.dispatchEvent(new window.Event('change', { bubbles: true }));
+
+	// Left on the vanishing field, focus would fall to the document and the host would lose their
+	// place in a long form.
+	assert.equal(document.activeElement, roundsRadio);
+	container.remove();
 });

@@ -35,10 +35,48 @@ public sealed class PackageValidator : IPackageValidator
 	/// the game document — and then quietly dropped, leaving a game that plays by a rule nobody
 	/// picked. Nothing else in the pipeline compares the two sets.</summary>
 	private static void CheckHouseRules(GameDefinition d, List<string> problems)
-		=> problems.AddRange(d.Manifest.HouseRules
+	{
+		problems.AddRange(d.Manifest.HouseRules
 			.Select(HouseRuleCatalog.ChoiceProblem)
 			.Where(problem => problem != null)
 			.Select(problem => problem!));
+		CheckRuleConditions(d, problems);
+	}
+
+	/// <summary>A rule shown only under one branch of a choice must name a choice that EXISTS and an
+	/// option it actually offers. Get either wrong and the lobby hides the rule for good: the host
+	/// never sees it, never sets it, and the package silently plays by a default nobody chose —
+	/// exactly the failure the choice-value check above exists to prevent.</summary>
+	private static void CheckRuleConditions(GameDefinition d, List<string> problems)
+	{
+		var rules = d.Manifest.HouseRules;
+		foreach (var rule in rules)
+		{
+			if (rule.ShowWhen is not { } condition)
+			{
+				continue;
+			}
+			var driver = rules.FirstOrDefault(other => other.Id == condition.Rule);
+			if (driver is null)
+			{
+				problems.Add($"house rule '{rule.Id}' is shown when '{condition.Rule}' is chosen, "
+					+ "but this package declares no such rule");
+				continue;
+			}
+			if (driver.Type != "choice")
+			{
+				problems.Add($"house rule '{rule.Id}' depends on '{condition.Rule}', which is a "
+					+ $"'{driver.Type}' and has no options to depend on");
+				continue;
+			}
+			var options = (driver.Options ?? new List<HouseRuleOption>()).Select(option => option.Id).ToList();
+			if (!options.Contains(condition.Is))
+			{
+				problems.Add($"house rule '{rule.Id}' is shown when '{condition.Rule}' is "
+					+ $"'{condition.Is}', which is not one of its options ({string.Join(", ", options)})");
+			}
+		}
+	}
 
 	/// <summary>Every package must declare which game family it targets, and it must be one this
 	/// engine version implements (the .corro format anticipates more — each family brings its

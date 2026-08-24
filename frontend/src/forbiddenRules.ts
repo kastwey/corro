@@ -26,11 +26,26 @@ export function forbiddenRoleLabel(role: ForbiddenRole, t: T): string {
 }
 
 /**
+ * Is this rotation one the match should already have ended in? The family adds a WHOLE extra
+ * rotation when the rounds the host asked for run out with the scores level, and THAT is what
+ * sudden death means here.
+ *
+ * Reported from play: a five-round match called every rotation from the second on sudden death.
+ * The old test — cycle > 1 — was right only while a match lasted exactly one rotation. On a
+ * target score there is no sudden death at all: play simply continues until somebody arrives.
+ */
+function inSuddenDeath(gs: GameState): boolean {
+	if (!gs.forbidden) return false;
+	if (gs.forbiddenRules?.endMode === 'score') return false;
+	return gs.forbidden.cycle > (gs.forbiddenRules?.cycles ?? 1);
+}
+
+/**
  * The headline of the turn: which team is up. Nothing else — not the seconds (the timer owns
  * those), not the duties (the cast below owns those), and not the turn or cycle NUMBER, which
  * was counting bookkeeping at a player who only wanted to know whose turn it was.
  *
- * The cycle survives in one place only: a tie-breaker, where a second rotation is the whole
+ * The cycle survives in one place only: a tie-breaker, where the extra rotation is the whole
  * reason the match is still going, and is named as sudden death rather than as "cycle 2".
  */
 export function forbiddenNowPlayingText(gs: GameState, playerId: string, t: T): string | null {
@@ -40,7 +55,7 @@ export function forbiddenNowPlayingText(gs: GameState, playerId: string, t: T): 
 	const mine = state.teams.find(team => team.teamIndex === turn.teamIndex)?.memberIds.includes(playerId);
 	const key = turn.phase === 'active' ? 'game.forbidden_now_active' : 'game.forbidden_now_preparing';
 	const headline = t(mine ? `${key}_self` : key, { team: teamDisplayName(turn.teamIndex, t) });
-	return state.cycle > 1
+	return inSuddenDeath(gs)
 		? `${headline} ${t('game.forbidden_sudden_death', { cycle: state.cycle })}`
 		: headline;
 }
@@ -112,7 +127,7 @@ export function forbiddenStatusText(gs: GameState, playerId: string, t: T): stri
 		score: team.score,
 		role: forbiddenRoleLabel(forbiddenRole(state.turn, playerId), t),
 	});
-	return state.cycle > 1
+	return inSuddenDeath(gs)
 		? `${status} ${t('game.forbidden_sudden_death', { cycle: state.cycle })}`
 		: status;
 }

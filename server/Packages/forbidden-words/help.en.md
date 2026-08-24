@@ -32,7 +32,7 @@ The clue-giver describes the target aloud. The guesser answers aloud. Corro deli
 - **Target or forbidden word** is controlled only by the monitor. It removes one point and deals another card.
 - When time expires, Corro closes the turn automatically and rotates the roles.
 
-The score is allowed to fall below zero. After every player has given clues once, the higher score wins. A tie adds another complete rotation — a sudden-death round — so both teams always receive the same number of turns.
+The score is allowed to fall below zero. How the match ends is the host's choice when creating it: **by rounds**, playing the rotations they chose, after which the higher score wins — a tie adding another complete rotation, a sudden-death round — or **by points**, won by the first team to reach the figure set. Either way both teams always receive the same number of turns: a match on points does not stop the moment somebody crosses, but when the other team has had its turns.
 
 ## Playing with a screen reader
 

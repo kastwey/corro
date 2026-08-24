@@ -34,8 +34,12 @@ mesa al crear la partida:
 - **Castigo**: cada cual se queda los puntos que le sobran en la mano y quien gana la ronda no
   se apunta nada. Llegar a **500** hace perder la partida, así que gana la puntuación más baja.
 
+La mesa también decide **cuándo se acaba**: al llegar a los puntos —500 de partida, aunque el
+anfitrión pone la cifra que quiera— o al jugar un número fijo de rondas, y entonces gana la mejor
+puntuación, que según el recuento elegido es la más alta o la más baja.
+
 En ambos casos el ganador de cada ronda abre la siguiente, y **Ctrl+Shift+F1** dice qué
-recuento está en vigor.
+recuento está en vigor y cómo termina la partida.
 
 Aquí nadie grita: el número de cartas de cada jugador se **consulta cuando quieras** —
 la **S** dice cómo vas (cartas, color en vigor, carta de arriba y puntos) y **Shift+S**

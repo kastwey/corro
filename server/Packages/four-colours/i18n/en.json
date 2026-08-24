@@ -80,7 +80,12 @@
     "sheddingStackingNone": "No stacking (classic: draw and lose your turn)",
     "sheddingStackingSameType": "Stack same type (+2 on +2, +4 on +4)",
     "sheddingStackingCross": "Stack across kinds (+4 on +2 and vice versa)",
-    "sheddingLastCardCall": "Declare your last card (or be caught)"
+    "sheddingLastCardCall": "Declare your last card (or be caught)",
+    "sheddingEndMode": "When the match ends",
+    "sheddingEndModeScore": "On reaching the points",
+    "sheddingEndModeRounds": "After the rounds are played",
+    "sheddingTargetScore": "Points that end it",
+    "sheddingRounds": "Rounds played"
   },
   "bots": {
     "rombo": "Rhombus Rita",

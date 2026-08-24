@@ -12,7 +12,9 @@ import {
 } from '../unlockCodes.js';
 import { i18nBinder } from '../i18nBinder.js';
 import { isLobbyPathFor, lobbyPathFor } from '../languageUrl.js';
-import { renderHouseRules, readHouseRuleValues } from '../houseRules.js';
+import {
+	renderHouseRules, readHouseRuleValues, syncHouseRuleVisibility, watchHouseRuleVisibility,
+} from '../houseRules.js';
 import { GameSessionStore, SavedGame } from '../sessionUtils.js';
 import { dialogManager } from '../dialogManager.js';
 import { makeInFlightGuard } from '../inFlightGuard.js';
@@ -748,6 +750,9 @@ class UnifiedLobbyUI {
 		const container = getElement('package-rules');
 		if (!container) return;
 		container.innerHTML = renderHouseRules(pkg.ruleGroups ?? [], pkg.houseRules ?? [], k => i18nBinder.tSync(k));
+		// A rule that belongs to one branch of a choice appears only under that branch.
+		syncHouseRuleVisibility(container);
+		watchHouseRuleVisibility(container);
 		container.classList.remove('hidden');
 		getElement('rules-details')?.classList.add('rules-details--package');
 	}

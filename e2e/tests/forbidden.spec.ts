@@ -418,7 +418,12 @@ test('a second match at the same table is dealt words the first one never used',
 	]);
 	const [ana, berto, carla, david] = pages;
 
-	const code = await createGame(ana, 'Ana', BOARD, { maxPlayers: 4, teamCount: 2, contentLanguage: 'es' });
+	// One rotation, chosen here rather than inherited: what this test needs is the SHORTEST match
+	// the rules allow, and the package's own figure is free to change — it went from 1 to 5 and
+	// left this loop playing half a match. The lobby offers the rule, so the spec states it.
+	const code = await createGame(ana, 'Ana', BOARD, {
+		maxPlayers: 4, teamCount: 2, contentLanguage: 'es', houseRules: { forbiddenCycles: 1 },
+	});
 	await joinGame(berto, code, 'Berto');
 	await joinGame(carla, code, 'Carla');
 	await joinGame(david, code, 'David');

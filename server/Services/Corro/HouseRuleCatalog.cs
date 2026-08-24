@@ -70,6 +70,12 @@ public static class HouseRuleCatalog
 	public static readonly IReadOnlySet<string> SheddingScoringModes =
 		new HashSet<string> { "collect", "penalty" };
 
+	/// <summary>What the "sheddingEndMode" choice rule accepts: "score" = play until somebody
+	/// crosses the target (the classic), "rounds" = play a fixed number of rounds and read the
+	/// scores. Which number applies is the host's answer here; the other one simply idles.</summary>
+	public static readonly IReadOnlySet<string> SheddingEndModes =
+		new HashSet<string> { "score", "rounds" };
+
 	private static readonly Dictionary<string, Func<SheddingRulesConfig, JsonElement, SheddingRulesConfig>> SheddingAppliers = new()
 	{
 		["sheddingAllowDoubles"] = (r, v) => r with { AllowDoubles = v.GetBoolean() },
@@ -87,10 +93,43 @@ public static class HouseRuleCatalog
 			: r,
 		["sheddingLastCardCall"] = (r, v) => r with { LastCardCall = v.GetBoolean() },
 		["sheddingLastCardPenalty"] = (r, v) => r with { LastCardPenalty = v.GetInt32() },
+		// A "choice" rule like the two above: an unrecognised string keeps the classic ending.
+		["sheddingEndMode"] = (r, v) => v.ValueKind == JsonValueKind.String
+										  && SheddingEndModes.Contains(v.GetString()!)
+			? r with { EndMode = v.GetString()! }
+			: r,
+		["sheddingTargetScore"] = (r, v) => r with { TargetScore = v.GetInt32() },
+		["sheddingRounds"] = (r, v) => r with { Rounds = v.GetInt32() },
 	};
 
 	/// <summary>Whether the engine knows this SHEDDING rule code.</summary>
 	public static bool IsKnownShedding(string id) => SheddingAppliers.ContainsKey(id);
+
+	// ── Forbidden family ──────────────────────────────────────────────────────
+
+	/// <summary>What the "forbiddenEndMode" choice rule accepts: "rounds" = complete clue-giver
+	/// rotations decide it (the classic, ties adding a whole rotation), "score" = the first team
+	/// to the target wins, once both have had the same number of turns.</summary>
+	public static readonly IReadOnlySet<string> ForbiddenEndModes =
+		new HashSet<string> { "rounds", "score" };
+
+	private static readonly Dictionary<string, Func<ForbiddenRulesConfig, JsonElement, ForbiddenRulesConfig>> ForbiddenAppliers = new()
+	{
+		["forbiddenEndMode"] = (r, v) => v.ValueKind == JsonValueKind.String
+										   && ForbiddenEndModes.Contains(v.GetString()!)
+			? r with { EndMode = v.GetString()! }
+			: r,
+		["forbiddenCycles"] = (r, v) => r with { Cycles = v.GetInt32() },
+		["forbiddenTargetScore"] = (r, v) => r with { TargetScore = v.GetInt32() },
+		["forbiddenTurnSeconds"] = (r, v) => r with { TurnSeconds = v.GetInt32() },
+	};
+
+	/// <summary>Whether the engine knows this FORBIDDEN rule code.</summary>
+	public static bool IsKnownForbidden(string id) => ForbiddenAppliers.ContainsKey(id);
+
+	/// <summary>Returns forbidden rules with the rule applied; unknown ids are left unchanged.</summary>
+	public static ForbiddenRulesConfig ApplyForbidden(ForbiddenRulesConfig rules, string id, JsonElement value)
+		=> ForbiddenAppliers.TryGetValue(id, out var apply) ? apply(rules, value) : rules;
 
 	// ── Choice rules: the values the engine actually accepts ──────────────────
 
@@ -103,6 +142,8 @@ public static class HouseRuleCatalog
 		{
 			["sheddingStacking"] = SheddingStackingModes,
 			["sheddingScoring"] = SheddingScoringModes,
+			["sheddingEndMode"] = SheddingEndModes,
+			["forbiddenEndMode"] = ForbiddenEndModes,
 		};
 
 	/// <summary>

@@ -198,7 +198,14 @@ the wrong rules.
   // choice may only offer values the engine's code accepts. Validation enforces both.
   "ruleGroups": [ { "id": "building", "nameKey": "rules.group.building" } ],
   "houseRules": [
-    { "id": "startingMoney",  "nameKey": "rules.startingMoney",  "default": 1500, "type": "number" }
+    { "id": "startingMoney",  "nameKey": "rules.startingMoney",  "default": 1500, "type": "number" },
+    // A rule may belong to ONE branch of a choice rule. The lobby then offers it only while that
+    // branch is selected — a number that decides nothing is one more control to walk past, and
+    // the host who chose the other branch never needs it. The value is hidden, never emptied or
+    // disabled, so switching back offers the figure they typed. Validation rejects a condition
+    // naming a rule this package does not declare, or an option that rule does not offer.
+    { "id": "sheddingRounds", "nameKey": "rules.sheddingRounds", "default": 15, "type": "number",
+      "showWhen": { "rule": "sheddingEndMode", "is": "rounds" } }
   ],
 
   // Player tokens (REQUIRED — the engine has no built-in set). See assets/tokens/ below.
@@ -1031,21 +1038,27 @@ game for every player, sighted or not — never a reflex race.
   "allowDoubles": false,          // play several identical number cards in one turn
   "stacking": "none",             // "none" | "sameType" | "cross" — answering a draw card
   "lastCardCall": false,          // declare your last card or be caught
-  "lastCardPenalty": 2            // cards drawn when caught without declaring
+  "lastCardPenalty": 2,           // cards drawn when caught without declaring
+  "endMode": "score",             // what ENDS the match: "score" = rounds repeat until someone
+                                  // crosses targetScore (the classic); "rounds" = exactly
+                                  // `rounds` rounds are played and the best score then wins,
+                                  // best being highest under "collect" and lowest under "penalty"
+  "rounds": 15                    // rounds played when endMode is "rounds" (at least 1)
 }
 ```
 
 The same fields are the shedding **house-rule codes** a package may expose to the host in
 `houseRules[]`, named in camelCase with the family prefix: `sheddingScoring` and
-`sheddingStacking` (both `"type": "choice"`), `sheddingAllowDoubles` and `sheddingLastCardCall`
-(toggles), and `sheddingLastCardPenalty` (number). A choice rule must declare option ids the
+`sheddingStacking` and `sheddingEndMode` (all `"type": "choice"`), `sheddingAllowDoubles` and
+`sheddingLastCardCall` (toggles), and `sheddingLastCardPenalty`, `sheddingTargetScore` and
+`sheddingRounds` (numbers). A choice rule must declare option ids the
 engine accepts and default to one of them — validation rejects the package otherwise, because a
 value the engine does not know would be offered, chosen and then silently dropped.
 
 Validation: unique ids, known types, wilds colourless and everything else coloured and
-named, at least two colours and one number card, non-negative values/points, a `scoring` and
-`stacking` the engine knows, and a deck of at least `players.max × handSize + 1` cards (draws
-recirculate the buried discards).
+named, at least two colours and one number card, non-negative values/points, a `scoring`,
+`stacking` and `endMode` the engine knows, `rounds` of at least 1, and a deck of at least
+`players.max × handSize + 1` cards (draws recirculate the buried discards).
 
 ### Overridable voice (`game.shedding_*`)
 
@@ -1284,13 +1297,22 @@ match these words against speech: the opposing monitor reports a violation.
   "passesPerTurn": 3,     // 0..10
   "correctPoints": 1,     // 1..10
   "violationPenalty": 1,  // 0..10; scores may fall below zero
-  "cycles": 1             // 1..5 complete clue-giver rotations before scoring
+  "cycles": 5,            // complete clue-giver rotations before scoring (at least 1)
+  "endMode": "rounds",    // what ENDS the match: "rounds" = play `cycles` rotations and the
+                          // higher score wins (ties adding a whole rotation); "score" = the
+                          // first team to `targetScore` wins, once both have had the same
+                          // number of turns — never mid-turn, never one team ahead
+  "targetScore": 30       // points that win when endMode is "score" (at least 1)
 }
 ```
 
+The house-rule codes this family exposes to the host are `forbiddenEndMode` (`"type": "choice"`,
+values `rounds` / `score`) and the numbers `forbiddenCycles`, `forbiddenTargetScore` and
+`forbiddenTurnSeconds`.
+
 Packages declare an even player range from 4 through 8 and enough tokens for `players.max`.
-The lobby forces exactly two equal, full teams before starting. Bots and house-rule declarations are
-not supported in this family.
+The lobby forces exactly two equal, full teams before starting. Bots are not supported in this
+family.
 
 ### Forbidden-word rules the engine implements
 

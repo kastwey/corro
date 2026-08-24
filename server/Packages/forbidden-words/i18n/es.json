@@ -8,5 +8,12 @@
     "comet": "Cometa",
     "pulse": "Pulso",
     "knot": "Nudo"
+  },
+  "rules": {
+    "forbiddenEndMode": "Cuándo termina la partida",
+    "forbiddenEndModeRounds": "Al jugar las rondas",
+    "forbiddenEndModeScore": "Al llegar a los puntos",
+    "forbiddenCycles": "Rondas que se juegan",
+    "forbiddenTargetScore": "Puntos para ganar"
   }
 }

@@ -46,6 +46,62 @@ export function renderHouseRules(
 	}).join('');
 }
 
+/**
+ * Wraps a rule that only applies under a choice in a marker its visibility is driven from
+ * (see {@link syncHouseRuleVisibility}). Rules with no condition are returned untouched, so
+ * the markup of every existing package is exactly what it was.
+ */
+function conditioned(rule: HouseRuleDef, html: string): string {
+	if (!rule.showWhen) return html;
+	return `<div class="rule-conditional" data-show-when-rule="${escapeHtml(rule.showWhen.rule)}"`
+		+ ` data-show-when-is="${escapeHtml(rule.showWhen.is)}">${html}</div>`;
+}
+
+/**
+ * Shows each conditional rule only while its choice sits on the option it belongs to. Called
+ * after rendering, after restoring saved values, and on every change — the panel must never
+ * offer a number that decides nothing.
+ *
+ * Hidden, never disabled: the project's rule is that a control a player can reach must be able
+ * to act. A field that does not apply is not a dead control, it is absent — and its value stays
+ * in the DOM, so switching back offers the figure the host typed rather than a default.
+ */
+export function syncHouseRuleVisibility(container: HTMLElement): void {
+	container.querySelectorAll<HTMLElement>('.rule-conditional').forEach(box => {
+		const rule = box.dataset.showWhenRule!;
+		// Matched by walking the radios rather than building a selector out of a rule id: the id
+		// comes from a package, and package content is never trusted to be a safe selector.
+		let selected: HTMLInputElement | undefined;
+		container.querySelectorAll<HTMLInputElement>('[data-rule-type="choice"]').forEach(input => {
+			if (!selected && input.checked && input.dataset.ruleId === rule) selected = input;
+		});
+		const applies = selected?.value === box.dataset.showWhenIs;
+		if (!applies && box.contains(document.activeElement)) {
+			// Never strand the focus on something about to vanish: hand it to the radio that did it.
+			selected?.focus();
+		}
+		box.hidden = !applies;
+	});
+}
+
+/**
+ * Keeps the conditional rules in step with their choice while the host edits the form.
+ *
+ * Called once per RENDER, but the container it watches outlives every render — both callers own a
+ * fixed element and only replace its innerHTML — so a host trying four boards left four listeners
+ * behind. Marking the container makes the second call a no-op: nothing visibly broke, since the
+ * sync is idempotent, it just piled up.
+ */
+export function watchHouseRuleVisibility(container: HTMLElement): void {
+	if (container.dataset.ruleVisibilityWatched === 'yes') return;
+	container.dataset.ruleVisibilityWatched = 'yes';
+	container.addEventListener('change', event => {
+		const target = event.target as HTMLElement | null;
+		if (target?.dataset?.ruleType !== 'choice') return;
+		syncHouseRuleVisibility(container);
+	});
+}
+
 function renderRule(rule: HouseRuleDef, translate: (key: string) => string): string {
 	const label_ = label(rule.nameKey, rule.id, translate);
 	const id = escapeHtml(rule.id);
@@ -54,7 +110,7 @@ function renderRule(rule: HouseRuleDef, translate: (key: string) => string): str
 		if (rule.min != null) attrs.push(`min="${Number(rule.min)}"`);
 		if (rule.max != null) attrs.push(`max="${Number(rule.max)}"`);
 		if (rule.step != null) attrs.push(`step="${Number(rule.step)}"`);
-		return `<div class="form-group"><label>${label_} <input type="number" ${attrs.join(' ')}></label></div>`;
+		return conditioned(rule, `<div class="form-group"><label>${label_} <input type="number" ${attrs.join(' ')}></label></div>`);
 	}
 	if (rule.type === 'choice') {
 		// A radio group: mutually-exclusive options, grouped by the rule id (its name), the
@@ -67,10 +123,10 @@ function renderRule(rule: HouseRuleDef, translate: (key: string) => string): str
 			return `<label class="rule-choice__option"><input type="radio" name="rule-${id}" `
 				+ `data-rule-id="${id}" data-rule-type="choice" value="${optId}"${checked}> ${optLabel}</label>`;
 		}).join('');
-		return `<fieldset class="form-group rule-choice"><legend>${label_}</legend>${radios}</fieldset>`;
+		return conditioned(rule, `<fieldset class="form-group rule-choice"><legend>${label_}</legend>${radios}</fieldset>`);
 	}
 	const checked = rule.default === true ? ' checked' : '';
-	return `<div class="form-group"><label><input type="checkbox" data-rule-id="${id}" data-rule-type="toggle"${checked}> ${label_}</label></div>`;
+	return conditioned(rule, `<div class="form-group"><label><input type="checkbox" data-rule-id="${id}" data-rule-type="toggle"${checked}> ${label_}</label></div>`);
 }
 
 /**

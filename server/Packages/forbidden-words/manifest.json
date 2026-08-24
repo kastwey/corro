@@ -19,7 +19,7 @@
     "passesPerTurn": 3,
     "correctPoints": 1,
     "violationPenalty": 1,
-    "cycles": 1
+    "cycles": 5
   },
   "tokens": [
     { "id": "spark", "nameKey": "tokens.spark" },
@@ -30,5 +30,53 @@
     { "id": "comet", "nameKey": "tokens.comet" },
     { "id": "pulse", "nameKey": "tokens.pulse" },
     { "id": "knot", "nameKey": "tokens.knot" }
+  ],
+  "houseRules": [
+    {
+      "id": "forbiddenEndMode",
+      "group": "forbidden",
+      "type": "choice",
+      "default": "rounds",
+      "options": [
+        {
+          "id": "rounds",
+          "nameKey": "rules.forbiddenEndModeRounds"
+        },
+        {
+          "id": "score",
+          "nameKey": "rules.forbiddenEndModeScore"
+        }
+      ],
+      "editableByHost": true,
+      "nameKey": "rules.forbiddenEndMode"
+    },
+    {
+      "id": "forbiddenCycles",
+      "group": "forbidden",
+      "type": "number",
+      "default": 5,
+      "min": 1,
+      "step": 1,
+      "editableByHost": true,
+      "nameKey": "rules.forbiddenCycles",
+      "showWhen": {
+        "rule": "forbiddenEndMode",
+        "is": "rounds"
+      }
+    },
+    {
+      "id": "forbiddenTargetScore",
+      "group": "forbidden",
+      "type": "number",
+      "default": 30,
+      "min": 1,
+      "step": 1,
+      "editableByHost": true,
+      "nameKey": "rules.forbiddenTargetScore",
+      "showWhen": {
+        "rule": "forbiddenEndMode",
+        "is": "score"
+      }
+    }
   ]
 }

@@ -80,6 +80,22 @@ public class FourColoursPackageTests
 	}
 
 	[Fact]
+	public async Task The_shipped_rules_and_the_defaults_the_lobby_offers_are_the_same_figures()
+	{
+		// The ending's two figures are each written twice — in the rules block a match falls back
+		// to, and in the default the lobby puts on the form. Forbidden Words shipped them
+		// disagreeing, which nothing catches at run time because the form always sends its value.
+		var def = await Loaded;
+		var rules = def.Manifest.SheddingRules!;
+		var offered = def.Manifest.HouseRules.ToDictionary(rule => rule.Id, rule => rule.Default);
+
+		Assert.Equal(rules.EndMode, offered["sheddingEndMode"]!.Value.GetString());
+		Assert.Equal(rules.TargetScore, offered["sheddingTargetScore"]!.Value.GetInt32());
+		Assert.Equal(rules.Rounds, offered["sheddingRounds"]!.Value.GetInt32());
+		Assert.Equal(rules.Scoring, offered["sheddingScoring"]!.Value.GetString());
+	}
+
+	[Fact]
 	public async Task Every_house_rule_and_option_is_named_in_both_locales()
 	{
 		// PackageValidator walks cards, colours, tokens and terminology but NOT house-rule

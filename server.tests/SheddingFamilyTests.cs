@@ -147,6 +147,41 @@ public class SheddingFamilyTests
 	}
 
 	[Fact]
+	public void The_host_chooses_how_the_match_ends_and_with_which_number()
+	{
+		// Both numbers travel: the host swaps the ending mid-lobby without retyping the other.
+		var byRounds = Family.CreateGame(new FamilyStartContext
+		{
+			Players = new List<Player> { TestFixtures.NewPlayer("a"), TestFixtures.NewPlayer("b") },
+			Definition = Definition(),
+			Random = new ScriptedRandomSource(),
+			RuleValues = new Dictionary<string, System.Text.Json.JsonElement>
+			{
+				["sheddingEndMode"] = System.Text.Json.JsonSerializer.SerializeToElement("rounds"),
+				["sheddingRounds"] = System.Text.Json.JsonSerializer.SerializeToElement(15),
+				["sheddingTargetScore"] = System.Text.Json.JsonSerializer.SerializeToElement(300),
+			},
+		}).State.SheddingRules!;
+
+		Assert.Equal("rounds", byRounds.EndMode);
+		Assert.Equal(15, byRounds.Rounds);
+		Assert.Equal(300, byRounds.TargetScore); // kept, simply not what ends this match
+
+		// An ending the engine does not know leaves the classic race to the target standing.
+		var nonsense = Family.CreateGame(new FamilyStartContext
+		{
+			Players = new List<Player> { TestFixtures.NewPlayer("a"), TestFixtures.NewPlayer("b") },
+			Definition = Definition(),
+			Random = new ScriptedRandomSource(),
+			RuleValues = new Dictionary<string, System.Text.Json.JsonElement>
+			{
+				["sheddingEndMode"] = System.Text.Json.JsonSerializer.SerializeToElement("whenever"),
+			},
+		}).State.SheddingRules!;
+		Assert.Equal("score", nonsense.EndMode);
+	}
+
+	[Fact]
 	public void House_rules_must_be_known_shedding_codes_and_stacking_must_be_valid()
 	{
 		var unknown = Definition();

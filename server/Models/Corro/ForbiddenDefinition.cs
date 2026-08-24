@@ -36,4 +36,14 @@ public sealed record ForbiddenRulesConfig
 	/// <summary>Complete rotations every player must take as clue-giver before scores decide
 	/// the game. A tie automatically adds another complete rotation.</summary>
 	public int Cycles { get; init; } = 1;
+
+	/// <summary>House rule: what ends the match. "rounds" = play <see cref="Cycles"/> complete
+	/// rotations and the higher score wins (what this family always did, ties adding a rotation);
+	/// "score" = the first team to reach <see cref="TargetScore"/> wins, which can happen
+	/// mid-rotation — but never mid-TURN: the turn in play is always finished, so both teams keep
+	/// the equal number of turns the family is built on.</summary>
+	public string EndMode { get; init; } = "rounds";
+
+	/// <summary>Points that win the match when <see cref="EndMode"/> is "score".</summary>
+	public int TargetScore { get; init; } = 30;
 }
