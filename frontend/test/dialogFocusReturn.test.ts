@@ -72,6 +72,33 @@ test('a non-focused opener (body) leaves focus alone — no throw', () => {
 	assert.doesNotThrow(() => dialogManager.close());
 });
 
+test('a close event arriving late does not steal focus an action already claimed', () => {
+	// The platform QUEUES the close event rather than firing it inside close(), so when a button
+	// action closes a dialog and then sends focus somewhere on purpose — "close this card's help
+	// and put me back on the card" — the dialog is already closed and focus already moved by the
+	// time the close handler runs. Restoring the opener unconditionally undid that a few
+	// milliseconds later, leaving the player on the row's Ayuda button where Enter re-opened the
+	// help instead of playing the card.
+	//
+	// jsdom's <dialog> polyfill dispatches close synchronously, so that order is staged here
+	// instead of awaited: close the element, move focus, and only then let the event through.
+	const btn = openerButton('card-help-btn');
+	btn.focus();
+	showSimple();
+
+	const dialog = document.getElementById('game-dialog') as HTMLDialogElement;
+	dialog.open = false;
+	dialog.removeAttribute('open');
+	const card = document.createElement('li');
+	card.tabIndex = 0;
+	document.body.appendChild(card);
+	card.focus();
+
+	dialog.dispatchEvent(new window.Event('close'));
+
+	assert.equal(document.activeElement, card, 'the action that closed the dialog keeps focus');
+});
+
 test('returnFocusTo restores to the named control even when it never held DOM focus', () => {
 	// Simulates a screen-reader browse-mode activation: the button opened the dialog but
 	// DOM focus was on <body>, so the auto-capture alone would miss it.
