@@ -13,12 +13,23 @@
 	padding: 0 0.5rem;
 }
 
+/* As many pieces per row as fit, never a fixed count. Four hard-coded columns held at every
+ * size, and a column of `1fr` cannot shrink below its own content: enlarge the text and each
+ * cell's icon and name grow, the four columns grow with them, and the fieldset runs off the
+ * right edge — the page then scrolls sideways, which is the one thing our layouts must never
+ * do, and a player who enlarged the text to read at all had to scroll right to reach a piece
+ * they cannot start a game without (issue #14).
+ *
+ * The floor is in rem so it grows with the text as the cells do — a pixel floor would keep
+ * counting columns as if the text had not changed — and `min(…, 100%)` keeps the track itself
+ * from exceeding a container narrower than the floor. At the default size this still lays out
+ * exactly four columns, unchanged. */
 .token-list {
 	list-style: none;
 	padding: 0;
 	margin: 0;
 	display: grid;
-	grid-template-columns: repeat(4, 1fr);
+	grid-template-columns: repeat(auto-fit, minmax(min(5rem, 100%), 1fr));
 	gap: 0.5rem;
 }
 
