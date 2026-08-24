@@ -6,6 +6,7 @@
 // is fix-once; each board keeps its own visual region and words its own status text.
 
 import { isTypingTarget } from './typingTarget.js';
+import { owningModalDialog } from './keys.js';
 import type { GameState } from './models.js';
 import type { HelpShortcut } from './shortcuts.js';
 import type { HandPanel } from './handPanel.js';
@@ -61,8 +62,31 @@ export interface StatusKeysDeps {
  * card family (live-play request: "Shift+S reads only the others; S already tells me my status"),
  * so it lives here once — a change to the keys or the gating is fix-once.
  */
+/**
+ * The second way in for a surface's READ-ONLY keys: while a modal dialog owns the keyboard.
+ *
+ * The engine's own queries already survive an open dialog — `DIALOG_READONLY_COMMANDS` in
+ * keys.ts exists so "a blind player can check their situation without first dismissing the
+ * dialog". A card family's queries never did: they hang off the surface element, and a dialog
+ * takes the focus off it. That was covered by accident while C (AnnounceMyStatus) still routed
+ * through the engine, and the gap showed the moment it stopped.
+ *
+ * Only handlers that ANNOUNCE belong here. A key that acts would fire on a game whose player is
+ * looking at a yes/no they have not answered yet.
+ *
+ * A screen reader in browse mode intercepts letters before the page sees them, so inside a
+ * reading dialog this works once the reader is switched to focus mode — the user's half of the
+ * bargain, and the same one every engine query already asks of them.
+ */
+function whileAModalDialogHasTheKeyboard(answer: (e: KeyboardEvent) => void): void {
+	document.addEventListener('keydown', (e) => {
+		if (!owningModalDialog(e.target)) return;
+		answer(e);
+	});
+}
+
 export function registerStatusKeys(element: HTMLElement, deps: StatusKeysDeps): void {
-	element.addEventListener('keydown', (e) => {
+	const answer = (e: KeyboardEvent): void => {
 		if (e.key !== 's' && e.key !== 'S') return;
 		if (e.ctrlKey || e.altKey || e.metaKey) return;
 		// A surface with a text field on it (the categories sheet) types its own letters.
@@ -75,7 +99,9 @@ export function registerStatusKeys(element: HTMLElement, deps: StatusKeysDeps): 
 		e.preventDefault();
 		e.stopPropagation();
 		deps.announce(status);
-	});
+	};
+	element.addEventListener('keydown', answer);
+	whileAModalDialogHasTheKeyboard(answer);
 }
 
 export interface PileStatusKeyDeps {
@@ -95,7 +121,7 @@ export interface PileStatusKeyDeps {
  */
 export function registerPileStatusKey(element: HTMLElement, deps: PileStatusKeyDeps): void {
 	const letter = (deps.key ?? 'd').toLowerCase();
-	element.addEventListener('keydown', (e) => {
+	const answer = (e: KeyboardEvent): void => {
 		if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
 		if (e.key.toLowerCase() !== letter) return;
 		if (isTypingTarget(e.target)) return;
@@ -104,7 +130,9 @@ export function registerPileStatusKey(element: HTMLElement, deps: PileStatusKeyD
 		e.preventDefault();
 		e.stopPropagation();
 		deps.announce(text);
-	});
+	};
+	element.addEventListener('keydown', answer);
+	whileAModalDialogHasTheKeyboard(answer);
 }
 
 /** A player's display name (falls back to the id). */
