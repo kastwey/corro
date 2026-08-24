@@ -1527,7 +1527,7 @@
     "shedding_last_card_button": "Declarar última carta",
     "shedding_catch_button": "¡Pillar!",
     "shedding_watch_button": "Vigilancia",
-    "shedding_watch_none": "Nadie va corto",
+    "shedding_watch_none": "Nadie está cerca de ganar",
     "shedding_watch_one": "{{name}}: una carta",
     "shedding_watch_cards": "{{name}}: {{count}} cartas",
     "shedding_watch_undeclared": "{{name}}: una carta, ¡sin declarar!",
