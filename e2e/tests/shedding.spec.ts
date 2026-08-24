@@ -2,7 +2,7 @@
 //
 // Two real browsers, Spanish, real SignalR. The E2E identity shuffle keeps the deck in
 // cards.json order and DEALS from its tail: both openers hold the MIRRORED hand
-// [5 rojo, Salto rojo, 5 azul, 7 verde, Roba dos azul, 2 verde, 7 amarillo], the flip is
+// [5 rojo, Saltar rojo, 5 azul, 7 verde, Roba dos azul, 2 verde, 7 amarillo], the flip is
 // 0 amarillo (`yellow` in force) and the first draws are the blue-2 pair, then red-1.
 // Reordering that tail breaks this spec (pinned in FourColoursPackageTests).
 //
