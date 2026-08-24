@@ -17,6 +17,7 @@ import {
 	newPlayerPage,
 	packageManifest,
 } from '../helpers/game';
+import { enlargeText, expectNoSidewaysScroll } from '../helpers/reflow';
 import { E2E_BASE_URL } from '../playwright.config';
 
 const TRACK_BOARD = 'snakes-and-ladders';
@@ -725,4 +726,51 @@ test('saved-game card, resume, dark palette and delete confirmation states are A
 	await flushAxeAudit(page);
 	await confirm.locator('.btn-primary').click();
 	await expect(page.locator('#your-games-empty')).toBeVisible();
+});
+
+// Nothing in this suite had ever enlarged the text, so nothing could see what happens to a
+// layout that only reflows through breakpoints: the viewport keeps its width, everything sized
+// in rem grows, and a fixed-column grid bursts its container. The token picker did exactly that
+// — the row of pieces ran off the right edge and the whole page scrolled sideways, which is what
+// our own rule forbids and what a low-vision player pays for, since a game cannot be created
+// without reaching a piece (issue #14).
+//
+// 900 CSS px at 200% is about 450px of usable width, comfortably inside what WCAG 1.4.10 asks
+// for; the walk covers the lobby views this file already scans at normal size.
+test('the lobby reflows at 200% text instead of scrolling sideways', async ({ browser }) => {
+	const page = await newPlayerPage(browser);
+	await page.setViewportSize({ width: 900, height: 900 });
+	await enlargeText(page, 200);
+
+	await gotoLobbyHome(page);
+	await expectNoSidewaysScroll(page, 'the lobby home');
+
+	await page.locator('#go-create-btn').click();
+	await expectNoSidewaysScroll(page, 'the create form, before a board is chosen');
+
+	// The piece picker is the part that broke: it arrives with the staged package and is as wide
+	// as that package has pieces.
+	await chooseBoard(page, SHEDDING_BOARD);
+	const firstToken = packageManifest(SHEDDING_BOARD).tokens[0].id as string;
+	await expect(page.locator(`.token-list:not(#join-token-list) input[value="${firstToken}"]`))
+		.toBeAttached();
+	await expectNoSidewaysScroll(page, 'the create form with a package staged');
+	await flushAxeAudit(page);
+
+	// The house rules the same package declares, open.
+	await page.locator('#rules-details').evaluate(el => { (el as HTMLDetailsElement).open = true; });
+	await expect(page.locator('#package-rules')).toBeVisible();
+	await expectNoSidewaysScroll(page, 'the create form with the house rules open');
+	await flushAxeAudit(page);
+
+	// A race board asks for a SEAT as well as a piece: two of these grids, one above the other.
+	await chooseBoard(page, 'galactic-race');
+	await expect(page.locator('#seat-fieldset')).toBeVisible();
+	await expectNoSidewaysScroll(page, 'the create form with both a piece and a seat to choose');
+
+	await gotoLobbyHome(page);
+	await page.locator('#go-join-btn').click();
+	await expect(page.locator('#lobby-code-input')).toBeVisible();
+	await expectNoSidewaysScroll(page, 'the join form');
+	await flushAxeAudit(page);
 });
