@@ -27,6 +27,8 @@ const DECK = [
 	{ id: 'yellow-2', type: 'number', color: 'yellow', value: 2, count: 2, nameKey: 'c.yellow2' },
 	{ id: 'skip-yellow', type: 'skip', color: 'yellow', count: 2, nameKey: 'c.skipYellow' },
 	{ id: 'reverse-red', type: 'reverse', color: 'red', count: 2, nameKey: 'c.reverseRed' },
+	{ id: 'reverse-blue', type: 'reverse', color: 'blue', count: 2, nameKey: 'c.reverseBlue' },
+	{ id: 'skip-blue', type: 'skip', color: 'blue', count: 2, nameKey: 'c.skipBlue' },
 	{ id: 'draw2-red', type: 'drawTwo', color: 'red', count: 2, nameKey: 'c.draw2Red' },
 	{ id: 'draw2-yellow', type: 'drawTwo', color: 'yellow', count: 2, nameKey: 'c.draw2Yellow' },
 	{ id: 'wild-4', type: 'wildDrawFour', count: 1, nameKey: 'c.wild4' },
@@ -333,17 +335,18 @@ test('Shift+colour walks BACKWARD through that colour; the plain key walks forwa
 });
 
 test('digit keys jump to the next card with that number; Shift+ goes back; missing says so', () => {
-	// Value order: wild, red-7, blue-7, red-5. Two 7s make the direction observable.
+	// Value order: wild, blue-7, red-7, red-5 — the two 7s tie on value and colour breaks it
+	// (blue before red by name). Two 7s make the jump's direction observable.
 	gs = game([seat('me', ['red-5', 'red-7', 'blue-7', 'wild']), seat('r1', [], { handCount: 1 })]);
 	view.update(gs);
 	const label = () => (document.activeElement as HTMLElement).getAttribute('aria-label') ?? '';
 	rows().find(r => r.getAttribute('aria-label')!.includes('wild'))!.focus();
-	key(boardEl, '7', { code: 'Digit7' });                  // → first 7 (red-7)
-	assert.ok(label().includes('red7'), 'landed on a 7');
-	key(boardEl, '7', { code: 'Digit7' });                  // → next 7 (blue-7)
-	assert.ok(label().includes('blue7'), 'advanced to the other 7');
-	key(boardEl, '7', { code: 'Digit7', shiftKey: true });  // back → red-7 (Shift+7 via e.code, not "/")
-	assert.ok(label().includes('red7'), 'Shift+7 stepped back');
+	key(boardEl, '7', { code: 'Digit7' });                  // → first 7 (blue-7)
+	assert.ok(label().includes('blue7'), 'landed on a 7');
+	key(boardEl, '7', { code: 'Digit7' });                  // → next 7 (red-7)
+	assert.ok(label().includes('red7'), 'advanced to the other 7');
+	key(boardEl, '7', { code: 'Digit7', shiftKey: true });  // back → blue-7 (Shift+7 via e.code, not "/")
+	assert.ok(label().includes('blue7'), 'Shift+7 stepped back');
 	key(boardEl, '3', { code: 'Digit3' });                  // no 3 in hand
 	assert.equal(announced.at(-1), 'game.shedding_no_number_cards(3)');
 });
@@ -501,17 +504,37 @@ test('lowest first: numbers in order, then each action group whole', () => {
 	assert.deepEqual(handNames(), [
 		'c.red0', 'c.yellow2', 'c.yellow2', 'c.red5', // numbers by their own figure
 		'c.skipYellow',                                // then the actions, by rank
-		'c.draw2Yellow', 'c.draw2Red',                 // …and the pair meets, colours apart
+		'c.draw2Red', 'c.draw2Yellow',                 // …and the pair meets, ordered by colour
 	]);
 });
 
-test('highest first is the exact mirror, actions leading', () => {
+test('highest first flips the groups, never the colours inside them', () => {
 	boardWith({}, REPORTED_HAND);
 	sortTool('value').click();
 
 	assert.deepEqual(handNames(), [
-		'c.draw2Yellow', 'c.draw2Red', 'c.skipYellow',
+		// The groups read downwards…
+		'c.draw2Red', 'c.draw2Yellow', 'c.skipYellow',
 		'c.red5', 'c.yellow2', 'c.yellow2', 'c.red0',
+	]);
+	// …but red still precedes yellow, exactly as it does reading upwards: a group whose inner
+	// order depended on the direction would be one more thing to remember.
+});
+
+test('colour breaks every tie, in the same direction whichever way the hand reads', () => {
+	// Reported from play: two skips and two reverses read blue, red then red, blue — same
+	// weight, so deal order decided, and the inner order changed with every deal.
+	const hand = ['skip-blue', 'skip-yellow', 'reverse-red', 'reverse-blue'];
+	const { el } = boardWith({}, hand);
+	sortTool('valueAsc').click();
+	assert.deepEqual(handNames(), [
+		'c.skipBlue', 'c.skipYellow',      // skips first, blue before yellow
+		'c.reverseBlue', 'c.reverseRed',   // then reverses, same colour direction
+	]);
+
+	key(el, 'N', { shiftKey: true }); // and downwards the GROUPS flip, never the colours
+	assert.deepEqual(handNames(), [
+		'c.reverseBlue', 'c.reverseRed', 'c.skipBlue', 'c.skipYellow',
 	]);
 });
 
@@ -555,14 +578,14 @@ test('an unsorted hand keeps the deal order, and the choice survives a repaint',
 
 test('Shift+N flips between the two value orderings, saying which one it landed on', () => {
 	const { el, said } = boardWith({}, REPORTED_HAND);
-	assert.deepEqual(handNames().slice(0, 2), ['c.draw2Yellow', 'c.draw2Red'], 'highest first by default');
+	assert.deepEqual(handNames().slice(0, 2), ['c.draw2Red', 'c.draw2Yellow'], 'highest first by default');
 
 	key(el, 'N', { shiftKey: true });
 	assert.deepEqual(handNames().slice(0, 2), ['c.red0', 'c.yellow2']);
 	assert.equal(said.at(-1), 'game.hand_sorted_valueAsc', 'the reorder is spoken, not just painted');
 
 	key(el, 'N', { shiftKey: true });
-	assert.deepEqual(handNames().slice(0, 2), ['c.draw2Yellow', 'c.draw2Red']);
+	assert.deepEqual(handNames().slice(0, 2), ['c.draw2Red', 'c.draw2Yellow']);
 	assert.equal(said.at(-1), 'game.hand_sorted_value');
 });
 

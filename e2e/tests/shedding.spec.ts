@@ -123,7 +123,7 @@ test('shedding: matches, the drawn-card pause, a penalty and the on-demand count
 	await expect(tools.locator('[data-focus-id="sort-colour"]')).toHaveAttribute('aria-pressed', 'true');
 
 	await berto.keyboard.press('Shift+O');
-	await expectAnnouncement(berto, /Sin ordenar; las posiciones no se mueven/);
+	await expectAnnouncement(berto, /En el orden en que llegaron; las posiciones no se mueven/);
 	await expect(tools.locator('[data-focus-id="sort-hand"]')).toHaveAttribute('aria-pressed', 'true');
 	await flushAxeAudit(berto);
 

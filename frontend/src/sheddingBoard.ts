@@ -39,6 +39,17 @@ const SHEDDING_ACTION_RANK: Readonly<Record<string, number>> = {
 const sheddingWeight = (card: HandCard): number =>
 	card.typeKey === 'number' ? card.value : 10 + (SHEDDING_ACTION_RANK[card.typeKey] ?? 0);
 
+/** Colours rank by their spoken name; a wild has none and closes its own group. */
+const colourRank = (card: HandCard): number => card.colourOrder ?? Number.MAX_SAFE_INTEGER;
+
+/** Colour breaks every tie, ALWAYS in the same direction — even when the hand reads
+ *  downwards. Reported from play: two skips and two reverses read blue, red then red, blue,
+ *  because same-weight cards fell back on deal order; a group whose inner order changes with
+ *  each deal cannot be learnt. Mirroring the colours in the descending sort would be prettier
+ *  and worse: then it changes with the DIRECTION instead. */
+const byWeightThenColour = (a: HandCard, b: HandCard, sign: 1 | -1): number =>
+	sign * (sheddingWeight(a) - sheddingWeight(b)) || colourRank(a) - colourRank(b);
+
 /** Shift+<letter> → the ordering it selects. C for colour and O for the original deal order
  *  read the same in both languages; Shift+N is not here because it alternates rather than
  *  selecting (see the keydown handler). */
@@ -56,13 +67,13 @@ const SHEDDING_HAND_SORTING: HandSorting = {
 			id: 'value',
 			labelKey: 'game.hand_sort_by_value',
 			announcementKey: 'game.hand_sorted_value',
-			compare: (a, b) => sheddingWeight(b) - sheddingWeight(a),
+			compare: (a, b) => byWeightThenColour(a, b, -1),
 		},
 		{
 			id: 'valueAsc',
 			labelKey: 'game.hand_sort_by_value_asc',
 			announcementKey: 'game.hand_sorted_valueAsc',
-			compare: (a, b) => sheddingWeight(a) - sheddingWeight(b),
+			compare: (a, b) => byWeightThenColour(a, b, 1),
 		},
 		{
 			// Numbers first and in order, then the actions — a colour reads as a small hand of
@@ -70,8 +81,7 @@ const SHEDDING_HAND_SORTING: HandSorting = {
 			id: 'colour',
 			labelKey: 'game.hand_sort_by_colour',
 			announcementKey: 'game.hand_sorted_colour',
-			compare: (a, b) => (a.colourOrder ?? Number.MAX_SAFE_INTEGER) - (b.colourOrder ?? Number.MAX_SAFE_INTEGER)
-				|| sheddingWeight(a) - sheddingWeight(b),
+			compare: (a, b) => colourRank(a) - colourRank(b) || sheddingWeight(a) - sheddingWeight(b),
 		},
 		{
 			id: 'hand',

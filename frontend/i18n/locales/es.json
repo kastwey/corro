@@ -559,7 +559,7 @@
     "hand_sorted_value": "Ordenadas por valor, de mayor a menor",
     "hand_sorted_valueAsc": "Ordenadas por valor, de menor a mayor",
     "hand_sorted_colour": "Ordenadas por color",
-    "hand_sorted_hand": "Sin ordenar; las posiciones no se mueven",
+    "hand_sorted_hand": "En el orden en que llegaron; las posiciones no se mueven",
     "hand_playability_group": "Mostrar cartas",
     "hand_show_all": "Todas las cartas",
     "hand_show_all_applied": "Todas las cartas siguen ahora el orden seleccionado.",

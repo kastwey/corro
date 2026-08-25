@@ -559,7 +559,7 @@
     "hand_sorted_value": "Sorted by value, highest first",
     "hand_sorted_valueAsc": "Sorted by value, lowest first",
     "hand_sorted_colour": "Sorted by colour",
-    "hand_sorted_hand": "Unsorted; positions stay put",
+    "hand_sorted_hand": "In the order they arrived; positions stay put",
     "hand_playability_group": "Show cards",
     "hand_show_all": "All cards",
     "hand_show_all_applied": "All cards now follow the selected order.",
