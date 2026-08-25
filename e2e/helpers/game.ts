@@ -102,16 +102,29 @@ export function appI18n(lang: string): Record<string, any> {
  * A fresh context+page for one player. Contexts are per-player browsers: cookies,
  * storage and the SignalR connection are isolated, exactly like two real devices.
  * Captures every aria-live write into window.__announcements for later assertions.
+ *
+ * `touch` is what a PHONE is, and it is not a narrow window: setting it makes Chromium
+ * report `(hover: none)` / `(pointer: coarse)`, which is the only way a spec can reach
+ * the layouts a hoverless pointer gets. Resizing the viewport alone leaves `hover: hover`
+ * matching, so a hover-only affordance stays "visible" to the test and its E2E coverage
+ * is an illusion — which is exactly how the journey hand shipped a toolbar no phone
+ * could open (journey-touch.spec.ts). It pairs with a phone-sized `viewport`.
  */
 export async function newPlayerPage(
 	browser: Browser,
 	locale = 'es-ES',
-	options: { reducedMotion?: 'reduce' | 'no-preference' } = {},
+	options: {
+		reducedMotion?: 'reduce' | 'no-preference';
+		touch?: boolean;
+		viewport?: { width: number; height: number };
+	} = {},
 ): Promise<Page> {
 	const context = await browser.newContext({
 		baseURL: E2E_BASE_URL,
 		locale,
 		reducedMotion: options.reducedMotion ?? 'reduce',
+		...(options.touch ? { hasTouch: true } : {}),
+		...(options.viewport ? { viewport: options.viewport } : {}),
 	});
 	// Handed to the test's teardown, which closes it. Nothing used to, and a full run ended with
 	// dozens of live contexts holding open connections — the load that makes later tests flaky.
