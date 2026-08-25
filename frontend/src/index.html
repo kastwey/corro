@@ -193,7 +193,10 @@
 
 				<div class="form-group" id="host-name-group">
 					<label for="host-name" data-i18n="lobby.playerName">Your name:</label>
-					<input type="text" id="host-name" required maxlength="20" data-i18n-attr-placeholder="lobby.playerNamePlaceholder" placeholder="Enter your name">
+					<input type="text" id="host-name" required maxlength="20" aria-describedby="host-name-hint">
+					<!-- The old placeholder, as a paragraph: same words, same look, but it is read
+						 WITH the field and does not vanish the moment you start typing. -->
+					<p class="field-hint" id="host-name-hint" data-i18n="lobby.playerNamePlaceholder">Enter your name</p>
 				</div>
 				<!-- Replaces the field above for somebody signed in: the account already has a name,
 					 so asking again is a question with a known answer. Says WHICH name, because a
@@ -432,7 +435,8 @@
 				<div class="form-group">
 					<label for="lobby-code-input" data-i18n="lobby.gameCode">Game code:</label>
 					<input type="text" id="lobby-code-input" required maxlength="8"
-						   data-i18n-attr-placeholder="lobby.gameCodePlaceholder" placeholder="e.g., ABC123" class="uppercase">
+						   aria-describedby="lobby-code-hint" class="uppercase">
+					<p class="field-hint" id="lobby-code-hint" data-i18n="lobby.gameCodePlaceholder">e.g., ABC123</p>
 				</div>
 
 				<button type="submit" id="validate-code-button" data-i18n="lobby.next">Next</button>
@@ -462,7 +466,8 @@
 					<form id="join-step2-form">
 						<div class="form-group" id="player-name-group">
 							<label for="player-name-step2" data-i18n="lobby.playerName">Your name:</label>
-							<input type="text" id="player-name-step2" required maxlength="20" data-i18n-attr-placeholder="lobby.playerNamePlaceholder" placeholder="Enter your name">
+							<input type="text" id="player-name-step2" required maxlength="20" aria-describedby="player-name-step2-hint">
+							<p class="field-hint" id="player-name-step2-hint" data-i18n="lobby.playerNamePlaceholder">Enter your name</p>
 						</div>
 						<p class="form-hint" id="player-name-known" hidden></p>
 

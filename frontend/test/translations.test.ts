@@ -98,13 +98,16 @@ function extractCodeKeys(): Map<string, string> {
 	return keys;
 }
 
+/** The ONLY attribute-binding syntax i18nBinder reads (it matches on the "data-i18n-attr:"
+ *  prefix). Anything else is inert markup, however plausible it looks. */
+const ATTR_BINDING = /data-i18n-attr:[\w-]+="([^"]+)"/g;
+
 /** Extract data-i18n keys from the HTML templates (full, namespaced keys). */
 function extractHtmlKeys(): Map<string, string> {
 	const keys = new Map<string, string>();
 	const patterns = [
 		/data-i18n="([^"]+)"/g,
-		/data-i18n-attr:[\w-]+="([^"]+)"/g,
-		/data-i18n-attr-[\w-]+="([^"]+)"/g,
+		ATTR_BINDING,
 	];
 	for (const file of collectFiles(SRC_DIR, ['.html'])) {
 		const content = readFileSync(file, 'utf8');
@@ -161,6 +164,22 @@ test('every data-i18n key used in HTML exists in all locales', () => {
 		}
 	}
 	assert.equal(missing.length, 0, `Missing translations:\n  ${missing.sort().join('\n  ')}`);
+});
+
+// Three lobby inputs asked for a translated placeholder with a hyphen — data-i18n-attr-placeholder
+// — where the binder matches "data-i18n-attr:". The markup read as translated, the key existed in
+// both locales, and the field showed its English fallback in every language for as long as it had
+// been there. This test used to accept BOTH spellings while extracting keys, so it confirmed the
+// translation of a string that never reached a screen: the guard was the reason nobody looked.
+test('an attribute binding the binder cannot read is not markup, it is a typo', () => {
+	const wrong: string[] = [];
+	for (const file of collectFiles(SRC_DIR, ['.html'])) {
+		const rel = file.slice(ROOT.length);
+		for (const m of readFileSync(file, 'utf8').matchAll(/data-i18n-attr-([\w-]+)="([^"]+)"/g)) {
+			wrong.push(`${rel}: data-i18n-attr-${m[1]}="${m[2]}" — write data-i18n-attr:${m[1]}`);
+		}
+	}
+	assert.deepEqual(wrong, [], `Attribute bindings nothing will ever apply:\n  ${wrong.join('\n  ')}`);
 });
 
 // ────────────────────────────────────────────────────────────────────────────
