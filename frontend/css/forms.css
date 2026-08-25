@@ -32,6 +32,19 @@ input::placeholder {
 	color: var(--text-faint);
 }
 
+/* A field's hint, worded exactly as the placeholder it replaces and sitting where one would
+   read: same size, quiet grey, right under the box. A placeholder disappears as soon as
+   there is something in the field and is not reliably read WITH it — this is a paragraph
+   the input points at with aria-describedby, so it does neither.
+   The colour is --text-muted, NOT the --text-faint of ::placeholder: measured at 3.06:1
+   against white, that grey is below the 4.5:1 WCAG asks of text. A placeholder is exempt
+   (it is a hint inside a field); a paragraph is text, and has to be readable. */
+.field-hint {
+	margin: 0.25rem 0 0;
+	font-size: 1rem;
+	color: var(--text-muted);
+}
+
 input:focus, select:focus {
 	outline: none;
 	border-color: var(--accent);
