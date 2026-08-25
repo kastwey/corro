@@ -369,3 +369,15 @@
     flex-wrap: wrap;
   }
 }
+
+/* Touch: one card per line, so each row can carry its own always-visible actions —
+ * the shared xcard/jcard rules that do that live in journey-board.css. This override
+ * comes AFTER the width breakpoints above on purpose: a phone matches both, and the
+ * grid/wrap they set would otherwise win over the single column. */
+@media (hover: none) {
+  .exploding-hand .hand-panel__list {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+}

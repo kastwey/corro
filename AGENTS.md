@@ -162,6 +162,13 @@ something genuinely can't be covered, say so explicitly.
   only states a scenario REACHES. Add E2E transitions for every new/changed view, theme,
   validation error, dialog/menu, loading/success/failure and disabled/unplayable state.
   `lobby-accessibility.spec.ts` is the lobby matrix.
+- **A hover-only affordance is unreachable on a phone, and no Axe rule says so.** Anything
+  revealed by `:hover` needs a `@media (hover: none)` layout that stands on its own, reached
+  by a `newPlayerPage(browser, locale, { touch: true, viewport })` context — a narrow viewport
+  is NOT that state, since Chromium keeps matching `hover: hover` and the affordance stays
+  "visible" to the test. Assert the geometry by hand (on screen, ≥24px per WCAG 2.5.8, inside
+  its own row): `target-size` ships DISABLED in axe-core, and no rule at all catches a control
+  positioned off-screen or on top of its neighbour. `journey-touch.spec.ts` is the pattern.
 - For a state dismissed faster than the quiet period, assert it, call
   `flushAxeAudit(page)`, then close it. Final-state-only scans are forbidden. The same
   applies before closing a PAGE or context mid-scenario: a page that disappears unflushed

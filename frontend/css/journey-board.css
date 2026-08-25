@@ -204,6 +204,67 @@
   margin-top: 0.25rem;
 }
 
+/* ── Touch: a hoverless pointer can never reveal that overlay ────────────────
+ * `:hover` never fires on a phone, so the only way into a card's actions was the tap
+ * that happens to focus its row — and the revealed toolbar then sits ON the card, so
+ * the next tap in the same place lands on Discard. Measured on a 393px viewport the
+ * geometry was worse than merely undiscoverable: a 162px toolbar centred on a 92px
+ * card put Play 27px off the left edge of the screen on the leftmost card and Help on
+ * top of the neighbouring one, in 20px-tall buttons (WCAG 2.5.8 asks for 24px).
+ *
+ * So where there is no hover, these rows stop being a card with a hidden overlay and
+ * become what the base .hand-card already is: a list row, the face on one side and its
+ * own always-visible actions on the other. Scoped to the jcard/xcard frames, since the
+ * gcard families above never had the overlay to begin with. */
+@media (hover: none) {
+  /* One card per line: the hand reads down the screen, which is also the order the
+   * screen reader walks. (Exploding lays its hand out as a grid and collapses it to the
+   * same single column in its own file, after the width breakpoints that would win here.) */
+  .journey-hand .hand-panel__list {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .hand-card--visual:has(.jcard),
+  .hand-card--visual:has(.xcard) {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+  }
+
+  .hand-card--visual:has(.jcard) .hand-card__actions,
+  .hand-card--visual:has(.xcard) .hand-card__actions {
+    position: static;
+    transform: none;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    margin-inline-start: auto;
+  }
+
+  /* The badge keeps floating over the card's own corner, as it does with a mouse — but
+   * anchored LEFT, because the row is now full-width and its right edge is where the
+   * actions live. In the row's flow it would cost the ~80px that pushes the third
+   * button onto a second line. */
+  .hand-card--visual:has(.jcard) .hand-card__availability,
+  .hand-card--visual:has(.xcard) .hand-card__availability {
+    right: auto;
+    left: 0.35rem;
+    max-width: 6rem;
+  }
+
+  .hand-card--visual:has(.jcard) .hand-card__btn,
+  .hand-card--visual:has(.xcard) .hand-card__btn {
+    font-size: 0.85rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.4rem 0.7rem;
+  }
+}
+
 .hand-card--visual .hand-card__btn {
   font-size: 0.68rem;
   padding: 0.2rem 0.45rem;
