@@ -98,6 +98,35 @@ test('shedding: matches, the drawn-card pause, a penalty and the on-demand count
 	await flushAxeAudit(berto);
 	await berto.locator('.hand-panel__list-actions [data-focus-id="show-all-cards"]').click();
 
+	// ── The family brings its own orderings: two by value, one by colour and the deal order.
+	// "By type" is deliberately absent — with the action cards ranked, ordering by value
+	// already groups every draw two with every draw two. ──
+	const tools = berto.locator('.hand-panel__list-actions');
+	for (const id of ['sort-value', 'sort-valueAsc', 'sort-colour', 'sort-hand']) {
+		await expect(tools.locator(`[data-focus-id="${id}"]`)).toHaveCount(1);
+	}
+	await expect(tools.locator('[data-focus-id="sort-type"]')).toHaveCount(0);
+	await tools.locator('[data-focus-id="sort-valueAsc"]').click();
+	await expectAnnouncement(berto, /Ordenadas por valor, de menor a mayor/);
+	await flushAxeAudit(berto);
+
+	// The same orderings without the menu, from the board where the keys are pressed: the
+	// engine binds these chords to property/board commands no card family has, so they arrive
+	// here. Shift+N alternates the two value ends; Shift+C and Shift+O each pick one.
+	await berto.locator('#board').focus();
+	await berto.keyboard.press('Shift+N');
+	await expectAnnouncement(berto, /Ordenadas por valor, de mayor a menor/);
+	await expect(tools.locator('[data-focus-id="sort-value"]')).toHaveAttribute('aria-pressed', 'true');
+
+	await berto.keyboard.press('Shift+C');
+	await expectAnnouncement(berto, /Ordenadas por color/);
+	await expect(tools.locator('[data-focus-id="sort-colour"]')).toHaveAttribute('aria-pressed', 'true');
+
+	await berto.keyboard.press('Shift+O');
+	await expectAnnouncement(berto, /En el orden en que llegaron; las posiciones no se mueven/);
+	await expect(tools.locator('[data-focus-id="sort-hand"]')).toHaveAttribute('aria-pressed', 'true');
+	await flushAxeAudit(berto);
+
 	// Berto DRAWS (Space) — and the drawn Azul 2
 	// matches by value, so the game pauses on his play-it-or-keep-it choice. ──
 	await berto.locator('#board').focus();

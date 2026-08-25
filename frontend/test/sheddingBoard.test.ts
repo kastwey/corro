@@ -21,6 +21,17 @@ const DECK = [
 	{ id: 'blue-7', type: 'number', color: 'blue', value: 7, count: 2, nameKey: 'c.blue7' },
 	{ id: 'wild', type: 'wild', count: 2, nameKey: 'c.wild' },
 	{ id: 'skip', type: 'skip', color: 'blue', count: 2, nameKey: 'c.skip' },
+	// The rest of the family's types, so the hand orderings can be exercised over a full
+	// spread of actions rather than one skip.
+	{ id: 'red-0', type: 'number', color: 'red', value: 0, count: 1, nameKey: 'c.red0' },
+	{ id: 'yellow-2', type: 'number', color: 'yellow', value: 2, count: 2, nameKey: 'c.yellow2' },
+	{ id: 'skip-yellow', type: 'skip', color: 'yellow', count: 2, nameKey: 'c.skipYellow' },
+	{ id: 'reverse-red', type: 'reverse', color: 'red', count: 2, nameKey: 'c.reverseRed' },
+	{ id: 'reverse-blue', type: 'reverse', color: 'blue', count: 2, nameKey: 'c.reverseBlue' },
+	{ id: 'skip-blue', type: 'skip', color: 'blue', count: 2, nameKey: 'c.skipBlue' },
+	{ id: 'draw2-red', type: 'drawTwo', color: 'red', count: 2, nameKey: 'c.draw2Red' },
+	{ id: 'draw2-yellow', type: 'drawTwo', color: 'yellow', count: 2, nameKey: 'c.draw2Yellow' },
+	{ id: 'wild-4', type: 'wildDrawFour', count: 1, nameKey: 'c.wild4' },
 ];
 
 const inst = (cardId: string, n = 0) => ({ instanceId: `${cardId}@${n}`, cardId });
@@ -70,7 +81,13 @@ function rows(): HTMLElement[] {
 }
 
 beforeEach(() => {
-	try { (globalThis as any).window.localStorage.removeItem('corro.handPreferences'); } catch { /* jsdom may ship no storage */ }
+	// The family scopes its own sort preference, so BOTH keys have to go or a previous test's
+	// choice would decide the next one's order.
+	try {
+		const store = (globalThis as any).window.localStorage;
+		store.removeItem('corro.handPreferences');
+		store.removeItem('corro.handPreferences.shedding');
+	} catch { /* jsdom may ship no storage */ }
 	document.body.innerHTML = '<div id="board"></div>';
 	boardEl = document.getElementById('board')!;
 	played = []; announced = []; drawn = 0; kept = 0; declared = 0; caught = 0;
@@ -117,7 +134,8 @@ test('a wild walks the colour picker and the pick carries the colour', () => {
 	const menu = document.querySelector('[role="menu"]');
 	assert.ok(menu, 'the colour picker opened');
 	const items = Array.from(menu!.querySelectorAll<HTMLElement>('[role="menuitem"]'));
-	assert.deepEqual(items.map(i => i.textContent), ['colors.red', 'colors.blue']);
+	// Every colour the DECK carries, in deck order — three since the deck grew a yellow suit.
+	assert.deepEqual(items.map(i => i.textContent), ['colors.red', 'colors.blue', 'colors.yellow']);
 	items[1].click();
 	assert.deepEqual(played, [['wild@2', 'blue']]);
 });
@@ -231,6 +249,9 @@ test('helpShortcuts reports the REAL wiring: Enter/Space + S/Shift+S, no discard
 		{ keys: 'shift + 0 – 9', descKey: 'game.help_cmd_shedding_number_jump_back' },
 		{ keys: 'i', descKey: 'game.help_cmd_shedding_special_jump' },
 		{ keys: 'shift + i', descKey: 'game.help_cmd_shedding_special_jump_back' },
+		{ keys: 'shift + n', descKey: 'game.help_cmd_shedding_sort_flip' },
+		{ keys: 'shift + c', descKey: 'game.help_cmd_shedding_sort_colour' },
+		{ keys: 'shift + o', descKey: 'game.help_cmd_shedding_sort_hand' },
 	]);
 });
 
@@ -314,17 +335,18 @@ test('Shift+colour walks BACKWARD through that colour; the plain key walks forwa
 });
 
 test('digit keys jump to the next card with that number; Shift+ goes back; missing says so', () => {
-	// Value order: wild, red-7, blue-7, red-5. Two 7s make the direction observable.
+	// Value order: wild, blue-7, red-7, red-5 — the two 7s tie on value and colour breaks it
+	// (blue before red by name). Two 7s make the jump's direction observable.
 	gs = game([seat('me', ['red-5', 'red-7', 'blue-7', 'wild']), seat('r1', [], { handCount: 1 })]);
 	view.update(gs);
 	const label = () => (document.activeElement as HTMLElement).getAttribute('aria-label') ?? '';
 	rows().find(r => r.getAttribute('aria-label')!.includes('wild'))!.focus();
-	key(boardEl, '7', { code: 'Digit7' });                  // → first 7 (red-7)
-	assert.ok(label().includes('red7'), 'landed on a 7');
-	key(boardEl, '7', { code: 'Digit7' });                  // → next 7 (blue-7)
-	assert.ok(label().includes('blue7'), 'advanced to the other 7');
-	key(boardEl, '7', { code: 'Digit7', shiftKey: true });  // back → red-7 (Shift+7 via e.code, not "/")
-	assert.ok(label().includes('red7'), 'Shift+7 stepped back');
+	key(boardEl, '7', { code: 'Digit7' });                  // → first 7 (blue-7)
+	assert.ok(label().includes('blue7'), 'landed on a 7');
+	key(boardEl, '7', { code: 'Digit7' });                  // → next 7 (red-7)
+	assert.ok(label().includes('red7'), 'advanced to the other 7');
+	key(boardEl, '7', { code: 'Digit7', shiftKey: true });  // back → blue-7 (Shift+7 via e.code, not "/")
+	assert.ok(label().includes('blue7'), 'Shift+7 stepped back');
 	key(boardEl, '3', { code: 'Digit3' });                  // no 3 in hand
 	assert.equal(announced.at(-1), 'game.shedding_no_number_cards(3)');
 });
@@ -453,6 +475,183 @@ test('the Rules button opens the active-rules reading dialog', () => {
 	assert.ok(items.some(l => l!.includes('shedding_rules_doubles') && l!.includes('rules_on')));
 	assert.ok(items.some(l => l!.includes('shedding_rules_stacking_cross')));
 	dialogManager.close();
+});
+
+// ── Hand orderings ────────────────────────────────────────────────────────────
+
+/** The list-level sort tool with the given id. */
+function sortTool(id: string): HTMLElement {
+	const btn = document.querySelector<HTMLElement>(
+		`.hand-panel__list-actions [data-focus-id="sort-${id}"]`);
+	assert.ok(btn, `sort tool '${id}' exists`);
+	return btn!;
+}
+
+/** Row names only: the aria-label also carries the "unplayable" tag, which is not the
+ *  ordering's business. */
+const handNames = (): string[] => Array.from(document.querySelectorAll<HTMLElement>('.hand-card'))
+	.map(r => r.querySelector<HTMLElement>('.hand-card__name')?.textContent ?? '');
+
+/** Reported from play: this exact hand read 0, 2, 2, 5, draw two, skip, draw two — the two
+ *  draw twos apart, because every action weighed the same 10 and only the deal order broke
+ *  the tie. Ranking the actions is what brings them together. */
+const REPORTED_HAND = ['red-0', 'yellow-2', 'yellow-2', 'red-5', 'draw2-yellow', 'skip-yellow', 'draw2-red'];
+
+test('lowest first: numbers in order, then each action group whole', () => {
+	boardWith({}, REPORTED_HAND);
+	sortTool('valueAsc').click();
+
+	assert.deepEqual(handNames(), [
+		'c.red0', 'c.yellow2', 'c.yellow2', 'c.red5', // numbers by their own figure
+		'c.skipYellow',                                // then the actions, by rank
+		'c.draw2Red', 'c.draw2Yellow',                 // …and the pair meets, ordered by colour
+	]);
+});
+
+test('highest first flips the groups, never the colours inside them', () => {
+	boardWith({}, REPORTED_HAND);
+	sortTool('value').click();
+
+	assert.deepEqual(handNames(), [
+		// The groups read downwards…
+		'c.draw2Red', 'c.draw2Yellow', 'c.skipYellow',
+		'c.red5', 'c.yellow2', 'c.yellow2', 'c.red0',
+	]);
+	// …but red still precedes yellow, exactly as it does reading upwards: a group whose inner
+	// order depended on the direction would be one more thing to remember.
+});
+
+test('colour breaks every tie, in the same direction whichever way the hand reads', () => {
+	// Reported from play: two skips and two reverses read blue, red then red, blue — same
+	// weight, so deal order decided, and the inner order changed with every deal.
+	const hand = ['skip-blue', 'skip-yellow', 'reverse-red', 'reverse-blue'];
+	const { el } = boardWith({}, hand);
+	sortTool('valueAsc').click();
+	assert.deepEqual(handNames(), [
+		'c.skipBlue', 'c.skipYellow',      // skips first, blue before yellow
+		'c.reverseBlue', 'c.reverseRed',   // then reverses, same colour direction
+	]);
+
+	key(el, 'N', { shiftKey: true }); // and downwards the GROUPS flip, never the colours
+	assert.deepEqual(handNames(), [
+		'c.reverseBlue', 'c.reverseRed', 'c.skipBlue', 'c.skipYellow',
+	]);
+});
+
+test('the action rank orders every type, wilds closing the hand', () => {
+	boardWith({}, ['wild-4', 'draw2-red', 'red-7', 'wild', 'skip-yellow', 'reverse-red']);
+	sortTool('valueAsc').click();
+
+	assert.deepEqual(handNames(), [
+		'c.red7', 'c.skipYellow', 'c.reverseRed', 'c.draw2Red', 'c.wild', 'c.wild4',
+	]);
+});
+
+test('by colour: each colour a small hand of its own, numbers before its actions', () => {
+	// Colours rank by their NAME, so with keys for names blue < red < yellow.
+	boardWith({}, ['yellow-2', 'red-5', 'wild', 'draw2-red', 'red-0', 'skip-yellow']);
+	sortTool('colour').click();
+
+	assert.deepEqual(handNames(), [
+		'c.red0', 'c.red5', 'c.draw2Red',   // red: numbers up, then its action
+		'c.yellow2', 'c.skipYellow',        // yellow, same shape
+		'c.wild',                            // colourless, pooled last
+	]);
+});
+
+test('"by type" is gone: ordering by value already groups the pairs', () => {
+	const { el } = boardWith({}, REPORTED_HAND);
+	assert.equal(el.querySelector('[data-focus-id="sort-type"]'), null,
+		'the alphabetical-by-english-key grouping is not offered');
+	for (const id of ['value', 'valueAsc', 'colour', 'hand']) sortTool(id);
+});
+
+test('an unsorted hand keeps the deal order, and the choice survives a repaint', () => {
+	const { view: v, state } = boardWith({}, REPORTED_HAND);
+	sortTool('hand').click();
+	assert.deepEqual(handNames().slice(0, 3), ['c.red0', 'c.yellow2', 'c.yellow2']);
+
+	sortTool('valueAsc').click();
+	v.update(state); // a server echo must not throw the player back to the default
+	assert.equal(sortTool('valueAsc').getAttribute('aria-pressed'), 'true');
+});
+
+test('Shift+N flips between the two value orderings, saying which one it landed on', () => {
+	const { el, said } = boardWith({}, REPORTED_HAND);
+	assert.deepEqual(handNames().slice(0, 2), ['c.draw2Red', 'c.draw2Yellow'], 'highest first by default');
+
+	key(el, 'N', { shiftKey: true });
+	assert.deepEqual(handNames().slice(0, 2), ['c.red0', 'c.yellow2']);
+	assert.equal(said.at(-1), 'game.hand_sorted_valueAsc', 'the reorder is spoken, not just painted');
+
+	key(el, 'N', { shiftKey: true });
+	assert.deepEqual(handNames().slice(0, 2), ['c.draw2Red', 'c.draw2Yellow']);
+	assert.equal(said.at(-1), 'game.hand_sorted_value');
+});
+
+test('Shift+C groups by colour and Shift+O returns to the order the cards arrived in', () => {
+	const { el, said } = boardWith({}, REPORTED_HAND);
+
+	key(el, 'C', { shiftKey: true });
+	assert.equal(said.at(-1), 'game.hand_sorted_colour');
+	// Colours rank by their spoken NAME, which here is the untranslated key: colors.red before
+	// colors.yellow. Each colour then reads as a small hand — its numbers, then its actions.
+	assert.deepEqual(handNames(), [
+		'c.red0', 'c.red5', 'c.draw2Red',
+		'c.yellow2', 'c.yellow2', 'c.skipYellow', 'c.draw2Yellow',
+	]);
+
+	key(el, 'O', { shiftKey: true });
+	assert.equal(said.at(-1), 'game.hand_sorted_hand');
+	assert.deepEqual(handNames(), [
+		'c.red0', 'c.yellow2', 'c.yellow2', 'c.red5', 'c.draw2Yellow', 'c.skipYellow', 'c.draw2Red',
+	], 'the deal order, untouched');
+});
+
+test('Shift+N from colour or deal order enters at the default end, and walks back out', () => {
+	const { el } = boardWith({}, REPORTED_HAND);
+	sortTool('colour').click();
+
+	key(el, 'N', { shiftKey: true });
+	assert.equal(sortTool('value').getAttribute('aria-pressed'), 'true', 'colour → highest first');
+	key(el, 'N', { shiftKey: true });
+	assert.equal(sortTool('valueAsc').getAttribute('aria-pressed'), 'true', 'and back out the other side');
+});
+
+test('the bare letters and the modified chords are left to the engine', () => {
+	const { el } = boardWith({}, REPORTED_HAND);
+	const before = handNames();
+
+	key(el, 'n');                                        // the engine's own piece cycle
+	key(el, 'o');                                        // unbound: not ours to swallow
+	key(el, 'N', { shiftKey: true, ctrlKey: true });      // no board chord starts with Ctrl+Shift
+	key(el, 'C', { shiftKey: true, altKey: true });
+	assert.deepEqual(handNames(), before, 'only the bare Shift+ chords reorder the hand');
+
+	// C alone keeps answering what it always answered: the top card, not an ordering.
+	key(el, 'c');
+	assert.deepEqual(handNames(), before, 'plain C did not reorder anything');
+});
+
+test('the sort keys are documented where the player looks for them', () => {
+	const { view: v } = boardWith({}, REPORTED_HAND);
+	const rows = new Map(v.helpShortcuts().map(s => [s.keys, s.descKey]));
+	assert.equal(rows.get('shift + n'), 'game.help_cmd_shedding_sort_flip');
+	assert.equal(rows.get('shift + c'), 'game.help_cmd_shedding_sort_colour');
+	assert.equal(rows.get('shift + o'), 'game.help_cmd_shedding_sort_hand');
+	assert.equal(rows.get('c'), 'game.help_cmd_shedding_top', 'the plain letter still means the top card');
+});
+
+test('a drawn card lands in its ordered place, not at the end of the hand', () => {
+	const { view: v, state } = boardWith({}, ['red-0', 'draw2-red', 'wild-4']);
+	sortTool('valueAsc').click();
+
+	state.shedding!.seats[0].hand.push(inst('red-5', 9));
+	state.shedding!.seats[0].handCount = 4;
+	v.update(state);
+
+	assert.deepEqual(handNames(), ['c.red0', 'c.red5', 'c.draw2Red', 'c.wild4'],
+		'the 5 slots between the 0 and the actions');
 });
 
 // ── Last-card declaration (house rule) ─────────────────────────────────────────

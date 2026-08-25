@@ -6,7 +6,7 @@
 // players; the same story speaks through sheddingStatusText (S / Shift+S / the players
 // panel). There is deliberately NO one-card-left shout: counts are on-demand.
 
-import { HandPanel, type HandCard } from './handPanel.js';
+import { HandPanel, type HandCard, type HandSorting } from './handPanel.js';
 import { genericCardArtHtml, genericCardBackHtml, genericEmptyCardHtml } from './cardArt.js';
 import { popupMenu } from './popupMenu.js';
 import { escapeHtml } from './escapeHtml.js';
@@ -23,6 +23,74 @@ import { showGameRulesDialog } from './gameRulesDialog.js';
 import { buildSheddingRulesLines } from './rulesSummaries.js';
 import type { GameState } from './models.js';
 import type { HelpShortcut } from './shortcuts.js';
+
+/** Where each action card sits once the numbers run out. The family's own types (models.ts),
+ *  never a package's cards, so themed decks inherit the order for free.
+ *  Reported from play: with every action weighing the same, a hand held two draw-twos that
+ *  never met — they landed wherever the deal had left them, and no sort could bring them
+ *  together. Ordering them by their bite (lose a turn < turn around < draw two) puts the
+ *  colourless pair last, where the hand ends. */
+const SHEDDING_ACTION_RANK: Readonly<Record<string, number>> = {
+	skip: 1, reverse: 2, drawTwo: 3, wild: 4, wildDrawFour: 5,
+};
+
+/** One learnable figure per card: its own number, or ten-and-up by action rank. The panel's
+ *  generic weight calls every action a 10, which is why they used to tie. */
+const sheddingWeight = (card: HandCard): number =>
+	card.typeKey === 'number' ? card.value : 10 + (SHEDDING_ACTION_RANK[card.typeKey] ?? 0);
+
+/** Colours rank by their spoken name; a wild has none and closes its own group. */
+const colourRank = (card: HandCard): number => card.colourOrder ?? Number.MAX_SAFE_INTEGER;
+
+/** Colour breaks every tie, ALWAYS in the same direction — even when the hand reads
+ *  downwards. Reported from play: two skips and two reverses read blue, red then red, blue,
+ *  because same-weight cards fell back on deal order; a group whose inner order changes with
+ *  each deal cannot be learnt. Mirroring the colours in the descending sort would be prettier
+ *  and worse: then it changes with the DIRECTION instead. */
+const byWeightThenColour = (a: HandCard, b: HandCard, sign: 1 | -1): number =>
+	sign * (sheddingWeight(a) - sheddingWeight(b)) || colourRank(a) - colourRank(b);
+
+/** Shift+<letter> → the ordering it selects. C for colour and O for the original deal order
+ *  read the same in both languages; Shift+N is not here because it alternates rather than
+ *  selecting (see the keydown handler). */
+const SORT_KEYS: Readonly<Record<string, string>> = { c: 'colour', o: 'hand' };
+
+/** Cuatro Colores answers two questions, so it offers two axes and drops the generic
+ *  "by type": with actions ranked, ordering by value ALREADY groups every draw two with
+ *  every draw two, whatever their colours. Ids match the generic ones so the wording and a
+ *  player's saved choice both carry over. */
+const SHEDDING_HAND_SORTING: HandSorting = {
+	preferenceScope: 'shedding',
+	defaultId: 'value',
+	options: [
+		{
+			id: 'value',
+			labelKey: 'game.hand_sort_by_value',
+			announcementKey: 'game.hand_sorted_value',
+			compare: (a, b) => byWeightThenColour(a, b, -1),
+		},
+		{
+			id: 'valueAsc',
+			labelKey: 'game.hand_sort_by_value_asc',
+			announcementKey: 'game.hand_sorted_valueAsc',
+			compare: (a, b) => byWeightThenColour(a, b, 1),
+		},
+		{
+			// Numbers first and in order, then the actions — a colour reads as a small hand of
+			// its own. Wilds carry no colour, so they pool at the end.
+			id: 'colour',
+			labelKey: 'game.hand_sort_by_colour',
+			announcementKey: 'game.hand_sorted_colour',
+			compare: (a, b) => colourRank(a) - colourRank(b) || sheddingWeight(a) - sheddingWeight(b),
+		},
+		{
+			id: 'hand',
+			labelKey: 'game.hand_sort_hand',
+			announcementKey: 'game.hand_sorted_hand',
+			compare: () => 0,
+		},
+	],
+};
 
 export interface SheddingBoardDeps {
 	getGameState: () => GameState | null;
@@ -94,6 +162,9 @@ export class SheddingBoard {
 		shortcuts.push({ keys: 'shift + 0 – 9', descKey: 'game.help_cmd_shedding_number_jump_back' });
 		shortcuts.push({ keys: 'i', descKey: 'game.help_cmd_shedding_special_jump' });
 		shortcuts.push({ keys: 'shift + i', descKey: 'game.help_cmd_shedding_special_jump_back' });
+		shortcuts.push({ keys: 'shift + n', descKey: 'game.help_cmd_shedding_sort_flip' });
+		shortcuts.push({ keys: 'shift + c', descKey: 'game.help_cmd_shedding_sort_colour' });
+		shortcuts.push({ keys: 'shift + o', descKey: 'game.help_cmd_shedding_sort_hand' });
 		if (this.deps.getGameState()?.sheddingRules?.lastCardCall) {
 			shortcuts.push(
 				{ keys: 'u', descKey: 'game.help_cmd_last_card_declare' },
@@ -178,6 +249,7 @@ export class SheddingBoard {
 
 		this.hand.init(handMount, {
 			getCards: () => this.myHandCards(),
+			sorting: SHEDDING_HAND_SORTING,
 			// Space: draw — or, mid drawn-card pause, KEEP the card and pass. The gate
 			// words the refusal; the panel never disables anything.
 			canDraw: () => this.canDrawNow(),
@@ -256,6 +328,25 @@ export class SheddingBoard {
 				e.stopPropagation();
 				this.jumpBy(c => c.typeKey !== 'number', e.shiftKey, 'game.shedding_no_special_cards');
 			}
+		});
+
+		// Reordering the hand without walking into the Shift+F10 menu: Shift+N flips the two
+		// value ends (which one you want changes with the hand you hold), Shift+C groups by
+		// colour, Shift+O returns to the order the cards arrived in. The engine binds all three
+		// chords to its property/board commands, which a card family has no board for — they are
+		// inert here and already hidden from this family's help, so the letters are free
+		// (exploding shadows plain N the same way).
+		this.element.addEventListener('keydown', (e) => {
+			if (!e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
+			// Shift+N alternates rather than picking a side: from colour or deal order it enters
+			// at the default end, so one more press always walks back out.
+			const wanted = e.key.toLowerCase() === 'n'
+				? (this.hand.currentSort() === 'value' ? 'valueAsc' : 'value')
+				: SORT_KEYS[e.key.toLowerCase()];
+			if (!wanted) return;
+			e.preventDefault();
+			e.stopPropagation();
+			this.hand.applySort(wanted);
 		});
 
 		// Last-card keys (house rule): U declares, P catches a rival who forgot, V reads the
