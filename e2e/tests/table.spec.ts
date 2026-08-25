@@ -9,7 +9,7 @@ import { test, expect } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
 import { E2E_BASE_URL } from '../playwright.config';
 import {
-	appI18n, createGame, expectAnnouncement, joinGame, newPlayerPage, packageI18n,
+	appI18n, createGame, expectAnnouncement, joinGame, newPlayerPage, packageI18n, startGame,
 } from '../helpers/game';
 
 const PROPERTY_BOARD = 'galactic-empire';
@@ -215,6 +215,36 @@ test('the host deleting the table takes everyone home with it', async ({ browser
 	await expect(berto.locator('#view-home')).toBeVisible();
 	// …and it is gone from the list too, not offering a way back into nothing.
 	await expect(berto.locator('#your-games-empty')).toBeVisible();
+});
+
+// Found while playing a table: the host, and only the host, heard the start announced twice —
+// "La partida ha comenzado. La partida ha comenzado." in one breath, because the announcer merges
+// two writes that land inside its clear gap. The hub was sending GameStarted to the lobby GROUP
+// and then again to the CALLER, who is in that group, so the client announced what it received:
+// twice. A guest, reached only by the broadcast, always heard it once — which is why nobody
+// noticed. Both sides are asserted here: the count is only meaningful next to a working one.
+test('starting the match is announced once — to the host as much as to a guest', async ({ browser }) => {
+	const ana = await newPlayerPage(browser);
+	const berto = await newPlayerPage(browser);
+	const code = await createGame(ana, 'Ana', TRACK_BOARD);
+	await joinGame(berto, code, 'Berto');
+	await startGame(ana, [ana, berto]);
+
+	const line = appI18n('es').game.game_has_started as string;
+	// Wait for the line before counting, or an empty log would pass for "heard once, not twice".
+	await expectAnnouncement(ana, new RegExp(line));
+	await expectAnnouncement(berto, new RegExp(line));
+
+	// Count the OCCURRENCES, not the entries: the two sends arrive close enough that the
+	// announcer coalesces them into a single line holding the sentence twice, which is exactly
+	// what a screen reader then reads out.
+	const timesHeard = async (page: typeof ana) => await page.evaluate((sentence) => {
+		const log: string[] = (window as any).__announcements ?? [];
+		return log.join(' ').split(sentence).length - 1;
+	}, line);
+
+	expect(await timesHeard(ana), 'the host hears it once').toBe(1);
+	expect(await timesHeard(berto), 'a guest hears it once').toBe(1);
 });
 
 test('the host changes the board rules for the next match, and the change sticks', async ({ browser }) => {
