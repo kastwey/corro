@@ -493,6 +493,19 @@ test('a second match at the same table is dealt words the first one never used',
 	const first = await playAMatch();
 	expect(first.length, 'the first match dealt at least one word').toBeGreaterThan(0);
 	await expect(ana.locator('.end-screen')).toBeVisible();
+
+	// The final table of a TEAM game is teams: two rows for four players, each naming who was on
+	// it and what it scored. Four loose names never said who played with whom, and the score —
+	// the whole point of the match — lived only in the panels that vanish with the board.
+	const standings = ana.locator('.end-screen__standings');
+	await expect(standings.locator('thead th').nth(1)).toHaveText(appI18n('es').game.end_col_team as string);
+	await expect(standings.locator('thead th').nth(2)).toHaveText(appI18n('es').game.end_measure_points as string);
+	await expect(standings.locator('tbody tr')).toHaveCount(2);
+	const winners = standings.locator('tbody tr').first();
+	await expect(winners).toContainText('Ana');
+	await expect(winners).toContainText('Berto');
+	await expect(winners).toContainText(appI18n('es').game.end_your_team as string);
+	await expect(winners.locator('td').last()).toHaveText('1'); // the one word they banked
 	await flushAxeAudit(ana);
 
 	// Back to the table, and away again: the same group, the same teams, the same deck.

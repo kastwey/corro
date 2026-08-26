@@ -288,4 +288,24 @@ public sealed class TriviaFamily : IGameFamily
 
 		return Task.CompletedTask;
 	}
+
+	/// <summary>
+	/// Wedges won. This family stamps a place on the WINNER alone — the match simply stops when
+	/// somebody completes the wheel — so the rows behind them are ordered by wedges, which is the
+	/// only thing that separates a player who was one question away from one who never scored.
+	/// It reorders nothing in the game itself: the win, and the place, were decided already.
+	/// </summary>
+	public MatchStandings? FinalStandings(GameState state)
+	{
+		if (state.Trivia is not { } trivia)
+		{
+			return null;
+		}
+
+		int? WedgesOf(string playerId)
+			=> trivia.Players.FirstOrDefault(player => player.PlayerId == playerId)?.Wedges.Count;
+
+		var byWedges = state.Players.OrderByDescending(player => WedgesOf(player.Id) ?? -1).ToList();
+		return FinalStandingsBuilder.ByPlayer(state, StandingsMeasure.Wedges, WedgesOf, byWedges);
+	}
 }

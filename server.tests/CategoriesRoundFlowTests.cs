@@ -369,6 +369,15 @@ public class CategoriesRoundFlowTests
 
 		Assert.True(table.State.IsGameOver);
 		Assert.Equal("p1", table.State.WinnerId);
+
+		// The points each player collected from the accepted answers, carried to the final table.
+		var standings = new CategoriesFamily().FinalStandings(table.State);
+		StandingsSanity.AssertSane(table.State, standings);
+		Assert.Equal("game.end_measure_points", standings!.MeasureKey);
+		Assert.Equal("p1", standings.Sides[0].MemberIds.Single());
+		Assert.Equal(
+			table.State.Categories!.Players.First(player => player.PlayerId == "p1").Score,
+			standings.Sides[0].Value);
 		Assert.Contains(TestFixtures.Announcer(table.Context).Sent,
 			sent => sent.Key == "game.categories_final_score");
 		Assert.Contains(TestFixtures.Announcer(table.Context).Sent, sent => sent.Key == "game.game_over");

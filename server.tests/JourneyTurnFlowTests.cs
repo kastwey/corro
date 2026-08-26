@@ -393,6 +393,63 @@ public class JourneyTurnFlowTests
 		Assert.Equal(1, state.Players.First(p => p.Id == "A").FinishPlace);
 		Assert.Equal(2, state.Players.First(p => p.Id == "B").FinishPlace);
 		Assert.Contains("game.game_over", Keys(ctx));
+
+		// One row per seat with its match score. Individual play seats one player each, so no row
+		// claims to be a team.
+		var standings = new JourneyFamily().FinalStandings(state);
+		StandingsSanity.AssertSane(state, standings);
+		Assert.Equal(new[] { "A", "B" }, standings!.Sides.Select(side => side.MemberIds.Single()));
+		Assert.Equal(journey.Seats.Select(seat => seat.Score), standings.Sides.Select(side => side.Value));
+		Assert.All(standings.Sides, side => Assert.Null(side.TeamIndex));
+	}
+
+	[Fact]
+	public async Task A_team_match_ends_with_one_row_per_TEAM_naming_both_partners()
+	{
+		// Teams [A,C] and [B,D], the same seating as the attack test above. Four players who
+		// played as two sides read as two rows: four separate lines would never say who drove
+		// with whom, and would print the same seat score twice.
+		var journey = new JourneyState();
+		journey.Seats.Add(new JourneySeatState
+		{
+			PlayerId = "A",
+			Members = new() { new() { PlayerId = "A" }, new() { PlayerId = "C" } },
+		});
+		journey.Seats.Add(new JourneySeatState
+		{
+			PlayerId = "B",
+			Members = new() { new() { PlayerId = "B" }, new() { PlayerId = "D" } },
+		});
+		journey.Seats[0].Members[0].Hand.Add(Inst("distance-25"));
+		journey.Seats[1].Members[0].Hand.Add(Inst("go"));
+		journey.HasDrawn = true;
+		JourneyRulebook.SyncCounts(journey);
+
+		var state = TestFixtures.NewState(new List<Player>
+		{
+			TestFixtures.NewPlayer("A"), TestFixtures.NewPlayer("B"),
+			TestFixtures.NewPlayer("C"), TestFixtures.NewPlayer("D"),
+		});
+		state.GameType = "journey";
+		state.Journey = journey;
+		state.JourneyDeck = Deck();
+		var ctx = NewJourneyContext(state, new JourneyRulesConfig { GoalKm = 25, TargetScore = 100 });
+
+		await new JourneyPlayHandler().HandleAsync(
+			new JourneyPlayCommand { PlayerId = "A", InstanceId = "distance-25#0" }, ctx);
+
+		Assert.True(state.IsGameOver);
+
+		var standings = new JourneyFamily().FinalStandings(state);
+		StandingsSanity.AssertSane(state, standings);
+		Assert.Equal(2, standings!.Sides.Count);
+		Assert.Equal(new[] { "A", "C" }, standings.Sides[0].MemberIds);
+		Assert.Equal(new[] { "B", "D" }, standings.Sides[1].MemberIds);
+		// A seat of two IS a team here, and the row is named from the same palette the game
+		// already speaks with ("__team:red" in the attack lines above).
+		Assert.Equal(0, standings.Sides[0].TeamIndex);
+		Assert.Equal(1, standings.Sides[1].TeamIndex);
+		Assert.Equal(journey.Seats[0].Score, standings.Sides[0].Value);
 	}
 
 	[Fact]

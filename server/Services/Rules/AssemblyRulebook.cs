@@ -44,16 +44,20 @@ public static class AssemblyRulebook
 	public static bool IsClean(AssemblySlot slot) => slot.Afflictions.Count == 0 && slot.Shields.Count == 0;
 
 	/// <summary>
-	/// The rack wins when its distinct FUNCTIONAL real colours plus its functional wild
-	/// jokers (each fills one missing colour) reach the goal.
+	/// How much of the rack actually stands: its distinct FUNCTIONAL real colours plus its
+	/// functional wild jokers, each of which fills one missing colour. This is the figure the
+	/// win, the final placings and the final table all read — a second copy of the sum would
+	/// eventually disagree with the one that decides the match.
 	/// </summary>
-	public static bool HasWon(AssemblySeatState seat, AssemblyRulesConfig rules)
+	public static int FunctionalSlots(AssemblySeatState seat)
 	{
 		var functional = seat.Slots.Where(IsFunctional).Select(s => s.Color).ToList();
-		var wilds = functional.Count(c => c == Wild);
-		var distinctReal = functional.Where(c => c != Wild).Distinct().Count();
-		return distinctReal + wilds >= rules.SlotsToWin;
+		return functional.Where(c => c != Wild).Distinct().Count() + functional.Count(c => c == Wild);
 	}
+
+	/// <summary>The rack wins when <see cref="FunctionalSlots"/> reaches the goal.</summary>
+	public static bool HasWon(AssemblySeatState seat, AssemblyRulesConfig rules)
+		=> FunctionalSlots(seat) >= rules.SlotsToWin;
 
 	public static AssemblySeatState SeatOf(AssemblyState state, string playerId)
 		=> state.Seats.First(s => s.PlayerId == playerId);

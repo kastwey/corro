@@ -558,6 +558,10 @@ Example — rewriting "three doubles → holding":
   `game.assembly_*`, `game.draft_*`), listed in its family section below. The engine's
   defaults use **theme-neutral words** (piece, card, table…); a package themes the game
   by overriding them — that is the intended convention, not a workaround.
+- **The final table's measure** is a `game.*` key like any other, so a board that calls its
+  points credits overrides `game.end_measure_points` and the end screen follows. Which key your
+  family uses is its own (`game.end_measure_points`, `_square`, `_wedges`, `_pieces_home`,
+  `_parts`); a package cannot change the measure, only what it is called.
 
 | Key (`game.…`) | Default (EN) | Variables | `_self` |
 |---|---|---|:--:|

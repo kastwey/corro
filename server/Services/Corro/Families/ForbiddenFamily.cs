@@ -22,6 +22,15 @@ public sealed class ForbiddenFamily : IGameFamily
 	/// so there is no legal seating with one team or an odd table.</summary>
 	public int? RequiredTeamCount => 2;
 
+	/// <summary>Two rows, one per team: the whole side named together, with the points it scored.
+	/// Nobody plays alone here, so the individual columns would never say who was with whom.</summary>
+	public MatchStandings? FinalStandings(GameState state)
+		=> state.Forbidden is not { } forbidden
+			? null
+			: FinalStandingsBuilder.ByTeam(state, StandingsMeasure.Points,
+				forbidden.Teams.Select(team =>
+					((int?)team.TeamIndex, (IReadOnlyList<string>)team.MemberIds, team.Score)));
+
 	/// <summary>The real word decks a package can offer in the lobby, preserving manifest order.
 	/// A locale the manifest lists but has no words for is not a choice, so it never appears.</summary>
 	public IReadOnlyList<string> ContentLanguages(GameDefinition definition)
