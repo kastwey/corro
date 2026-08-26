@@ -17,10 +17,11 @@ The `deploy-production` job runs only after all three succeed. It:
 1. skips itself if its commit is no longer the head of `main`;
 2. obtains a short-lived Azure token through GitHub OIDC;
 3. downloads the private package bundle directly from Blob Storage;
-4. publishes the frontend and server together without uploading the combined artifact to
+4. validates every package now on disk and refuses to publish if any fails;
+5. publishes the frontend and server together without uploading the combined artifact to
    GitHub;
-5. deploys a clean ZIP to the existing Web App;
-6. verifies that the exact commit SHA and the shipped-package API are live at the custom
+6. deploys a clean ZIP to the existing Web App;
+7. verifies that the exact commit SHA and the shipped-package API are live at the custom
    production hostname.
 
 Deployments are serialized and never interrupted halfway through. There is no separate
@@ -61,7 +62,20 @@ pwsh ./tools/publish-private-packages.ps1
 ```
 
 CI has read-only access to that one container. A missing or unreadable bundle fails the
-deployment instead of silently removing private games from production.
+deployment instead of silently removing private games from production. A bundle that
+unzips to nothing fails it too: the job counts the packages on disk against the committed
+ones and refuses to publish when the restore added none.
+
+The restored bundle is the only content in the repository that no test job has seen — the
+frontend, server and e2e jobs run on a checkout where the private boards do not exist, so
+`KeyIntegrityTests` iterates the committed packages alone. The deploy job therefore
+validates every package between the restore and the publish, with the same validator an
+upload goes through plus the dangling-key tests. A private board that the current engine
+would reject stops the deployment instead of reaching players.
+
+Because the upload overwrites one fixed blob name, the account keeps blob versions and soft
+delete, so a mistaken publish is a restore rather than a loss — see
+[the infrastructure README](../infra/README.md) for the recovery commands.
 
 ## Operational notes
 

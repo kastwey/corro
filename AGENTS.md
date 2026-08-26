@@ -205,6 +205,15 @@ too: manifest, both locales and both help files. Then prove it, don't assume it 
 `dotnet tools/Corro.PackageCli/bin/Debug/net10.0/corro-package.dll validate server/Packages/<id>`
 checks one. Say in your summary which local packages you touched, since the diff cannot.
 
+**A session without them must say so.** "Present on disk" is the whole strength of those gates
+and their whole weakness: a remote session starts from a clean clone, so the local packages are
+absent and every check above passes without having looked at a single one. That is not compliance
+with this rule, it is the rule going unenforced — so when they are missing, say plainly that the
+local-package half of the change could not be made or verified, rather than reporting green.
+Production is guarded independently: `deploy-production` validates every package between
+restoring the private bundle and publishing, and refuses to ship a board the current engine
+rejects (`tools/tests/deployment-gate.tests.ps1` pins that order).
+
 **Style.** No inline styles in HTML. No `console.log` in production (use
 `console.debug`). Handlers emit events, not direct DOM manipulation.
 

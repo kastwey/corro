@@ -14,7 +14,38 @@ It creates:
   `production` environment in `kastwey/corro`;
 - `Website Contributor` scoped only to the existing `Imperio` Web App;
 - a private Blob container for package sources intentionally excluded from Git;
-- `Storage Blob Data Reader` scoped only to that container.
+- `Storage Blob Data Reader` scoped only to that container;
+- blob versioning and soft delete on the account's blob service (see below).
+
+## Recovering a private package bundle
+
+`tools/publish-private-packages.ps1` uploads to a single fixed blob name with `--overwrite`.
+Those packages are excluded from Git by design, so that blob is the only copy of them outside
+the maintainer's machine — and every publish used to destroy the one before it. The template
+therefore enables **blob versioning** (every upload keeps its predecessor) and **soft delete**
+(90 days for a blob, 30 for a container), which turns a bad publish from a loss into a restore:
+
+```powershell
+az storage blob list `
+  --account-name imperio --container-name deployment `
+  --include v --prefix private-packages.zip --auth-mode login `
+  --query "[].{version:versionId, modified:properties.lastModified}" --output table
+
+az storage blob copy start `
+  --account-name imperio --destination-container deployment `
+  --destination-blob private-packages.zip `
+  --source-uri "https://imperio.blob.core.windows.net/deployment/private-packages.zip?versionId=<version>" `
+  --auth-mode login
+```
+
+Two things to know before applying the template:
+
+- **Versioning cannot be scoped to one container.** It is a blob-service property, so the
+  container holding uploaded `.corro` packages keeps versions too, and they are billed. If that
+  ever costs anything noticeable, add a lifecycle-management rule that expires non-current
+  versions after N days rather than turning versioning off.
+- **The template now owns those properties.** Run the `what-if` below and confirm it turns
+  nothing off that was previously set by hand.
 
 `Website Contributor` also lets the production workflow idempotently enforce `Always On` on the
 existing S1 Web App. This keeps the in-process daily game-retention worker scheduled without a
