@@ -61,9 +61,33 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' existing 
   name: storageAccountName
 }
 
-resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2025-01-01' existing = {
+// Owned rather than merely referenced, because versioning is a blob-SERVICE property and the
+// bundle needs it: tools/publish-private-packages.ps1 uploads to one fixed blob name with
+// --overwrite, so without versioning the private packages exist in exactly ONE place off the
+// maintainer's machine, and a bad publish destroys the previous copy irrecoverably. With it,
+// every upload keeps the one before it and a mistake is a restore instead of a loss.
+//
+// Two consequences to know before applying this (see infra/README.md):
+//   * Versioning cannot be scoped to one container. It applies to the whole account, so the
+//     uploaded-package container keeps versions too, and they are billed. A lifecycle rule that
+//     expires non-current versions is the answer if that ever costs anything noticeable.
+//   * This template now OWNS these properties. Run `az deployment group what-if` first and
+//     confirm it turns nothing off that was set by hand.
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2025-01-01' = {
   parent: storageAccount
   name: 'default'
+  properties: {
+    isVersioningEnabled: true
+    // A deleted blob is recoverable for three months; a deleted container for one.
+    deleteRetentionPolicy: {
+      enabled: true
+      days: 90
+    }
+    containerDeleteRetentionPolicy: {
+      enabled: true
+      days: 30
+    }
+  }
 }
 
 // The bundle is private and contains only package folders ignored by Git. It is downloaded with

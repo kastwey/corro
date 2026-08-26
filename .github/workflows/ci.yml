@@ -41,6 +41,7 @@ jobs:
           ./tools/tests/hook-installation.tests.ps1
           ./tools/tests/repository-language.tests.ps1
           ./tools/tests/build-version.tests.ps1
+          ./tools/tests/deployment-gate.tests.ps1
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
@@ -221,6 +222,48 @@ jobs:
         if: steps.freshness.outputs.deploy == 'true'
         working-directory: frontend
         run: npm ci
+
+      # The bundle restored above has never been seen by a gate. The frontend, server and e2e
+      # jobs run on a plain checkout, where the private boards do not exist — so KeyIntegrityTests,
+      # the very Theory written to cover them ("the private boards are gitignored, so they're
+      # included when present"), only ever iterates the shipped twelve. The bundle went straight
+      # from an opaque zip into the publish artifact, and a board the current engine would reject
+      # reached players with nothing anywhere saying so.
+      #
+      # This is the one moment in the pipeline where every package exists on disk. Validate here,
+      # and refuse to publish rather than ship a broken board.
+      - name: Validate every package before publishing
+        if: steps.freshness.outputs.deploy == 'true'
+        run: |
+          set -euo pipefail
+
+          # A bundle that unzipped to nothing passes `unzip -t` happily. Committed packages are
+          # the floor: anything at or below it means the restore produced no private board, which
+          # is a silent downgrade of production, not a deployment.
+          tracked="$(git ls-files server/Packages | awk -F/ 'NF>3 {print $3}' | sort -u | wc -l)"
+          present="$(find server/Packages -mindepth 1 -maxdepth 1 -type d | wc -l)"
+          echo "Packages on disk: $present ($tracked committed, $((present - tracked)) restored)."
+          if [ "$present" -le "$tracked" ]; then
+            echo "::error::the private bundle restored no packages — refusing to publish"
+            exit 1
+          fi
+
+          # The same validator an upload goes through, built once and reused.
+          dotnet build tools/Corro.PackageCli -p:SkipFrontendBuild=true --nologo
+          cli=tools/Corro.PackageCli/bin/Debug/net10.0/corro-package.dll
+          failed=0
+          for dir in server/Packages/*/; do
+            [ -f "$dir/manifest.json" ] || continue
+            if ! dotnet "$cli" validate "$dir"; then
+              echo "::error::package validation failed for ${dir%/}"
+              failed=1
+            fi
+          done
+          [ "$failed" -eq 0 ]
+
+          # Dangling i18n keys are what an engine change breaks in a board nobody re-validated.
+          dotnet test server.tests/CorroServer.Tests.csproj --nologo \
+            --filter "FullyQualifiedName~KeyIntegrityTests"
 
       - name: Publish application
         if: steps.freshness.outputs.deploy == 'true'
