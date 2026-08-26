@@ -937,6 +937,30 @@ export interface GameState {
   /** The winning player's id / name, populated alongside isGameOver. */
   winnerId?: string | null;
   winnerName?: string | null;
+  /** The final table, sealed by the server when the match ends. Absent in the two families that
+   *  count nothing worth showing, and in matches that finished before it existed. */
+  finalStandings?: MatchStandings | null;
+}
+
+/** The final table of a finished match: one row per side, in the family's own measure. */
+export interface MatchStandings {
+  /** i18n key naming the measure ("game.end_measure_points"), resolved in each player's language. */
+  measureKey: string;
+  /** The rows, best first. Ties are possible: partners share their side's place. */
+  sides: StandingSide[];
+}
+
+/** One row of the final table: who, in which place, with which number. */
+export interface StandingSide {
+  /** Everyone on this side, in seating order. Exactly one id in an individual game. */
+  memberIds: string[];
+  /** Finishing place, 1 = winner. 0 when the family never stamped one. */
+  place: number;
+  /** Engine team index, so the row can be named from the shared palette. Absent for a lone player
+   *  and for sides whose family names its partners instead of a colour. */
+  teamIndex?: number | null;
+  /** What this side finished on, in the measure named by measureKey. */
+  value: number;
 }
 
 export interface GameInfo {

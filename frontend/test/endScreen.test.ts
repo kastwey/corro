@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeStandings, winningSide } from '../src/endScreen.js';
+import { readFileSync } from 'node:fs';
+import { computeStandings, standingsRows, winningSide } from '../src/endScreen.js';
 import type { GameState, Player } from '../src/models.js';
 
 /**
@@ -8,9 +9,22 @@ import type { GameState, Player } from '../src/models.js';
  * wrapper over this; only the ordering is covered here.
  */
 
-// winningSide builds the team name through tSync, which probes window.i18next: give it a
-// bare window (no i18next → keys come back unchanged, which is all these tests need).
+// winningSide and the team rows compose their text through tSync, which probes window.i18next.
+// The Spanish resources are loaded for real and interpolated the way i18next does, so the tests
+// that assert a spoken line assert the line players actually hear — those strings are a contract.
+const es = JSON.parse(
+	readFileSync(new URL('../i18n/locales/es.json', import.meta.url), 'utf8'));
+
 (globalThis as any).window ??= {};
+(globalThis as any).window.i18next = {
+	language: 'es',
+	t: (key: string, vars?: Record<string, any>) => {
+		const [section, name] = key.split('.');
+		const text = es[section]?.[name];
+		if (typeof text !== 'string') return key;
+		return text.replace(/\{\{(\w+)\}\}/g, (_m, v) => String(vars?.[v] ?? `{{${v}}}`));
+	},
+};
 
 function player(partial: Partial<Player>): Player {
 	return { id: '', name: '', money: 0, position: 0, properties: [], ...partial } as Player;
@@ -103,6 +117,99 @@ test('winningSide is the lone winner outside team play (no team name)', () => {
 	const side = winningSide(gs);
 	assert.deepEqual([...side.ids], ['a']);
 	assert.equal(side.teamName, null);
+});
+
+test('a sealed table is shown as the server ordered it, numbers and all', () => {
+	// Four Colours played with the penalty count: the winner has the LOWEST score. The rows must
+	// come out in the server's order, so reading the numbers must not put 'b' on top.
+	const players = [
+		player({ id: 'a', name: 'Ana', finishPlace: 1 }),
+		player({ id: 'b', name: 'Berto', finishPlace: 2 }),
+	];
+	const rows = standingsRows(state({
+		players,
+		winnerId: 'a',
+		finalStandings: {
+			measureKey: 'game.end_measure_points',
+			sides: [
+				{ memberIds: ['a'], place: 1, value: 0 },
+				{ memberIds: ['b'], place: 2, value: 50 },
+			],
+		},
+	} as any));
+
+	assert.deepEqual(rows.map(r => r.name), ['Ana', 'Berto']);
+	assert.deepEqual(rows.map(r => r.value), [0, 50]);
+	assert.deepEqual(rows.map(r => r.isWinner), [true, false]);
+});
+
+test('a team row stands for both partners and carries the team score', () => {
+	const players = [
+		player({ id: 'a', name: 'Ana', finishPlace: 1 }),
+		player({ id: 'b', name: 'Berto', finishPlace: 1 }),
+		player({ id: 'c', name: 'Carla', finishPlace: 2 }),
+		player({ id: 'd', name: 'Dani', finishPlace: 2 }),
+	];
+	const rows = standingsRows(state({
+		players,
+		winnerId: 'a',
+		forbidden: {
+			teams: [
+				{ teamIndex: 0, memberIds: ['a', 'b'], score: 12, turnsTaken: 4 },
+				{ teamIndex: 1, memberIds: ['c', 'd'], score: 9, turnsTaken: 4 },
+			],
+		} as any,
+		finalStandings: {
+			measureKey: 'game.end_measure_points',
+			sides: [
+				{ memberIds: ['a', 'b'], place: 1, teamIndex: 0, value: 12 },
+				{ memberIds: ['c', 'd'], place: 2, teamIndex: 1, value: 9 },
+			],
+		},
+	} as any));
+
+	// Two rows for four players: the table says who was with whom.
+	assert.equal(rows.length, 2);
+	assert.deepEqual(rows[0].memberIds, ['a', 'b']);
+	assert.deepEqual(rows.map(r => r.value), [12, 9]);
+	assert.equal(rows[0].isWinner, true);
+	assert.equal(rows[1].isWinner, false);
+	// The whole row is ONE spoken line: the team, then who was on it, joined by a spoken
+	// connector ("Ana y Berto") — never juxtaposed or split by a separator that does not speak.
+	// (The list's language is the binder's, which no test initializes, so the connector itself
+	// is matched as a word rather than as Spanish.)
+	assert.match(rows[0].name, /^Equipo rojo: Ana \w+ Berto$/iu, rows[0].name);
+	assert.match(rows[1].name, /^Equipo azul: Carla \w+ Dani$/iu, rows[1].name);
+});
+
+test('a side that names its partners instead of a colour reads as a plain list of names', () => {
+	// Race teams: the winning announcement names the two players, so the row does too.
+	const players = [
+		player({ id: 'a', name: 'Ana', finishPlace: 1 }),
+		player({ id: 'b', name: 'Berto', finishPlace: 1 }),
+	];
+	const rows = standingsRows(state({
+		players,
+		winnerId: 'a',
+		finalStandings: {
+			measureKey: 'game.end_measure_pieces_home',
+			sides: [{ memberIds: ['a', 'b'], place: 1, value: 8 }],
+		},
+	} as any));
+
+	assert.ok(rows[0].name.includes('Ana') && rows[0].name.includes('Berto'), rows[0].name);
+	assert.ok(!rows[0].name.includes('end_team_members'), 'no team name is composed without a team index');
+});
+
+test('without a sealed table the standings stay the plain ranked list, with no number', () => {
+	const players = [
+		player({ id: 'a', name: 'Ana' }),
+		player({ id: 'b', name: 'Bea', isBankrupt: true, finishPlace: 2 }),
+	];
+	const rows = standingsRows(state({ players, winnerId: 'a' }));
+
+	assert.deepEqual(rows.map(r => r.name), ['Ana', 'Bea']);
+	assert.deepEqual(rows.map(r => r.value), [null, null]);
 });
 
 test('computeStandings breaks a finishPlace tie by name (defensive, for odd states)', () => {

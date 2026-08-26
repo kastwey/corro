@@ -322,4 +322,16 @@ public sealed class JourneyFamily : IGameFamily
 		};
 		return state with { Journey = projected };
 	}
+
+	/// <summary>One row per SEAT with the match score it accumulated. A seat IS the side here:
+	/// individual play seats one player, team play seats a whole team, and the team rows are
+	/// named from the palette because that is how the dashboards named them all match.</summary>
+	public MatchStandings? FinalStandings(GameState state)
+		=> state.Journey is not { } journey
+			? null
+			: FinalStandingsBuilder.ByTeam(state, StandingsMeasure.Points,
+				journey.Seats.Select((seat, index) => (
+					seat.Members.Count > 1 ? (int?)index : null,
+					(IReadOnlyList<string>)seat.Members.Select(member => member.PlayerId).ToList(),
+					seat.Score)));
 }
