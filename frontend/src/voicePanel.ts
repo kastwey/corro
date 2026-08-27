@@ -1000,8 +1000,10 @@ export class VoicePanel {
 
 		if (this.microphoneButton) {
 			this.microphoneButton.hidden = !this.deploymentAvailable || !this.connected;
+			// Muting strikes the icon through (voice.css) and rewrites the label, which
+			// states the microphone's state AND what a press does. aria-pressed on top of
+			// that was a third telling of the same fact, and the least clear of the three.
 			this.microphoneButton.classList.toggle('voice-microphone-toggle--muted', this.selfMuted);
-			this.microphoneButton.setAttribute('aria-pressed', String(!this.selfMuted));
 			const microphoneLabel = this.deps.t(this.selfMuted
 				? 'game.voice_microphone_button_muted'
 				: 'game.voice_microphone_button_on');

@@ -53,8 +53,9 @@ export function initSoundToggle(mount: HTMLElement, opts: SoundToggleOptions): S
 		const showBlocked = blocked && !muted;
 		btn.innerHTML = (muted || showBlocked) ? SOUND_OFF_ICON : SOUND_ON_ICON;
 		btn.classList.toggle('is-sound-blocked', showBlocked);
-		// aria-pressed reflects whether sounds are actually ON (unmuted AND unblocked).
-		btn.setAttribute('aria-pressed', String(!muted && !blocked));
+		// No aria-pressed: the crossed-out speaker and the label already carry the state,
+		// and a third statement of it read as a contradiction — "turn sound effects on,
+		// not pressed" made a listener work out the state through a double negative.
 		// Label describes the action a click performs. When blocked, it nudges the user to
 		// tap to unlock; otherwise it mirrors the theme toggle (enable / disable).
 		const label = showBlocked
