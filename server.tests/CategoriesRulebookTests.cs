@@ -199,6 +199,44 @@ public class CategoriesRulebookTests
 	}
 
 	[Fact]
+	public void Playing_to_a_score_ends_the_match_on_the_rotation_that_reaches_it()
+	{
+		var toScore = Rules with { EndMode = "score", TargetScore = 10, Cycles = 99 };
+		var state = CategoriesRulebook.CreateInitialState(new[] { "p0", "p1", "p2" }, Deck(), toScore);
+		var seats = new[] { "p0", "p1", "p2" };
+		state.Players.First(player => player.PlayerId == "p2").Score = 10;
+
+		// Mid-rotation the target is ignored: p2 is there only because the others have judged more
+		// rounds than they have, so they have written fewer.
+		var first = CategoriesRulebook.CompleteRound(state, seats, Deck(), toScore);
+		var second = CategoriesRulebook.CompleteRound(state, seats, Deck(), toScore);
+		var third = CategoriesRulebook.CompleteRound(state, seats, Deck(), toScore);
+
+		Assert.False(first.GameOver);
+		Assert.False(second.GameOver);
+		Assert.True(third.GameOver);
+		Assert.Equal("p2", third.WinnerId);
+	}
+
+	[Fact]
+	public void Playing_to_a_score_keeps_dealing_while_nobody_has_reached_it()
+	{
+		var toScore = Rules with { EndMode = "score", TargetScore = 10, Cycles = 1 };
+		var state = CategoriesRulebook.CreateInitialState(new[] { "p0", "p1", "p2" }, Deck(), toScore);
+		var seats = new[] { "p0", "p1", "p2" };
+		state.Players.First(player => player.PlayerId == "p1").Score = 9;
+
+		CategoriesRulebook.CompleteRound(state, seats, Deck(), toScore);
+		CategoriesRulebook.CompleteRound(state, seats, Deck(), toScore);
+		var last = CategoriesRulebook.CompleteRound(state, seats, Deck(), toScore);
+
+		// One rotation was played and somebody leads, which under "rounds" would have ended it.
+		Assert.False(last.GameOver);
+		Assert.False(last.TieBreakerStarted);
+		Assert.Equal(4, state.Round.RoundNumber);
+	}
+
+	[Fact]
 	public void A_tie_at_the_end_of_a_rotation_adds_another_whole_rotation_instead_of_sharing_the_win()
 	{
 		var state = NewGame();

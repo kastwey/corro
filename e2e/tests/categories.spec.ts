@@ -203,6 +203,64 @@ test('a shared Spanish deck, per-player interfaces and one full judged round', a
 	await flushAxeAudit(carla);
 });
 
+test('the rules the host settled on are the ones the table plays', async ({ browser }) => {
+	const ana = await newPlayerPage(browser, 'es-ES');
+	const berto = await newPlayerPage(browser, 'es-ES');
+	const carla = await newPlayerPage(browser, 'es-ES');
+
+	// A short sheet, a short clock, and a match that ends on points rather than on rotations.
+	const code = await createGame(ana, 'Ana', BOARD, {
+		maxPlayers: 3,
+		contentLanguage: 'es',
+		houseRules: {
+			categoriesPerRound: 3,
+			categoriesRoundSeconds: 45,
+			categoriesEndMode: 'score',
+			categoriesTargetScore: 5,
+		},
+	});
+	await joinGame(berto, code, 'Berto');
+	await joinGame(carla, code, 'Carla');
+	await startGame(ana, [ana, berto, carla]);
+
+	// Three categories, not the package's twelve.
+	await expect(berto.locator('.categories-sheet-input')).toHaveCount(3);
+
+	// The clock the host chose is the authoritative one: R answers from it.
+	await ana.locator('.categories-start').click();
+	await expect(ana.locator('.categories-timer')).toBeVisible();
+	await ana.locator('.categories-shell').focus();
+	await ana.keyboard.press('r');
+	await expectAnnouncement(ana, /4[0-5] segundos/);
+
+	// The active-rules dialog reads back what this table agreed to, and only the ending in force.
+	await ana.keyboard.press('Control+Shift+F1');
+	const rules = ana.locator('.game-dialog.dialog-game-rules');
+	await expect(rules).toBeVisible();
+	const lines = rules.locator('.game-rules-list li');
+	await expect(lines.filter({ hasText: '45' })).toHaveCount(1);
+	await expect(lines.filter({ hasText: 'Gana quien llegue a 5 puntos' })).toHaveCount(1);
+	// Only the ending in force: two numbers to choose between is a puzzle for the table.
+	await expect(lines.filter({ hasText: 'Rotaciones' })).toHaveCount(0);
+	await flushAxeAudit(ana);
+	await ana.keyboard.press('Escape');
+
+	// A match played to a score keeps dealing while nobody has reached it: the round after this
+	// one exists, under the next judge.
+	await berto.locator('.categories-finish').click();
+	await carla.locator('.categories-finish').click();
+	await expect(ana.locator('.categories-review')).toBeVisible();
+	for (let category = 0; category < 3; category++) {
+		await ana.locator('.categories-confirm').click();
+	}
+	await expect(berto.locator('.categories-start')).toBeVisible();
+	await berto.locator('.categories-start').click();
+	await expect(ana.locator('.categories-sheet-input')).toHaveCount(3);
+	await flushAxeAudit(ana);
+	await flushAxeAudit(berto);
+	await flushAxeAudit(carla);
+});
+
 test('the surface answers the reading keys without a screen reader having to hunt', async ({ browser }) => {
 	const ana = await newPlayerPage(browser, 'en-US');
 	const berto = await newPlayerPage(browser, 'en-US');

@@ -145,6 +145,34 @@ public static class HouseRuleCatalog
 	public static ForbiddenRulesConfig ApplyForbidden(ForbiddenRulesConfig rules, string id, JsonElement value)
 		=> ForbiddenAppliers.TryGetValue(id, out var apply) ? apply(rules, value) : rules;
 
+	// ── Categories family ─────────────────────────────────────────────────────
+
+	/// <summary>What the "categoriesEndMode" choice rule accepts: "rounds" = complete judge
+	/// rotations decide it (the classic, ties adding a whole rotation), "score" = the first player
+	/// past the target wins, checked only where every player has judged the same number of
+	/// rounds.</summary>
+	public static readonly IReadOnlySet<string> CategoriesEndModes =
+		new HashSet<string> { "rounds", "score" };
+
+	private static readonly Dictionary<string, Func<CategoriesRulesConfig, JsonElement, CategoriesRulesConfig>> CategoriesAppliers = new()
+	{
+		["categoriesPerRound"] = (r, v) => r with { CategoriesPerRound = v.GetInt32() },
+		["categoriesRoundSeconds"] = (r, v) => r with { RoundSeconds = v.GetInt32() },
+		["categoriesEndMode"] = (r, v) => v.ValueKind == JsonValueKind.String
+										    && CategoriesEndModes.Contains(v.GetString()!)
+			? r with { EndMode = v.GetString()! }
+			: r,
+		["categoriesCycles"] = (r, v) => r with { Cycles = v.GetInt32() },
+		["categoriesTargetScore"] = (r, v) => r with { TargetScore = v.GetInt32() },
+	};
+
+	/// <summary>Whether the engine knows this CATEGORIES rule code.</summary>
+	public static bool IsKnownCategories(string id) => CategoriesAppliers.ContainsKey(id);
+
+	/// <summary>Returns categories rules with the rule applied; unknown ids are left unchanged.</summary>
+	public static CategoriesRulesConfig ApplyCategories(CategoriesRulesConfig rules, string id, JsonElement value)
+		=> CategoriesAppliers.TryGetValue(id, out var apply) ? apply(rules, value) : rules;
+
 	// ── Choice rules: the values the engine actually accepts ──────────────────
 
 	/// <summary>The value set each CHOICE rule code accepts. A package declares its own options
@@ -159,6 +187,7 @@ public static class HouseRuleCatalog
 			["sheddingEndMode"] = SheddingEndModes,
 			["forbiddenEndMode"] = ForbiddenEndModes,
 			[ForbiddenModeRule] = ForbiddenModes,
+			["categoriesEndMode"] = CategoriesEndModes,
 		};
 
 	/// <summary>

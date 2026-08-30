@@ -18,8 +18,68 @@
     "roundSeconds": 180,
     "categoriesPerRound": 12,
     "pointsPerAnswer": 1,
-    "cycles": 1
+    "cycles": 1,
+    "endMode": "rounds",
+    "targetScore": 30
   },
+  "houseRules": [
+    {
+      "id": "categoriesPerRound",
+      "group": "categories",
+      "type": "number",
+      "default": 12,
+      "min": 3,
+      "max": 12,
+      "step": 1,
+      "editableByHost": true,
+      "nameKey": "rules.categoriesPerRound"
+    },
+    {
+      "id": "categoriesRoundSeconds",
+      "group": "categories",
+      "type": "number",
+      "default": 180,
+      "min": 30,
+      "max": 300,
+      "step": 15,
+      "editableByHost": true,
+      "nameKey": "rules.categoriesRoundSeconds"
+    },
+    {
+      "id": "categoriesEndMode",
+      "group": "categories",
+      "type": "choice",
+      "default": "rounds",
+      "options": [
+        { "id": "rounds", "nameKey": "rules.categoriesEndModeRounds" },
+        { "id": "score", "nameKey": "rules.categoriesEndModeScore" }
+      ],
+      "editableByHost": true,
+      "nameKey": "rules.categoriesEndMode"
+    },
+    {
+      "id": "categoriesCycles",
+      "group": "categories",
+      "type": "number",
+      "default": 1,
+      "min": 1,
+      "step": 1,
+      "editableByHost": true,
+      "nameKey": "rules.categoriesCycles",
+      "showWhen": { "rule": "categoriesEndMode", "is": "rounds" }
+    },
+    {
+      "id": "categoriesTargetScore",
+      "group": "categories",
+      "type": "number",
+      "default": 30,
+      "min": 1,
+      "step": 1,
+      "editableByHost": true,
+      "nameKey": "rules.categoriesTargetScore",
+      "showWhen": { "rule": "categoriesEndMode", "is": "score" }
+    }
+  ],
   "tokens": [
     { "id": "quill", "nameKey": "tokens.quill" },
     { "id": "inkwell", "nameKey": "tokens.inkwell" },

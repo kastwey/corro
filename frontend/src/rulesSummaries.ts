@@ -134,11 +134,16 @@ export function buildCategoriesRulesLines(rules: CategoriesRulesConfig | null | 
 		pointsPerAnswer: 1,
 		cycles: 1,
 	};
+	// Only the ending in force is read: hearing both numbers would leave the table working out
+	// which one decides the match.
+	const ending = r.endMode === 'score'
+		? t('game.categories_rules_target', { score: r.targetScore ?? 30 })
+		: t('game.categories_rules_cycles', { count: r.cycles });
 	return [
 		t('game.categories_rules_time', { seconds: r.roundSeconds }),
 		t('game.categories_rules_categories', { count: r.categoriesPerRound }),
 		t('game.categories_rules_points', { points: r.pointsPerAnswer }),
-		t('game.categories_rules_cycles', { count: r.cycles }),
+		ending,
 	];
 }
 

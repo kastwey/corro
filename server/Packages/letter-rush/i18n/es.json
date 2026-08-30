@@ -1,4 +1,13 @@
 {
+  "rules": {
+    "categoriesPerRound": "Categorías por ronda",
+    "categoriesRoundSeconds": "Tiempo para escribir, en segundos",
+    "categoriesEndMode": "Cuándo termina la partida",
+    "categoriesEndModeRounds": "Al jugar las vueltas",
+    "categoriesEndModeScore": "Al llegar a los puntos",
+    "categoriesCycles": "Vueltas de juez que se juegan",
+    "categoriesTargetScore": "Puntos para ganar"
+  },
   "tokens": {
     "quill": "Pluma",
     "inkwell": "Tintero",

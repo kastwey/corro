@@ -24,6 +24,7 @@ const TRACK_BOARD = 'snakes-and-ladders';
 const FORBIDDEN_BOARD = 'forbidden-words';
 const SHEDDING_BOARD = 'four-colours';
 const TRIVIA_BOARD = 'wheel-of-wits';
+const CATEGORIES_BOARD = 'letter-rush';
 
 /** A small, real .corro archive used to exercise the browser's successful upload state. */
 async function uploadedTrackPackage(): Promise<Buffer> {
@@ -433,6 +434,45 @@ test('Forbidden Words offers the same ending choice, with its own numbers', asyn
 	await expect(ending.nth(1)).toBeChecked();
 	await expect(target).toBeVisible();
 	await expect(target).toHaveValue('30'); // tens of points, not hundreds: this game's own figure
+	await expect(cycles).toBeHidden();
+	await flushAxeAudit(page);
+});
+
+test('Letter Rush lets the host set the clock, the sheet and how the match ends', async ({ browser }) => {
+	// This family had no house rules at all until now: the panel itself is a new lobby state.
+	const page = await newPlayerPage(browser, 'es-ES');
+	await gotoLobbyHome(page);
+	await page.locator('#go-create-btn').click();
+	await chooseBoard(page, CATEGORIES_BOARD);
+	const firstToken = packageManifest(CATEGORIES_BOARD).tokens[0].id as string;
+	await expect(page.locator(`#create-form input.token-radio[value="${firstToken}"]`)).toBeAttached();
+	await page.locator('#rules-details').evaluate(el => { (el as HTMLDetailsElement).open = true; });
+
+	// The writing clock is the game: it is offered in quarter-minutes, from half a minute to five.
+	const seconds = page.locator('#package-rules [data-rule-id="categoriesRoundSeconds"]');
+	await expect(seconds).toHaveValue('180');
+	await expect(seconds).toHaveAttribute('min', '30');
+	await expect(seconds).toHaveAttribute('max', '300');
+	await expect(seconds).toHaveAttribute('step', '15');
+	const perRound = page.locator('#package-rules [data-rule-id="categoriesPerRound"]');
+	await expect(perRound).toHaveValue('12');
+	await flushAxeAudit(page);
+
+	// The same ending mechanism as the other games that count, with this one's own figures.
+	const ending = page.locator('#package-rules [data-rule-id="categoriesEndMode"]');
+	const group = page.locator('#package-rules fieldset.rule-choice', {
+		has: page.locator('[data-rule-id="categoriesEndMode"]'),
+	});
+	await expect(group.locator('legend')).toHaveText('Cuándo termina la partida');
+	await expect(ending.nth(0)).toBeChecked();
+	const cycles = page.locator('#package-rules [data-rule-id="categoriesCycles"]');
+	const target = page.locator('#package-rules [data-rule-id="categoriesTargetScore"]');
+	await expect(cycles).toBeVisible();
+	await expect(target).toBeHidden();
+
+	await ending.nth(1).dispatchEvent('click');
+	await expect(target).toBeVisible();
+	await expect(target).toHaveValue('30');
 	await expect(cycles).toBeHidden();
 	await flushAxeAudit(page);
 });

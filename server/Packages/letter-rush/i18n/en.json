@@ -1,4 +1,13 @@
 {
+  "rules": {
+    "categoriesPerRound": "Categories per round",
+    "categoriesRoundSeconds": "Time to write, in seconds",
+    "categoriesEndMode": "When the match ends",
+    "categoriesEndModeRounds": "After the rotations are played",
+    "categoriesEndModeScore": "On reaching the points",
+    "categoriesCycles": "Judge rotations played",
+    "categoriesTargetScore": "Points that win"
+  },
   "tokens": {
     "quill": "Quill",
     "inkwell": "Inkwell",

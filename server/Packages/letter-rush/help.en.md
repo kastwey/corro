@@ -1,6 +1,6 @@
 # Letter Rush
 
-Everyone writes at the same time. A round deals one letter and twelve categories, and every answer you write must start with that letter. You get three minutes. The round's judge does not write: once the clock runs out, they rule on what everybody else wrote.
+Everyone writes at the same time. A round deals one letter and a list of categories, and every answer you write must start with that letter. The host decides how many categories there are and how long you get. The round's judge does not write: once the clock runs out, they rule on what everybody else wrote.
 
 ## The round's judge
 
@@ -61,9 +61,19 @@ Each category's result is announced to the whole table, and you also hear privat
 - **Ctrl+F1** lists the live keyboard shortcuts.
 - **Ctrl+Shift+F1** reads the effective clock, category and scoring rules.
 
+## What the host decides
+
+Creating the table sets:
+
+- how many categories each round has, from three to twelve;
+- how long the writing lasts, from half a minute to five, in quarter-minute steps;
+- how the match ends: after a number of judge rotations, or as soon as somebody reaches the agreed points.
+
+**Ctrl+Shift+F1** reads them out during the match, so nobody has to remember what the lobby agreed.
+
 ## Winning
 
-Each valid answer scores one point. When everybody has judged once, the highest score wins. If the lead is tied, the match adds another complete rotation and plays on until somebody wins outright.
+Each valid answer scores one point. The match is always decided at the end of a complete judge rotation, because mid-rotation some players have written more rounds than others: depending on what the host chose, it goes to whoever leads once the agreed rotations are played, or to whoever has reached the points. If the lead is tied, the match adds another complete rotation and plays on until somebody wins outright.
 
 ## Leaving
 

@@ -1121,6 +1121,7 @@
     "categories_rules_categories": "Categories per round: {{count}}",
     "categories_rules_points": "Each valid answer: {{points}} point",
     "categories_rules_cycles": "Complete judge rotations before scoring: {{count}}",
+    "categories_rules_target": "The first player to {{score}} points wins",
     "help_cmd_categories_next_field": "Move to the next category, and from the last one to \"I have finished\"",
     "help_cmd_categories_home": "Go back to your answers, or to the ones being judged",
     "help_cmd_categories_timer": "Announce the time remaining on the clock",

@@ -348,6 +348,9 @@ export interface CategoriesRulesConfig {
   categoriesPerRound: number;
   pointsPerAnswer: number;
   cycles: number;
+  /** "rounds" (complete judge rotations) or "score" (first past the target). */
+  endMode?: string;
+  targetScore?: number;
 }
 
 // ── Journey family (Mil Millas genre) ───────────────────────────────────────

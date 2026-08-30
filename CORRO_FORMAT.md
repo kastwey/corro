@@ -1487,16 +1487,24 @@ digraph (Spanish `"CH"`, `"LL"`) as one letter and the engine treats it as one.
 
 ```jsonc
 "categoriesRules": {
-  "roundSeconds": 120,       // 30..600, authoritative server clock
-  "categoriesPerRound": 6,  // 3..12
-  "pointsPerAnswer": 1,     // 1..10
-  "cycles": 1               // 1..5 complete judge rotations before scoring
+  "roundSeconds": 120,       // 30..300, authoritative server clock
+  "categoriesPerRound": 6,   // 3..12
+  "pointsPerAnswer": 1,      // 1..10
+  "cycles": 1,               // complete judge rotations before scoring (at least 1)
+  "endMode": "rounds",       // "rounds" | "score"
+  "targetScore": 30          // points that win when endMode is "score" (at least 1)
 }
 ```
 
+The house-rule codes this family exposes to the host are `categoriesEndMode` (`"type": "choice"`,
+values `rounds` / `score`) and the numbers `categoriesPerRound`, `categoriesRoundSeconds`,
+`categoriesCycles` and `categoriesTargetScore`.
+The bounds above are the engine's, and they are checked against the values the HOST settled on as
+well as the manifest's: the lobby form's `min`/`max`/`step` are a courtesy to the person typing.
+
 Packages declare a player range from 3 through 8 and enough tokens for `players.max`. Three is the
 floor because a single writer's answer could never coincide with anybody's, which removes half the
-game. Bots and house-rule declarations are not supported in this family.
+game. Bots are not supported in this family.
 
 ### Categories rules the engine implements
 
@@ -1512,8 +1520,11 @@ game. Bots and house-rule declarations are not supported in this family.
   rules one category at a time. Every written answer needs a verdict — `accepted`, `rejected` or
   `duplicate` — and a ruling that leaves one out is refused rather than silently costing a point.
 - Each accepted answer scores `pointsPerAnswer`; rejected and duplicate answers score nothing.
-- After `cycles` complete judge rotations, the highest score wins. A tie adds another **complete**
-  rotation, so every player still judges the same number of times.
+- The match is decided only at the end of a complete judge rotation, whichever ending is in force:
+  after `cycles` rotations under `"rounds"`, or on the first rotation whose leader has reached
+  `targetScore` under `"score"`. Mid-rotation one player has always written more rounds than
+  another — the judge does not write — so calling it there would reward turns, not answers. A tie
+  adds another **complete** rotation, so every player still judges the same number of times.
 - If the judge permanently leaves mid-round, the round restarts under the next judge: the answers
   were written for a table that no longer exists. If a writer leaves, their answers leave with them.
   Below three players the match ends and the leader takes it. A temporary disconnection retires

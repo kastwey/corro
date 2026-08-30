@@ -1,6 +1,6 @@
 # Carrera de letras
 
-Todo el mundo escribe a la vez. Cada ronda reparte una letra y doce categorías, y todas tus respuestas tienen que empezar por esa letra. Tienes tres minutos. El juez de la ronda no escribe: cuando se acaba el tiempo, decide sobre lo que han escrito los demás.
+Todo el mundo escribe a la vez. Cada ronda reparte una letra y una lista de categorías, y todas tus respuestas tienen que empezar por esa letra. El anfitrión decide cuántas categorías hay y cuánto tiempo tenéis. El juez de la ronda no escribe: cuando se acaba el tiempo, decide sobre lo que han escrito los demás.
 
 ## El juez de la ronda
 
@@ -61,9 +61,19 @@ El resultado de cada categoría se anuncia a toda la mesa, y además oyes en pri
 - **Ctrl+F1** muestra los atajos activos.
 - **Ctrl+Shift+F1** lee las reglas efectivas de reloj, categorías y puntuación.
 
+## Lo que decide el anfitrión
+
+Al crear la mesa se ajustan:
+
+- cuántas categorías tiene cada ronda, de tres a doce;
+- cuánto dura la escritura, de medio minuto a cinco, en tramos de quince segundos;
+- cómo termina la partida: al jugar unas cuantas vueltas de juez, o en cuanto alguien llega a los puntos acordados.
+
+**Ctrl+Mayús+F1** las lee dentro de la partida, así que nadie tiene que recordar lo que se acordó en la sala de espera.
+
 ## Ganar
 
-Cada respuesta válida suma un punto. Cuando todos han juzgado una vez, gana la puntuación más alta. Si hay empate en cabeza, la partida añade otra rotación completa y sigue hasta que alguien gane sin empate.
+Cada respuesta válida suma un punto. La partida se decide siempre al terminar una vuelta completa de juez, porque a media vuelta unos han escrito más rondas que otros: según lo que eligiera el anfitrión, gana quien vaya en cabeza al completar las vueltas acordadas, o quien haya llegado a los puntos. Si hay empate en cabeza, la partida añade otra vuelta completa y sigue hasta que alguien gane sin empate.
 
 ## Si alguien se va
 
