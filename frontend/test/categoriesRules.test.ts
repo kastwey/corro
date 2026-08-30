@@ -57,7 +57,8 @@ function gameState(phase: CategoriesRoundPhase = 'writing', overrides: Record<st
 			round: {
 				roundNumber: 1,
 				judgeId: 'p0',
-				letter: 'R',
+				// As the server projects it: the letter is withheld until the clock starts.
+				letter: phase === 'preparing' ? '' : 'R',
 				phase,
 				startedAt: null,
 				durationSeconds: 120,
@@ -102,6 +103,20 @@ test('the round headline names the round, the letter and the judge, in the first
 	// One flowing sentence: no visual separators a screen reader would not speak.
 	for (const line of [forJudge, forWriter]) {
 		assert.equal(/[·|]/.test(line), false, line);
+	}
+});
+
+test('the headline of a round still being prepared names no letter, because there is none yet', () => {
+	const gs = gameState('preparing');
+
+	const forJudge = categoriesNowPlayingText(gs, 'p0', translate)!;
+	const forWriter = categoriesNowPlayingText(gs, 'p1', translate)!;
+
+	assert.match(forWriter, /Round 1/);
+	assert.match(forWriter, /Ada/);
+	// No "with the letter" left dangling with nothing after it, in either voice.
+	for (const line of [forJudge, forWriter]) {
+		assert.doesNotMatch(line, /letter/i, line);
 	}
 });
 
