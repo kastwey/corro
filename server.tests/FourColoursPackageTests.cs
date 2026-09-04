@@ -123,7 +123,7 @@ public class FourColoursPackageTests
 			new[] { "ana", "berto" }, def.SheddingDeck!, def.Manifest.SheddingRules!,
 			new ScriptedRandomSource());
 
-		// Mirrored hands (each tail pair splits one copy per player), Amarillo 0 flips.
+		// Mirrored hands (each tail pair splits one copy per player), 0 amarillo flips.
 		Assert.Equal(
 			new[]
 			{
