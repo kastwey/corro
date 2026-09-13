@@ -6,7 +6,8 @@ Corro is deployed to the existing Linux Azure App Service **Imperio** in resourc
 
 ## Delivery flow
 
-A push to `main` starts all three CI layers in parallel:
+A push to `main` — or a push to the hidden packages' own repository, see below — starts all
+three CI layers in parallel, each on a checkout that also holds the hidden packages:
 
 1. The frontend build and Node test suites.
 2. The .NET build and xUnit suites.
@@ -16,7 +17,7 @@ The `deploy-production` job runs only after all three succeed. It:
 
 1. skips itself if its commit is no longer the head of `main`;
 2. obtains a short-lived Azure token through GitHub OIDC;
-3. downloads the private package bundle directly from Blob Storage;
+3. checks the hidden packages out of their private repository, always from its `main`;
 4. validates every package now on disk and refuses to publish if any fails;
 5. publishes the frontend and server together without uploading the combined artifact to
    GitHub;
@@ -46,36 +47,60 @@ silence. The same applies to a stamp that arrives malformed. For local work the 
 supplied as ordinary configuration instead (`Build__Version`, `Build__Commit`,
 `Build__RepositoryUrl`, `Build__DeployedAt`), which is how the E2E suite exercises the footer.
 
-## Authentication and private packages
+## Authentication
 
 [The deployment infrastructure](../infra/README.md) defines a dedicated user-assigned
-identity, its passwordless federated credential, narrowly scoped roles and a private Blob
-container. The GitHub `production` environment is restricted to `main`. No publish
-profile, client secret, storage key or Cosmos credential is stored in GitHub.
+identity, its passwordless federated credential and one narrowly scoped role. The GitHub
+`production` environment is restricted to `main`. No publish profile, client secret, storage
+key or Cosmos credential is stored in GitHub.
 
-Private package folders are deliberately ignored by Git. Their encrypted-at-rest Blob
-bundle must exist before the first deployment and must be republished after any private
-package change:
+## The hidden packages
 
-```powershell
-pwsh ./tools/publish-private-packages.ps1
-```
+Some packages ship on the maintainer's server as hidden packages and cannot be redistributed
+with the engine. They live in a **private repository**, `kastwey/corro-hidden-packages`, one
+folder per package in exactly the layout of `server/Packages/<id>/`; `/server/Packages/*` is
+gitignored here except for the committed packages, so a hidden package on disk never enters
+this repository by accident.
 
-CI has read-only access to that one container. A missing or unreadable bundle fails the
-deployment instead of silently removing private games from production. A bundle that
-unzips to nothing fails it too: the job counts the packages on disk against the committed
-ones and refuses to publish when the restore added none.
+[`.github/actions/hidden-packages`](../.github/actions/hidden-packages/action.yml) puts them
+on disk. Every test job runs it right after the checkout, and the deploy job runs it again
+before publishing. It needs one repository secret:
 
-The restored bundle is the only content in the repository that no test job has seen — the
-frontend, server and e2e jobs run on a checkout where the private boards do not exist, so
-`KeyIntegrityTests` iterates the committed packages alone. The deploy job therefore
-validates every package between the restore and the publish, with the same validator an
-upload goes through plus the dangling-key tests. A private board that the current engine
-would reject stops the deployment instead of reaching players.
+| Where | Secret | Access it needs |
+| --- | --- | --- |
+| `kastwey/corro` | `HIDDEN_PACKAGES_TOKEN` | Read the contents of `kastwey/corro-hidden-packages`. |
+| `kastwey/corro-hidden-packages` | `CORRO_DISPATCH_TOKEN` | Write the contents of `kastwey/corro` (what a `repository_dispatch` requires). |
 
-Because the upload overwrites one fixed blob name, the account keeps blob versions and soft
-delete, so a mistaken publish is a restore rather than a loss — see
-[the infrastructure README](../infra/README.md) for the recovery commands.
+Both are fine-grained personal access tokens with only that permission on only that
+repository; a single token granted `Contents: read and write` on both repositories also works,
+stored under each name.
+
+**Branch to branch.** A pull request whose head branch also exists in the private repository
+is tested with that branch; anything else uses the private `main`. That is how an engine change
+and the package change it needs travel together: same branch name in both repositories, and CI
+proves them against each other before either merges. Production always ships the private
+`main`, so merge the package branch no later than the engine one.
+
+**Without the token** — a fork, or a repository that has not set the secret — the action does
+nothing and says so, and the pipeline runs with the committed packages only, exactly as a clone
+of the engine would. The deployment is the one place where that is a failure: it refuses to run
+without the secret, and it counts the packages on disk against the committed ones and refuses to
+publish when the restore added none, because that would be a silent downgrade of production.
+
+**A package change deploys too.** A push to the private repository's `main` runs its
+`publish.yml`, which sends `repository_dispatch` (event `hidden-packages-updated`) to this
+repository. That runs the full pipeline on the current `main` with the new packages on disk,
+and then the deployment. The deploy job validates every package between the restore and the
+publish — the same validator an upload goes through, plus the dangling-key tests — so a hidden
+board that the current engine would reject stops the deployment instead of reaching players.
+`tools/tests/deployment-gate.tests.ps1` pins that order, the dispatch trigger and the fork-safe
+skip.
+
+**Locally**, clone the private repository next to this one (or point `CORRO_HIDDEN_PACKAGES`
+at it); `pwsh tools/dev.ps1` links every package it holds into `server/Packages/`
+(`tools/link-hidden-packages.ps1` does only that). Edit in place, commit from the private
+clone. A remote Claude Code session does the same when its environment carries
+`HIDDEN_PACKAGES_TOKEN`.
 
 ## Operational notes
 

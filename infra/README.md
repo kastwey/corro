@@ -12,40 +12,7 @@ It creates:
 
 - a user-assigned identity with a GitHub OIDC credential restricted to the protected
   `production` environment in `kastwey/corro`;
-- `Website Contributor` scoped only to the existing `Imperio` Web App;
-- a private Blob container for package sources intentionally excluded from Git;
-- `Storage Blob Data Reader` scoped only to that container;
-- blob versioning and soft delete on the account's blob service (see below).
-
-## Recovering a private package bundle
-
-`tools/publish-private-packages.ps1` uploads to a single fixed blob name with `--overwrite`.
-Those packages are excluded from Git by design, so that blob is the only copy of them outside
-the maintainer's machine — and every publish used to destroy the one before it. The template
-therefore enables **blob versioning** (every upload keeps its predecessor) and **soft delete**
-(90 days for a blob, 30 for a container), which turns a bad publish from a loss into a restore:
-
-```powershell
-az storage blob list `
-  --account-name imperio --container-name deployment `
-  --include v --prefix private-packages.zip --auth-mode login `
-  --query "[].{version:versionId, modified:properties.lastModified}" --output table
-
-az storage blob copy start `
-  --account-name imperio --destination-container deployment `
-  --destination-blob private-packages.zip `
-  --source-uri "https://imperio.blob.core.windows.net/deployment/private-packages.zip?versionId=<version>" `
-  --auth-mode login
-```
-
-Two things to know before applying the template:
-
-- **Versioning cannot be scoped to one container.** It is a blob-service property, so the
-  container holding uploaded `.corro` packages keeps versions too, and they are billed. If that
-  ever costs anything noticeable, add a lifecycle-management rule that expires non-current
-  versions after N days rather than turning versioning off.
-- **The template now owns those properties.** Run the `what-if` below and confirm it turns
-  nothing off that was previously set by hand.
+- `Website Contributor` scoped only to the existing `Imperio` Web App.
 
 `Website Contributor` also lets the production workflow idempotently enforce `Always On` on the
 existing S1 Web App. This keeps the in-process daily game-retention worker scheduled without a
@@ -54,6 +21,13 @@ second Function App, identity or set of Cosmos/Blob credentials.
 No client secret, publish profile, storage key or Cosmos credential is stored in GitHub.
 The federated subject uses the repository's immutable owner/repository IDs, as returned by
 GitHub's OIDC customization endpoint, rather than relying only on renameable display names.
+
+The hidden packages are not an Azure concern: they come from a private GitHub repository, as
+described in [docs/deployment.md](../docs/deployment.md#the-hidden-packages). An earlier design
+kept them as a bundle in a private container of the `imperio` storage account (`deployment`) with
+a `Storage Blob Data Reader` assignment for the identity; the template no longer declares either,
+and removing a resource from a template does not delete it — both can be removed by hand once the
+repository-based delivery has shipped.
 
 ## Provision or update
 
@@ -103,11 +77,6 @@ gh variable set AZURE_SUBSCRIPTION_ID --repo $repository --env $environment `
   --body $subscriptionId
 gh variable set AZURE_RESOURCE_GROUP --repo $repository --env $environment --body 'Imperio'
 gh variable set AZURE_WEBAPP_NAME --repo $repository --env $environment --body 'Imperio'
-gh variable set AZURE_STORAGE_ACCOUNT --repo $repository --env $environment --body 'imperio'
-gh variable set AZURE_PRIVATE_PACKAGES_CONTAINER --repo $repository --env $environment `
-  --body $deployment.privatePackageContainer.value
-gh variable set AZURE_PRIVATE_PACKAGES_BLOB --repo $repository --env $environment `
-  --body 'private-packages.zip'
 ```
 
 The environment restriction and the OIDC subject are both required: the subject names
@@ -119,18 +88,3 @@ the template and pass the returned `sub_claim_prefix` as `githubSubjectPrefix`:
 ```powershell
 gh api repos/kastwey/corro/actions/oidc/customization/sub
 ```
-
-## Private package bundle
-
-The public repository deliberately ignores non-distributable package folders. Publish
-the bundle once during setup and again after changing any of those packages:
-
-```powershell
-pwsh ./tools/publish-private-packages.ps1
-```
-
-The script discovers ignored folders without hardcoding or printing their names, uploads
-one private archive using the operator's Microsoft Entra identity, and deletes the local
-temporary archive. CI later downloads it directly with read-only data-plane RBAC. The
-combined application is never stored as a GitHub Actions artifact because it contains
-those private packages.

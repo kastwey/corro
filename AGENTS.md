@@ -195,24 +195,36 @@ token id/title. Optional card art lives in `assets/cards/<id>.svg` (64×64 path 
 the loader/format first, update every relevant family/model/schema/SDK/doc surface, grep for leaked
 content ids, and add a boundary regression.
 
-**Local packages ship too (mandatory).** Some packages under `server/Packages/` are gitignored
-(`git check-ignore server/Packages/<id>` tells you which). They are not drafts: they are published
-as hidden packages on the maintainer's server, so they must work as well as the committed ones —
-and no diff, review or CI run will ever show them. Every rule, house rule, key or engine
-improvement that lands in a shipped package MUST land in every local package of the same family
-too: manifest, both locales and both help files. Then prove it, don't assume it —
+**Hidden packages ship too (mandatory).** Some packages under `server/Packages/` are not in this
+repository: they live in the private `kastwey/corro-hidden-packages` and reach a working tree as
+links (`git check-ignore server/Packages/<id>` tells you which; `tools/dev.ps1` and the remote
+session-start hook create them from a clone next to this one, or the path in
+`CORRO_HIDDEN_PACKAGES`). They are not drafts: they are published as hidden packages on the
+maintainer's server, so they must work as well as the committed ones. Every rule, house rule, key
+or engine improvement that lands in a shipped package MUST land in every hidden package of the
+same family too: manifest, both locales and both help files. Then prove it, don't assume it —
 `dotnet test` runs `KeyIntegrityTests` over every package present on disk, and
 `dotnet tools/Corro.PackageCli/bin/Debug/net10.0/corro-package.dll validate server/Packages/<id>`
-checks one. Say in your summary which local packages you touched, since the diff cannot.
+checks one.
+
+**Branch to branch.** A hidden-package change is committed and pushed FROM the private clone, on a
+branch **named exactly like the engine branch** it belongs to. CI tests a pull request with the
+private branch of the same name when one exists, and with the private `main` otherwise, so an
+engine change and the package change it needs are proven together before either merges. Merge the
+package branch no later than the engine one: production ships the private `main`. Say in your
+summary which hidden packages you touched and which private branch carries them, since the engine
+diff cannot show them.
 
 **A session without them must say so.** "Present on disk" is the whole strength of those gates
-and their whole weakness: a remote session starts from a clean clone, so the local packages are
-absent and every check above passes without having looked at a single one. That is not compliance
-with this rule, it is the rule going unenforced — so when they are missing, say plainly that the
-local-package half of the change could not be made or verified, rather than reporting green.
-Production is guarded independently: `deploy-production` validates every package between
-restoring the private bundle and publishing, and refuses to ship a board the current engine
-rejects (`tools/tests/deployment-gate.tests.ps1` pins that order).
+and their whole weakness: without the private clone the hidden packages are absent and every
+check above passes without having looked at a single one. That is not compliance with this rule,
+it is the rule going unenforced — so when they are missing (a remote session without
+`HIDDEN_PACKAGES_TOKEN`, a clone without access), say plainly that the hidden-package half of the
+change could not be made or verified, rather than reporting green. Production is guarded
+independently: `deploy-production` validates every package between restoring the hidden packages
+and publishing, and refuses to ship a board the current engine rejects
+(`tools/tests/deployment-gate.tests.ps1` pins that order; [docs/deployment.md](docs/deployment.md)
+has the whole round trip).
 
 **Style.** No inline styles in HTML. No `console.log` in production (use
 `console.debug`). Handlers emit events, not direct DOM manipulation.

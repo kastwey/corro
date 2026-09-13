@@ -21,6 +21,11 @@ $cosmosConn = "AccountEndpoint=http://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0
 #    so every normal development start also repairs missing or overridden local hook config.
 & (Join-Path $PSScriptRoot "install-hooks.ps1") -RepositoryRoot $root
 
+#    …and link the hidden packages from the private clone next to this repository (or the path in
+#    CORRO_HIDDEN_PACKAGES) into server/Packages/, so the server, the tests and the validator see
+#    them. Idempotent; a missing clone only means the engine runs with the committed packages.
+& (Join-Path $PSScriptRoot "link-hidden-packages.ps1") -RepositoryRoot $root
+
 # 2. Reuse healthy emulators already published on the standard ports (even if another Compose
 #    project owns them); start only what is missing. The helper still waits for Cosmos health, so
 #    the server's one-time initialization never races the emulator's slow first start.

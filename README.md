@@ -425,6 +425,12 @@ Packages can be **bundled**
 with the server (`server/Packages/`) or **uploaded** at runtime from the lobby; the
 engine treats both identically.
 
+The maintainer's server also ships a few **hidden** packages that cannot be redistributed. They
+live in a private repository and are linked into `server/Packages/` by `pwsh tools/dev.ps1` when
+a clone of it sits next to this one; without one, the engine simply runs with the committed
+packages. [docs/deployment.md](docs/deployment.md#the-hidden-packages) describes how CI and the
+production deployment fetch them.
+
 The format is designed for **game families**: every package declares a `gameType`, and
 each family plugs its own rulebook and board topology under the same package envelope.
 This engine version implements eleven: `property` (roll-and-move property trading),

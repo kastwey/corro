@@ -128,7 +128,7 @@ when the server runs in E2E mode, deliberately absent from `server/Packages/` an
 production publish artifacts:
 
 - `hidden/` — code `e2e-hidden`; use it to test the unlock gate instead of relying on
-  private/local packages.
+  hidden packages.
 - `one-play-match/` — a shedding deck of five cards dealing ONE each, played as a single
   penalty round with the target score at 1. It exists because that combination cannot be
   reached through a shipped package (the lobby hides the target field under a rounds

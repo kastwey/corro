@@ -3,12 +3,19 @@
 #  * server   — .NET build + xUnit suites (unit + integration playthroughs)
 #  * e2e      — Playwright against the real server in its deterministic E2E mode
 #               (scripted dice, in-memory persistence; no external services needed)
+# Every layer first checks the hidden packages out of their private repository, when the
+# HIDDEN_PACKAGES_TOKEN secret is there (.github/actions/hidden-packages): a fork runs without
+# them, exactly as it would run the engine.
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+  # The private package repository asks for this on every push to its main: a package change is a
+  # production change, and it goes through the same three layers before it is deployed.
+  repository_dispatch:
+    types: [hidden-packages-updated]
 
 permissions:
   contents: read
@@ -21,6 +28,9 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v5
+      - uses: ./.github/actions/hidden-packages # the guide test walks every package on disk
+        with:
+          token: ${{ secrets.HIDDEN_PACKAGES_TOKEN }}
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -34,11 +44,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - uses: ./.github/actions/hidden-packages # KeyIntegrityTests covers every package on disk
+        with:
+          token: ${{ secrets.HIDDEN_PACKAGES_TOKEN }}
       - name: Test development tooling
         shell: pwsh
         run: |
           ./tools/tests/emulator-startup.tests.ps1
           ./tools/tests/hook-installation.tests.ps1
+          ./tools/tests/hidden-packages-link.tests.ps1
           ./tools/tests/repository-language.tests.ps1
           ./tools/tests/build-version.tests.ps1
           ./tools/tests/deployment-gate.tests.ps1
@@ -55,6 +69,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - uses: ./.github/actions/hidden-packages # the server under test stages every package it finds
+        with:
+          token: ${{ secrets.HIDDEN_PACKAGES_TOKEN }}
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
@@ -83,7 +100,10 @@ jobs:
 
   deploy-production:
     name: Deploy production
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # A push to main, or the private package repository asking for a redeploy of the current main.
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      || github.event_name == 'repository_dispatch'
     needs: [frontend, server, e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -104,9 +124,6 @@ jobs:
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
       AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
-      AZURE_STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
-      AZURE_PRIVATE_PACKAGES_CONTAINER: ${{ vars.AZURE_PRIVATE_PACKAGES_CONTAINER }}
-      AZURE_PRIVATE_PACKAGES_BLOB: ${{ vars.AZURE_PRIVATE_PACKAGES_BLOB }}
       PRODUCTION_URL: https://imperio.kastwey.org
     steps:
       - name: Check that this is still the latest main commit
@@ -132,16 +149,19 @@ jobs:
             AZURE_TENANT_ID \
             AZURE_SUBSCRIPTION_ID \
             AZURE_RESOURCE_GROUP \
-            AZURE_WEBAPP_NAME \
-            AZURE_STORAGE_ACCOUNT \
-            AZURE_PRIVATE_PACKAGES_CONTAINER \
-            AZURE_PRIVATE_PACKAGES_BLOB; do
+            AZURE_WEBAPP_NAME; do
             if [[ -z "${!name}" ]]; then
               echo "::error::$name is not configured in the production GitHub environment."
               missing=1
             fi
           done
+          if [[ -z "$HIDDEN_PACKAGES_TOKEN" ]]; then
+            echo "::error::HIDDEN_PACKAGES_TOKEN is not configured; production would ship without the hidden packages."
+            missing=1
+          fi
           exit "$missing"
+        env:
+          HIDDEN_PACKAGES_TOKEN: ${{ secrets.HIDDEN_PACKAGES_TOKEN }}
 
       - name: Check out the tested commit
         if: steps.freshness.outputs.deploy == 'true'
@@ -186,23 +206,14 @@ jobs:
             exit 1
           fi
 
-      # Private, non-distributable packages are intentionally absent from Git. Fetch them
-      # directly with data-plane RBAC and never upload the resulting app as a GitHub artifact.
-      - name: Restore private packages
+      # The hidden, non-distributable packages live in their private repository. Production always
+      # ships its main; the resulting application is never uploaded as a GitHub artifact.
+      - name: Restore hidden packages
         if: steps.freshness.outputs.deploy == 'true'
-        run: |
-          set -euo pipefail
-          archive="$RUNNER_TEMP/private-packages.zip"
-          az storage blob download \
-            --account-name "$AZURE_STORAGE_ACCOUNT" \
-            --container-name "$AZURE_PRIVATE_PACKAGES_CONTAINER" \
-            --name "$AZURE_PRIVATE_PACKAGES_BLOB" \
-            --file "$archive" \
-            --auth-mode login \
-            --overwrite \
-            --only-show-errors
-          unzip -tq "$archive" > /dev/null
-          unzip -q "$archive" -d server/Packages
+        uses: ./.github/actions/hidden-packages
+        with:
+          token: ${{ secrets.HIDDEN_PACKAGES_TOKEN }}
+          ref: main
 
       - name: Set up Node.js
         if: steps.freshness.outputs.deploy == 'true'
@@ -223,28 +234,21 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      # The bundle restored above has never been seen by a gate. The frontend, server and e2e
-      # jobs run on a plain checkout, where the private boards do not exist — so KeyIntegrityTests,
-      # the very Theory written to cover them ("the private boards are gitignored, so they're
-      # included when present"), only ever iterates the shipped twelve. The bundle went straight
-      # from an opaque zip into the publish artifact, and a board the current engine would reject
-      # reached players with nothing anywhere saying so.
-      #
-      # This is the one moment in the pipeline where every package exists on disk. Validate here,
-      # and refuse to publish rather than ship a broken board.
+      # The three test jobs saw the hidden packages too, but each on the branch it was given and
+      # without the validator an upload goes through. This is the set that is about to ship, on
+      # the disk it ships from: validate here, and refuse to publish rather than ship a broken board.
       - name: Validate every package before publishing
         if: steps.freshness.outputs.deploy == 'true'
         run: |
           set -euo pipefail
 
-          # A bundle that unzipped to nothing passes `unzip -t` happily. Committed packages are
-          # the floor: anything at or below it means the restore produced no private board, which
-          # is a silent downgrade of production, not a deployment.
+          # Committed packages are the floor: anything at or below it means the restore produced
+          # no hidden board, which is a silent downgrade of production, not a deployment.
           tracked="$(git ls-files server/Packages | awk -F/ 'NF>3 {print $3}' | sort -u | wc -l)"
           present="$(find server/Packages -mindepth 1 -maxdepth 1 -type d | wc -l)"
           echo "Packages on disk: $present ($tracked committed, $((present - tracked)) restored)."
           if [ "$present" -le "$tracked" ]; then
-            echo "::error::the private bundle restored no packages — refusing to publish"
+            echo "::error::the private repository restored no packages — refusing to publish"
             exit 1
           fi
 

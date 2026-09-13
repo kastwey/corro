@@ -9,12 +9,6 @@ param identityName string = 'imperio-github-deploy'
 @description('Existing Azure App Service that receives the application ZIP.')
 param webAppName string = 'Imperio'
 
-@description('Existing storage account that holds the private package bundle.')
-param storageAccountName string = 'imperio'
-
-@description('Private blob container used as the source for packages intentionally excluded from Git.')
-param privatePackageContainerName string = 'deployment'
-
 @description('GitHub repository owner trusted by the federated credential.')
 param githubOwner string = 'kastwey'
 
@@ -57,61 +51,13 @@ resource webApp 'Microsoft.Web/sites@2024-11-01' existing = {
   name: webAppName
 }
 
-resource storageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' existing = {
-  name: storageAccountName
-}
-
-// Owned rather than merely referenced, because versioning is a blob-SERVICE property and the
-// bundle needs it: tools/publish-private-packages.ps1 uploads to one fixed blob name with
-// --overwrite, so without versioning the private packages exist in exactly ONE place off the
-// maintainer's machine, and a bad publish destroys the previous copy irrecoverably. With it,
-// every upload keeps the one before it and a mistake is a restore instead of a loss.
-//
-// Two consequences to know before applying this (see infra/README.md):
-//   * Versioning cannot be scoped to one container. It applies to the whole account, so the
-//     uploaded-package container keeps versions too, and they are billed. A lifecycle rule that
-//     expires non-current versions is the answer if that ever costs anything noticeable.
-//   * This template now OWNS these properties. Run `az deployment group what-if` first and
-//     confirm it turns nothing off that was set by hand.
-resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2025-01-01' = {
-  parent: storageAccount
-  name: 'default'
-  properties: {
-    isVersioningEnabled: true
-    // A deleted blob is recoverable for three months; a deleted container for one.
-    deleteRetentionPolicy: {
-      enabled: true
-      days: 90
-    }
-    containerDeleteRetentionPolicy: {
-      enabled: true
-      days: 30
-    }
-  }
-}
-
-// The bundle is private and contains only package folders ignored by Git. It is downloaded with
-// data-plane RBAC during the workflow and never uploaded as a GitHub artifact.
-resource privatePackagesContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2025-01-01' = {
-  parent: blobService
-  name: privatePackageContainerName
-  properties: {
-    publicAccess: 'None'
-    defaultEncryptionScope: '$account-encryption-key'
-    denyEncryptionScopeOverride: false
-  }
-}
-
 var websiteContributorRoleId = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions',
   'de139f84-1756-47ae-9be6-808fbbe84772'
 )
-var storageBlobDataReaderRoleId = subscriptionResourceId(
-  'Microsoft.Authorization/roleDefinitions',
-  '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1'
-)
 
-// Scope deployment rights to this one web app, not the resource group or subscription.
+// Scope deployment rights to this one web app, not the resource group or subscription. The hidden
+// packages come from a private GitHub repository, so the identity needs nothing in storage.
 resource webAppDeploymentRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(webApp.id, deploymentIdentity.id, websiteContributorRoleId)
   scope: webApp
@@ -123,20 +69,7 @@ resource webAppDeploymentRole 'Microsoft.Authorization/roleAssignments@2022-04-0
   }
 }
 
-// The workflow can read only this private container; it cannot write or delete package bundles.
-resource privatePackagesReadRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(privatePackagesContainer.id, deploymentIdentity.id, storageBlobDataReaderRoleId)
-  scope: privatePackagesContainer
-  properties: {
-    principalId: deploymentIdentity.properties.principalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: storageBlobDataReaderRoleId
-    description: 'Read the private Corro package bundle during deployment.'
-  }
-}
-
 output clientId string = deploymentIdentity.properties.clientId
 output principalId string = deploymentIdentity.properties.principalId
 output tenantId string = deploymentIdentity.properties.tenantId
-output privatePackageContainer string = privatePackagesContainer.name
 output trustedSubject string = githubCredential.properties.subject

@@ -1,0 +1,85 @@
+# Put the hidden packages on disk, where every gate finds them like a committed one.
+#
+# They live in a private repository (by default <owner>/corro-hidden-packages) so that the engine
+# stays redistributable. Every test job and the deployment run this first: a pull request that
+# changes the engine is then tested against the hidden boards too, instead of only against the
+# committed ones, and a board the engine would now reject fails the pull request rather than the
+# deployment — or, before this existed, nothing at all.
+#
+# Branch to branch: a pull request whose head branch also exists in the private repository is
+# tested with that branch, so an engine change and the package change it needs travel together.
+# Anything else uses the private repository's main.
+#
+# Without a token (a fork, or a repository that has not set the secret) it does nothing and says
+# so. That is the documented behaviour, not a failure: such a clone ships without these packages.
+# The deployment is the one place where their absence is a failure, and it checks the count itself.
+name: Hidden packages
+description: Check the private package repository out over server/Packages/.
+
+inputs:
+  token:
+    description: A token that can read the contents of the private repository. Empty means skip.
+    required: false
+    default: ''
+  repository:
+    description: The private repository, owner/name.
+    required: false
+    default: ${{ github.repository_owner }}/corro-hidden-packages
+  ref:
+    description: The branch to prefer. Falls back to main when it does not exist there.
+    required: false
+    default: ${{ github.head_ref || github.ref_name }}
+
+outputs:
+  count:
+    description: How many hidden packages were placed under server/Packages/.
+    value: ${{ steps.restore.outputs.count }}
+  ref:
+    description: The branch of the private repository that was used, or empty when skipped.
+    value: ${{ steps.restore.outputs.ref }}
+
+runs:
+  using: composite
+  steps:
+    - id: restore
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        REPOSITORY: ${{ inputs.repository }}
+        WANTED_REF: ${{ inputs.ref }}
+        GIT_TERMINAL_PROMPT: '0'
+      run: |
+        set -euo pipefail
+        if [[ -z "$TOKEN" ]]; then
+          echo "::notice title=Hidden packages::no token for $REPOSITORY; running with the committed packages only."
+          echo "count=0" >> "$GITHUB_OUTPUT"
+          echo "ref=" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        url="https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
+        ref="$WANTED_REF"
+        if [[ -z "$ref" ]] || ! git ls-remote --exit-code --heads "$url" "refs/heads/$ref" > /dev/null; then
+          ref=main
+        fi
+
+        clone="$RUNNER_TEMP/hidden-packages"
+        rm -rf "$clone"
+        git clone --quiet --depth 1 --branch "$ref" "$url" "$clone"
+
+        count=0
+        for dir in "$clone"/*/; do
+          [[ -f "$dir/manifest.json" ]] || continue
+          name="$(basename "$dir")"
+          if [[ -e "server/Packages/$name" ]]; then
+            echo "::error title=Hidden packages::$name exists in both repositories; a package has exactly one home."
+            exit 1
+          fi
+          cp -R "$dir" "server/Packages/$name"
+          count=$((count + 1))
+        done
+        rm -rf "$clone"
+
+        echo "Hidden packages: $count from $REPOSITORY@$ref."
+        echo "count=$count" >> "$GITHUB_OUTPUT"
+        echo "ref=$ref" >> "$GITHUB_OUTPUT"
