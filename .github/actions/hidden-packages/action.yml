@@ -62,7 +62,11 @@ runs:
 
         url="https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
         ref="$WANTED_REF"
-        if [[ -z "$ref" ]] || ! git ls-remote --exit-code --heads "$url" "refs/heads/$ref" > /dev/null; then
+        # Asked from OUTSIDE the checkout: actions/checkout leaves an Authorization header for
+        # github.com in the checkout's local git config, carrying the job's GITHUB_TOKEN, and a git
+        # run from in there sends it instead of the token in the URL — which for a private
+        # repository reads as "not found", and every pull request would silently fall back to main.
+        if [[ -z "$ref" ]] || ! git -C "$RUNNER_TEMP" ls-remote --exit-code --heads "$url" "refs/heads/$ref" > /dev/null; then
           ref=main
         fi
 
