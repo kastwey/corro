@@ -43,6 +43,9 @@ runs:
   steps:
     - id: restore
       shell: bash
+      # Explicit: a job's own run defaults (the frontend job runs from frontend/) must not move
+      # server/Packages/ somewhere else.
+      working-directory: ${{ github.workspace }}
       env:
         TOKEN: ${{ inputs.token }}
         REPOSITORY: ${{ inputs.repository }}
