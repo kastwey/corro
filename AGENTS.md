@@ -210,10 +210,15 @@ checks one.
 **Branch to branch.** A hidden-package change is committed and pushed FROM the private clone, on a
 branch **named exactly like the engine branch** it belongs to. CI tests a pull request with the
 private branch of the same name when one exists, and with the private `main` otherwise, so an
-engine change and the package change it needs are proven together before either merges. Merge the
-package branch no later than the engine one: production ships the private `main`. Say in your
-summary which hidden packages you touched and which private branch carries them, since the engine
-diff cannot show them.
+engine change and the package change it needs are proven together before either merges. Only the
+ENGINE side triggers anything: a push to a private branch runs nothing, and the engine's CI looks
+the branch up when IT runs — so push the private branch first, and if the engine branch was already
+pushed, push it again or close and reopen its PR to get a run that sees the package change. A
+change that does not need a package change needs no private branch at all: the PR is tested with
+the private `main`. Merge the package branch right after the engine one, never later: production
+ships the private `main`, and an engine merged without its package half is exactly the drift this
+setup exists to prevent. Say in your summary which hidden packages you touched and which private
+branch carries them, since the engine diff cannot show them.
 
 **A session without them must say so.** "Present on disk" is the whole strength of those gates
 and their whole weakness: without the private clone the hidden packages are absent and every
