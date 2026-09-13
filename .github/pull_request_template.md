@@ -46,18 +46,19 @@
 - [ ] Every new user-facing string exists in both `en.json` and `es.json` (base **and** `_self` where applicable)
 - [ ] Not applicable — no user-facing strings changed
 
-## Packages
+## Package impact
 
-<!-- Delete if the change is nowhere near `server/Packages/`.
+<!-- Some packages live in a private repository and never appear in a diff or a CI log,
+     while they ship to real players. If this change touches a game family (its rules,
+     house rules, keys, help or announcements), say which one: the maintainer has to land
+     the same change in that family's hidden packages before merging — manifest, both
+     locales, both help files. Only fill in the branch line if you have access to them:
+     the private branch is named exactly like this one and is pushed BEFORE this PR's last
+     push, so CI tests both halves together (AGENTS.md, "Branch to branch"). -->
 
-     Some packages are gitignored, so the diff, the review and CI show NOTHING about them
-     while they ship to real players. If a rule, house rule, key or engine improvement
-     landed in a shipped package, it must land in every local package of the same family
-     too — manifest, both locales, both help files. Name the local packages you touched and
-     how you validated them; nobody else can see them. -->
-
-- [ ] Local packages of the same family updated and validated (`corro-package validate …`)
-- [ ] Not applicable
+- [ ] Not applicable — nothing a package can see changes
+- [ ] Touches the `<family>` family — the hidden packages of that family need the same change
+- [ ] Hidden packages already updated on private branch `<same name as this branch>`
 
 ## Notes for the reviewer
 

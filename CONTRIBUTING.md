@@ -51,8 +51,10 @@ For code and documentation changes:
     The pre-push hook repeats the frontend and backend checks before a push to **any branch** and
     blocks the push if either fails. E2E remains an explicit local check for covered UI/game flows.
 
-6. **Open the PR** against `main` with a clear description of *what* changed and *why*.
-   Link any related issue. Keep PRs focused — one logical change per PR reviews faster.
+6. **Open the PR** against `main`. It opens pre-filled with the repository's
+   [pull request template](.github/pull_request_template.md): fill in the sections that
+   apply and delete the rest. Link any related issue. Keep PRs focused — one logical
+   change per PR reviews faster.
 
 ### Project conventions
 
