@@ -56,8 +56,8 @@ key or Cosmos credential is stored in GitHub.
 
 ## The hidden packages
 
-Some packages ship on the maintainer's server as hidden packages and cannot be redistributed
-with the engine. They live in a **private repository**, `kastwey/corro-hidden-packages`, one
+Some packages ship on the maintainer's server as hidden packages and are kept out of this
+repository. They live in a **private repository**, `kastwey/corro-hidden-packages`, one
 folder per package in exactly the layout of `server/Packages/<id>/`; `/server/Packages/*` is
 gitignored here except for the committed packages, so a hidden package on disk never enters
 this repository by accident.

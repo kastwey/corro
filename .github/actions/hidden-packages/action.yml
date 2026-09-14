@@ -1,7 +1,7 @@
 # Put the hidden packages on disk, where every gate finds them like a committed one.
 #
-# They live in a private repository (by default <owner>/corro-hidden-packages) so that the engine
-# stays redistributable. Every test job and the deployment run this first: a pull request that
+# They live in a private repository (by default <owner>/corro-hidden-packages), apart from the
+# engine. Every test job and the deployment run this first: a pull request that
 # changes the engine is then tested against the hidden boards too, instead of only against the
 # committed ones, and a board the engine would now reject fails the pull request rather than the
 # deployment — or, before this existed, nothing at all.
