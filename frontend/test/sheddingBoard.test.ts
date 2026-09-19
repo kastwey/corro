@@ -633,6 +633,28 @@ test('the bare letters and the modified chords are left to the engine', () => {
 	assert.deepEqual(handNames(), before, 'plain C did not reorder anything');
 });
 
+test('the sort chords shadow nothing a card board can reach in the engine keymap', async () => {
+	// The board consumes Shift+N, Shift+C and Shift+O before the engine's handler sees them.
+	// That is only honest while the engine either leaves the chord unbound or binds it to a
+	// command a card family already hides (no board to walk, no squares to read). A future
+	// engine binding that IS live here would be swallowed without anybody noticing — this
+	// fails instead, and names the chord.
+	const { readFileSync } = await import('node:fs');
+	const { join, dirname } = await import('node:path');
+	const { fileURLToPath } = await import('node:url');
+	const here = dirname(fileURLToPath(import.meta.url));
+	const keymap: Record<string, string | { cmd: string }> = JSON.parse(
+		readFileSync(join(here, '..', '..', 'server', 'Config', 'keymap.json'), 'utf-8'));
+	const { CARD_FAMILY_HIDDEN_COMMANDS } = await import('../src/keys.js');
+
+	const shadowed = ['shift+n', 'shift+c', 'shift+o']
+		.map(chord => ({ chord, binding: keymap[chord] }))
+		.filter(({ binding }) => binding !== undefined)
+		.map(({ chord, binding }) => ({ chord, cmd: typeof binding === 'string' ? binding : binding!.cmd }))
+		.filter(({ cmd }) => !CARD_FAMILY_HIDDEN_COMMANDS.has(cmd));
+	assert.deepEqual(shadowed, [], 'an engine command that works on a card board is being swallowed');
+});
+
 test('the sort keys are documented where the player looks for them', () => {
 	const { view: v } = boardWith({}, REPORTED_HAND);
 	const rows = new Map(v.helpShortcuts().map(s => [s.keys, s.descKey]));
