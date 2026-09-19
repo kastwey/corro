@@ -326,6 +326,28 @@ test('Four Colours lets the host say how the match ends, and with which number',
 	await flushAxeAudit(page);
 });
 
+// The maintainer asked for a ten-seat Forbidden Words and found the family, not the game, saying
+// no. The whole chain — package range, server summary, lobby select — has to offer every even
+// count up to the package's own maximum, with a token to pick for each seat.
+test('Forbidden Words seats every even table up to ten', async ({ browser }) => {
+	const page = await newPlayerPage(browser, 'es-ES');
+	await gotoLobbyHome(page);
+	await page.locator('#go-create-btn').click();
+	await chooseBoard(page, FORBIDDEN_BOARD);
+
+	const counts = await page.locator('#max-players option').evaluateAll(
+		options => options.map(option => (option as HTMLOptionElement).value));
+	expect(counts).toEqual(['4', '6', '8', '10']);
+	const tokens = packageManifest(FORBIDDEN_BOARD).tokens as { id: string }[];
+	expect(tokens.length).toBeGreaterThanOrEqual(10);
+	for (const token of tokens) {
+		await expect(page.locator(`#create-form input.token-radio[value="${token.id}"]`)).toBeAttached();
+	}
+	await page.locator('#max-players').selectOption('10');
+	await expect(page.locator('#max-players')).toHaveValue('10');
+	await flushAxeAudit(page);
+});
+
 test('Forbidden Words offers the same ending choice, with its own numbers', async ({ browser }) => {
 	// The point of the rule: one mechanism, values that belong to each game. A party word game
 	// counts in tens of points and a handful of rotations, not in hundreds.

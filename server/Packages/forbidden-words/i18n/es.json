@@ -7,7 +7,9 @@
     "leaf": "Hoja",
     "comet": "Cometa",
     "pulse": "Pulso",
-    "knot": "Nudo"
+    "knot": "Nudo",
+    "arrow": "Flecha",
+    "acorn": "Bellota"
   },
   "rules": {
     "forbiddenEndMode": "Cuándo termina la partida",

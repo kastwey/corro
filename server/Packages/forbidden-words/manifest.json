@@ -8,11 +8,11 @@
     "es": "Palabras prohibidas"
   },
   "author": "Corro contributors",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "locales": ["en", "es"],
   "players": {
     "min": 4,
-    "max": 8
+    "max": 10
   },
   "forbiddenRules": {
     "turnSeconds": 60,
@@ -29,7 +29,9 @@
     { "id": "leaf", "nameKey": "tokens.leaf" },
     { "id": "comet", "nameKey": "tokens.comet" },
     { "id": "pulse", "nameKey": "tokens.pulse" },
-    { "id": "knot", "nameKey": "tokens.knot" }
+    { "id": "knot", "nameKey": "tokens.knot" },
+    { "id": "arrow", "nameKey": "tokens.arrow" },
+    { "id": "acorn", "nameKey": "tokens.acorn" }
   ],
   "houseRules": [
     {
