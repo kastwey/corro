@@ -172,6 +172,12 @@ The same key must resolve in at least one locale, and a package intended for bot
 translate it in both. Keep the key stable and translate the value. Never put a secret such as an
 unlock code in translations: translations are sent to browsers.
 
+A card is also named inside a sentence the engine speaks ("Ana juega **un** 7 rojo"), and the
+article there depends on the name you chose, not on the engine. So a card may ship that second
+form beside the plain one — `"step25_indefinite": "un avance de 25"` — and a card that ships none
+is simply announced by its plain name. See
+[Naming a thing inside a sentence](../CORRO_FORMAT.md#naming-a-thing-inside-a-sentence-key_indefinite).
+
 ### Naming your board's bots
 
 A host can seat a bot and ask for a random name. Left alone, those names come from the engine's own

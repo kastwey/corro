@@ -3,11 +3,18 @@
   "colors": { "amber": "ámbar", "blue": "azul" },
   "cards": {
     "amberZero": "Cero ámbar",
+    "amberZero_indefinite": "un Cero ámbar",
     "amberOne": "Uno ámbar",
+    "amberOne_indefinite": "un Uno ámbar",
     "amberSkip": "Salto ámbar",
+    "amberSkip_indefinite": "un Salto ámbar",
     "blueZero": "Cero azul",
+    "blueZero_indefinite": "un Cero azul",
     "blueOne": "Uno azul",
+    "blueOne_indefinite": "un Uno azul",
     "blueReverse": "Reversa azul",
-    "wild": "Comodín"
+    "blueReverse_indefinite": "una Reversa azul",
+    "wild": "Comodín",
+    "wild_indefinite": "un Comodín"
   }
 }

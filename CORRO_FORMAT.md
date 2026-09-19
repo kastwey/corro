@@ -249,6 +249,25 @@ Partial translations are allowed: a key present in some locales falls back to an
 that has it at runtime. A key referenced anywhere but defined in **no** locale fails
 validation.
 
+### Naming a thing inside a sentence (`<key>_indefinite`)
+
+An engine sentence cannot carry the article itself: in a gendered language "un" fits *7 rojo*
+and betrays *Reversa roja*, and a deck the engine has never seen decides which one it ships. So
+the sentence asks the package for the name **as it sounds after the verb** —
+`$t(<nameKey>, {"context": "indefinite"})` — and the package defines that form next to the
+plain name:
+
+```jsonc
+"cards": {
+  "red_7": "7 rojo",              "red_7_indefinite": "un 7 rojo",
+  "blue_reverse": "Reversa azul", "blue_reverse_indefinite": "una Reversa azul"
+}
+```
+
+The form is OPTIONAL and falls back to the plain name, so a deck that omits it is announced
+exactly as before — which is what the English locales do today, where the engine sentences ask
+for no article.
+
 ## Hidden packages (self-hosting)
 
 Two OPTIONAL manifest fields let a self-hosted server keep some boards private. Both live entirely in
@@ -1023,6 +1042,9 @@ game for every player, sighted or not — never a reflex race.
   package's `colors.<id>` i18n key (the wilds name it out loud; validated).
 - The round opener flips from the pile until a NUMBER shows (flipped actions slide under
   the pile), so every deck needs at least one number card and two colours.
+- A play is announced around the card's name ("Ana juega **un** 7 rojo"), so a deck whose
+  names need an article ships it per card — see
+  [Naming a thing inside a sentence](#naming-a-thing-inside-a-sentence-key_indefinite).
 
 ### manifest sheddingRules
 

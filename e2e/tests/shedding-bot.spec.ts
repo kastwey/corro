@@ -2,7 +2,7 @@
 //
 // The host seats a bot and starts. Ana opens on the colour; the bot answers unattended
 // (its policy sheds across colours by VALUE — the known mirrored hand makes its choice
-// deterministic: Verde 7 on Amarillo 7) and the turn comes back. Driven entirely
+// deterministic: 7 verde on 7 amarillo) and the turn comes back. Driven entirely
 // server-side (Services/Bots) — no client code plays for it.
 
 import { test, expect } from '../helpers/test';
@@ -27,13 +27,13 @@ test('the host seats a bot; it sheds by value unattended and hands the turn back
 
 	await startGame(ana, [ana]);
 
-	// Ana opens on the colour in force (Amarillo 0 flipped).
+	// Ana opens on the colour in force (0 amarillo flipped).
 	await ana.locator('#board').focus();
-	await ana.locator('.hand-card:not(.hand-card--info)', { hasText: /Amarillo 7/ }).first().focus();
+	await ana.locator('.hand-card:not(.hand-card--info)', { hasText: /7 amarillo/ }).first().focus();
 	await ana.keyboard.press('Enter');
-	await expectAnnouncement(ana, /Juegas Amarillo 7/);
+	await expectAnnouncement(ana, /Juegas un 7 amarillo/);
 
 	// The bot answers by VALUE across colours, and the turn returns to Ana.
-	await expectAnnouncement(ana, /Crupier juega Verde 7/);
+	await expectAnnouncement(ana, /Crupier juega un 7 verde/);
 	await expectAnnouncement(ana, /Es tu turno|Turno de Ana/);
 });
