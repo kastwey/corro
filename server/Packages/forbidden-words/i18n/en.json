@@ -7,7 +7,9 @@
     "leaf": "Leaf",
     "comet": "Comet",
     "pulse": "Pulse",
-    "knot": "Knot"
+    "knot": "Knot",
+    "arrow": "Arrow",
+    "acorn": "Acorn"
   },
   "rules": {
     "forbiddenEndMode": "When the match ends",

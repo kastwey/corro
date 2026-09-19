@@ -242,6 +242,66 @@ public class ForbiddenFamilyTests
 		Assert.Equal("lighthouse", full.Forbidden.Turn.Target);
 	}
 
+	// Reported by the maintainer: the shipped package sat eight, and raising it to ten was refused by
+	// the family, not by the game. Nothing in the role rotation cares how big a team is, so the only
+	// ceiling left is the engine's own table limit — and a token for every seat declared.
+	[Fact]
+	public async Task Shipped_package_seats_ten_players_with_a_token_for_each()
+	{
+		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+
+		Assert.Equal(10, definition.Manifest.Players.Max);
+		Assert.True(definition.Manifest.Tokens.Count >= 10,
+			$"the package offers only {definition.Manifest.Tokens.Count} tokens for ten seats.");
+		Assert.Equal(definition.Manifest.Tokens.Count, definition.Manifest.Tokens.Select(token => token.Id).Distinct().Count());
+		new ForbiddenFamily().ValidateDefinition(definition); // does not throw
+	}
+
+	[Fact]
+	public async Task A_ten_player_table_starts_as_two_teams_of_five_and_rotates_every_seat()
+	{
+		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+		var game = new ForbiddenFamily().CreateGame(new FamilyStartContext
+		{
+			Players = Players(10), Definition = definition, Lang = "en", Teams = Teams(5),
+		});
+
+		var state = game.State.Forbidden!;
+		Assert.Equal(new[] { 5, 5 }, state.Teams.Select(team => team.MemberIds.Count));
+		Assert.Equal("p0", state.Turn.ClueGiverId);
+		Assert.Equal("p1", state.Turn.GuesserId);
+		Assert.Equal("p5", state.Turn.MonitorId);
+	}
+
+	[Theory]
+	[InlineData(4, 18)] // beyond the engine's table limit
+	[InlineData(4, 9)] // odd: no two equal teams
+	[InlineData(6, 4)] // inverted range
+	public async Task Definition_rejects_a_range_the_engine_or_two_equal_teams_cannot_seat(int min, int max)
+	{
+		var shipped = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+		var tokens = Enumerable.Range(0, 18).Select(index => new TokenDef { Id = $"t{index}" }).ToList();
+		var definition = shipped with
+		{
+			Manifest = shipped.Manifest with { Players = new PlayersDef { Min = min, Max = max }, Tokens = tokens },
+		};
+
+		Assert.Throws<InvalidOperationException>(() => new ForbiddenFamily().ValidateDefinition(definition));
+	}
+
+	[Fact]
+	public async Task Definition_rejects_more_seats_than_tokens()
+	{
+		var shipped = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+		var definition = shipped with
+		{
+			Manifest = shipped.Manifest with { Players = new PlayersDef { Min = 4, Max = 12 } },
+		};
+
+		var error = Assert.Throws<InvalidOperationException>(() => new ForbiddenFamily().ValidateDefinition(definition));
+		Assert.Contains("cannot exceed the number of tokens", error.Message);
+	}
+
 	[Fact]
 	public async Task Game_requires_two_equal_complete_human_teams()
 	{

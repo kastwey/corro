@@ -1310,9 +1310,9 @@ The house-rule codes this family exposes to the host are `forbiddenEndMode` (`"t
 values `rounds` / `score`) and the numbers `forbiddenCycles`, `forbiddenTargetScore` and
 `forbiddenTurnSeconds`.
 
-Packages declare an even player range from 4 through 8 and enough tokens for `players.max`.
-The lobby forces exactly two equal, full teams before starting. Bots are not supported in this
-family.
+Packages declare an even player range from 4 up to the engine's table limit of 16 and enough
+tokens for `players.max`. The lobby forces exactly two equal, full teams before starting. Bots are
+not supported in this family.
 
 ### Forbidden-word rules the engine implements
 

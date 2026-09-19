@@ -1,5 +1,6 @@
 using CorroServer.Models;
 using CorroServer.Models.Corro;
+using CorroServer.Services;
 using CorroServer.Services.Commands;
 using CorroServer.Services.Rules;
 
@@ -16,6 +17,14 @@ public sealed record ForbiddenRuntime(ForbiddenRulesConfig Rules) : IFamilyRunti
 /// </summary>
 public sealed class ForbiddenFamily : IGameFamily
 {
+	/// <summary>Two teams of at least two: the smallest table the role rotation can seat.</summary>
+	internal const int MinimumPlayers = 4;
+
+	/// <summary>The ceiling is the engine's own table limit, not a family number: the role
+	/// rotation works for any team size, and how long an evening a bigger table wants is the host's
+	/// business. A package still has to ship enough tokens for every seat it declares.</summary>
+	internal const int MaximumPlayers = LobbyInput.MaxPlayersPerGame;
+
 	public string GameType => "forbidden";
 
 	/// <summary>Two teams, always: one side's clue-giver is watched by the OTHER side's monitor,
@@ -59,9 +68,10 @@ public sealed class ForbiddenFamily : IGameFamily
 	public void ValidateDefinition(GameDefinition definition)
 	{
 		var players = definition.Manifest.Players;
-		if (players.Min < 4 || players.Max > 8 || players.Max < players.Min)
+		if (players.Min < MinimumPlayers || players.Max > MaximumPlayers || players.Max < players.Min)
 		{
-			throw new InvalidOperationException("forbidden players must be between 4 and 8.");
+			throw new InvalidOperationException(
+				$"forbidden players must be between {MinimumPlayers} and {MaximumPlayers}.");
 		}
 		if (players.Min % 2 != 0 || players.Max % 2 != 0)
 		{
@@ -165,10 +175,11 @@ public sealed class ForbiddenFamily : IGameFamily
 
 	public FamilyGame CreateGame(FamilyStartContext start)
 	{
-		if (start.Players.Count is < 4 or > 8 || start.Players.Count % 2 != 0
+		if (start.Players.Count is < MinimumPlayers or > MaximumPlayers || start.Players.Count % 2 != 0
 			|| start.Players.Any(player => player.IsBot))
 		{
-			throw new InvalidOperationException("forbidden games need 4, 6 or 8 human players.");
+			throw new InvalidOperationException(
+				$"forbidden games need an even number of human players, from {MinimumPlayers} to {MaximumPlayers}.");
 		}
 
 		var arranged = start.Teams?.Select(team => (IReadOnlyList<string>)team).ToList()
