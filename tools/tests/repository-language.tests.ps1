@@ -57,7 +57,11 @@ if (Test-Path -LiteralPath $skillsRoot -PathType Container) {
     $skillFiles = @(Get-ChildItem -LiteralPath $skillsRoot -Recurse -File -Filter '*.md' |
         ForEach-Object { [IO.Path]::GetRelativePath($root, $_.FullName).Replace([char]92, [char]47) })
 }
-$filesToCheck = @($scriptFiles + $skillFiles + 'AGENTS.md' + 'CLAUDE.md' + 'tools/tests/repository-language.tests.ps1' | Sort-Object -Unique)
+# The pull request template and anything else GitHub reads from `.github/` are contributor-facing
+# repository text, so they answer to the rule as well.
+$githubDocs = @(& git -C $root ls-files -- '.github/*.md')
+if ($LASTEXITCODE -ne 0) { throw 'Could not enumerate tracked .github documents.' }
+$filesToCheck = @($scriptFiles + $skillFiles + $githubDocs + 'AGENTS.md' + 'CLAUDE.md' + 'tools/tests/repository-language.tests.ps1' | Sort-Object -Unique)
 $violations = New-Object System.Collections.Generic.List[string]
 
 foreach ($relativePath in $filesToCheck) {
