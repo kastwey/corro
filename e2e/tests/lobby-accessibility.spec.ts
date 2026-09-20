@@ -774,3 +774,42 @@ test('the lobby reflows at 200% text instead of scrolling sideways', async ({ br
 	await expectNoSidewaysScroll(page, 'the join form');
 	await flushAxeAudit(page);
 });
+
+// The create form showed two kinds of hint at once: the board filter's in ordinary ink, and the
+// name field's, two fields below, in muted grey, because each had its own class. One class now,
+// which also pins the single distinction worth keeping — a line that ANSWERS you (a name taken,
+// a list that would not load) is the page replying, not a hint, and is not dimmed.
+test('every lobby hint reads alike, and a status line keeps its ink', async ({ browser }) => {
+	const page = await newPlayerPage(browser);
+	await gotoLobbyHome(page);
+	await page.locator('#go-create-btn').click();
+	await expect(page.locator('#view-create')).toBeVisible();
+	await waitForDefaultPackage(page);
+
+	// Compared against the label rather than a hex value: what has to hold is that a hint reads
+	// quieter than the words it belongs to, in whichever palette, and that an answer does not.
+	const ink = () => page.evaluate(() => {
+		const colour = (selector: string) => getComputedStyle(document.querySelector(selector)!).color;
+		return {
+			field: colour('#host-name-hint'),
+			block: colour('#board-results-hint'),
+			status: colour('#online-status'),
+			label: colour('label[for="host-name"]'),
+		};
+	});
+
+	for (const theme of ['light', 'dark']) {
+		const colours = await ink();
+		expect(colours.field, `the field hint and the block hint match in ${theme}`)
+			.toBe(colours.block);
+		expect(colours.field, `a hint stays quieter than its label in ${theme}`)
+			.not.toBe(colours.label);
+		expect(colours.status, `an answer is not dimmed in ${theme}`).toBe(colours.label);
+
+		if (theme === 'light') {
+			await page.locator('#theme-toggle').click();
+			await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+		}
+	}
+	await flushAxeAudit(page);
+});
