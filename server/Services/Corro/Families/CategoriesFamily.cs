@@ -247,6 +247,14 @@ public sealed class CategoriesFamily : IGameFamily
 	/// not to a rival, not to the judge, and not to a spectator. The deck goes too: it holds
 	/// every letter and category the match has not dealt yet.
 	///
+	/// The LETTER is nobody's until the clock starts. Dealing it while the round was still being
+	/// prepared handed every writer unlimited time to think of answers before the timed phase
+	/// began, so the clock stopped measuring what it claims to measure — the same hole the
+	/// forbidden family closed for its card. Hiding it on the CLIENT would not have fixed it: the
+	/// letter was already in those browsers, readable by anyone who looked. The CATEGORIES stay
+	/// visible on purpose: reading a dozen prompts with a screen reader is exactly what the
+	/// preparing phase is FOR, and they are useless without the letter anyway.
+	///
 	/// Once the round reaches review the answers become the shared subject of the table, so
 	/// everyone sees them all: that is exactly when they are read out and ruled on.
 	/// </summary>
@@ -265,6 +273,7 @@ public sealed class CategoriesFamily : IGameFamily
 			{
 				Round = round with
 				{
+					Letter = round.Phase == CategoriesRoundPhase.Preparing ? string.Empty : round.Letter,
 					Prompts = round.Prompts.Select(prompt => prompt with
 					{
 						Answers = prompt.Answers
@@ -376,9 +385,11 @@ public sealed class CategoriesFamily : IGameFamily
 		state.IsGameOver = true;
 	}
 
-	/// <summary>The round card, spoken: which round, who judges, and the letter everybody writes
-	/// to. The categories themselves are read on the surface, where they can be reviewed at
-	/// leisure — reading six prompts aloud before every round would be read over, every time.</summary>
+	/// <summary>The round card, spoken: which round, who judges, and how many categories there are
+	/// to read. NOT the letter, which belongs to nobody until the clock starts — saying it here
+	/// would give away in the live region exactly what the projection withholds from the state.
+	/// The categories themselves are read on the surface, where they can be reviewed at leisure —
+	/// reading six prompts aloud before every round would be read over, every time.</summary>
 	internal static Task AnnounceRoundPreparingAsync(
 		Func<string, Dictionary<string, object>?, Task> announce,
 		GameState state)
@@ -388,7 +399,6 @@ public sealed class CategoriesFamily : IGameFamily
 		{
 			["round"] = round.RoundNumber,
 			["judge"] = state.Players.First(player => player.Id == round.JudgeId).Name,
-			["letter"] = round.Letter,
 			["count"] = round.Prompts.Count,
 			["actorId"] = round.JudgeId,
 		});
