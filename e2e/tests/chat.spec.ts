@@ -31,11 +31,12 @@ test('chat: mention autocompletes, both sides get it, history survives a reload'
 	await expect(anaChatToggle).toHaveAttribute('aria-controls', 'chat-panel');
 	await expect(anaChatToggle).not.toHaveAttribute('aria-haspopup', 'dialog');
 	await expect(anaChatToggle).toHaveAttribute('aria-keyshortcuts', 'Control+Shift+H');
-	await expect(anaChatToggle).toHaveAttribute('aria-expanded', 'false');
+	// The panel's state travels in the LABEL, which changes with it. aria-expanded said the
+	// same thing a second time in the same breath ("close the text chat, expanded").
+	await expect(anaChatToggle).not.toHaveAttribute('aria-expanded', /.*/);
 	await expect(anaChatToggle).toHaveAttribute('aria-label', es.chat_open);
 	await anaChatToggle.click();
 	await expect(ana.locator('#chat-panel')).toBeVisible();
-	await expect(anaChatToggle).toHaveAttribute('aria-expanded', 'true');
 	await expect(anaChatToggle).toHaveAttribute('aria-label', es.chat_close);
 	await expect(ana.locator('#chat-disclaimer-text')).toBeFocused();
 	await flushAxeAudit(ana);
@@ -79,7 +80,7 @@ test('chat: mention autocompletes, both sides get it, history survives a reload'
 
 	// The notification itself is actionable (first contact: notice → acknowledge), reads and replies.
 	await unread.click();
-	await expect(berto.locator('#chat-toggle')).toHaveAttribute('aria-expanded', 'true');
+	await expect(berto.locator('#chat-toggle')).toHaveAttribute('aria-label', es.chat_close);
 	await expect(unread).toBeHidden();
 	await expect(berto.locator('#chat-disclaimer-text')).toBeFocused();
 	await flushAxeAudit(berto);

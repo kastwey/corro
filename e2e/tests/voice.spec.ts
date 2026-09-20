@@ -158,7 +158,10 @@ test('voice chat: every game offers it, the host closes and reopens it, players 
 	const anaMicrophone = ana.locator('#voice-microphone-toggle');
 	await expect(anaMicrophone).toBeVisible();
 	await expect(anaMicrophone).toHaveAttribute('aria-keyshortcuts', 'Control+Alt+X');
-	await expect(anaMicrophone).toHaveAttribute('aria-pressed', 'true');
+	// The label alone carries the microphone's state and what pressing does; aria-pressed
+	// would say it again, less clearly, right after it.
+	await expect(anaMicrophone).not.toHaveAttribute('aria-pressed', /.*/);
+	await expect(anaMicrophone).toHaveAttribute('aria-label', es.voice_microphone_button_on);
 	await expect.poll(() => ana.evaluate(() => (window as any).__voiceTest.connectedPreferences))
 		.toEqual({ microphoneId: 'mic-built-in', outputId: 'default' });
 	await expectAnnouncement(ana, exact(es.voice_joined_self));
@@ -245,7 +248,6 @@ test('voice chat: every game offers it, the host closes and reopens it, players 
 	await ana.keyboard.press('Control+Alt+V');
 	await expect(ana.locator('#voice-panel')).toBeHidden();
 	await ana.keyboard.press('Control+Alt+X');
-	await expect(anaMicrophone).toHaveAttribute('aria-pressed', 'false');
 	await expect(anaMicrophone).toHaveAttribute('aria-label', es.voice_microphone_button_muted);
 	await ana.keyboard.press('Control+Alt+V');
 	await expect(ana.locator('#voice-status')).toHaveText(es.voice_connected_muted);
@@ -256,7 +258,7 @@ test('voice chat: every game offers it, the host closes and reopens it, players 
 	await flushAxeAudit(ana);
 	await ana.setViewportSize({ width: 1280, height: 720 });
 	await anaMicrophone.click();
-	await expect(anaMicrophone).toHaveAttribute('aria-pressed', 'true');
+	await expect(anaMicrophone).toHaveAttribute('aria-label', es.voice_microphone_button_on);
 	await expect(ana.locator('#voice-status')).toHaveText(es.voice_connected);
 	await flushAxeAudit(ana);
 

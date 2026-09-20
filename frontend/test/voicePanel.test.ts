@@ -224,7 +224,9 @@ test('joining is explicit, starts unmuted, renders the roster and announces entr
 	const persistentMicrophone = document.getElementById('voice-microphone-toggle') as HTMLButtonElement;
 	assert.equal(persistentMicrophone.hidden, false);
 	assert.equal(persistentMicrophone.getAttribute('aria-keyshortcuts'), 'Control+Alt+X');
-	assert.equal(persistentMicrophone.getAttribute('aria-pressed'), 'true');
+	// The label states the microphone's state and what a press does; aria-pressed on top
+	// of it was a third account of the same fact, and the vaguest of the three.
+	assert.equal(persistentMicrophone.getAttribute('aria-pressed'), null);
 	assert.equal(persistentMicrophone.getAttribute('aria-label'), 'Microphone on; press to mute it.');
 	assert.equal(document.querySelector('[disabled]'), null, 'controls stay focusable; disabled is forbidden');
 });
@@ -430,7 +432,7 @@ test('self mute is reversible and host moderation is a one-shot request', async 
 	assert.equal(document.getElementById('voice-status')?.textContent,
 		'You are in voice chat and listening, with your microphone muted.');
 	const persistentMicrophone = document.getElementById('voice-microphone-toggle') as HTMLButtonElement;
-	assert.equal(persistentMicrophone.getAttribute('aria-pressed'), 'false');
+	assert.equal(persistentMicrophone.getAttribute('aria-pressed'), null);
 	assert.equal(persistentMicrophone.getAttribute('aria-label'), 'Microphone muted; press to turn it on.');
 	assert.ok(persistentMicrophone.classList.contains('voice-microphone-toggle--muted'));
 	const panelMicrophone = Array.from(document.querySelectorAll<HTMLButtonElement>('#voice-controls button'))
