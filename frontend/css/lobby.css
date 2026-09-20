@@ -306,10 +306,10 @@
 	color: var(--text-muted);
 }
 
-/* The blocks own the rhythm between them, so their last child does not add a second gap. */
+/* The blocks own the rhythm between them, so their last child does not add a second gap.
+   .form-hint used to be listed here too; it now carries margin-bottom: 0 of its own (forms.css). */
 .home-block > .saved-game-list,
-.home-block > .your-games-empty,
-.home-block > .form-hint:last-child {
+.home-block > .your-games-empty {
 	margin-bottom: 0;
 }
 

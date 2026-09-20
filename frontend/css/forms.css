@@ -28,8 +28,24 @@ input:not([type="checkbox"]):not([type="radio"]), select {
 	transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-input::placeholder {
-	color: var(--text-faint);
+/* The secondary line of a form: what a field expects, what a block is for, what the page has
+   just been told. It reads as secondary — quiet grey, tight under what it belongs to — and it
+   is a paragraph the field points at with aria-describedby, never a placeholder: a placeholder
+   disappears the moment there is something in the box and is not reliably read WITH the field.
+   The grey is --text-muted and NOT --text-faint: the latter measures 3.06:1 against white,
+   below the 4.5:1 WCAG asks of text. A placeholder was exempt as a hint inside a field; a
+   paragraph is text, and has to be readable. Size is inherited on purpose — a hint is the same
+   size as the words around it, and shrinking it is the other way to make it hard to read. */
+.form-hint {
+	margin: 0.25rem 0 0;
+	color: var(--text-muted);
+}
+
+/* A status line wears the same class but is not a hint: it is the page ANSWERING something you
+   just did — a name taken, a request sent, a list that would not load. An answer is not
+   secondary to the form that provoked it, so it keeps the ordinary ink. */
+.form-hint[role="status"] {
+	color: var(--text);
 }
 
 input:focus, select:focus {
