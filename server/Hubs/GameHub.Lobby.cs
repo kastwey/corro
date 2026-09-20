@@ -1309,18 +1309,17 @@ public partial class GameHub
 			// of re-reading it from Cosmos every turn.
 			_registry.CacheDocument(request.GameId, savedGame);
 
+			// The GROUP only, never also the caller: every route into a table joins this group
+			// (create, join, re-authenticate), so the host who pressed Start is already in it.
+			// The extra caller send was reaching them a second time, and the client announces
+			// what it receives — so the host, and only the host, heard "the game has started"
+			// twice, merged into one line by the announcer's write-coalescing.
 			await Clients.Group($"lobby_{game.GameId}")
 				.SendAsync("GameStarted", new StartGameResponse
 				{
 					GameId = game.GameId,
 					Game = updatedGame.Sanitized()
 				});
-
-			await Clients.Caller.SendAsync("GameStarted", new StartGameResponse
-			{
-				GameId = game.GameId,
-				Game = updatedGame.Sanitized()
-			});
 
 			// Same hidden-information contract as every state update: the registry broadcasts
 			// for open families and projects per player for hiding ones.
