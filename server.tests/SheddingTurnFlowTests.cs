@@ -431,6 +431,31 @@ public class SheddingTurnFlowTests
 	}
 
 	[Fact]
+	public async Task The_final_table_shows_every_score_and_keeps_the_penalty_winner_first()
+	{
+		// A penalty match is won by the LOWEST score, so a table that ranked by the number would
+		// print the winner last. It shows the numbers and leaves the order to the places.
+		var (state, context) = Game(
+			rules: new SheddingRulesConfig { TargetScore = 50, Scoring = "penalty" },
+			hands: new[]
+			{
+				("a", new[] { "red-7" }),
+				("b", new[] { "wild" }), // 50: reaching the target LOSES here
+			});
+
+		await Play(context, state, "a", "red-7#0");
+
+		var standings = new SheddingFamily().FinalStandings(state);
+		StandingsSanity.AssertSane(state, standings);
+		Assert.Equal("game.end_measure_points", standings!.MeasureKey);
+		Assert.Equal(new[] { "a", "b" }, standings.Sides.Select(side => side.MemberIds.Single()));
+		Assert.Equal(new[] { 1, 2 }, standings.Sides.Select(side => side.Place));
+		Assert.Equal(new[] { 0, 50 }, standings.Sides.Select(side => side.Value));
+		// Nobody is a team here: a row of one names one player.
+		Assert.All(standings.Sides, side => Assert.Null(side.TeamIndex));
+	}
+
+	[Fact]
 	public async Task Two_players_crossing_the_target_at_once_still_place_by_their_totals()
 	{
 		var (state, context) = Game(

@@ -244,4 +244,54 @@ public sealed class RaceFamily : IGameFamily
 		}
 		return Task.CompletedTask;
 	}
+
+	/// <summary>
+	/// Pieces brought home. In teams mode the two partners are ONE row carrying the pieces they
+	/// got home between them, because that is what the match was played for — and the row names
+	/// both of them rather than a colour, the way the winning announcement already does.
+	/// </summary>
+	public MatchStandings? FinalStandings(GameState state)
+	{
+		if (state.Race is not { } race)
+		{
+			return null;
+		}
+
+		static int PiecesHome(RaceSeatState seat)
+			=> seat.Pieces.Count(piece => piece.Location == RacePieceLocation.Goal);
+
+		if (!race.TeamsMode || state.RaceBoard is not { } board)
+		{
+			return FinalStandingsBuilder.ByPlayer(state, StandingsMeasure.PiecesHome, playerId =>
+				race.Seats.FirstOrDefault(seat => seat.PlayerId == playerId) is { } seat
+					? PiecesHome(seat)
+					: null);
+		}
+
+		var sides = new List<(int?, IReadOnlyList<string>, int)>();
+		var paired = new HashSet<string>(StringComparer.Ordinal);
+		foreach (var seat in race.Seats)
+		{
+			if (!paired.Add(seat.PlayerId))
+			{
+				continue;
+			}
+
+			var partnerId = RaceRulebook.TeammateOf(board, race, seat.PlayerId);
+			var partner = partnerId is null
+				? null
+				: race.Seats.FirstOrDefault(other => other.PlayerId == partnerId);
+			if (partner is not null)
+			{
+				paired.Add(partner.PlayerId);
+			}
+
+			var members = partner is null
+				? new List<string> { seat.PlayerId }
+				: new List<string> { seat.PlayerId, partner.PlayerId };
+			sides.Add((null, members, PiecesHome(seat) + (partner is null ? 0 : PiecesHome(partner))));
+		}
+
+		return FinalStandingsBuilder.ByTeam(state, StandingsMeasure.PiecesHome, sides);
+	}
 }

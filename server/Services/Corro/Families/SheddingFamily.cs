@@ -266,6 +266,12 @@ public sealed class SheddingFamily : IGameFamily
 		}
 	}
 
+	/// <summary>The match score each seat banked. Which end of the table won it depends on the
+	/// scoring rule in force, and the places already say so — this only shows the number.</summary>
+	public MatchStandings? FinalStandings(GameState state)
+		=> FinalStandingsBuilder.ByPlayer(state, StandingsMeasure.Points, playerId =>
+			state.Shedding?.Seats.FirstOrDefault(seat => seat.PlayerId == playerId)?.Score);
+
 	// ── Hidden information ────────────────────────────────────────────────────
 
 	public bool HasHiddenInformation => true;

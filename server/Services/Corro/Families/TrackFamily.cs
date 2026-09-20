@@ -123,4 +123,10 @@ public sealed class TrackFamily : IGameFamily
 	/// <summary>One die, roll-and-resolve (no choices, no economy).</summary>
 	public Task<ServerResponse>? ProcessRoll(Func<int> rollSingleDie, Player player, GameContext context)
 		=> TrackTurnFlow.ProcessRollAsync(rollSingleDie(), player, context);
+
+	/// <summary>The square each piece stopped on. Nobody keeps a score here, and how far along
+	/// the track somebody got is the only thing the finishing order leaves unsaid.</summary>
+	public MatchStandings? FinalStandings(GameState state)
+		=> FinalStandingsBuilder.ByPlayer(state, StandingsMeasure.Square, playerId =>
+			state.Track?.Positions.FirstOrDefault(position => position.PlayerId == playerId)?.Square);
 }

@@ -215,4 +215,16 @@ public sealed class AssemblyFamily : IGameFamily
 		};
 		return state with { Assembly = projected };
 	}
+
+	/// <summary>
+	/// How much of each rack was standing when the match ended, counted the way the win itself is
+	/// counted (<see cref="Services.Rules.AssemblyRulebook.FunctionalSlots"/>): afflicted pieces
+	/// do not count, and neither does a second piece of a colour already held. A table showing the
+	/// raw rack size would print a bigger number above a better placing.
+	/// </summary>
+	public MatchStandings? FinalStandings(GameState state)
+		=> FinalStandingsBuilder.ByPlayer(state, StandingsMeasure.Parts, playerId =>
+			state.Assembly?.Seats.FirstOrDefault(seat => seat.PlayerId == playerId) is { } seat
+				? Services.Rules.AssemblyRulebook.FunctionalSlots(seat)
+				: null);
 }

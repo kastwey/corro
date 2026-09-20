@@ -1,6 +1,7 @@
 using CorroServer.Models;
 using CorroServer.Models.Corro;
 using CorroServer.Services.Commands;
+using CorroServer.Services.Corro.Families;
 using CorroServer.Services.Rules;
 using Xunit;
 
@@ -199,6 +200,14 @@ public class TrackFamilyTests
 		Assert.Equal(2, state.Players[1].FinishPlace);
 		Assert.True(state.IsGameOver);
 		Assert.Equal("A", state.WinnerId);
+
+		// Nobody scores on a track: how far each piece got IS the result, and the final table is
+		// the only place it is written down.
+		var standings = new TrackFamily().FinalStandings(state);
+		StandingsSanity.AssertSane(state, standings);
+		Assert.Equal("game.end_measure_square", standings!.MeasureKey);
+		Assert.Equal(30, standings.Sides[0].Value);          // the finisher, on the last square
+		Assert.Equal(new[] { "A", "B" }, standings.Sides.Select(side => side.MemberIds.Single()));
 		var sent = TestFixtures.Announcer(ctx).Sent;
 		Assert.Contains(sent, a => a.Key == "game.track_won");
 		Assert.Contains(sent, a => a.Key == "game.game_over");

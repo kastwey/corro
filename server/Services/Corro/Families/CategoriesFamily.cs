@@ -393,4 +393,9 @@ public sealed class CategoriesFamily : IGameFamily
 			["actorId"] = round.JudgeId,
 		});
 	}
+
+	/// <summary>The points each player collected from the accepted answers.</summary>
+	public MatchStandings? FinalStandings(GameState state)
+		=> FinalStandingsBuilder.ByPlayer(state, StandingsMeasure.Points, playerId =>
+			state.Categories?.Players.FirstOrDefault(player => player.PlayerId == playerId)?.Score);
 }
