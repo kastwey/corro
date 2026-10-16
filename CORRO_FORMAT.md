@@ -103,9 +103,10 @@ is common to all families.
   question deck ships as per-locale `questions.<lang>.json`, and the rules live in the
   manifest's `triviaRules` — see [The trivia family](#the-trivia-family). This family has
   **no bots**.
-- `"gameType": "forbidden"` — two-team spoken clue play: a rotating clue-giver describes
-  a private target without saying its forbidden words, a teammate guesses aloud and an opposing
-  monitor adjudicates violations. **No `board.json` or `cards.json`** — real content ships in
+- `"gameType": "forbidden"` — spoken clue play: a rotating clue-giver describes a private
+  target without saying its forbidden words, a second player guesses aloud and a third monitors
+  violations — in two teams, or everyone for themselves when the table is odd or small. **No
+  `board.json` or `cards.json`** — real content ships in
   `words.<lang>.json`; the host explicitly selects one shared word language in the lobby, and rules live in
   `forbiddenRules` — see [The forbidden-word family](#the-forbidden-word-family). This family has
   **no bots**; voice chat is optional because players may share a physical room.
@@ -1279,11 +1280,13 @@ keys (each with its `_self` variant where the actor differs): `trivia_rolled`, `
 
 ## The forbidden-word family
 
-A `"gameType": "forbidden"` package is a spoken team game with a distinct role/state model:
-two equal teams alternate timed turns; the active team's clue-giver and the opposing team's monitor
-receive one private card, while the guesser and every spectator receive no target data. It reuses the
-common package envelope (identity, locales, tokens, sounds and guides) and has **no spatial board,
-hand, `board.json` or `cards.json`**.
+A `"gameType": "forbidden"` package is a spoken game with a distinct role/state model: every
+timed turn has a clue-giver, a guesser and a monitor. In the classic seating two equal teams
+alternate turns and the monitor comes from the rival team; with **everyone for themselves** the
+three roles rotate through the whole table, which is how three players — or any odd table — can
+play. The clue-giver and the monitor receive one private card, while the guesser and every
+spectator receive no target data. It reuses the common package envelope (identity, locales, tokens,
+sounds and guides) and has **no spatial board, hand, `board.json` or `cards.json`**.
 
 Voice chat is deliberately optional. Remote players may opt into Corro's platform voice room; people
 playing together in person can leave it off. Corro never records or transcribes speech. The humans
@@ -1324,22 +1327,32 @@ match these words against speech: the opposing monitor reports a violation.
                           // higher score wins (ties adding a whole rotation); "score" = the
                           // first team to `targetScore` wins, once both have had the same
                           // number of turns — never mid-turn, never one team ahead
-  "targetScore": 30       // points that win when endMode is "score" (at least 1)
+  "targetScore": 30,      // points that win when endMode is "score" (at least 1)
+  "mode": "teams"         // the seating: "teams" = two equal teams (the classic); "solo" =
+                          // everyone for themselves, the three roles rotating through the table
 }
 ```
 
-The house-rule codes this family exposes to the host are `forbiddenEndMode` (`"type": "choice"`,
-values `rounds` / `score`) and the numbers `forbiddenCycles`, `forbiddenTargetScore` and
-`forbiddenTurnSeconds`.
+The house-rule codes this family exposes to the host are `forbiddenMode` (`"type": "choice"`,
+values `teams` / `solo`), `forbiddenEndMode` (`"type": "choice"`, values `rounds` / `score`) and
+the numbers `forbiddenCycles`, `forbiddenTargetScore` and `forbiddenTurnSeconds`.
 
-Packages declare an even player range from 4 up to the engine's table limit of 16 and enough
-tokens for `players.max`. The lobby forces exactly two equal, full teams before starting. Bots are
-not supported in this family.
+Packages declare a player range from 3 up to the engine's table limit of 16 and enough tokens for
+`players.max`. The range need not be even: in team play the lobby offers only the even sizes of
+four and up and forces exactly two equal, full teams before starting; everyone for themselves takes
+any size from three and has no teams to arrange, so the table starts like any other board's.
+A package that offers `forbiddenMode` should start its range at 3; one that does not is only ever
+seated in teams, whatever its minimum says. Bots are not supported in this family.
 
 ### Forbidden-word rules the engine implements
 
-- Teams alternate turns. Within the active team, the clue-giver rotates in team order and the next
-  teammate is the guesser; the opposing monitor rotates in the rival team's order.
+- In team play, teams alternate turns. Within the active team, the clue-giver rotates in team
+  order and the next teammate is the guesser; the opposing monitor rotates in the rival team's
+  order.
+- Everyone for themselves: the active player gives the clues, the next seat guesses and the one
+  after monitors. Over a complete rotation every player holds every role once. A correct guess
+  scores for the clue-giver **and** the guesser; a violation costs the clue-giver alone. Every
+  rule below reads "side" for "team": the match is decided and ranked by individual score.
 - Only the clue-giver may start the clock. They coordinate readiness through voice chat or in person;
   the engine does not require separate confirmations from the guesser or monitor.
 - During the timed phase, only the clue-giver may mark **Correct** or **Pass**; only the monitor may
@@ -1354,7 +1367,8 @@ not supported in this family.
 - After `cycles` complete rotations, the higher team score wins. A tie adds another **complete**
   rotation for both teams, preserving equal opportunity.
 - If a player permanently leaves, their team forfeits because the equal-role rotation can no longer
-  continue truthfully. A temporary disconnection does not retire the seat.
+  continue truthfully; everyone for themselves, the match ends where it stands, the best remaining
+  score wins and the one who left finishes last. A temporary disconnection does not retire the seat.
 
 ### Hidden information and accessible card surface
 
@@ -1380,8 +1394,12 @@ Turn preparation and start: `forbidden_turn_preparing`, `forbidden_turn_started`
 variants where the listener is the actor). Card outcomes:
 `forbidden_correct`, `forbidden_passed`, `forbidden_violation` (with `_self`). Turn/match outcomes:
 `forbidden_time_up`, `forbidden_tie_breaker`, `forbidden_team_won`, `forbidden_forfeit`.
-Surfaces, roles, status, timer and active-rule text use `forbidden_*`; shared team names use
-`team_name` and the engine colour words.
+Everyone for themselves speaks in names rather than team colours through the `_solo` counterparts
+of the same lines: `forbidden_turn_preparing_solo`, `forbidden_turn_started_solo`,
+`forbidden_correct_solo` (which also carries `guesserScore`), `forbidden_violation_solo`,
+`forbidden_time_up_solo`, `forbidden_tie_breaker_solo`, `forbidden_won_solo` and
+`forbidden_forfeit_solo`. Surfaces, roles, status, timer and active-rule text use `forbidden_*`;
+shared team names use `team_name` and the engine colour words.
 
 ---
 

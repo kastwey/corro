@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CorroServer.Models.Corro;
 using CorroServer.Services.Corro.Families;
 
@@ -34,6 +35,39 @@ public class FamilyCapabilityTests
 		foreach (var gameType in new[] { "property", "race", "track", "journey", "assembly", "draft", "shedding", "exploding", "trivia" })
 		{
 			Assert.Null(GameFamilies.For(gameType).RequiredTeamCount);
+		}
+	}
+
+	[Fact]
+	public void A_team_only_family_waives_its_teams_under_the_house_rule_it_names()
+	{
+		// The requirement is read UNDER the host's rule choices everywhere the lobby checks a
+		// table's shape, so a family seated "everyone for themselves" has no teams to count.
+		var family = GameFamilies.For("forbidden");
+		var waiver = family.TeamsWaivedWhen!;
+		Assert.Equal("forbiddenMode", waiver.Rule);
+		Assert.Equal("solo", waiver.Is);
+
+		Assert.Equal(2, family.RequiredTeamsUnder(null));
+		Assert.Equal(2, family.RequiredTeamsUnder(new Dictionary<string, JsonElement>
+		{
+			["forbiddenMode"] = JsonSerializer.SerializeToElement("teams"),
+		}));
+		Assert.Null(family.RequiredTeamsUnder(new Dictionary<string, JsonElement>
+		{
+			["forbiddenMode"] = JsonSerializer.SerializeToElement("solo"),
+		}));
+		// A value of the wrong kind never holds the waiver.
+		Assert.Equal(2, family.RequiredTeamsUnder(new Dictionary<string, JsonElement>
+		{
+			["forbiddenMode"] = JsonSerializer.SerializeToElement(true),
+		}));
+
+		// Families with no requirement have nothing to waive, whatever the host chose.
+		foreach (var gameType in new[] { "property", "journey", "race" })
+		{
+			Assert.Null(GameFamilies.For(gameType).TeamsWaivedWhen);
+			Assert.Null(GameFamilies.For(gameType).RequiredTeamsUnder(null));
 		}
 	}
 

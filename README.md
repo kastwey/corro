@@ -438,7 +438,8 @@ This engine version implements eleven: `property` (roll-and-move property tradin
 (distance-and-hazard card games), `assembly` (set-building card games), `draft`
 (simultaneous card drafting), `shedding` (match-and-discard card games), `exploding`
 (push-your-luck elimination card games), `trivia` (category quiz games), `forbidden`
-(two-team spoken clue games with private role cards and an authoritative clock), and
+(spoken clue games with private role cards and an authoritative clock, in two teams or everyone
+for themselves), and
 `categories` (simultaneous written games where everyone answers the same prompts under one
 letter and a rotating judge rules). See
 [`CORRO_FORMAT.md`](CORRO_FORMAT.md)

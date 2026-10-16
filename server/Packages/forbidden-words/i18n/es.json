@@ -12,6 +12,9 @@
     "acorn": "Bellota"
   },
   "rules": {
+    "forbiddenMode": "Cómo se juega",
+    "forbiddenModeTeams": "Por equipos",
+    "forbiddenModeSolo": "Todos contra todos (tres jugadores o más, también en número impar)",
     "forbiddenEndMode": "Cuándo termina la partida",
     "forbiddenEndModeRounds": "Al jugar las rondas",
     "forbiddenEndModeScore": "Al llegar a los puntos",

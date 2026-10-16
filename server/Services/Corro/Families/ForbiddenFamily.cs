@@ -10,15 +10,22 @@ namespace CorroServer.Services.Corro.Families;
 public sealed record ForbiddenRuntime(ForbiddenRulesConfig Rules) : IFamilyRuntime;
 
 /// <summary>
-/// Team spoken-clue play: two equal teams alternate timed turns. One teammate gives clues,
-/// the next guesses aloud, and one rotating opponent monitors the forbidden words. Voice chat
-/// is optional because the same interaction works around a physical table. Corro never records
-/// or transcribes speech; the humans mark correct answers, passes and violations.
+/// Spoken-clue play with three roles a turn: one player gives clues, another guesses aloud, and a
+/// third monitors the forbidden words. The classic seating is two equal teams alternating timed
+/// turns, the monitor coming from the rival side; the host may instead seat everyone for
+/// themselves, the three roles rotating through the whole table, which is how an odd table — or
+/// three people — can play. Voice chat is optional because the same interaction works around a
+/// physical table. Corro never records or transcribes speech; the humans mark correct answers,
+/// passes and violations.
 /// </summary>
 public sealed class ForbiddenFamily : IGameFamily
 {
-	/// <summary>Two teams of at least two: the smallest table the role rotation can seat.</summary>
+	/// <summary>Two teams of at least two: the smallest table the TEAM rotation can seat.</summary>
 	internal const int MinimumPlayers = 4;
+
+	/// <summary>Everyone for themselves needs the three roles of a turn and nobody else: the
+	/// smallest table of all, and the one a family of three asked for.</summary>
+	internal const int MinimumSoloPlayers = 3;
 
 	/// <summary>The ceiling is the engine's own table limit, not a family number: the role
 	/// rotation works for any team size, and how long an evening a bigger table wants is the host's
@@ -27,9 +34,14 @@ public sealed class ForbiddenFamily : IGameFamily
 
 	public string GameType => "forbidden";
 
-	/// <summary>Two teams, always: one side's clue-giver is watched by the OTHER side's monitor,
-	/// so there is no legal seating with one team or an odd table.</summary>
+	/// <summary>Two teams by default: one side's clue-giver is watched by the OTHER side's
+	/// monitor, so there is no legal team seating with one team or an odd table.</summary>
 	public int? RequiredTeamCount => 2;
+
+	/// <summary>…unless the host seats everyone for themselves, when there are no teams to
+	/// arrange at all and the lobby offers every table size from three up.</summary>
+	public HouseRuleCondition? TeamsWaivedWhen
+		=> new() { Rule = HouseRuleCatalog.ForbiddenModeRule, Is = ForbiddenMode.Solo };
 
 	/// <summary>The real word decks a package can offer in the lobby, preserving manifest order.
 	/// A locale the manifest lists but has no words for is not a choice, so it never appears.</summary>
@@ -67,15 +79,15 @@ public sealed class ForbiddenFamily : IGameFamily
 
 	public void ValidateDefinition(GameDefinition definition)
 	{
+		// The range is the package's whole offer, across both seatings: three is the floor because
+		// everyone-for-themselves seats it, and an odd maximum is fine because that seating takes
+		// it too. The lobby itself keeps a TEAM table to the even sizes of four and up, so the
+		// range no longer has to be even — it used to be, when teams were the only way to play.
 		var players = definition.Manifest.Players;
-		if (players.Min < MinimumPlayers || players.Max > MaximumPlayers || players.Max < players.Min)
+		if (players.Min < MinimumSoloPlayers || players.Max > MaximumPlayers || players.Max < players.Min)
 		{
 			throw new InvalidOperationException(
-				$"forbidden players must be between {MinimumPlayers} and {MaximumPlayers}.");
-		}
-		if (players.Min % 2 != 0 || players.Max % 2 != 0)
-		{
-			throw new InvalidOperationException("forbidden players.min and players.max must be even for two equal teams.");
+				$"forbidden players must be between {MinimumSoloPlayers} and {MaximumPlayers}.");
 		}
 		if (definition.Manifest.Tokens.Count < players.Max)
 		{
@@ -124,6 +136,19 @@ public sealed class ForbiddenFamily : IGameFamily
 		if (rules.TargetScore < 1)
 		{
 			throw new InvalidOperationException("forbiddenRules.targetScore must be at least 1.");
+		}
+		if (!HouseRuleCatalog.ForbiddenModes.Contains(rules.Mode))
+		{
+			throw new InvalidOperationException(
+				$"forbiddenRules.mode must be one of {string.Join(", ", HouseRuleCatalog.ForbiddenModes)}.");
+		}
+		// The lobby learns the seating from the host's rule choices, not from the manifest, so a
+		// package whose default seating is everyone for themselves has to expose the choice: a
+		// silent "solo" default would leave the lobby arranging teams the match then refuses.
+		if (rules.PlaysSolo() && definition.Manifest.HouseRules.All(rule => rule.Id != HouseRuleCatalog.ForbiddenModeRule))
+		{
+			throw new InvalidOperationException(
+				$"forbiddenRules.mode '{ForbiddenMode.Solo}' requires the '{HouseRuleCatalog.ForbiddenModeRule}' house rule, so the lobby seats the table accordingly.");
 		}
 
 		if (definition.ForbiddenWords is not { Count: > 0 })
@@ -175,28 +200,10 @@ public sealed class ForbiddenFamily : IGameFamily
 
 	public FamilyGame CreateGame(FamilyStartContext start)
 	{
-		if (start.Players.Count is < MinimumPlayers or > MaximumPlayers || start.Players.Count % 2 != 0
-			|| start.Players.Any(player => player.IsBot))
-		{
-			throw new InvalidOperationException(
-				$"forbidden games need an even number of human players, from {MinimumPlayers} to {MaximumPlayers}.");
-		}
-
-		var arranged = start.Teams?.Select(team => (IReadOnlyList<string>)team).ToList()
-			?? throw new InvalidOperationException("forbidden games require two arranged teams.");
-		var allIds = arranged.SelectMany(team => team).ToList();
-		var playerIds = start.Players.Select(player => player.Id).ToHashSet(StringComparer.Ordinal);
-		if (arranged.Count != 2 || arranged.Any(team => team.Count != start.Players.Count / 2)
-			|| allIds.Count != start.Players.Count || allIds.Distinct(StringComparer.Ordinal).Count() != allIds.Count
-			|| allIds.Any(id => !playerIds.Contains(id)))
-		{
-			throw new InvalidOperationException("forbidden teams must be equal and cover every player exactly once.");
-		}
-
 		var definition = start.Definition;
 		var rules = definition.Manifest.ForbiddenRules ?? new ForbiddenRulesConfig();
 		// The host's lobby choices override the package defaults. The EFFECTIVE rules are stored
-		// on the state, so a restored match keeps the length the table agreed on.
+		// on the state, so a restored match keeps the length — and the seating — the table agreed on.
 		if (start.RuleValues is { Count: > 0 } chosen)
 		{
 			foreach (var (id, value) in chosen)
@@ -204,6 +211,14 @@ public sealed class ForbiddenFamily : IGameFamily
 				rules = HouseRuleCatalog.ApplyForbidden(rules, id, value);
 			}
 		}
+
+		if (start.Players.Count > MaximumPlayers || start.Players.Any(player => player.IsBot))
+		{
+			throw new InvalidOperationException(
+				$"forbidden games seat up to {MaximumPlayers} human players and no bots.");
+		}
+		var arranged = rules.PlaysSolo() ? SoloSides(start) : ArrangedTeams(start);
+
 		var resolved = definition.ForbiddenWords?.GetValueOrDefault(start.Lang)
 			?? throw new InvalidOperationException(
 				$"forbidden word deck does not provide the selected language '{start.Lang}'.");
@@ -245,6 +260,43 @@ public sealed class ForbiddenFamily : IGameFamily
 			Runtime = new ForbiddenRuntime(rules),
 			PostStartAsync = announce => AnnouncePreparingTurnAsync(announce, state),
 		};
+	}
+
+	/// <summary>Everyone for themselves: one side per player, in seat order, and no arrangement to
+	/// take — a team layout handed in here is a lobby that let the two settings disagree.</summary>
+	private static List<IReadOnlyList<string>> SoloSides(FamilyStartContext start)
+	{
+		if (start.Players.Count < MinimumSoloPlayers)
+		{
+			throw new InvalidOperationException(
+				$"forbidden games with everyone for themselves need at least {MinimumSoloPlayers} players.");
+		}
+		if (start.Teams is { Count: > 0 })
+		{
+			throw new InvalidOperationException("forbidden games with everyone for themselves take no team arrangement.");
+		}
+		return start.Players.Select(player => (IReadOnlyList<string>)new[] { player.Id }).ToList();
+	}
+
+	/// <summary>The classic seating: two equal teams of at least two, covering every player once.</summary>
+	private static List<IReadOnlyList<string>> ArrangedTeams(FamilyStartContext start)
+	{
+		if (start.Players.Count < MinimumPlayers || start.Players.Count % 2 != 0)
+		{
+			throw new InvalidOperationException(
+				$"forbidden team games need an even number of players, from {MinimumPlayers} to {MaximumPlayers}.");
+		}
+		var arranged = start.Teams?.Select(team => (IReadOnlyList<string>)team).ToList()
+			?? throw new InvalidOperationException("forbidden team games require two arranged teams.");
+		var allIds = arranged.SelectMany(team => team).ToList();
+		var playerIds = start.Players.Select(player => player.Id).ToHashSet(StringComparer.Ordinal);
+		if (arranged.Count != 2 || arranged.Any(team => team.Count != start.Players.Count / 2)
+			|| allIds.Count != start.Players.Count || allIds.Distinct(StringComparer.Ordinal).Count() != allIds.Count
+			|| allIds.Any(id => !playerIds.Contains(id)))
+		{
+			throw new InvalidOperationException("forbidden teams must be equal and cover every player exactly once.");
+		}
+		return arranged;
 	}
 
 	public IFamilyRuntime? CreateRuntime(GameDefinition definition)
@@ -360,36 +412,88 @@ public sealed class ForbiddenFamily : IGameFamily
 		{
 			return;
 		}
-		var losingTeam = forbidden.Teams.FirstOrDefault(team => team.MemberIds.Contains(player.Id));
-		if (losingTeam is null)
+		var losingSide = forbidden.Teams.FirstOrDefault(team => team.MemberIds.Contains(player.Id));
+		if (losingSide is null)
 		{
 			return;
 		}
-		var winner = forbidden.Teams.First(team => team.TeamIndex != losingTeam.TeamIndex);
-		FinishGame(context.GameState, winner.TeamIndex);
+		var rules = context.GameState.ForbiddenRules ?? new ForbiddenRulesConfig();
+		if (rules.PlaysSolo())
+		{
+			// The rotation cannot go on truthfully without them, so the match ends where it stands:
+			// the best score among those who stayed wins, and the one who left finishes last.
+			var winner = forbidden.Teams
+				.Where(side => side.TeamIndex != losingSide.TeamIndex)
+				.OrderByDescending(side => side.Score)
+				.ThenBy(side => side.TeamIndex)
+				.First();
+			FinishGame(context.GameState, winner.TeamIndex, retiredPlayerId: player.Id);
+			var winnerName = PlayerName(context.GameState, winner.MemberIds[0]);
+			await context.Announce("game.forbidden_forfeit_solo", new()
+			{
+				["player"] = player.Name,
+				["winner"] = winnerName,
+				["score"] = winner.Score,
+			});
+			await context.Announce("game.game_over", new() { ["winner"] = winnerName });
+			return;
+		}
+		var winningTeam = forbidden.Teams.First(team => team.TeamIndex != losingSide.TeamIndex);
+		FinishGame(context.GameState, winningTeam.TeamIndex);
 		await context.Announce("game.forbidden_forfeit", new()
 		{
 			["player"] = player.Name,
-			["team"] = TeamVar(winner.TeamIndex),
+			["team"] = TeamVar(winningTeam.TeamIndex),
 		});
-		await context.Announce("game.game_over", new() { ["winner"] = TeamVar(winner.TeamIndex) });
+		await context.Announce("game.game_over", new() { ["winner"] = TeamVar(winningTeam.TeamIndex) });
 	}
 
 	internal static string TeamVar(int teamIndex) => $"__team:{EnginePalette.NameFor(teamIndex)}";
 
-	internal static void FinishGame(GameState state, int winnerTeamIndex)
+	internal static string PlayerName(GameState state, string playerId)
+		=> state.Players.First(player => player.Id == playerId).Name;
+
+	/// <summary>The spoken name of a side: the team's colour word in team play, the player's own
+	/// name when everyone plays for themselves.</summary>
+	internal static object SideVar(GameState state, int sideIndex)
+	{
+		var rules = state.ForbiddenRules ?? new ForbiddenRulesConfig();
+		return rules.PlaysSolo()
+			? PlayerName(state, state.Forbidden!.Teams.First(side => side.TeamIndex == sideIndex).MemberIds[0])
+			: TeamVar(sideIndex);
+	}
+
+	/// <summary>
+	/// Close the match with <paramref name="winnerTeamIndex"/> on top. Every member of the winning
+	/// side finishes first; the others are placed by score, ties sharing a place — which in team
+	/// play is simply second, and with everyone for themselves is a real ranking. A player who left
+	/// (<paramref name="retiredPlayerId"/>) finishes last whatever their score said.
+	/// </summary>
+	internal static void FinishGame(GameState state, int winnerTeamIndex, string? retiredPlayerId = null)
 	{
 		var forbidden = state.Forbidden!;
-		var winner = forbidden.Teams.First(team => team.TeamIndex == winnerTeamIndex);
+		var sides = forbidden.Teams;
+		var winner = sides.First(team => team.TeamIndex == winnerTeamIndex);
+		var retiredSide = retiredPlayerId is null
+			? null
+			: sides.FirstOrDefault(side => side.MemberIds.Contains(retiredPlayerId));
+		var ranked = sides.Where(side => side != winner && side != retiredSide).ToList();
 		foreach (var participant in state.Players)
 		{
-			var won = winner.MemberIds.Contains(participant.Id);
+			var side = sides.First(candidate => candidate.MemberIds.Contains(participant.Id));
 			participant.Status = PlayerStatus.Finished;
-			participant.FinishPlace = won ? 1 : 2;
+			participant.FinishPlace = side == winner
+				? 1
+				: side == retiredSide
+					? sides.Count
+					: 2 + ranked.Count(other => other.Score > side.Score);
 		}
 		forbidden.Turn.Phase = ForbiddenTurnPhase.Finished;
 		state.CurrentTurn = null;
 		state.WinnerId = winner.MemberIds.FirstOrDefault();
+		// A side of one is a person, so the banner can name them; a team is named by the client,
+		// in each player's own language, from its colour.
+		state.WinnerName = winner.MemberIds.Count == 1 ? PlayerName(state, winner.MemberIds[0]) : null;
 		state.IsGameOver = true;
 	}
 
@@ -398,14 +502,19 @@ public sealed class ForbiddenFamily : IGameFamily
 		GameState state)
 	{
 		var turn = state.Forbidden!.Turn;
-		string Name(string id) => state.Players.First(player => player.Id == id).Name;
-		return announce("game.forbidden_turn_preparing", new()
+		var rules = state.ForbiddenRules ?? new ForbiddenRulesConfig();
+		var vars = new Dictionary<string, object>
 		{
-			["team"] = TeamVar(turn.TeamIndex),
-			["clueGiver"] = Name(turn.ClueGiverId),
-			["guesser"] = Name(turn.GuesserId),
-			["monitor"] = Name(turn.MonitorId),
+			["clueGiver"] = PlayerName(state, turn.ClueGiverId),
+			["guesser"] = PlayerName(state, turn.GuesserId),
+			["monitor"] = PlayerName(state, turn.MonitorId),
 			["actorId"] = turn.ClueGiverId,
-		});
+		};
+		if (rules.PlaysSolo())
+		{
+			return announce("game.forbidden_turn_preparing_solo", vars);
+		}
+		vars["team"] = TeamVar(turn.TeamIndex);
+		return announce("game.forbidden_turn_preparing", vars);
 	}
 }

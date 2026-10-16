@@ -509,3 +509,117 @@ test('a second match at the same table is dealt words the first one never used',
 		`the second match repeated ${JSON.stringify(second.filter(w => first.includes(w)))} from ${JSON.stringify(first)}`,
 	).toEqual([]);
 });
+
+// Asked for by a family of three. Two teams of two was the only seating the family knew, so
+// three people could not play at all. "Everyone for themselves" seats them: the three roles of a
+// turn rotate through the whole table, each turn's correct guess pays the clue-giver AND the
+// guesser, and the match is won by a person, not a team.
+test('three players play everyone for themselves, with no teams to arrange', async ({ browser }) => {
+	const ana = await newPlayerPage(browser, 'en-US');
+	const berto = await newPlayerPage(browser, 'es-ES');
+	const carla = await newPlayerPage(browser, 'es-ES');
+	const pages = [ana, berto, carla];
+
+	const code = await createGame(ana, 'Ana', BOARD, {
+		houseRules: { forbiddenMode: 'solo', forbiddenCycles: 1 },
+		maxPlayers: 3,
+		contentLanguage: 'es',
+	});
+	// No teams to arrange, so the host lands straight at the table, like any other board.
+	await expect(ana.locator('#table-view')).toBeVisible();
+	await expect(ana.locator('#table-team-panel')).toBeHidden();
+	await joinGame(berto, code, 'Berto');
+	await joinGame(carla, code, 'Carla');
+	await flushAxeAudit(ana);
+	const tableId = new URL(ana.url()).searchParams.get('gameId')!;
+	await startGame(ana, pages);
+
+	// Every side is a person: the scoreboard, the headline and the turn's cast all say names.
+	await expect(ana.locator('#forbidden-score-title')).toHaveText('Scores');
+	await expect(berto.locator('#forbidden-score-title')).toHaveText('Puntuaciones');
+	await expect(ana.locator('.forbidden-score')).toHaveText([
+		'Ana: 0 points.', 'Berto: 0 points.', 'Carla: 0 points.',
+	]);
+	await expect(ana.locator('.forbidden-now__line')).toHaveText('You are about to play.');
+	await expect(berto.locator('.forbidden-now__line')).toHaveText('Ana va a jugar.');
+	await expect(ana.locator('.forbidden-role-list li')).toHaveText([
+		'You give the clues.', 'Berto guesses.', 'Carla monitors.',
+	]);
+	await expect(carla.locator('.forbidden-role-detail')).toHaveText(
+		'Eres el supervisor: pulsa V si Ana dice el objetivo o cualquiera de las palabras prohibidas.');
+	for (const page of pages) await flushAxeAudit(page);
+
+	const anaCard = ana.locator('.forbidden-secret__text');
+	const carlaCard = carla.locator('.forbidden-secret__text');
+	await expect(anaCard).toBeVisible();
+	await expect(carlaCard).toBeVisible();
+	await expect(berto.locator('.forbidden-secret__text')).toBeHidden();
+
+	// S and Shift+S speak about people too — "Red team" was never a thing at this table.
+	await ana.evaluate(() => { ((window as any).__announcements as string[]).length = 0; });
+	await anaCard.focus();
+	await ana.keyboard.press('s');
+	await expectAnnouncement(ana, /^You have 0 points; your role is clue-giver\.$/);
+	await ana.keyboard.press('Shift+S');
+	await expectAnnouncement(ana, /^Berto: 0 points\. Carla: 0 points\.$/);
+
+	await ana.keyboard.press('Enter');
+	await expectAnnouncement(berto, /Ana inicia su turno/);
+	await expect(ana.locator('.forbidden-correct')).toBeVisible();
+	await expect(carla.locator('.forbidden-violation')).toBeVisible();
+
+	// A correct guess pays both the clue-giver and the guesser; the monitor stays where she was.
+	await ana.keyboard.press('Enter');
+	await expectAnnouncement(berto, /Berto acierta .*Ana y Berto suman 1 punto cada uno/);
+	await expect(ana.locator('.forbidden-score')).toHaveText([
+		'Ana: 1 points.', 'Berto: 1 points.', 'Carla: 0 points.',
+	]);
+	await ana.keyboard.press('Enter');
+	await expect(ana.locator('.forbidden-score').first()).toHaveText('Ana: 2 points.');
+	await flushAxeAudit(ana);
+
+	// A reported slip costs the clue-giver alone.
+	await carlaCard.focus();
+	await carla.keyboard.press('v');
+	await expectAnnouncement(berto, /Carla señala que Ana dijo .*Ana pierde 1 punto/);
+	await expect(ana.locator('.forbidden-score')).toHaveText([
+		'Ana: 1 points.', 'Berto: 2 points.', 'Carla: 0 points.',
+	]);
+	await flushAxeAudit(carla);
+
+	// Time up: the three roles move one seat along — Berto gives, Carla guesses, Ana monitors.
+	await expireRoundClock(tableId);
+	await expectAnnouncement(berto, /Tiempo\. Ana ha acertado 2/);
+	await expect(berto.locator('.forbidden-now__line')).toHaveText('Vas a jugar.');
+	await expect(ana.locator('.forbidden-role-list li')).toHaveText([
+		'Berto gives the clues.', 'Carla guesses.', 'You monitor.',
+	]);
+	await expect(ana.locator('.forbidden-role-detail')).toHaveText(
+		'You are the monitor: press V if Berto says the target or any forbidden word.');
+	await flushAxeAudit(ana);
+
+	// Berto banks one word, then the last two turns run out, so the rotation ends with a lone
+	// leader: Berto 3, Ana 1, Carla 1.
+	const bertoCard = berto.locator('.forbidden-secret__text');
+	await bertoCard.focus();
+	await berto.keyboard.press('Enter');
+	await expect(berto.locator('.forbidden-correct')).toBeVisible();
+	await berto.keyboard.press('Enter');
+	await expect(ana.locator('.forbidden-score')).toHaveText([
+		'Ana: 1 points.', 'Berto: 3 points.', 'Carla: 1 points.',
+	]);
+	await expireRoundClock(tableId);
+	await expect(carla.locator('.forbidden-start')).toBeVisible();
+	await carla.locator('.forbidden-start').click();
+	await expect(carla.locator('.forbidden-correct')).toBeVisible();
+	await expireRoundClock(tableId);
+
+	// Won by a person: the banner names Berto, nobody is told a team won, and the standings are a
+	// real ranking with the two tied for second sharing their place.
+	await expectAnnouncement(ana, /Berto wins with 3 points!/);
+	await expect(ana.locator('.end-screen')).toBeVisible();
+	await expect(ana.locator('.end-screen__banner')).toHaveText('🏆 Berto won the game!');
+	await expect(berto.locator('.end-screen__banner')).toHaveText('🏆 ¡Has ganado! ¡Enhorabuena!');
+	await expect(ana.locator('.end-screen__standings tbody td:first-child')).toHaveText(['1', '2', '2']);
+	for (const page of pages) await flushAxeAudit(page);
+});

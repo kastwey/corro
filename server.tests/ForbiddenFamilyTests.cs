@@ -114,6 +114,298 @@ public class ForbiddenFamilyTests
 		Assert.Equal(rules.EndMode, offered["forbiddenEndMode"]!.Value.GetString());
 		Assert.Equal(rules.Cycles, offered["forbiddenCycles"]!.Value.GetInt32());
 		Assert.Equal(rules.TargetScore, offered["forbiddenTargetScore"]!.Value.GetInt32());
+		Assert.Equal(rules.Mode, offered["forbiddenMode"]!.Value.GetString());
+	}
+
+	// Asked for by a family of three: the shipped package could not seat them at all, because two
+	// teams of two was the only seating the family knew. The host now chooses the seating, and the
+	// package's range starts where the three roles of a turn do.
+	[Fact]
+	public async Task The_shipped_package_lets_the_host_seat_everyone_for_themselves_from_three_players()
+	{
+		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+
+		Assert.Equal(3, definition.Manifest.Players.Min);
+		var seating = Assert.Single(definition.Manifest.HouseRules, rule => rule.Id == "forbiddenMode");
+		Assert.Equal("choice", seating.Type);
+		Assert.True(seating.EditableByHost);
+		Assert.Equal(new[] { "teams", "solo" }, seating.Options!.Select(option => option.Id));
+		Assert.Equal("teams", seating.Default!.Value.GetString()); // the classic stays the default
+		new ForbiddenFamily().ValidateDefinition(definition); // an odd floor is a legal range now
+	}
+
+	[Fact]
+	public async Task A_solo_default_seating_must_be_offered_as_a_house_rule_too()
+	{
+		// The lobby seats a table from the host's rule choices, so a manifest that defaults to
+		// everyone for themselves without exposing the choice would have the lobby arranging teams
+		// the match then refuses.
+		var shipped = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+		var soloByDefault = shipped with
+		{
+			Manifest = shipped.Manifest with
+			{
+				ForbiddenRules = shipped.Manifest.ForbiddenRules! with { Mode = "solo" },
+			},
+		};
+		new ForbiddenFamily().ValidateDefinition(soloByDefault); // the shipped package offers the choice
+
+		var silent = soloByDefault with
+		{
+			Manifest = soloByDefault.Manifest with
+			{
+				HouseRules = soloByDefault.Manifest.HouseRules.Where(rule => rule.Id != "forbiddenMode").ToList(),
+			},
+		};
+		var error = Assert.Throws<InvalidOperationException>(() => new ForbiddenFamily().ValidateDefinition(silent));
+		Assert.Contains("forbiddenMode", error.Message);
+
+		var nonsense = shipped with
+		{
+			Manifest = shipped.Manifest with { ForbiddenRules = shipped.Manifest.ForbiddenRules! with { Mode = "pairs" } },
+		};
+		Assert.Contains("forbiddenRules.mode", Assert.Throws<InvalidOperationException>(
+			() => new ForbiddenFamily().ValidateDefinition(nonsense)).Message);
+	}
+
+	[Fact]
+	public async Task An_odd_player_range_is_accepted_because_everyone_for_themselves_seats_it()
+	{
+		var shipped = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+		var definition = shipped with
+		{
+			Manifest = shipped.Manifest with { Players = new PlayersDef { Min = 3, Max = 9 } },
+		};
+
+		new ForbiddenFamily().ValidateDefinition(definition); // does not throw
+	}
+
+	private static Dictionary<string, System.Text.Json.JsonElement> Solo(params (string Id, object Value)[] more)
+	{
+		var values = new Dictionary<string, System.Text.Json.JsonElement>
+		{
+			["forbiddenMode"] = System.Text.Json.JsonSerializer.SerializeToElement("solo"),
+		};
+		foreach (var (id, value) in more)
+		{
+			values[id] = System.Text.Json.JsonSerializer.SerializeToElement(value);
+		}
+		return values;
+	}
+
+	[Fact]
+	public async Task Three_players_play_for_themselves_with_the_three_roles_spread_across_them()
+	{
+		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+		var game = new ForbiddenFamily().CreateGame(new FamilyStartContext
+		{
+			Players = Players(3), Definition = definition, Lang = "es", RuleValues = Solo(),
+		});
+
+		var state = game.State.Forbidden!;
+		Assert.Equal("solo", game.State.ForbiddenRules!.Mode);
+		// One side per player, in seat order: scores and turns are kept per person.
+		Assert.Equal(new[] { "p0", "p1", "p2" }, state.Teams.Select(side => Assert.Single(side.MemberIds)));
+		Assert.Equal(("p0", "p1", "p2"), (state.Turn.ClueGiverId, state.Turn.GuesserId, state.Turn.MonitorId));
+		Assert.Equal("faro", state.Turn.Target);
+		// Each player is their own side, so each gets their own colour rather than a team's.
+		Assert.Equal(3, game.State.Players.Select(player => player.Color).Distinct().Count());
+	}
+
+	[Fact]
+	public async Task Everyone_for_themselves_refuses_two_players_a_team_arrangement_and_bots()
+	{
+		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+		var family = new ForbiddenFamily();
+
+		Assert.Throws<InvalidOperationException>(() => family.CreateGame(new FamilyStartContext
+		{
+			Players = Players(2), Definition = definition, RuleValues = Solo(),
+		}));
+		// A team layout under the solo seating is a lobby that let the two settings disagree.
+		Assert.Throws<InvalidOperationException>(() => family.CreateGame(new FamilyStartContext
+		{
+			Players = Players(), Definition = definition, RuleValues = Solo(), Teams = Teams(),
+		}));
+		var players = Players(3);
+		players[2] = players[2] with { IsBot = true };
+		Assert.Throws<InvalidOperationException>(() => family.CreateGame(new FamilyStartContext
+		{
+			Players = players, Definition = definition, RuleValues = Solo(),
+		}));
+	}
+
+	private static List<IReadOnlyList<string>> Sides(int count)
+		=> Enumerable.Range(0, count).Select(index => (IReadOnlyList<string>)new[] { $"p{index}" }).ToList();
+
+	[Fact]
+	public void Rulebook_hands_every_player_every_role_once_per_rotation_and_breaks_a_tie_with_a_whole_one()
+	{
+		var deck = Deck(12);
+		var rules = new ForbiddenRulesConfig { Cycles = 1, Mode = "solo" };
+		var state = ForbiddenRulebook.CreateInitialState(Sides(3), deck, rules);
+
+		// Clue-giver, guesser, monitor: the active seat and the two after it.
+		Assert.Equal((0, "p0", "p1", "p2"),
+			(state.Turn.TeamIndex, state.Turn.ClueGiverId, state.Turn.GuesserId, state.Turn.MonitorId));
+		Assert.False(ForbiddenRulebook.CompleteTurn(state, deck, rules).GameOver);
+		Assert.Equal((1, "p1", "p2", "p0"),
+			(state.Turn.TeamIndex, state.Turn.ClueGiverId, state.Turn.GuesserId, state.Turn.MonitorId));
+		Assert.False(ForbiddenRulebook.CompleteTurn(state, deck, rules).GameOver);
+		Assert.Equal((2, "p2", "p0", "p1"),
+			(state.Turn.TeamIndex, state.Turn.ClueGiverId, state.Turn.GuesserId, state.Turn.MonitorId));
+
+		// Three turns, nobody scored: the rotation is complete and level, so another whole one.
+		var tie = ForbiddenRulebook.CompleteTurn(state, deck, rules);
+		Assert.False(tie.GameOver);
+		Assert.True(tie.TieBreakerStarted);
+		Assert.Equal(2, state.Cycle);
+		Assert.Equal((0, "p0", "p1", "p2"),
+			(state.Turn.TeamIndex, state.Turn.ClueGiverId, state.Turn.GuesserId, state.Turn.MonitorId));
+
+		// A lead shared by two of the three is still a tie at the top; a lone leader ends it.
+		state.Teams[0].Score = 4;
+		state.Teams[1].Score = 4;
+		state.Teams[2].Score = 1;
+		for (var turn = 0; turn < 2; turn++)
+		{
+			Assert.False(ForbiddenRulebook.CompleteTurn(state, deck, rules).GameOver);
+		}
+		Assert.True(ForbiddenRulebook.CompleteTurn(state, deck, rules).TieBreakerStarted);
+		state.Teams[1].Score = 5;
+		for (var turn = 0; turn < 2; turn++)
+		{
+			Assert.False(ForbiddenRulebook.CompleteTurn(state, deck, rules).GameOver);
+		}
+		var finish = ForbiddenRulebook.CompleteTurn(state, deck, rules);
+		Assert.True(finish.GameOver);
+		Assert.Equal(1, finish.WinnerTeamIndex);
+	}
+
+	[Fact]
+	public void Five_players_for_themselves_rotate_the_three_roles_through_the_whole_table()
+	{
+		// The odd table the seating exists for: five people, three jobs a turn, and over one
+		// rotation each of them has given, guessed and monitored exactly once.
+		var deck = Deck(12);
+		var rules = new ForbiddenRulesConfig { Cycles = 1, Mode = "solo" };
+		var state = ForbiddenRulebook.CreateInitialState(Sides(5), deck, rules);
+		var gave = new List<string>();
+		var guessed = new List<string>();
+		var monitored = new List<string>();
+
+		for (var turn = 0; turn < 5; turn++)
+		{
+			gave.Add(state.Turn.ClueGiverId);
+			guessed.Add(state.Turn.GuesserId);
+			monitored.Add(state.Turn.MonitorId);
+			Assert.Equal(3, new[] { state.Turn.ClueGiverId, state.Turn.GuesserId, state.Turn.MonitorId }.Distinct().Count());
+			ForbiddenRulebook.CompleteTurn(state, deck, rules);
+		}
+
+		var everyone = Sides(5).Select(side => side[0]).OrderBy(id => id).ToList();
+		Assert.Equal(everyone, gave.OrderBy(id => id));
+		Assert.Equal(everyone, guessed.OrderBy(id => id));
+		Assert.Equal(everyone, monitored.OrderBy(id => id));
+	}
+
+	[Fact]
+	public void A_correct_guess_credits_the_guesser_too_only_when_everyone_plays_for_themselves()
+	{
+		var deck = Deck(8);
+		var solo = new ForbiddenRulesConfig { Mode = "solo", CorrectPoints = 2 };
+		var soloState = ForbiddenRulebook.CreateInitialState(Sides(3), deck, solo);
+
+		var credited = ForbiddenRulebook.AwardCorrect(soloState, solo);
+
+		// Guessing has to pay, or the only player with a reason to try is the one giving clues.
+		Assert.Equal(new[] { "p0", "p1" }, credited.Select(side => side.MemberIds[0]));
+		Assert.Equal(new[] { 2, 2, 0 }, soloState.Teams.Select(side => side.Score));
+		Assert.Equal(1, soloState.Turn.CorrectCount);
+
+		var teams = new ForbiddenRulesConfig { CorrectPoints = 2 };
+		var teamState = ForbiddenRulebook.CreateInitialState(Teams().Select(team => (IReadOnlyList<string>)team).ToList(), deck, teams);
+		Assert.Equal(new[] { 0 }, ForbiddenRulebook.AwardCorrect(teamState, teams).Select(side => side.TeamIndex));
+		Assert.Equal(new[] { 2, 0 }, teamState.Teams.Select(team => team.Score));
+	}
+
+	[Fact]
+	public void A_reported_slip_costs_the_clue_giver_alone_in_either_seating()
+	{
+		var deck = Deck(8);
+		var solo = new ForbiddenRulesConfig { Mode = "solo", ViolationPenalty = 3 };
+		var state = ForbiddenRulebook.CreateInitialState(Sides(3), deck, solo);
+
+		var penalised = ForbiddenRulebook.PenaliseViolation(state, solo);
+
+		Assert.Equal("p0", penalised.MemberIds[0]);
+		Assert.Equal(new[] { -3, 0, 0 }, state.Teams.Select(side => side.Score));
+		Assert.Equal(1, state.Turn.ViolationCount);
+	}
+
+	[Fact]
+	public void A_target_score_decides_a_solo_match_only_with_level_turns_and_a_lone_leader()
+	{
+		var deck = Deck(12);
+		var rules = new ForbiddenRulesConfig { Mode = "solo", EndMode = "score", TargetScore = 5, Cycles = 1 };
+		var state = ForbiddenRulebook.CreateInitialState(Sides(3), deck, rules);
+
+		state.Teams[0].Score = 5; // the opener is there…
+		Assert.False(ForbiddenRulebook.CompleteTurn(state, deck, rules).GameOver); // …but two others are a turn behind
+		Assert.False(ForbiddenRulebook.CompleteTurn(state, deck, rules).GameOver);
+		var finish = ForbiddenRulebook.CompleteTurn(state, deck, rules);
+		Assert.True(finish.GameOver);
+		Assert.Equal(0, finish.WinnerTeamIndex);
+	}
+
+	[Fact]
+	public async Task Everyone_for_themselves_ends_with_the_table_ranked_by_score()
+	{
+		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+		var state = new ForbiddenFamily().CreateGame(new FamilyStartContext
+		{
+			Players = Players(4), Definition = definition, Lang = "en", RuleValues = Solo(),
+		}).State;
+		state.Forbidden!.Teams[0].Score = 2;
+		state.Forbidden.Teams[1].Score = 7;
+		state.Forbidden.Teams[2].Score = 2;
+		state.Forbidden.Teams[3].Score = 0;
+
+		ForbiddenFamily.FinishGame(state, winnerTeamIndex: 1);
+
+		// A real ranking, ties sharing a place: not the "winners and everyone else" of team play.
+		Assert.Equal(new[] { 2, 1, 2, 4 }, state.Players.Select(player => player.FinishPlace));
+		Assert.Equal("p1", state.WinnerId);
+		Assert.True(state.IsGameOver);
+		Assert.All(state.Players, player => Assert.Equal(PlayerStatus.Finished, player.Status));
+	}
+
+	[Fact]
+	public async Task A_player_leaving_a_solo_match_ends_it_with_the_best_remaining_score_on_top()
+	{
+		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+		var family = new ForbiddenFamily();
+		var state = family.CreateGame(new FamilyStartContext
+		{
+			Players = Players(3), Definition = definition, Lang = "en", RuleValues = Solo(),
+		}).State;
+		state.Forbidden!.Teams[0].Score = 9; // the leader is the one who leaves
+		state.Forbidden.Teams[1].Score = 3;
+		state.Forbidden.Teams[2].Score = 4;
+		var context = TestFixtures.NewContext(state, forbiddenRules: state.ForbiddenRules);
+
+		await family.OnPlayerRetiredAsync(state.Players[0], context);
+
+		// The rotation cannot go on truthfully with two: the best of those who stayed wins, and
+		// the one who left finishes last whatever their score said.
+		Assert.True(state.IsGameOver);
+		Assert.Equal("p2", state.WinnerId);
+		Assert.Equal(new[] { 3, 2, 1 }, state.Players.Select(player => player.FinishPlace));
+		var forfeit = Assert.Single(TestFixtures.Announcer(context).Sent, sent => sent.Key == "game.forbidden_forfeit_solo");
+		Assert.Equal("p2", forfeit.Vars["winner"]);
+		Assert.Equal(4, forfeit.Vars["score"]);
+		// The shared game-over line names a person, not a colour.
+		Assert.Equal("p2", Assert.Single(TestFixtures.Announcer(context).Sent, sent => sent.Key == "game.game_over").Vars["winner"]);
 	}
 
 	[Fact]
@@ -275,9 +567,9 @@ public class ForbiddenFamilyTests
 
 	[Theory]
 	[InlineData(4, 18)] // beyond the engine's table limit
-	[InlineData(4, 9)] // odd: no two equal teams
+	[InlineData(2, 4)] // below the three roles a turn needs, in either seating
 	[InlineData(6, 4)] // inverted range
-	public async Task Definition_rejects_a_range_the_engine_or_two_equal_teams_cannot_seat(int min, int max)
+	public async Task Definition_rejects_a_range_the_engine_or_a_turn_cannot_seat(int min, int max)
 	{
 		var shipped = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
 		var tokens = Enumerable.Range(0, 18).Select(index => new TokenDef { Id = $"t{index}" }).ToList();

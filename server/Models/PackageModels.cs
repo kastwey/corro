@@ -40,6 +40,10 @@ public record PackageUploadResponse
 	/// null when team play is optional. The lobby offers only the table sizes that split evenly
 	/// into that many teams, instead of hardcoding which family needs what.</summary>
 	public int? RequiredTeamCount { get; init; }
+	/// <summary>The house-rule choice under which the family plays WITHOUT its required teams
+	/// (see IGameFamily.TeamsWaivedWhen), or null when the requirement always holds. The lobby
+	/// re-offers the table sizes and hides the team count whenever the host selects it.</summary>
+	public HouseRuleCondition? TeamsWaivedWhen { get; init; }
 	/// <summary>
 	/// Optional i18n key (in the PACKAGE's own translations) the lobby shows the host as a notice when
 	/// they create a game with this board. Null when the package declares none. Carried verbatim — the

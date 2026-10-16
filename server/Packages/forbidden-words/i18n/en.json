@@ -12,6 +12,9 @@
     "acorn": "Acorn"
   },
   "rules": {
+    "forbiddenMode": "How the table plays",
+    "forbiddenModeTeams": "In two teams",
+    "forbiddenModeSolo": "Everyone for themselves (three players or more, odd tables welcome)",
     "forbiddenEndMode": "When the match ends",
     "forbiddenEndModeRounds": "After the rounds are played",
     "forbiddenEndModeScore": "On reaching the points",

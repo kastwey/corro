@@ -78,11 +78,20 @@ public partial class GameHub
 				request = request with { Language = selectedContentLanguage };
 			}
 			// A family that plays only in teams (forbidden: clue-giver vs the opposing monitor) says
-			// how many; the table must split evenly into exactly that many.
-			if (GameFamilies.For(stagedDefinition?.Manifest.GameType).RequiredTeamCount is { } required
+			// how many; the table must split evenly into exactly that many. The host's house rules
+			// are part of the question: the same family seated "everyone for themselves" has no
+			// teams to arrange, and then a team count is the thing that does not fit.
+			var family = GameFamilies.For(stagedDefinition?.Manifest.GameType);
+			var requiredTeams = family.RequiredTeamsUnder(request.RuleValues);
+			if (requiredTeams is { } required
 				&& (request.TeamCount != required
 					|| request.MaxPlayers % required != 0
 					|| request.MaxPlayers / required < 2))
+			{
+				await Clients.Caller.SendAsync("Error", "BAD_TEAM_COUNT");
+				return;
+			}
+			if (requiredTeams is null && family.RequiredTeamCount is not null && request.TeamCount is > 0)
 			{
 				await Clients.Caller.SendAsync("Error", "BAD_TEAM_COUNT");
 				return;
@@ -490,6 +499,16 @@ public partial class GameHub
 			if (game.Status != GameStatus.WaitingForPlayers)
 			{
 				await Clients.Caller.SendAsync("Error", "GAME_ALREADY_STARTED");
+				return;
+			}
+			// The table's shape was fixed when it was created: its size, and whether it is arranged
+			// in teams. A rule that would need teams this table never arranged — or drop the ones
+			// it did — is not a rule change but a different table, so it is refused here rather
+			// than discovered at the start, when the room is full and waiting.
+			var family = GameFamilies.For(game.GameType);
+			if (family.RequiredTeamsUnder(request.RuleValues) != family.RequiredTeamsUnder(game.RuleValues))
+			{
+				await Clients.Caller.SendAsync("Error", "BAD_TEAM_COUNT");
 				return;
 			}
 
@@ -1257,8 +1276,9 @@ public partial class GameHub
 			}
 			// A team-only family must reach the table fully seated into exactly its team count —
 			// the lobby refused any other shape at creation, but a game restored from an older
-			// document (or one whose teams were never filled) is caught here.
-			if (GameFamilies.For(definition.Manifest.GameType).RequiredTeamCount is { } requiredTeams
+			// document (or one whose teams were never filled) is caught here. Under the house rule
+			// that waives its teams (forbidden, everyone for themselves) there is nothing to check.
+			if (GameFamilies.For(definition.Manifest.GameType).RequiredTeamsUnder(game.RuleValues) is { } requiredTeams
 				&& (game.TeamCount != requiredTeams || arrangedTeams?.Count != requiredTeams))
 			{
 				await Clients.Caller.SendAsync("Error", "TEAMS_INCOMPLETE");

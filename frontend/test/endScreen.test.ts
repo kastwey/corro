@@ -98,6 +98,34 @@ test('forbidden teams: every member of the winning team shares first place', () 
 	assert.deepEqual(rows.map(row => row.place), [1, 1, 2, 2]);
 });
 
+test('forbidden, everyone for themselves: a side of one is a lone winner, ranked by score', () => {
+	// The server keeps one "team" per player in this seating. A banner saying "The Red team won"
+	// to a table of three people playing for themselves would name a team that never existed.
+	const players = [
+		player({ id: 'a', name: 'Ana', finishPlace: 2 }),
+		player({ id: 'b', name: 'Berto', finishPlace: 1 }),
+		player({ id: 'c', name: 'Carla', finishPlace: 2 }),
+	];
+	const gs = state({
+		players,
+		winnerId: 'b',
+		forbidden: {
+			teams: [
+				{ teamIndex: 0, memberIds: ['a'], score: 1, turnsTaken: 1 },
+				{ teamIndex: 1, memberIds: ['b'], score: 3, turnsTaken: 1 },
+				{ teamIndex: 2, memberIds: ['c'], score: 1, turnsTaken: 1 },
+			],
+		} as any,
+	});
+
+	const side = winningSide(gs);
+	assert.deepEqual([...side.ids], ['b']);
+	assert.equal(side.teamName, null);
+	const rows = computeStandings(gs);
+	assert.deepEqual(rows.map(row => row.name), ['Berto', 'Ana', 'Carla']);
+	assert.deepEqual(rows.map(row => row.place), [1, 2, 2]);
+});
+
 test('winningSide is the lone winner outside team play (no team name)', () => {
 	const gs = state({ players: [player({ id: 'a', name: 'Ana' })], winnerId: 'a' });
 	const side = winningSide(gs);

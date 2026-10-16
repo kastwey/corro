@@ -126,13 +126,14 @@ test('forbidden: reads the authoritative clock, pass, score and cycle rules', ()
 		cycles: 4,
 	};
 	assert.deepEqual(buildForbiddenRulesLines(rules, t), [
+		'game.forbidden_rules_mode_teams',
 		'game.forbidden_rules_time(75)',
 		'game.forbidden_rules_passes(2)',
 		'game.forbidden_rules_correct(3)',
 		'game.forbidden_rules_violation(2)',
 		'game.forbidden_rules_cycles(4)',
 	]);
-	assert.equal(buildForbiddenRulesLines(null, t)[0], 'game.forbidden_rules_time(60)');
+	assert.equal(buildForbiddenRulesLines(null, t)[1], 'game.forbidden_rules_time(60)');
 });
 
 test('forbidden: a target-score ending replaces the rotation line, never sits beside it', () => {
@@ -141,12 +142,27 @@ test('forbidden: a target-score ending replaces the rotation line, never sits be
 		cycles: 5, endMode: 'score', targetScore: 30,
 	};
 	const lines = buildForbiddenRulesLines(rules, t);
-	assert.equal(lines[4], 'game.forbidden_rules_target(30)');
+	assert.equal(lines[5], 'game.forbidden_rules_target(30)');
 	assert.ok(!lines.some(l => l.startsWith('game.forbidden_rules_cycles')));
 	// The rotation count is kept, simply not what ends this match — switching back needs no
 	// retyping. And an unknown mode keeps the classic ending.
-	assert.equal(buildForbiddenRulesLines({ ...rules, endMode: 'whenever' }, t)[4],
+	assert.equal(buildForbiddenRulesLines({ ...rules, endMode: 'whenever' }, t)[5],
 		'game.forbidden_rules_cycles(5)');
+});
+
+test('forbidden: everyone for themselves is said first, and a target is won by a player', () => {
+	// The seating changes who the rules are about: the first line says so, and a target score is
+	// reached by a person rather than a team. The clock, passes and points read the same.
+	const rules: ForbiddenRulesConfig = {
+		turnSeconds: 60, passesPerTurn: 3, correctPoints: 1, violationPenalty: 1,
+		cycles: 5, endMode: 'score', targetScore: 30, mode: 'solo',
+	};
+	const lines = buildForbiddenRulesLines(rules, t);
+	assert.equal(lines[0], 'game.forbidden_rules_mode_solo');
+	assert.equal(lines[5], 'game.forbidden_rules_target_solo(30)');
+	assert.equal(buildForbiddenRulesLines({ ...rules, mode: 'teams' }, t)[5], 'game.forbidden_rules_target(30)');
+	// Rounds are rounds in either seating.
+	assert.equal(buildForbiddenRulesLines({ ...rules, endMode: 'rounds' }, t)[5], 'game.forbidden_rules_cycles(5)');
 });
 
 // ── Journey / Assembly / Draft ─────────────────────────────────────────────────

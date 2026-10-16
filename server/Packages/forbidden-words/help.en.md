@@ -1,17 +1,21 @@
 # Forbidden Words
 
-Describe a target to your teammate without saying the target or any word listed on its private card. The other team supplies a monitor. Corro never listens to, records or transcribes the conversation: people decide when an answer is correct and when a forbidden word was used.
+Describe a target to the guesser without saying the target or any word listed on its private card, while a monitor listens for slips. Corro never listens to, records or transcribes the conversation: people decide when an answer is correct and when a forbidden word was used.
 
 ## Teams and roles
 
-The host creates two equal teams. Turns alternate between them.
+Every turn has three roles.
 
 - The **clue-giver** sees the private card, speaks clues and controls Correct and Pass.
 - The **guesser** listens and says possible answers.
-- The opposing **monitor** also sees the private card and reports when the clue-giver says the target or any listed word.
-- Other players support their team and wait for their next role.
+- The **monitor** also sees the private card and reports when the clue-giver says the target or any listed word.
+- Other players wait for their next role.
 
-Roles rotate in team order. Every player gives clues once in a complete rotation.
+The host chooses how the table plays when creating the game.
+
+**In two teams**, the classic: the host creates two equal teams of at least two, and turns alternate between them. The clue-giver and the guesser are teammates, the monitor comes from the other team, and roles rotate in team order, so every player gives clues once in a complete rotation. The team scores.
+
+**Everyone for themselves** works with three players or more, odd numbers included: there are no teams. Each turn the active player gives the clues, the next player guesses and the one after monitors, so in a complete rotation everybody gives, guesses and monitors once. A correct guess scores a point for the clue-giver **and** for the guesser; a reported slip costs the clue-giver alone. The match is won by the player with the most points.
 
 ## Starting a turn
 
@@ -32,7 +36,7 @@ The clue-giver describes the target aloud. The guesser answers aloud. Corro deli
 - **Target or forbidden word** is controlled only by the monitor. It removes one point and deals another card.
 - When time expires, Corro closes the turn automatically and rotates the roles.
 
-The score is allowed to fall below zero. How the match ends is the host's choice when creating it: **by rounds**, playing the rotations they chose, after which the higher score wins — a tie adding another complete rotation, a sudden-death round — or **by points**, won by the first team to reach the figure set. Either way both teams always receive the same number of turns: a match on points does not stop the moment somebody crosses, but when the other team has had its turns.
+The score is allowed to fall below zero. How the match ends is the host's choice when creating it: **by rounds**, playing the rotations they chose, after which the higher score wins — a tie at the top adding another complete rotation, a sudden-death round — or **by points**, won by the first team or player to reach the figure set. Either way every side always receives the same number of turns: a match on points does not stop the moment somebody crosses, but when everyone has had their turn.
 
 ## Playing with a screen reader
 
@@ -41,8 +45,8 @@ Focus enters the role table. The private card is this family's board: **Enter** 
 - Press **Enter** on the private card to start the timer; once it is running, **Enter** marks the word guessed and deals the next one.
 - As clue-giver, press **P** to pass a word you cannot get out; the next one arrives without stopping the clock. If you have spent every pass in the turn, the key says so.
 - Press **Escape** from anywhere on the surface to come back to the words.
-- Press **S** on the game surface to hear your team, score and role.
-- Press **Shift+S** to hear the opposing team's score.
+- Press **S** on the game surface to hear your score and role, with your team when playing in teams.
+- Press **Shift+S** to hear the opposing team's score, or every other player's when everyone plays for themselves.
 - Press **R** to hear how many seconds remain on the timer. Before a turn starts, it confirms that the timer is not running.
 - As monitor, press **V** from the private card or role table when the clue-giver says the target or any listed forbidden word.
 - **Tab** and **Shift+Tab** still move through the private card and the actions available to your role. Controls that cannot act remain focusable and explain what is missing.

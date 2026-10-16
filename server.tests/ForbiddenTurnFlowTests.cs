@@ -119,6 +119,106 @@ public class ForbiddenTurnFlowTests
 		Assert.Equal("FORBIDDEN_NO_PASSES", Assert.IsType<ErrorResponse>(refused).Code);
 	}
 
+	private static async Task<(GameContext Context, ForbiddenState State, ForbiddenRulesConfig Rules)> StartedSoloTurn()
+	{
+		var definition = await new CorroPackageLoader().LoadAsync(CorroTestPaths.PackageDir("forbidden-words"));
+		var players = Enumerable.Range(0, 3).Select(index => TestFixtures.NewPlayer($"p{index}", token: definition.Manifest.Tokens[index].Id)).ToList();
+		var game = new ForbiddenFamily().CreateGame(new FamilyStartContext
+		{
+			Players = players, Definition = definition, Lang = "en",
+			RuleValues = new()
+			{
+				["forbiddenMode"] = System.Text.Json.JsonSerializer.SerializeToElement("solo"),
+				// One rotation: the shortest match the rules allow, whatever the package ships.
+				["forbiddenCycles"] = System.Text.Json.JsonSerializer.SerializeToElement(1),
+			},
+		});
+		var rules = game.State.ForbiddenRules!;
+		var context = TestFixtures.NewContext(game.State, forbiddenRules: rules);
+		Assert.IsType<ForbiddenActionResponse>(
+			await new ForbiddenStartHandler().HandleAsync(new ForbiddenStartCommand { PlayerId = "p0" }, context));
+		return (context, game.State.Forbidden!, rules);
+	}
+
+	// Everyone for themselves speaks in names, never in team colours: every line the team seating
+	// says about "the Red team" has a counterpart here that names the person, because "the Ana
+	// gains a point" is not a sentence anybody should hear.
+	[Fact]
+	public async Task Everyone_for_themselves_credits_both_players_and_speaks_in_names()
+	{
+		var (context, state, rules) = await StartedSoloTurn();
+		var announcer = TestFixtures.Announcer(context);
+		Assert.Contains(announcer.Sent, sent => sent.Key == "game.forbidden_turn_started_solo" && (string)sent.Vars["player"] == "p0");
+		Assert.DoesNotContain(announcer.Sent, sent => sent.Key == "game.forbidden_turn_started");
+
+		var correct = await new ForbiddenCorrectHandler().HandleAsync(
+			new ForbiddenCorrectCommand { PlayerId = "p0", CardSequence = state.Turn.CardSequence }, context);
+
+		Assert.IsType<ForbiddenActionResponse>(correct);
+		Assert.Equal(new[] { rules.CorrectPoints, rules.CorrectPoints, 0 }, state.Teams.Select(side => side.Score));
+		var line = Assert.Single(announcer.Sent, sent => sent.Key == "game.forbidden_correct_solo");
+		Assert.Equal("p0", line.Vars["player"]);
+		Assert.Equal("p1", line.Vars["guesser"]);
+		Assert.Equal(rules.CorrectPoints, line.Vars["score"]);
+		Assert.Equal(rules.CorrectPoints, line.Vars["guesserScore"]);
+		Assert.False(line.Vars.ContainsKey("team"));
+
+		var violation = await new ForbiddenViolationHandler().HandleAsync(
+			new ForbiddenViolationCommand { PlayerId = "p2", CardSequence = state.Turn.CardSequence }, context);
+
+		Assert.IsType<ForbiddenActionResponse>(violation);
+		Assert.Equal(new[] { rules.CorrectPoints - rules.ViolationPenalty, rules.CorrectPoints, 0 }, state.Teams.Select(side => side.Score));
+		var slip = Assert.Single(announcer.Sent, sent => sent.Key == "game.forbidden_violation_solo");
+		Assert.Equal("p0", slip.Vars["clueGiver"]);
+		Assert.Equal("p2", slip.Vars["monitor"]);
+	}
+
+	[Fact]
+	public async Task A_solo_timeout_moves_the_three_roles_one_seat_along()
+	{
+		var (context, state, _) = await StartedSoloTurn();
+		state.Turn.StartedAt = DateTime.UtcNow.AddMinutes(-5);
+
+		var late = await new ForbiddenCorrectHandler().HandleAsync(new ForbiddenCorrectCommand
+		{
+			PlayerId = "p0",
+			CardSequence = state.Turn.CardSequence,
+		}, context);
+
+		Assert.True(Assert.IsType<ForbiddenActionResponse>(late).TurnEnded);
+		Assert.Equal(("p1", "p2", "p0"), (state.Turn.ClueGiverId, state.Turn.GuesserId, state.Turn.MonitorId));
+		Assert.Equal("p1", context.GameState.CurrentTurn);
+		var announcer = TestFixtures.Announcer(context);
+		Assert.Equal("p0", Assert.Single(announcer.Sent, sent => sent.Key == "game.forbidden_time_up_solo").Vars["player"]);
+		var preparing = Assert.Single(announcer.Sent, sent => sent.Key == "game.forbidden_turn_preparing_solo");
+		Assert.Equal("p1", preparing.Vars["clueGiver"]);
+		Assert.Equal("p1", preparing.Vars["actorId"]);
+		Assert.DoesNotContain(announcer.Sent, sent => sent.Key is "game.forbidden_time_up" or "game.forbidden_turn_preparing");
+	}
+
+	[Fact]
+	public async Task A_solo_match_is_won_by_name_once_the_rotation_leaves_a_lone_leader()
+	{
+		var (context, state, _) = await StartedSoloTurn();
+		state.Teams[2].Score = 6; // nobody else scores: p2 leads alone once everyone has given clues
+		var announcer = TestFixtures.Announcer(context);
+
+		for (var turn = 0; turn < 3; turn++)
+		{
+			state.Turn.Phase = ForbiddenTurnPhase.Active;
+			state.Turn.StartedAt = DateTime.UtcNow.AddMinutes(-5);
+			await new ForbiddenExpireTurnHandler().HandleAsync(new ForbiddenExpireTurnCommand { PlayerId = state.Turn.ClueGiverId }, context);
+		}
+
+		Assert.True(context.GameState.IsGameOver);
+		Assert.Equal("p2", context.GameState.WinnerId);
+		var won = Assert.Single(announcer.Sent, sent => sent.Key == "game.forbidden_won_solo");
+		Assert.Equal("p2", won.Vars["player"]);
+		Assert.Equal("p2", won.Vars["actorId"]);
+		Assert.Equal("p2", Assert.Single(announcer.Sent, sent => sent.Key == "game.game_over").Vars["winner"]);
+		Assert.DoesNotContain(announcer.Sent, sent => sent.Key == "game.forbidden_team_won");
+	}
+
 	[Fact]
 	public async Task Timeout_rotates_team_and_roles_without_accepting_late_card_action()
 	{

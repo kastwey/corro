@@ -10,12 +10,25 @@ public static class ForbiddenRulebook
 {
 	public sealed record TurnAdvance(bool GameOver, int? WinnerTeamIndex, bool TieBreakerStarted);
 
+	/// <summary>
+	/// The sides of a match: two equal teams in team play, or one side per player when everyone
+	/// plays for themselves. Scores, turns taken and the rotation all live on the side, so the rest
+	/// of the rulebook never asks which seating it is running — only the role assignment does.
+	/// </summary>
 	public static ForbiddenState CreateInitialState(
 		IReadOnlyList<IReadOnlyList<string>> arrangedTeams,
 		IReadOnlyList<ForbiddenWordDef> deck,
 		ForbiddenRulesConfig rules)
 	{
-		if (arrangedTeams.Count != 2 || arrangedTeams.Any(team => team.Count < 2)
+		if (rules.PlaysSolo())
+		{
+			if (arrangedTeams.Count < 3 || arrangedTeams.Any(side => side.Count != 1))
+			{
+				throw new InvalidOperationException(
+					"forbidden games with everyone for themselves need at least three players, one per side.");
+			}
+		}
+		else if (arrangedTeams.Count != 2 || arrangedTeams.Any(team => team.Count < 2)
 			|| arrangedTeams[0].Count != arrangedTeams[1].Count)
 		{
 			throw new InvalidOperationException("forbidden games need two equal teams with at least two players each.");
@@ -73,7 +86,42 @@ public static class ForbiddenRulebook
 		return card;
 	}
 
-	/// <summary>Close the active team's turn and either prepare the next alternating team or
+	/// <summary>The side a player scores for: their team, or themselves.</summary>
+	public static ForbiddenTeamState SideOf(ForbiddenState state, string playerId)
+		=> state.Teams.First(side => side.MemberIds.Contains(playerId));
+
+	/// <summary>
+	/// A correct guess: the active side scores, and when everyone plays for themselves the guesser
+	/// scores too — guessing has to pay, or the only player with a reason to try is the one giving
+	/// the clues, and the monitor (the one player NOT gaining this turn) has a reason to listen.
+	/// Returns the sides credited, the clue-giver's first.
+	/// </summary>
+	public static IReadOnlyList<ForbiddenTeamState> AwardCorrect(ForbiddenState state, ForbiddenRulesConfig rules)
+	{
+		var turn = state.Turn;
+		var credited = new List<ForbiddenTeamState> { state.Teams[turn.TeamIndex] };
+		if (rules.PlaysSolo())
+		{
+			credited.Add(SideOf(state, turn.GuesserId));
+		}
+		foreach (var side in credited)
+		{
+			side.Score += rules.CorrectPoints;
+		}
+		turn.CorrectCount++;
+		return credited;
+	}
+
+	/// <summary>A reported slip costs the side that spoke it — the clue-giver's, in either seating.</summary>
+	public static ForbiddenTeamState PenaliseViolation(ForbiddenState state, ForbiddenRulesConfig rules)
+	{
+		var side = state.Teams[state.Turn.TeamIndex];
+		side.Score -= rules.ViolationPenalty;
+		state.Turn.ViolationCount++;
+		return side;
+	}
+
+	/// <summary>Close the active side's turn and either prepare the next side in rotation or
 	/// decide the match after a complete clue-giver rotation. A tie adds one whole rotation.</summary>
 	public static TurnAdvance CompleteTurn(
 		ForbiddenState state,
@@ -84,16 +132,17 @@ public static class ForbiddenRulebook
 		completedTeam.TurnsTaken++;
 		state.Turn.Phase = ForbiddenTurnPhase.Finished;
 
-		// Ending on a target score: the first team there wins — but only once BOTH have taken the
-		// same number of turns. Stopping the moment a team crosses would hand the match to
+		// Ending on a target score: the first side there wins — but only once EVERY side has taken
+		// the same number of turns. Stopping the moment a side crosses would hand the match to
 		// whoever happened to play first, and equal opportunity is the rule this family is built
 		// on (it is why a tie adds a WHOLE rotation rather than one turn). Level on the target,
 		// nobody has won yet and play continues.
+		var ranked = state.Teams.OrderByDescending(team => team.Score).ToList();
+		var leaderAlone = ranked[0].Score != ranked[1].Score;
 		if (rules.EndMode == "score")
 		{
 			var levelTurns = state.Teams.Select(team => team.TurnsTaken).Distinct().Count() == 1;
-			var ranked = state.Teams.OrderByDescending(team => team.Score).ToList();
-			if (levelTurns && ranked[0].Score >= rules.TargetScore && ranked[0].Score != ranked[1].Score)
+			if (levelTurns && ranked[0].Score >= rules.TargetScore && leaderAlone)
 			{
 				return new TurnAdvance(
 					GameOver: true,
@@ -108,16 +157,15 @@ public static class ForbiddenRulebook
 		if (cycleComplete)
 		{
 			// Rotations decide the match only when the host asked for a fixed length; on a target
-			// score they just keep dealing turns until somebody gets there.
+			// score they just keep dealing turns until somebody gets there. A lead shared at the
+			// top — by two teams, or by two of five players — is what a rotation more settles.
 			if (rules.EndMode != "score" && state.Cycle >= rules.Cycles)
 			{
-				var first = state.Teams[0].Score;
-				var second = state.Teams[1].Score;
-				if (first != second)
+				if (leaderAlone)
 				{
 					return new TurnAdvance(
 						GameOver: true,
-						WinnerTeamIndex: first > second ? 0 : 1,
+						WinnerTeamIndex: ranked[0].TeamIndex,
 						TieBreakerStarted: false);
 				}
 				tieBreaker = true;
@@ -141,6 +189,23 @@ public static class ForbiddenRulebook
 		int turnNumber,
 		ForbiddenRulesConfig rules)
 	{
+		if (rules.PlaysSolo())
+		{
+			// Everyone for themselves: the active player gives the clues, the next seat guesses and
+			// the one after monitors. Over a whole rotation every player holds every role once, so
+			// the seating is as fair as two teams — with any number of players from three up.
+			var count = teams.Count;
+			return new ForbiddenTurnState
+			{
+				TurnNumber = turnNumber,
+				TeamIndex = activeTeamIndex,
+				ClueGiverId = teams[activeTeamIndex].MemberIds[0],
+				GuesserId = teams[(activeTeamIndex + 1) % count].MemberIds[0],
+				MonitorId = teams[(activeTeamIndex + 2) % count].MemberIds[0],
+				DurationSeconds = rules.TurnSeconds,
+			};
+		}
+
 		var team = teams[activeTeamIndex];
 		var rival = teams[(activeTeamIndex + 1) % teams.Count];
 		var index = team.TurnsTaken % team.MemberIds.Count;

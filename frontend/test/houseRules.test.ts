@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { setupDom } from './helpers/dom.js';
 import {
 	renderHouseRules, readHouseRuleValues, syncHouseRuleVisibility, watchHouseRuleVisibility,
+	requiredTeamCountUnder, houseRuleDefaults,
 } from '../src/houseRules.js';
 
 const tr = (k: string) => (({
@@ -218,4 +219,31 @@ test('focus never stays on a rule that is being hidden', () => {
 	// place in a long form.
 	assert.equal(document.activeElement, roundsRadio);
 	container.remove();
+});
+
+// A team-only board's requirement can hang on one of its own rules: Forbidden Words seated
+// "everyone for themselves" has no teams to arrange. The lobby asks this with whatever the panel
+// reads, so the sizes it offers follow the host's pick.
+test('requiredTeamCountUnder lifts a board\'s team requirement only under the waiving choice', () => {
+	const board = { requiredTeamCount: 2, teamsWaivedWhen: { rule: 'forbiddenMode', is: 'solo' } };
+	assert.equal(requiredTeamCountUnder(board, {}), 2);
+	assert.equal(requiredTeamCountUnder(board, { forbiddenMode: 'teams' }), 2);
+	assert.equal(requiredTeamCountUnder(board, { forbiddenMode: 'solo' }), null);
+	// A value of another rule, or of another kind, waives nothing.
+	assert.equal(requiredTeamCountUnder(board, { forbiddenEndMode: 'solo' }), 2);
+	assert.equal(requiredTeamCountUnder(board, { forbiddenMode: true }), 2);
+	// A board with no requirement has nothing to waive; one with no waiver keeps it whatever is chosen.
+	assert.equal(requiredTeamCountUnder({ requiredTeamCount: null, teamsWaivedWhen: null }, { forbiddenMode: 'solo' }), null);
+	assert.equal(requiredTeamCountUnder({ requiredTeamCount: 2 }, { forbiddenMode: 'solo' }), 2);
+});
+
+test('houseRuleDefaults reads what the panel would say before the host touches it', () => {
+	assert.deepEqual(houseRuleDefaults([
+		{ id: 'mode', type: 'choice', default: 'teams', editableByHost: true, options: [{ id: 'teams' }, { id: 'solo' }] },
+		{ id: 'unset', type: 'choice', editableByHost: true, options: [{ id: 'first' }, { id: 'second' }] },
+		{ id: 'cycles', type: 'number', default: 5, editableByHost: true },
+		{ id: 'auctions', type: 'toggle', default: true, editableByHost: true },
+		{ id: 'shortage', type: 'toggle', editableByHost: true },
+	]), { mode: 'teams', unset: 'first', cycles: 5, auctions: true, shortage: false });
+	assert.deepEqual(houseRuleDefaults(undefined), {});
 });

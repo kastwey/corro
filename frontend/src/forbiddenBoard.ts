@@ -1,5 +1,4 @@
 import { resetCardBoard, registerStatusKeys, CARD_STATUS_SHORTCUTS } from './cardBoardShell.js';
-import { teamDisplayName } from './enginePalette.js';
 import { buildForbiddenRulesLines } from './rulesSummaries.js';
 import {
 	forbiddenCastLines,
@@ -7,11 +6,13 @@ import {
 	forbiddenNowPlayingText,
 	forbiddenRivalStatus,
 	forbiddenRole,
+	forbiddenSideName,
 	forbiddenStatusText,
 	forbiddenTurnContextText,
 	formatForbiddenCard,
 } from './forbiddenRules.js';
 import { listenForShake, requestShakePermission } from './shakeGesture.js';
+import { forbiddenPlaysSolo } from './models.js';
 import type { GameState } from './models.js';
 import type { HelpShortcut } from './shortcuts.js';
 
@@ -489,7 +490,6 @@ export class ForbiddenBoard {
 	private localizeStatic(): void {
 		this.required('.forbidden-title').textContent = this.t('forbidden_title');
 		this.required('.forbidden-subtitle').textContent = this.t('forbidden_subtitle');
-		this.required('#forbidden-score-title').textContent = this.t('forbidden_scores_title');
 		this.required('#forbidden-now-title').textContent = this.t('forbidden_now_title');
 		this.required('#forbidden-turn-title').textContent = this.t('forbidden_turn_title');
 		this.required('.forbidden-secret__eyebrow').textContent = this.t('forbidden_secret_eyebrow');
@@ -518,16 +518,23 @@ export class ForbiddenBoard {
 		}
 	}
 
+	/** One line per side: the two teams, or — everyone for themselves — every player by name. */
 	private renderScores(gs: GameState): void {
 		const focusedTeam = document.activeElement?.closest<HTMLElement>('[data-team-index]')?.dataset.teamIndex;
+		const solo = forbiddenPlaysSolo(gs.forbiddenRules);
+		this.required('#forbidden-score-title').textContent =
+			this.t(solo ? 'forbidden_scores_title_solo' : 'forbidden_scores_title');
 		this.scoreList.innerHTML = '';
-		for (const team of gs.forbidden!.teams) {
+		for (const side of gs.forbidden!.teams) {
 			const item = document.createElement('li');
-			item.className = `forbidden-score forbidden-score--${team.teamIndex}`;
-			item.dataset.teamIndex = String(team.teamIndex);
-			const teamName = teamDisplayName(team.teamIndex, this.deps.tSync);
-			item.textContent = this.t('forbidden_score_line', { team: teamName, score: team.score });
-			item.setAttribute('aria-label', this.t('forbidden_score_line', { team: teamName, score: team.score }));
+			item.className = `forbidden-score forbidden-score--${side.teamIndex}`;
+			item.dataset.teamIndex = String(side.teamIndex);
+			const name = forbiddenSideName(gs, side, this.deps.tSync);
+			const line = solo
+				? this.t('forbidden_score_line_player', { player: name, score: side.score })
+				: this.t('forbidden_score_line', { team: name, score: side.score });
+			item.textContent = line;
+			item.setAttribute('aria-label', line);
 			this.scoreList.appendChild(item);
 		}
 		if (focusedTeam) this.scoreList.querySelector<HTMLElement>(`[data-team-index="${focusedTeam}"]`)?.focus();

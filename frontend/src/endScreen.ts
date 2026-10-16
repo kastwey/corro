@@ -23,7 +23,8 @@ const t = (key: string, vars?: Record<string, any>): string => tSync(`game.${key
 
 /**
  * Who actually WON: the winnerId alone, every member of a winning Journey seat, or every
- * member of the winning Forbidden Words team, plus the team name for the banner.
+ * member of the winning Forbidden Words team, plus the team name for the banner. A Forbidden
+ * Words side of ONE (everyone for themselves) is a lone winner, not a team.
  */
 export function winningSide(state: GameState): { ids: Set<string>; teamName: string | null } {
 	const ids = new Set<string>();
@@ -31,7 +32,7 @@ export function winningSide(state: GameState): { ids: Set<string>; teamName: str
 	const forbiddenTeam = state.winnerId
 		? state.forbidden?.teams.find(team => team.memberIds.includes(state.winnerId!)) ?? null
 		: null;
-	if (forbiddenTeam) {
+	if (forbiddenTeam && forbiddenTeam.memberIds.length >= 2) {
 		for (const memberId of forbiddenTeam.memberIds) ids.add(memberId);
 		return {
 			ids,

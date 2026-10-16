@@ -259,6 +259,14 @@ public sealed record HouseRuleCondition
 {
 	public string Rule { get; init; } = string.Empty;
 	public string Is { get; init; } = string.Empty;
+
+	/// <summary>True when the host's chosen values put <see cref="Rule"/> on option <see cref="Is"/>.
+	/// A missing rule, or a value that is not a choice id, does not hold.</summary>
+	public bool Holds(IReadOnlyDictionary<string, JsonElement>? values)
+		=> values is not null
+			&& values.TryGetValue(Rule, out var value)
+			&& value.ValueKind == JsonValueKind.String
+			&& value.GetString() == Is;
 }
 
 /// <summary>One option of a "choice" house rule: the id stored/applied and its i18n label.</summary>

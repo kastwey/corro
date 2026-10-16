@@ -14,6 +14,7 @@ import { i18nBinder } from '../i18nBinder.js';
 import { isLobbyPathFor, lobbyPathFor } from '../languageUrl.js';
 import {
 	renderHouseRules, readHouseRuleValues, syncHouseRuleVisibility, watchHouseRuleVisibility,
+	requiredTeamCountUnder, houseRuleDefaults,
 } from '../houseRules.js';
 import { GameSessionStore, SavedGame } from '../sessionUtils.js';
 import { dialogManager } from '../dialogManager.js';
@@ -477,6 +478,16 @@ class UnifiedLobbyUI {
 		getElement<HTMLSelectElement>('max-players')?.addEventListener('change', () => {
 			if (this.uploadedPackage) this.renderTeamCountOptions(this.uploadedPackage);
 		});
+		// A board whose team requirement hangs on one of its own house rules (Forbidden Words,
+		// "everyone for themselves") changes shape when that rule is flipped: the table sizes it
+		// seats and whether there are teams to count at all are re-offered on the spot.
+		getElement('package-rules')?.addEventListener('change', event => {
+			const pkg = this.uploadedPackage;
+			const rule = (event.target as HTMLElement | null)?.dataset?.ruleId;
+			if (!pkg || !rule || rule !== pkg.teamsWaivedWhen?.rule) return;
+			this.renderPlayerCount(pkg);
+			this.renderTeamCountOptions(pkg);
+		});
 	}
 
 	/** Wires the .corro upload control: upload on file pick; a Remove button clears it. */
@@ -542,10 +553,6 @@ class UnifiedLobbyUI {
 		teamsGroup?.classList.toggle('hidden', raceSeats.length !== 4);
 		const teamsBox = getElement<HTMLInputElement>('race-teams');
 		if (teamsBox) teamsBox.checked = false;
-		// Fill the player-count selector from this board's supported range (min..max).
-		this.renderPlayerCount(pkg);
-		// Team families offer their legal equal-team layouts for the chosen player count.
-		this.renderTeamCountOptions(pkg);
 		// Forbidden Words exposes each real word deck as one shared match-language choice.
 		this.renderCreateContentLanguages(pkg, i18nBinder.getCurrentLanguage());
 		// Reset any previous board's dynamic rules, then render this board's.
@@ -563,6 +570,12 @@ class UnifiedLobbyUI {
 			// are property rules and would be nonsense here — hide the whole panel.
 			details?.classList.add('hidden');
 		}
+		// Fill the player-count selector from this board's supported range (min..max). After the
+		// rules, on purpose: a board's team requirement may hang on one of its own rules, and the
+		// sizes it seats are read off the panel as it stands.
+		this.renderPlayerCount(pkg);
+		// Team families offer their legal equal-team layouts for the chosen player count.
+		this.renderTeamCountOptions(pkg);
 		// Open the rules panel so the host actually sees the board's rules (both the shipped-board
 		// picker and the upload land here; previously only the upload path opened it, so a shipped
 		// board rendered its rules into a still-collapsed <details> — "nothing showed up inside").
@@ -654,8 +667,22 @@ class UnifiedLobbyUI {
 	}
 
 	/**
-	 * Journey offers optional equal teams. Forbidden Words always requires exactly two equal
-	 * teams. Hidden for other families and rebuilt with the chosen player count.
+	 * The team count a board requires under the host's CURRENT rule choices — read off the rules
+	 * panel once it is rendered, off the package defaults before that. The SERVER says which rule
+	 * waives the requirement; the lobby only follows it.
+	 */
+	private requiredTeamCount(pkg: PackageUploadResponse): number | null {
+		const panel = getElement('package-rules');
+		const values = panel && !panel.classList.contains('hidden')
+			? readHouseRuleValues(panel)
+			: houseRuleDefaults(pkg.houseRules);
+		return requiredTeamCountUnder(pkg, values);
+	}
+
+	/**
+	 * Journey offers optional equal teams. A team-only board (Forbidden Words in teams) requires
+	 * exactly its team count, and offers nothing else. Hidden for other families — and for a
+	 * team-only board playing without teams — and rebuilt with the chosen player count.
 	 */
 	private renderTeamCountOptions(pkg: PackageUploadResponse): void {
 		const group = getElement('team-count-group');
@@ -665,16 +692,17 @@ class UnifiedLobbyUI {
 		const chosen = select.value;
 		const players = Number(getElement<HTMLSelectElement>('max-players')?.value) || pkg.maxPlayers || 0;
 		const family = pkg.gameType ?? 'property';
+		const required = this.requiredTeamCount(pkg);
 		const counts: number[] = [];
-		if (family === 'journey') {
+		if (required) {
+			if (players % required === 0 && players / required >= 2) counts.push(required);
+		} else if (family === 'journey') {
 			for (let teams = 2; teams <= players / 2; teams++) {
 				if (players % teams === 0) counts.push(teams);
 			}
-		} else if (family === 'forbidden' && players >= 4 && players % 2 === 0) {
-			counts.push(2);
 		}
 
-		const entries: SelectOption[] = family === 'forbidden'
+		const entries: SelectOption[] = required
 			? []
 			: [{ value: '0', label: t('lobby.teamsNone') }];
 		for (const n of counts) {
@@ -687,7 +715,7 @@ class UnifiedLobbyUI {
 		}
 		syncSelectOptions(select, entries);
 		// Keep the host's pick when it survives the new player count; else back to "none".
-		select.value = counts.includes(Number(chosen)) ? chosen : (family === 'forbidden' ? '2' : '0');
+		select.value = counts.includes(Number(chosen)) ? chosen : (required ? String(required) : '0');
 		group.classList.toggle('hidden', counts.length === 0);
 	}
 
@@ -726,8 +754,9 @@ class UnifiedLobbyUI {
 		const max = Math.max(pkg.maxPlayers || 8, min);
 		// A team-only board (forbidden: clue-giver vs the opposing monitor) only seats tables that
 		// split evenly into its teams, with at least two players each. The SERVER says how many —
-		// the lobby no longer guesses which family that is.
-		const teams = pkg.requiredTeamCount ?? 0;
+		// the lobby no longer guesses which family that is — and which house rule waives them,
+		// after which every size in the package's range is on offer.
+		const teams = this.requiredTeamCount(pkg) ?? 0;
 		const counts: SelectOption[] = [];
 		for (let n = min; n <= max; n++) {
 			if (teams > 0 && (n % teams !== 0 || n / teams < 2)) continue;

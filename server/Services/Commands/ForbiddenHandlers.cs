@@ -1,4 +1,5 @@
 using CorroServer.Models;
+using CorroServer.Models.Corro;
 using CorroServer.Services.Corro.Families;
 using CorroServer.Services.Rules;
 
@@ -16,7 +17,7 @@ public static class ForbiddenTurnFlow
 			return new ErrorResponse { Message = "Wrong game family", Code = "WRONG_FAMILY" };
 		}
 		runtime = context.FamilyRuntime as ForbiddenRuntime ?? new ForbiddenRuntime(
-			context.GameState.ForbiddenRules ?? new CorroServer.Models.Corro.ForbiddenRulesConfig());
+			context.GameState.ForbiddenRules ?? new ForbiddenRulesConfig());
 		return null;
 	}
 
@@ -45,11 +46,13 @@ public static class ForbiddenTurnFlow
 	{
 		var state = context.GameState.Forbidden!;
 		var runtime = context.Family<ForbiddenRuntime>();
+		var solo = runtime.Rules.PlaysSolo();
 		var oldTurn = state.Turn;
 		var team = state.Teams[oldTurn.TeamIndex];
-		await context.Announce("game.forbidden_time_up", new()
+		await context.Announce(solo ? "game.forbidden_time_up_solo" : "game.forbidden_time_up", new()
 		{
-			["team"] = ForbiddenFamily.TeamVar(team.TeamIndex),
+			// The same fact under either seating: who just played, and where that leaves them.
+			[solo ? "player" : "team"] = ForbiddenFamily.SideVar(context.GameState, team.TeamIndex),
 			["correct"] = oldTurn.CorrectCount,
 			["score"] = team.Score,
 		});
@@ -61,24 +64,34 @@ public static class ForbiddenTurnFlow
 		{
 			ForbiddenFamily.FinishGame(context.GameState, winnerIndex);
 			var winner = state.Teams.First(entry => entry.TeamIndex == winnerIndex);
-			await context.Announce("game.forbidden_team_won", new()
+			var winnerVar = ForbiddenFamily.SideVar(context.GameState, winnerIndex);
+			if (solo)
 			{
-				["team"] = ForbiddenFamily.TeamVar(winnerIndex),
-				["score"] = winner.Score,
-			});
-			await context.Announce("game.game_over", new()
+				await context.Announce("game.forbidden_won_solo", new()
+				{
+					["player"] = winnerVar,
+					["score"] = winner.Score,
+					["actorId"] = winner.MemberIds[0],
+				});
+			}
+			else
 			{
-				["winner"] = ForbiddenFamily.TeamVar(winnerIndex),
-			});
+				await context.Announce("game.forbidden_team_won", new()
+				{
+					["team"] = winnerVar,
+					["score"] = winner.Score,
+				});
+			}
+			await context.Announce("game.game_over", new() { ["winner"] = winnerVar });
 			return new ForbiddenActionResponse { Action = "timeout", TurnEnded = true, GameEnded = true };
 		}
 
 		if (advance.TieBreakerStarted)
 		{
-			await context.Announce("game.forbidden_tie_breaker", new()
+			await context.Announce(solo ? "game.forbidden_tie_breaker_solo" : "game.forbidden_tie_breaker", new()
 			{
 				["cycle"] = state.Cycle,
-				["score"] = state.Teams[0].Score,
+				["score"] = state.Teams.Max(side => side.Score),
 			});
 		}
 		context.GameState.CurrentTurn = state.Turn.ClueGiverId;
@@ -90,14 +103,14 @@ public static class ForbiddenTurnFlow
 		=> ForbiddenRulebook.IsExpired(state.Turn, DateTime.UtcNow);
 
 	public static string PlayerName(GameState state, string playerId)
-		=> state.Players.First(player => player.Id == playerId).Name;
+		=> ForbiddenFamily.PlayerName(state, playerId);
 }
 
 public sealed class ForbiddenStartHandler : PlayerCommandHandler<ForbiddenStartCommand>
 {
 	protected override async Task<ServerResponse> HandleAsync(ForbiddenStartCommand command, Player player, GameContext context)
 	{
-		if (ForbiddenTurnFlow.RequireState(context, out var state, out _) is { } stateError)
+		if (ForbiddenTurnFlow.RequireState(context, out var state, out var runtime) is { } stateError)
 		{
 			return stateError;
 		}
@@ -113,13 +126,21 @@ public sealed class ForbiddenStartHandler : PlayerCommandHandler<ForbiddenStartC
 
 		turn.StartedAt = DateTime.UtcNow;
 		turn.Phase = ForbiddenTurnPhase.Active;
-		await context.Announce("game.forbidden_turn_started", new()
+		var vars = new Dictionary<string, object>
 		{
 			["player"] = player.Name,
-			["team"] = ForbiddenFamily.TeamVar(turn.TeamIndex),
 			["seconds"] = turn.DurationSeconds,
 			["actorId"] = player.Id,
-		});
+		};
+		if (runtime.Rules.PlaysSolo())
+		{
+			await context.Announce("game.forbidden_turn_started_solo", vars);
+		}
+		else
+		{
+			vars["team"] = ForbiddenFamily.TeamVar(turn.TeamIndex);
+			await context.Announce("game.forbidden_turn_started", vars);
+		}
 		return new ForbiddenActionResponse { Action = "start" };
 	}
 }
@@ -142,20 +163,28 @@ public sealed class ForbiddenCorrectHandler : PlayerCommandHandler<ForbiddenCorr
 		}
 
 		var turn = state.Turn;
-		var team = state.Teams[turn.TeamIndex];
 		var target = turn.Target ?? string.Empty;
-		team.Score += runtime.Rules.CorrectPoints;
-		turn.CorrectCount++;
-		await context.Announce("game.forbidden_correct", new()
+		var credited = ForbiddenRulebook.AwardCorrect(state, runtime.Rules);
+		var vars = new Dictionary<string, object>
 		{
 			["player"] = player.Name,
 			["guesser"] = ForbiddenTurnFlow.PlayerName(context.GameState, turn.GuesserId),
 			["target"] = target,
-			["team"] = ForbiddenFamily.TeamVar(team.TeamIndex),
 			["points"] = runtime.Rules.CorrectPoints,
-			["score"] = team.Score,
+			["score"] = credited[0].Score,
 			["actorId"] = player.Id,
-		});
+		};
+		if (runtime.Rules.PlaysSolo())
+		{
+			// Two people just scored, so the line names both totals: the clue-giver's, then the guesser's.
+			vars["guesserScore"] = credited[1].Score;
+			await context.Announce("game.forbidden_correct_solo", vars);
+		}
+		else
+		{
+			vars["team"] = ForbiddenFamily.TeamVar(credited[0].TeamIndex);
+			await context.Announce("game.forbidden_correct", vars);
+		}
 		ForbiddenRulebook.DealNextCard(state, context.GameState.ForbiddenDeck!);
 		return new ForbiddenActionResponse { Action = "correct" };
 	}
@@ -214,20 +243,26 @@ public sealed class ForbiddenViolationHandler : PlayerCommandHandler<ForbiddenVi
 		}
 
 		var turn = state.Turn;
-		var team = state.Teams[turn.TeamIndex];
 		var target = turn.Target ?? string.Empty;
-		team.Score -= runtime.Rules.ViolationPenalty;
-		turn.ViolationCount++;
-		await context.Announce("game.forbidden_violation", new()
+		var penalised = ForbiddenRulebook.PenaliseViolation(state, runtime.Rules);
+		var vars = new Dictionary<string, object>
 		{
 			["monitor"] = player.Name,
 			["clueGiver"] = ForbiddenTurnFlow.PlayerName(context.GameState, turn.ClueGiverId),
 			["target"] = target,
-			["team"] = ForbiddenFamily.TeamVar(team.TeamIndex),
 			["points"] = runtime.Rules.ViolationPenalty,
-			["score"] = team.Score,
+			["score"] = penalised.Score,
 			["actorId"] = player.Id,
-		});
+		};
+		if (runtime.Rules.PlaysSolo())
+		{
+			await context.Announce("game.forbidden_violation_solo", vars);
+		}
+		else
+		{
+			vars["team"] = ForbiddenFamily.TeamVar(penalised.TeamIndex);
+			await context.Announce("game.forbidden_violation", vars);
+		}
 		ForbiddenRulebook.DealNextCard(state, context.GameState.ForbiddenDeck!);
 		return new ForbiddenActionResponse { Action = "violation" };
 	}

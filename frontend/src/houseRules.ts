@@ -149,6 +149,35 @@ export function applyHouseRuleValues(
 	});
 }
 
+/**
+ * How many teams a board requires UNDER the host's current choices: its declared count, unless
+ * the choice that waives them is selected — the forbidden family seated "everyone for
+ * themselves" has no teams to arrange, and offers every table size from three up. The values
+ * are whatever the rules panel currently reads (or the package defaults before it is rendered),
+ * so the player-count and team-count selectors follow the host's pick as they make it.
+ */
+export function requiredTeamCountUnder(
+	pkg: { requiredTeamCount?: number | null; teamsWaivedWhen?: { rule: string; is: string } | null },
+	values: Record<string, boolean | number | string>,
+): number | null {
+	const required = pkg.requiredTeamCount ?? null;
+	const waiver = pkg.teamsWaivedWhen;
+	if (required && waiver && values[waiver.rule] === waiver.is) return null;
+	return required;
+}
+
+/** The value each declared rule starts on, as {ruleId: default}: what the panel would read
+ *  before the host touches anything, and the answer when it has not been rendered yet. */
+export function houseRuleDefaults(rules: HouseRuleDef[] | undefined): Record<string, boolean | number | string> {
+	const out: Record<string, boolean | number | string> = {};
+	for (const rule of rules ?? []) {
+		if (rule.type === 'number') out[rule.id] = Number(rule.default ?? 0);
+		else if (rule.type === 'choice') out[rule.id] = typeof rule.default === 'string' ? rule.default : rule.options?.[0]?.id ?? '';
+		else out[rule.id] = rule.default === true;
+	}
+	return out;
+}
+
 /** Reads the rendered rule inputs back into a {ruleId: value} map: boolean for toggles,
  *  number for numbers, the selected option id (string) for a choice's radio group. */
 export function readHouseRuleValues(container: HTMLElement): Record<string, boolean | number | string> {

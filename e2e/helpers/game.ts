@@ -421,30 +421,18 @@ export async function createGame(
 	const firstPackageToken = packageManifest(boardId).tokens[0].id as string;
 	const tokenList = page.locator('.token-list:not(#join-token-list)');
 	await expect(tokenList.locator(`input[value="${firstPackageToken}"]`)).toBeAttached();
-	// Player count first: the journey team-count options depend on it.
-	if (opts.maxPlayers) await page.selectOption('#max-players', String(opts.maxPlayers));
-	if (opts.teamCount) await page.selectOption('#team-count', String(opts.teamCount));
-	if (opts.contentLanguage) await page.selectOption('#content-language', opts.contentLanguage);
-	// A signed-in player is not asked for a name at all: the account already has one, and the form
-	// says which. So the field is only filled when the form is actually asking.
-	await fillNameIfAsked(page, '#host-name', hostName);
-	// The real control is an invisible radio absolutely positioned inside the label (the
-	// label is the visual), so its own geometry is useless to Playwright's hit testing.
-	// Dispatch the click as an event: same app-visible behaviour (checked + change), no geometry.
-	await tokenList.locator('input.token-radio').first().dispatchEvent('click');
-	// Race boards: pick a specific seat (squadron colour); default = the first one.
-	if (opts.seat) {
-		await page.locator(`#seat-list input[value="${opts.seat}"]`).dispatchEvent('click');
-	}
 	// Flip declared toggle house rules in the package rules panel before creating.
 	// The long create form defeats Playwright's scroll-into-view inside this lobby (same as
 	// the token radios), so drive the controls by events rather than positional clicks.
+	// Rules go FIRST: a board's seating rule (Forbidden Words, everyone for themselves) decides
+	// which table sizes the player-count selector offers at all.
 	const houseRules = Object.entries(opts.houseRules ?? {});
 	if (houseRules.length > 0) {
 		await page.locator('#rules-details').evaluate(el => { (el as HTMLDetailsElement).open = true; });
 		for (const [ruleId, value] of houseRules) {
 			if (typeof value === 'string') {
-				// A choice rule is a radio group: pick the option by its value.
+				// A choice rule is a radio group: pick the option by its value. A real click, as a
+				// host's would be: the lobby listens for the change it raises.
 				await page.locator(`#package-rules [data-rule-id="${ruleId}"][value="${value}"]`)
 					.dispatchEvent('click');
 				continue;
@@ -461,6 +449,21 @@ export async function createGame(
 			}
 			if (await box.isChecked() !== value) await box.dispatchEvent('click');
 		}
+	}
+	// Player count next: the journey team-count options depend on it.
+	if (opts.maxPlayers) await page.selectOption('#max-players', String(opts.maxPlayers));
+	if (opts.teamCount) await page.selectOption('#team-count', String(opts.teamCount));
+	if (opts.contentLanguage) await page.selectOption('#content-language', opts.contentLanguage);
+	// A signed-in player is not asked for a name at all: the account already has one, and the form
+	// says which. So the field is only filled when the form is actually asking.
+	await fillNameIfAsked(page, '#host-name', hostName);
+	// The real control is an invisible radio absolutely positioned inside the label (the
+	// label is the visual), so its own geometry is useless to Playwright's hit testing.
+	// Dispatch the click as an event: same app-visible behaviour (checked + change), no geometry.
+	await tokenList.locator('input.token-radio').first().dispatchEvent('click');
+	// Race boards: pick a specific seat (squadron colour); default = the first one.
+	if (opts.seat) {
+		await page.locator(`#seat-list input[value="${opts.seat}"]`).dispatchEvent('click');
 	}
 	// Flake forensics: creating has failed intermittently under machine load with
 	// #lobby-code just staying empty, which the bare assertion reports as nothing but a

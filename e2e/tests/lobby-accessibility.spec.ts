@@ -345,6 +345,31 @@ test('Forbidden Words seats every even table up to ten', async ({ browser }) => 
 	}
 	await page.locator('#max-players').selectOption('10');
 	await expect(page.locator('#max-players')).toHaveValue('10');
+	await expect(page.locator('#team-count-group')).toBeVisible();
+	await flushAxeAudit(page);
+
+	// Everyone for themselves: the same board, every size from three up, and no teams to count.
+	// Asked for by a family of three, who found the lobby could not seat them at all.
+	await page.locator('#rules-details').evaluate(el => { (el as HTMLDetailsElement).open = true; });
+	const seating = page.locator('#package-rules fieldset.rule-choice', {
+		has: page.locator('[data-rule-id="forbiddenMode"]'),
+	});
+	await expect(seating.locator('legend')).toHaveText('Cómo se juega');
+	await expect(seating.locator('[data-rule-id="forbiddenMode"]').nth(0)).toBeChecked(); // teams, the classic
+	await page.locator('#package-rules [data-rule-id="forbiddenMode"][value="solo"]').dispatchEvent('click');
+	const soloCounts = await page.locator('#max-players option').evaluateAll(
+		options => options.map(option => (option as HTMLOptionElement).value));
+	expect(soloCounts).toEqual(['3', '4', '5', '6', '7', '8', '9', '10']);
+	await expect(page.locator('#team-count-group')).toBeHidden();
+	await page.locator('#max-players').selectOption('3');
+	await flushAxeAudit(page);
+
+	// And back: the even sizes return, with the team count beside them.
+	await page.locator('#package-rules [data-rule-id="forbiddenMode"][value="teams"]').dispatchEvent('click');
+	const teamCounts = await page.locator('#max-players option').evaluateAll(
+		options => options.map(option => (option as HTMLOptionElement).value));
+	expect(teamCounts).toEqual(['4', '6', '8', '10']);
+	await expect(page.locator('#team-count-group')).toBeVisible();
 	await flushAxeAudit(page);
 });
 

@@ -270,6 +270,14 @@ export interface ForbiddenRulesConfig {
   endMode?: string;
   /** Points that win the match when endMode is "score". */
   targetScore?: number;
+  /** House rule: "teams" (two equal teams, the classic) or "solo" (everyone for themselves —
+   *  the three roles rotate through the whole table, so three players or an odd table can play). */
+  mode?: string;
+}
+
+/** True when the match seats everyone for themselves rather than in two teams. */
+export function forbiddenPlaysSolo(rules: ForbiddenRulesConfig | null | undefined): boolean {
+  return rules?.mode === 'solo';
 }
 
 // ── Categories family ───────────────────────────────────────────────────────
@@ -1088,6 +1096,9 @@ export interface PackageUploadResponse {
   /** How many teams this board REQUIRES, or absent when team play is optional. The player-count
    *  selector offers only the table sizes that split evenly into that many. */
   requiredTeamCount?: number | null;
+  /** The house-rule choice under which the board plays WITHOUT its required teams (the forbidden
+   *  family seated "everyone for themselves"), or absent when the requirement always holds. */
+  teamsWaivedWhen?: { rule: string; is: string } | null;
   /**
    * An i18n key (in the PACKAGE's own translations) shown to the host as a notice when they create a
    * game with this board. Absent when the package declares none. The engine carries it verbatim and

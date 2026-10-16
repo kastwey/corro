@@ -116,6 +116,17 @@ public interface IGameFamily
 	int? RequiredTeamCount => null;
 
 	/// <summary>
+	/// The house-rule choice under which a team-only family plays WITHOUT teams at all, or null
+	/// (the default) when <see cref="RequiredTeamCount"/> holds whatever the host chooses. The
+	/// forbidden family waives its two teams when the host picks "everyone for themselves": the
+	/// roles then rotate through the whole table, so three people — or any odd number — can play.
+	/// The lobby carries the condition to the client, which re-offers the table sizes as the
+	/// host flips the choice; the server reads it through
+	/// <see cref="GameFamilies.RequiredTeamsUnder"/> wherever it checks the table's shape.
+	/// </summary>
+	HouseRuleCondition? TeamsWaivedWhen => null;
+
+	/// <summary>
 	/// The spoken line when a player leaves the game for good (the "leave game"
 	/// flow). Only the property family has an estate to forfeit — its override keeps the
 	/// bankruptcy wording; everywhere else leaving is a plain retirement.

@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace CorroServer.Services.Corro.Families;
 
 /// <summary>
@@ -40,4 +42,16 @@ public static class GameFamilies
 		=> !string.IsNullOrWhiteSpace(gameType) && ByType.TryGetValue(gameType, out var family)
 			? family
 			: ByType["property"];
+
+	/// <summary>
+	/// The number of teams a family requires UNDER the host's chosen house rules: its
+	/// <see cref="IGameFamily.RequiredTeamCount"/>, unless the choice named by
+	/// <see cref="IGameFamily.TeamsWaivedWhen"/> is selected, in which case none. Every place the
+	/// lobby checks a table's shape (creation, a rule change while waiting, the start) asks this,
+	/// so a family's team requirement and its waiver are read the same way everywhere.
+	/// </summary>
+	public static int? RequiredTeamsUnder(this IGameFamily family, IReadOnlyDictionary<string, JsonElement>? ruleValues)
+		=> family.TeamsWaivedWhen is { } waiver && waiver.Holds(ruleValues)
+			? null
+			: family.RequiredTeamCount;
 }

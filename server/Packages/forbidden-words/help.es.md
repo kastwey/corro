@@ -1,17 +1,21 @@
 # Palabras prohibidas
 
-Describe un objetivo a tu compañero sin decir el objetivo ni ninguna palabra de su carta privada. El otro equipo aporta un supervisor. Corro nunca escucha, graba ni transcribe la conversación: las personas deciden cuándo una respuesta es correcta y cuándo se ha usado una palabra prohibida.
+Describe un objetivo a quien adivina sin decir el objetivo ni ninguna palabra de su carta privada, mientras un supervisor vigila los deslices. Corro nunca escucha, graba ni transcribe la conversación: las personas deciden cuándo una respuesta es correcta y cuándo se ha usado una palabra prohibida.
 
 ## Equipos y funciones
 
-El anfitrión crea dos equipos iguales. Los turnos se alternan entre ellos.
+Cada turno tiene tres funciones.
 
 - El **portavoz** ve la carta privada, da pistas y controla Correcta y Pasar.
 - El **adivinante** escucha y dice posibles respuestas.
-- El **supervisor** del equipo contrario también ve la carta privada y señala cuando el portavoz dice el objetivo o cualquier palabra de la lista.
-- Los demás jugadores apoyan a su equipo y esperan su próxima función.
+- El **supervisor** también ve la carta privada y señala cuando el portavoz dice el objetivo o cualquier palabra de la lista.
+- Los demás jugadores esperan su próxima función.
 
-Las funciones rotan siguiendo el orden del equipo. Cada persona es portavoz una vez en cada rotación completa.
+El anfitrión elige cómo se juega al crear la partida.
+
+**Por equipos**, el modo clásico: el anfitrión crea dos equipos iguales de al menos dos personas y los turnos se alternan entre ellos. El portavoz y el adivinante son compañeros, el supervisor lo aporta el equipo contrario y las funciones rotan siguiendo el orden del equipo, de modo que cada persona es portavoz una vez en cada rotación completa. Puntúa el equipo.
+
+**Todos contra todos** sirve para tres jugadores o más, también en número impar: no hay equipos. En cada turno el jugador activo da las pistas, el siguiente adivina y el de después supervisa, así que en una rotación completa todos dan pistas, adivinan y supervisan una vez. Cada acierto suma un punto al portavoz **y** al adivinante; un desliz señalado se lo resta solo al portavoz. Gana la persona con más puntos.
 
 ## Empezar un turno
 
@@ -32,7 +36,7 @@ El portavoz describe el objetivo en voz alta. El adivinante responde en voz alta
 - **Objetivo o palabra prohibida** solo está disponible para el supervisor. Resta un punto y reparte otra carta.
 - Cuando se agota el tiempo, Corro cierra el turno automáticamente y rota las funciones.
 
-La puntuación puede bajar de cero. Cómo termina la partida lo decide el anfitrión al crearla: **por rondas**, jugando las rotaciones que haya elegido y ganando entonces el equipo con más puntos —un empate añade otra rotación completa, una ronda de muerte súbita—, o **por puntos**, ganando el primer equipo que llegue a la cifra fijada. En ambos casos ambos equipos tienen siempre el mismo número de turnos: una partida por puntos no se corta en cuanto alguien cruza, sino cuando el otro equipo ha jugado sus turnos.
+La puntuación puede bajar de cero. Cómo termina la partida lo decide el anfitrión al crearla: **por rondas**, jugando las rotaciones que haya elegido y ganando entonces quien tenga más puntos —un empate en cabeza añade otra rotación completa, una ronda de muerte súbita—, o **por puntos**, ganando el primer equipo o jugador que llegue a la cifra fijada. En ambos casos todos tienen siempre el mismo número de turnos: una partida por puntos no se corta en cuanto alguien cruza, sino cuando los demás han jugado sus turnos.
 
 ## Cómo jugar con lector de pantalla
 
@@ -41,8 +45,8 @@ El foco entra en la mesa de funciones. La carta privada es el tablero de esta fa
 - Pulsa **Intro** en la carta privada para iniciar el temporizador; una vez en marcha, **Intro** marca la palabra como adivinada y reparte la siguiente.
 - Como portavoz, pulsa **P** para pasar la palabra que no consigues sacar; llega la siguiente sin parar el reloj. Si ya has gastado todos los pases del turno, la tecla te lo dice.
 - Pulsa **Escape** desde cualquier punto de la superficie para volver a las palabras.
-- Pulsa **S** en la superficie del juego para oír tu equipo, puntuación y función.
-- Pulsa **Shift+S** para oír la puntuación del equipo contrario.
+- Pulsa **S** en la superficie del juego para oír tu puntuación y tu función, con tu equipo si se juega por equipos.
+- Pulsa **Shift+S** para oír la puntuación del equipo contrario o, en todos contra todos, la de cada uno de los demás jugadores.
 - Pulsa **R** para oír cuántos segundos quedan en el temporizador. Antes de iniciar un turno, confirma que el temporizador no está en marcha.
 - Como supervisor, pulsa **V** desde la carta privada o la mesa de funciones cuando el portavoz diga el objetivo o cualquier palabra prohibida de la lista.
 - **Tab** y **Shift+Tab** siguen moviéndote entre la carta privada y las acciones de tu función. Los controles que no pueden actuar siguen siendo enfocables y explican qué falta.
