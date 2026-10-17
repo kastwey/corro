@@ -41,9 +41,12 @@ server's own build when one already happened.
 ## Writing a scenario
 
 - Import `nvdaTest` from `@guidepup/playwright` as `test`; the `nvda` fixture is a started NVDA.
-- Open a story with `page.goto('/gallery.html?story=<id>')`, call `nvda.navigateToWebContent()`,
-  put DOM focus on the story's first control, then press keys **through `nvda.press`** so the
-  screen reader owns the keyboard, exactly as a player's does.
+- Open a story with `page.goto('/gallery.html?story=<id>')`, bring the browser window to the
+  front with `bringWindowToFront(await page.title())` (`helpers/windowFocus.ts`; Guidepup's own
+  search only tries the next ten windows, which a developer's desktop exceeds), call
+  `nvda.navigateToWebContent()`, put DOM focus on the story's first control, then press keys
+  **through `nvda.press`** so the screen reader owns the keyboard, exactly as a player's does.
+  `openStory` in `tests/gallery-nvda.spec.ts` does all of that.
 - Read what was said with `heard(nvda)` (`helpers/speech.ts`): the whole phrase log since the last
   `nvda.clearSpokenPhraseLog()`, lower-cased and whitespace-normalised. Assert **facts**, with the
   loose patterns in `NVDA` (`NVDA.submenu`, `NVDA.unavailable`, `NVDA.selected`…) and

@@ -74,7 +74,10 @@ async function initGallery(): Promise<void> {
 		return;
 	}
 	section.hidden = false;
-	document.title = `${story.title} — Component gallery`;
+	// No punctuation in the title: the screen-reader suite finds the browser window by asking NVDA
+	// for its title and comparing it with this, and a dash NVDA chooses to voice ("em dash") would
+	// never match the text it was asked to find.
+	document.title = `${story.title} in the component gallery`;
 	title.textContent = story.title;
 	description.textContent = story.description;
 	story.mount(host, makeContext(log));

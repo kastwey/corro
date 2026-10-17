@@ -15,11 +15,16 @@
 import { nvdaTest as test } from '@guidepup/playwright';
 import { expect } from '@playwright/test';
 import { attachSpeech, heard, NVDA, pressAndSettle } from '../helpers/speech';
+import { bringWindowToFront } from '../helpers/windowFocus';
 
 /** Open one story, hand the page to NVDA, and move the reader onto the first control of the story. */
 async function openStory(page: import('@playwright/test').Page, nvda: import('@guidepup/playwright').NVDAPlaywright, id: string, firstControl: string) {
 	await page.goto(`/gallery.html?story=${id}`, { waitUntil: 'load' });
 	await page.locator('#story-host > *').first().waitFor();
+	// The browser window above every other application FIRST (helpers/windowFocus.ts): Guidepup
+	// only looks through the next ten windows, and a developer's desktop has more than that.
+	await page.bringToFront();
+	await bringWindowToFront(await page.title());
 	await nvda.navigateToWebContent();
 	// DOM focus on the first control of the story. Moving focus from the page is how a player's
 	// Tab lands there too; NVDA reports the newly focused control, and from here on the test
