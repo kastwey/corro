@@ -17,7 +17,7 @@ export const tabsStory: Story = {
 	title: 'Tabs',
 	description: 'One tab stop for the whole strip. Left and Right move between tabs and show their '
 		+ 'panel at once; Home and End jump to the ends; Tab goes into the open panel.',
-	mount(host, context) {
+	mount(host) {
 		const tablist = document.createElement('div');
 		tablist.id = 'story-tabs';
 		tablist.className = 'gallery-tabs';
@@ -51,9 +51,9 @@ export const tabsStory: Story = {
 			host.appendChild(tabpanel);
 		}
 
-		new Tabs({
-			tablist,
-			onSelect: tabId => context.announce(`Showing ${PANELS.find(panel => `story-tab-${panel.id}` === tabId)?.label ?? tabId}.`),
-		});
+		// Nothing is announced on selection, exactly as in the lobby: the selected tab takes focus
+		// and the screen reader's own report of it ("Lobby notices, tab, selected") IS the voice. A
+		// live-region line on top of that would talk over the report, and did in the first NVDA run.
+		new Tabs({ tablist });
 	},
 };

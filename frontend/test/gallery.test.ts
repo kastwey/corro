@@ -143,7 +143,8 @@ test('the tabs story shows exactly one panel and follows the arrows', async () =
 	tabs[0].dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
 	assert.equal(document.activeElement, tabs[1]);
 	assert.deepEqual(panels.map(p => p.hidden), [true, false, true]);
-	assert.deepEqual(ctx.announced, ['Showing Lobby notices.']);
+	// The focused tab's own screen-reader report is the voice; the story adds nothing on top.
+	assert.deepEqual(ctx.announced, []);
 });
 
 test('the combobox story filters and describes its results from the live region', async () => {

@@ -21,7 +21,7 @@ async function openStory(page: Page, id: string): Promise<void> {
 
 /** The gallery's announcement log: what the widget would have said through the game's announcer. */
 function log(page: Page) {
-	return page.locator('#gallery-log-entries li');
+	return page.locator('#gallery-log-entries p');
 }
 
 test('the index lists every story and each one mounts Axe-clean in both themes', async ({ browser }) => {
@@ -126,7 +126,8 @@ test('tabs: one tab stop, arrows select and reveal, Tab goes into the panel', as
 	await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
 	await expect(panels.nth(0)).toBeHidden();
 	await expect(panels.nth(1)).toBeVisible();
-	await expect(log(page).last()).toHaveText('Showing Lobby notices.');
+	// Selection is not announced: the focused tab's own report is the voice, as in the lobby.
+	await expect(log(page)).toHaveCount(0);
 	await flushAxeAudit(page);
 
 	await page.keyboard.press('End');

@@ -47,11 +47,17 @@ server's own build when one already happened.
   `nvda.navigateToWebContent()`, put DOM focus on the story's first control, then press keys
   **through `nvda.press`** so the screen reader owns the keyboard, exactly as a player's does.
   `openStory` in `tests/gallery-nvda.spec.ts` does all of that.
+- Start NVDA with `capture: true` (the spec's `test.use`). Guidepup's default keeps only the
+  first phrase after a key, and the widgets say their most important things second: the answer a
+  dialog focuses a moment after opening, the tab selected as the arrow lands, the search count
+  spoken once the typing pauses. Speech nobody's key caused is never recorded, so a live-region
+  line is heard only inside the window of the key that caused it.
 - Read what was said with `heard(nvda)` (`helpers/speech.ts`): the whole phrase log since the last
   `nvda.clearSpokenPhraseLog()`, lower-cased and whitespace-normalised. Assert **facts**, with the
-  loose patterns in `NVDA` (`NVDA.submenu`, `NVDA.unavailable`, `NVDA.selected`…) and
-  `toContain` for the component's own words. Never assert a whole sentence: the wording is NVDA's
-  and changes between versions; the fact is ours.
+  loose patterns in `NVDA` (`NVDA.submenu`, `NVDA.unavailable`, `NVDA.selected`, `NVDA.position`…)
+  and `toContain` for the component's own words. Never assert a whole sentence: the wording is
+  NVDA's and changes between versions; the fact is ours. NVDA does not name the role of a plain
+  menu entry ("Rename, 1 of 4"): the position count is what says it sits in a menu.
 - Keep NVDA on its defaults and the page in English. The role words asserted are NVDA's English
   ones; the component's content comes from the gallery, which `?lang=es` can switch when a
   Spanish scenario is wanted.

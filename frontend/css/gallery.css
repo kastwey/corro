@@ -248,11 +248,7 @@ body.gallery-page {
 	background: var(--surface-2);
 }
 
-.gallery-log ul {
+.gallery-log p {
 	margin: 0;
-	padding-left: 1.25rem;
-}
-
-.gallery-log li {
 	padding: 0.15rem 0;
 }

@@ -37,7 +37,7 @@ function renderIndex(list: HTMLElement, search: string, current: string | null):
 function makeContext(log: HTMLElement): StoryContext {
 	return {
 		announce: text => {
-			const entry = document.createElement('li');
+			const entry = document.createElement('p');
 			entry.textContent = text;
 			log.appendChild(entry);
 		},
