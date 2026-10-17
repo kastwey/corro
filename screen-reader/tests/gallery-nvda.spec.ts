@@ -12,8 +12,8 @@
 // and reads its speech over the same remote protocol the NVDA Remote add-on speaks. The browser is
 // Playwright's Chromium, headed, as the config requires.
 
-import { nvdaTest as test } from '@guidepup/playwright';
-import { expect } from '@playwright/test';
+import { nvdaTest as test, type NVDAPlaywright } from '@guidepup/playwright';
+import { expect, type Page } from '@playwright/test';
 import { attachSpeech, heard, NVDA } from '../helpers/speech';
 import { bringWindowToFront } from '../helpers/windowFocus';
 
@@ -21,7 +21,7 @@ import { bringWindowToFront } from '../helpers/windowFocus';
 test.use({ nvdaStartOptions: { capture: true } });
 
 /** Open one story, hand the page to NVDA, and move the reader onto the first control of the story. */
-async function openStory(page: import('@playwright/test').Page, nvda: import('@guidepup/playwright').NVDAPlaywright, id: string, firstControl: string) {
+async function openStory(page: Page, nvda: NVDAPlaywright, id: string, firstControl: string): Promise<void> {
 	await page.goto(`/gallery.html?story=${id}`, { waitUntil: 'load' });
 	await page.locator('#story-host > *').first().waitFor();
 	// The browser window above every other application FIRST (helpers/windowFocus.ts): Guidepup
