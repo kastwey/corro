@@ -57,7 +57,10 @@ server's own build when one already happened.
   loose patterns in `NVDA` (`NVDA.submenu`, `NVDA.unavailable`, `NVDA.selected`, `NVDA.position`…)
   and `toContain` for the component's own words. Never assert a whole sentence: the wording is
   NVDA's and changes between versions; the fact is ours. NVDA does not name the role of a plain
-  menu entry ("Rename, 1 of 4"): the position count is what says it sits in a menu.
+  menu entry ("Rename, 1 of 4"): the position count is what says it sits in a menu. And a
+  container's role ("tool bar", "menu") is spoken when focus *enters* it, never by re-reporting
+  the focused control, so a test that wants to hear it opens the story on the control before the
+  widget and sends the Tab through NVDA.
 - Keep NVDA on its defaults and the page in English. The role words asserted are NVDA's English
   ones; the component's content comes from the gallery, which `?lang=es` can switch when a
   Spanish scenario is wanted.

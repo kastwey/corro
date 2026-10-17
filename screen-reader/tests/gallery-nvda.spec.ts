@@ -125,7 +125,13 @@ test.describe('component gallery with NVDA', () => {
 	});
 
 	test('toolbar: a tool bar whose refused action is unavailable and explains itself', async ({ page, nvda }) => {
-		await openStory(page, nvda, 'toolbar', '#story-toolbar button');
+		// A container's role is spoken when focus ENTERS it, and NVDA's "report current focus"
+		// describes the object alone ("Roll the dice, button, R"). So the story is opened on the
+		// control just before the toolbar — the current story's link in the index — and the toolbar
+		// is reached the way a player reaches it: with a Tab that NVDA sends.
+		await openStory(page, nvda, 'toolbar', '#gallery-stories a[aria-current="page"]');
+		await nvda.clearSpokenPhraseLog();
+		await nvda.press('Tab');
 		const arrival = await heard(nvda);
 		expect(arrival, 'entering says tool bar, which is what makes the arrows mean something').toMatch(NVDA.toolbar);
 		expect(arrival).toContain('roll the dice');
