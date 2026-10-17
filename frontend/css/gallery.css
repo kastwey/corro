@@ -1,0 +1,258 @@
+/* gallery.css — the component gallery page (gallery.html).
+ *
+ * Only the page's own shell and the scaffolding a story needs around a widget live here. The
+ * widgets themselves wear the stylesheets they wear in the lobby and on the board, loaded by the
+ * page, so the gallery measures the real thing. */
+
+body.gallery-page {
+	/* global.css centres the lobby card; a gallery wants a readable column that grows with its
+	   content, and must scroll when a story is tall. */
+	align-items: stretch;
+	overflow: auto;
+}
+
+.gallery-page__main {
+	width: min(100%, 900px);
+	margin: 0 auto;
+	padding: clamp(1.25rem, 4vw, 2.5rem);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	background: var(--surface);
+	box-shadow: var(--shadow-md);
+}
+
+.gallery-page__toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding-bottom: 1rem;
+	border-bottom: 1px solid var(--border);
+}
+
+.gallery-page__back {
+	color: var(--text-muted);
+	font-weight: 700;
+}
+
+.gallery-page__main h1 {
+	margin: 1.5rem 0 0.5rem;
+}
+
+.gallery-page__intro {
+	color: var(--text-muted);
+	max-width: 70ch;
+}
+
+.gallery-page__stories {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem 1rem;
+	margin: 1.25rem 0;
+	padding: 0;
+	list-style: none;
+}
+
+.gallery-page__stories a {
+	display: inline-block;
+	padding: 0.4rem 0.75rem;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius);
+	color: var(--text);
+	text-decoration: none;
+}
+
+.gallery-page__stories a[aria-current="page"] {
+	border-color: var(--accent);
+	background: var(--accent-soft);
+	font-weight: 700;
+}
+
+.gallery-page__stories a:focus-visible {
+	outline: none;
+	box-shadow: var(--focus-ring);
+}
+
+.gallery-story {
+	margin-top: 1.5rem;
+	padding-top: 1.5rem;
+	border-top: 1px solid var(--border);
+}
+
+.gallery-story__description {
+	color: var(--text-muted);
+	max-width: 70ch;
+}
+
+/* The widget's room: a flat surface with a little air, so a popup or a toolbar has somewhere to
+   be and a focus ring is never clipped by the page edge. */
+.gallery-story__host {
+	position: relative;
+	margin-top: 1rem;
+	padding: 1.25rem;
+	border: 1px dashed var(--border-strong);
+	border-radius: var(--radius);
+	background: var(--surface-2);
+}
+
+/* forms.css stretches every button to its container for the lobby's forms; a widget's buttons are
+   their own width, as they are everywhere else the widgets appear. */
+.gallery-story__host .btn {
+	width: auto;
+	padding: 0.55rem 1rem;
+}
+
+.gallery-story__host .btn + .btn {
+	margin-left: 0.75rem;
+}
+
+/* ---- Tabs ---------------------------------------------------------------- */
+
+.gallery-tabs {
+	display: flex;
+	gap: 0.25rem;
+	border-bottom: 1px solid var(--border-strong);
+}
+
+.gallery-tabs__tab {
+	width: auto;
+	padding: 0.6rem 1rem;
+	background: transparent;
+	color: var(--text);
+	border: 1px solid transparent;
+	border-bottom: none;
+	border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+	box-shadow: none;
+	font-weight: 600;
+}
+
+.gallery-tabs__tab:hover {
+	transform: none;
+	background: var(--surface);
+}
+
+.gallery-tabs__tab[aria-selected="true"] {
+	background: var(--surface);
+	border-color: var(--border-strong);
+	color: var(--accent);
+}
+
+.gallery-tabs__panel {
+	padding: 1rem;
+	background: var(--surface);
+	border: 1px solid var(--border-strong);
+	border-top: none;
+	border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+.gallery-tabs__panel:focus-visible {
+	outline: none;
+	box-shadow: var(--focus-ring);
+}
+
+/* ---- Combobox ------------------------------------------------------------ */
+
+.gallery-combo label {
+	display: block;
+	margin-bottom: 0.4rem;
+	font-weight: 600;
+}
+
+/* ---- List with row actions ---------------------------------------------- */
+
+.gallery-list__sort {
+	display: flex;
+	gap: 0.5rem;
+	margin-bottom: 0.75rem;
+}
+
+.gallery-list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	display: grid;
+	gap: 0.5rem;
+}
+
+.gallery-list__row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem 1rem;
+	padding: 0.75rem 1rem;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius);
+	background: var(--surface);
+}
+
+.gallery-list__row:focus-visible {
+	outline: none;
+	box-shadow: var(--focus-ring);
+}
+
+.gallery-list__row-actions {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.gallery-list__row-actions .btn,
+.gallery-list__sort .btn {
+	margin: 0;
+	padding: 0.4rem 0.75rem;
+}
+
+.gallery-list__row-actions .btn[aria-pressed="true"],
+.gallery-list__sort .btn[aria-pressed="true"] {
+	border-color: var(--accent);
+	background: var(--accent-soft);
+}
+
+/* ---- Checkbox list -------------------------------------------------------- */
+
+.gallery-checkboxes {
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius);
+	padding: 0.75rem 1rem 1rem;
+}
+
+.gallery-checkboxes legend {
+	padding: 0 0.4rem;
+	font-weight: 700;
+}
+
+.gallery-checkboxes__row {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	padding: 0.35rem 0;
+}
+
+.gallery-checkboxes__row input {
+	width: 1.1rem;
+	height: 1.1rem;
+}
+
+.gallery-checkboxes__row label {
+	margin: 0;
+}
+
+/* ---- Announcement log ----------------------------------------------------- */
+
+.gallery-log {
+	margin-top: 0.5rem;
+	padding: 0.75rem 1rem;
+	min-height: 3rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface-2);
+}
+
+.gallery-log ul {
+	margin: 0;
+	padding-left: 1.25rem;
+}
+
+.gallery-log li {
+	padding: 0.15rem 0;
+}

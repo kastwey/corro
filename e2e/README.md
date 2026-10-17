@@ -108,6 +108,7 @@ Playwright, while root-level files accumulate stale visual states.
 | `lobby-accessibility.spec.ts` | Lobby-only Axe states: both themes, runtime language switch, create/join validation, invalid and successful `.corro` uploads, upload removal, unlock prompt/feedback, saved-game actions, and the complete hidden-package lifecycle (reveal → persist → delayed stage → create → code-free guest → browser board). |
 | `shedding-match-end.spec.ts` | A shedding match that actually ENDS: a whole Four Colours round played out card by card (the deal predicted from `cards.json`, playability read off the hand the server sends), plus the regression for a rounds ending that also announced a loss on the target it was not being played to. |
 | `voice.spec.ts` | Optional voice lifecycle with two players: deployment-gated lobby choice, host enable/disable, opt-in unmuted join, presence, active-speaker query, local volume, reversible host mute and every settled Axe state. |
+| `gallery.spec.ts` | The component gallery (`/gallery.html?story=<id>`): every reusable widget alone — popup menu with submenu and refused entry, tabs, combobox with its late-spoken count, toolbar, roster list with Shift+F10 menu, checkbox list, the two dialog voices — walked with the keyboard, Axe at every state, both themes. The `screen-reader/` suite hears the same pages with NVDA. |
 
 ## Writing a scenario
 

@@ -1,0 +1,65 @@
+# Screen-reader suite (NVDA through Guidepup)
+
+This suite listens to a **real screen reader**. [Guidepup](https://github.com/guidepup/guidepup)
+starts a portable NVDA, sends it keys and returns every phrase it speaks, through the same remote
+protocol the NVDA Remote add-on uses; `@guidepup/playwright` wraps that as a Playwright fixture
+(`nvdaTest`). The tests open the [component gallery](../frontend/src/gallery/) one widget at a
+time and assert the facts a player relies on being *spoken*: a menu is called a menu, a submenu
+says so, a refused action is "unavailable" and its reason is read, a tab is "selected", a search
+count is announced once the typing stops, a reading dialog is walked in browse mode.
+
+None of that can be checked on the DOM. The e2e suite proves the markup is right and Axe-clean;
+this one proves that Chromium's accessibility tree and NVDA's reading of it still turn that
+markup into the right words. When an NVDA or browser update stops saying "sub menu", this is the
+only layer that notices before a player does.
+
+## Where it runs
+
+Only on a **Windows desktop session**: NVDA is a Windows screen reader and reads whatever window
+has focus, so the browser is headed, there is one worker, and the files run serially
+(`withGuidepup` in `playwright.config.ts` enforces all three). GitHub's `windows-latest` runners
+are such a session: [`.github/workflows/screen-reader.yml`](../.github/workflows/screen-reader.yml)
+runs the suite nightly and on demand. It is deliberately **not** a required check on pull requests:
+a screen reader session is slower and less deterministic than a browser one, and the spoken-phrase
+log of every test is attached to the report so a red run is read, not retried.
+
+Locally, on a Windows machine with no other screen reader running:
+
+```powershell
+cd screen-reader
+npm install
+npx playwright install chromium
+npm run setup        # once per machine: guidepup setup --ci, then the portable NVDA it drives
+npm test             # starts the server in E2E mode on port 5699, runs every spec
+npm run report       # the HTML report, with the NVDA phrase logs attached
+```
+
+The server is the real one in its E2E environment (`dotnet run`, the same launch as `e2e/`), so
+the .NET 10 SDK and Node 20+ are needed. `SR_PORT` moves the port; `SR_PREBUILT=1` skips the
+server's own build when one already happened.
+
+## Writing a scenario
+
+- Import `nvdaTest` from `@guidepup/playwright` as `test`; the `nvda` fixture is a started NVDA.
+- Open a story with `page.goto('/gallery.html?story=<id>')`, call `nvda.navigateToWebContent()`,
+  put DOM focus on the story's first control, then press keys **through `nvda.press`** so the
+  screen reader owns the keyboard, exactly as a player's does.
+- Read what was said with `heard(nvda)` (`helpers/speech.ts`): the whole phrase log since the last
+  `nvda.clearSpokenPhraseLog()`, lower-cased and whitespace-normalised. Assert **facts**, with the
+  loose patterns in `NVDA` (`NVDA.submenu`, `NVDA.unavailable`, `NVDA.selected`…) and
+  `toContain` for the component's own words. Never assert a whole sentence: the wording is NVDA's
+  and changes between versions; the fact is ours.
+- Keep NVDA on its defaults and the page in English. The role words asserted are NVDA's English
+  ones; the component's content comes from the gallery, which `?lang=es` can switch when a
+  Spanish scenario is wanted.
+
+## Keeping it honest
+
+- Guidepup pins the NVDA it drives to its own version: bumping `@guidepup/guidepup` means a new
+  NVDA, and the first nightly after it is the place to read the logs.
+- A phrase that stops being spoken is a regression somewhere in the widget, Chromium or NVDA;
+  find which before loosening a pattern. Loosening is the last resort, and only to NVDA's new
+  wording for the *same* fact.
+- This suite covers what the gallery shows. A new reusable widget gets a story in
+  `frontend/src/gallery/catalogue.ts`, a spec in `e2e/tests/gallery.spec.ts`, and a scenario here
+  when what it says matters, which for an accessibility-first client is nearly always.

@@ -42,6 +42,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The component gallery (frontend/src/gallery.html + gallery/) is a development surface: the
+         E2E and screen-reader suites drive it, and a reviewer opens it to see one widget alone. It
+         is served from dist/ and wwwroot like every other page while developing and testing, but it
+         does not belong in the published application, so it is dropped from the publish artifact
+         here rather than left for every deployment to expose. -->
+    <Content Remove="wwwroot\gallery.html" />
+    <Content Remove="wwwroot\gallery\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- This deployment's privacy notice. It lives HERE and not in wwwroot for two reasons: wwwroot
          is generated (the frontend build wipes and re-mirrors it from frontend/dist, so anything
          else placed there is deleted on the next build), and this text is a TEMPLATE — served raw

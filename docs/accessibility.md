@@ -195,3 +195,34 @@ Every user-facing string exists in **both** `en.json` and `es.json` (base **and*
 where applicable). Automated parity/usage tests fail the build if a key is used but not
 translated, or a server `actorId` announcement lacks its `_self` twin — so the voice can
 never regress into reading a raw key aloud.
+
+## Hearing it: the component gallery and the screen-reader suite
+
+Everything above is checked on the DOM: the unit tests read attributes, the E2E suite reads the
+live region and runs Axe on every settled state. What none of that can check is the last metre —
+whether Chromium's accessibility tree and the screen reader still turn `aria-haspopup="menu"` into
+the word "sub menu", or `aria-disabled` into "unavailable" followed by the reason. That metre
+breaks without a line of this repository changing (a browser update, an NVDA update), and it is
+where a blind player lives.
+
+So the reusable widgets have a **gallery** (`frontend/src/gallery.html`, `frontend/src/gallery/`):
+one page that mounts ONE widget from invented data — the popup menu with its submenu and a refused
+entry, the tab strip, the combobox, the toolbar, the roster list with its Shift+F10 menu, the
+checkbox list, the two voices of the dialog manager. Each story calls the real component, so it is
+the lobby's and the board's code with nothing but a match removed, and the page is served by the
+same server (never published: `CorroServer.csproj` drops it). Three things use it:
+
+- `e2e/tests/gallery.spec.ts` walks every story with the keyboard and flushes Axe at every state,
+  so a shared widget is audited alone, in both themes, on every pull request.
+- `screen-reader/` drives a **real NVDA** over the same pages (Guidepup, which installs a portable
+  NVDA and reads its speech over the NVDA Remote protocol) and asserts the facts a player relies
+  on being *spoken*: menu, sub menu, unavailable plus the reason, selected, the search count once
+  the typing stops, a reading dialog walked in browse mode. Facts, with loose patterns — never the
+  sentence, which is NVDA's. It runs nightly and on demand on a Windows runner and is not a
+  required check; its spoken-phrase logs are attached to every report. [screen-reader/README.md](../screen-reader/README.md)
+  has the how and the rules.
+- A person reviewing a widget change opens `/gallery.html?story=<id>` and tries it, in both
+  themes, with their own screen reader.
+
+A new reusable widget is not finished until it has a story, its E2E states, and — since this is an
+accessibility-first client, nearly always — a scenario that says what it must be heard to say.

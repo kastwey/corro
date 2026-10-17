@@ -1,0 +1,68 @@
+# Screen reader: what the widgets SAY, heard by a real NVDA.
+#
+# screen-reader/ drives NVDA (through Guidepup) over the component gallery and asserts the facts a
+# player relies on being spoken: a menu is a menu, a submenu says so, a refused action is
+# unavailable and gives its reason, a tab is selected, a search count is read once the typing stops.
+# None of that can be checked on the DOM: it is Chromium's accessibility tree and NVDA's reading of
+# it, and either can change under an update without a line of this repository changing.
+#
+# It runs on a Windows desktop runner, nightly and on demand, and is NOT a required check: a screen
+# reader session is slower and less deterministic than a browser one, and a gate that goes red on
+# a lost keystroke is a gate people learn to ignore. A red run here is a finding to read
+# (the spoken-phrase logs are attached to the report), not a push to retry.
+name: Screen reader
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Nightly, after the day's merges. 03:17 UTC: off the hour, where everybody else's jobs queue.
+    - cron: '17 3 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  nvda:
+    name: NVDA over the component gallery
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/hidden-packages # the server stages every package it finds, as in e2e
+        with:
+          token: ${{ secrets.HIDDEN_PACKAGES_TOKEN }}
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: screen-reader/package-lock.json
+
+      # Build once, here, so the Playwright webServer launches with --no-build (SR_PREBUILT) and the
+      # frontend is compiled by this step rather than inside the server's start-up timeout.
+      - run: dotnet build server/CorroServer.csproj --nologo
+
+      - run: npm ci
+        working-directory: screen-reader
+      - run: npx playwright install chromium
+        working-directory: screen-reader
+      # Guidepup prepares the machine for screen reader automation (--ci answers every prompt) and
+      # installs the portable NVDA that matches the installed @guidepup/guidepup version.
+      - run: npm run setup
+        working-directory: screen-reader
+
+      - run: npm test
+        working-directory: screen-reader
+        env:
+          SR_PREBUILT: '1'
+
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: screen-reader-report
+          path: |
+            screen-reader/playwright-report/
+            screen-reader/test-results/
+          retention-days: 14

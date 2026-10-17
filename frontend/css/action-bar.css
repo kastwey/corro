@@ -310,6 +310,17 @@
 	background: transparent;
 }
 
+/* A refused entry UNDER the keyboard. The focus rule above paints the accent behind the entry and
+   the disabled rule keeps the muted ink, which together was muted-on-accent: unreadable (1.1:1 in
+   the light theme), and Axe never says so because it skips disabled controls. The component
+   gallery showed it first. A refused entry keeps its muted ink on the quiet surface, with the ring
+   and a border as the "you are here" — the same cue the toolbar gives its refused actions. */
+.popup-menu__item[aria-disabled="true"]:focus-visible {
+	background: var(--surface-3, #2a313f);
+	color: var(--text-muted, #9aa3b2);
+	border-color: var(--border, #3a4151);
+}
+
 .popup-menu__hint {
 	display: block;
 	padding: 0 0.85rem 0.35rem;
