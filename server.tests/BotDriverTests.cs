@@ -88,12 +88,118 @@ public class BotDriverTests
 
 		// The state change wakes the driver: the bot must draw AND play/discard, then the
 		// turn returns to the human — a full unattended bot turn.
+		//
+		// One deal in a hundred or so hands the bot a speed limit and the human the right of
+		// way: the bot's attack then lands on a victim holding the shield, and the GAME pauses
+		// for the human's coup fourré answer — which is correct play, and which this test used to
+		// sit out for thirty seconds and call a timeout. The human plays their part here, as a
+		// person would (the deterministic version of that deal is the test below).
+		await WaitUntilAsync(
+			() => svc.GameState.CurrentTurn == "a" || svc.GameState.Journey!.PendingCoup?.VictimId == "a",
+			"the turn to come back to the human, or a coup fourré to be offered to them");
+		if (svc.GameState.Journey!.PendingCoup?.VictimId == "a")
+		{
+			await svc.ExecuteCommandAsync(new JourneyCoupCommand { PlayerId = "a", Accept = false });
+		}
 		await WaitUntilAsync(() => svc.GameState.CurrentTurn == "a", "the turn to come back to the human");
 		// Deterministic traces, whatever the (shuffled) bot hand held: two draws left the
 		// pile, and the bot's hand is back to size after playing or discarding one card.
 		var journey = svc.GameState.Journey!;
 		Assert.Equal(94 - 2, journey.DrawCount); // 106 − 12 dealt − the human's draw − the bot's
 		Assert.Equal(6, JourneyRulebook.MemberOf(journey, "b").Hand.Count);
+	}
+
+	/// <summary>
+	/// Rig the deal so the bot's turn is an attack the human can answer: the bot holds one speed
+	/// limit and otherwise distance it cannot play while stopped, the human holds the right of way
+	/// (which shields the speed limit) at the back of their hand, and the next two cards of the pile
+	/// are distance too, so neither draw hands anybody a better play. Every card stays in the game:
+	/// the hands are refilled from the pool and the rest goes back on the pile.
+	/// </summary>
+	private static void DealASpeedLimitIntoTheRightOfWay(GameService svc)
+	{
+		var journey = svc.GameState!.Journey!;
+		var human = JourneyRulebook.MemberOf(journey, "a").Hand;
+		var bot = JourneyRulebook.MemberOf(journey, "b").Hand;
+		var pool = human.Concat(bot).Concat(journey.DrawPile).ToList();
+		human.Clear();
+		bot.Clear();
+		journey.DrawPile.Clear();
+
+		JourneyCardInstance Take(string cardId)
+		{
+			var card = pool.First(c => c.CardId == cardId);
+			pool.Remove(card);
+			return card;
+		}
+
+		bot.Add(Take("speed-limit"));
+		for (var i = 0; i < 5; i++) bot.Add(Take("distance-25"));
+		for (var i = 0; i < 5; i++) human.Add(Take("distance-25"));
+		human.Add(Take("right-of-way"));
+		var nextDraws = new[] { Take("distance-50"), Take("distance-50") };
+		journey.DrawPile.AddRange(pool);
+		journey.DrawPile.AddRange(nextDraws); // top last: the human draws one, the bot the other
+		JourneyRulebook.SyncCounts(journey);
+	}
+
+	// The failure this pins down was a flake: the test above timed out once in a long while, on
+	// whatever deal put a speed limit in the bot's hand and the right of way in the human's. The
+	// bot's attack then opens the victim's coup fourré window and the game waits — for the human,
+	// not for the bot — which is exactly what it should do, and what the driver must not "fix" by
+	// acting again or spinning.
+	[Theory]
+	[InlineData(false)]
+	[InlineData(true)]
+	public async Task The_bot_waits_for_the_humans_coup_fourre_answer_and_the_game_goes_on_from_it(bool accept)
+	{
+		var svc = await StartHumanVsBotAsync();
+		DealASpeedLimitIntoTheRightOfWay(svc);
+		var driver = new BotDriver(new BotOptions { ActionDelay = TimeSpan.Zero });
+		driver.Attach("g1", svc);
+
+		await svc.ExecuteCommandAsync(new JourneyDrawCommand { PlayerId = "a" });
+		var myCard = JourneyRulebook.MemberOf(svc.GameState!.Journey!, "a").Hand[0].InstanceId;
+		await svc.ExecuteCommandAsync(new JourneyDiscardCommand { PlayerId = "a", InstanceId = myCard });
+
+		// The bot draws and attacks; the human holds the shield, so the game pauses on them.
+		await WaitUntilAsync(() => svc.GameState.Journey!.PendingCoup != null, "the bot's speed limit to offer the coup fourré");
+		var journey = svc.GameState.Journey!;
+		var coup = journey.PendingCoup!;
+		Assert.Equal("a", coup.VictimId);
+		Assert.Equal("b", coup.AttackerId);
+		Assert.Equal("speedLimit", coup.HazardKind);
+		Assert.Equal("b", svc.GameState.CurrentTurn); // the attacker's turn is paused, not over
+		Assert.Contains("speedLimit", JourneyRulebook.SeatOf(journey, "a").Hazards);
+
+		// And it STAYS paused: the driver neither repeats the bot's move nor answers for the human.
+		await Task.Delay(200);
+		Assert.Same(coup, journey.PendingCoup);
+		Assert.Equal(94 - 2, journey.DrawCount);
+		Assert.Equal(6, JourneyRulebook.MemberOf(journey, "b").Hand.Count);
+
+		var response = await svc.ExecuteCommandAsync(new JourneyCoupCommand { PlayerId = "a", Accept = accept });
+
+		Assert.IsType<JourneyActionResponse>(response);
+		Assert.Null(journey.PendingCoup);
+		// Either answer ends the pause with the human to play: declining ends the bot's turn the
+		// ordinary way, accepting hands the turn to the coup's author with the hazard cancelled,
+		// the shield on the table and a replacement card drawn.
+		await WaitUntilAsync(() => svc.GameState.CurrentTurn == "a", "the turn to reach the human");
+		var humanSeat = JourneyRulebook.SeatOf(journey, "a");
+		if (accept)
+		{
+			Assert.DoesNotContain("speedLimit", humanSeat.Hazards);
+			Assert.Contains("right-of-way", humanSeat.Immunities);
+			Assert.Equal(1, humanSeat.CoupFourres);
+			Assert.Equal(94 - 3, journey.DrawCount);
+		}
+		else
+		{
+			Assert.Contains("speedLimit", humanSeat.Hazards);
+			Assert.Empty(humanSeat.Immunities);
+			Assert.Equal(94 - 2, journey.DrawCount);
+		}
 	}
 
 	[Fact]
