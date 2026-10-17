@@ -47,7 +47,7 @@ export const S = (shape, o = {}, precision = 1) => ({ tag: 'path', a: ` d="${toP
 /** Group. */
 export const G = (children, o = {}) => ({ tag: 'g', a: attrs(o), children: children.flat(Infinity).filter(Boolean) });
 
-/** Smooth closed or open curve through points as a cubic path (Catmull-Rom → Bézier). */
+/** Smooth closed or open curve through points as a cubic path (Catmull-Rom to Bezier). */
 export function curveD(points, closed = false, tension = 1) {
 	const p = closed ? [points[points.length - 1], ...points, points[0], points[1]] : [points[0], ...points, points[points.length - 1]];
 	let d = `M${fmt(p[1][0])} ${fmt(p[1][1])}`;

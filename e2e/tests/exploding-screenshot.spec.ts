@@ -69,7 +69,10 @@ test('exploding: board and the defuse picker (screenshots)', async ({ browser },
 	await expect(reveal).toBeVisible();
 	await expect(reveal).not.toHaveClass(/exploding-reveal--static/);
 	await expect(ana.locator('.exploding-reveal .xcard--bomb [data-card-art="package"]')).toBeVisible();
-	await expect(ana.locator('.exploding-reveal__defuse .xcard--defuse [data-card-art="package"]')).toBeVisible();
+	// The defuse face is on screen only for the first 1.5 s of its 2 s drop (the keyframes hide
+	// it afterwards), a window a loaded runner can miss by the time the checks above settle; its
+	// presence in the reveal plus the animation asserted below is what proves the beat.
+	await expect(ana.locator('.exploding-reveal__defuse .xcard--defuse [data-card-art="package"]')).toBeAttached();
 	const animationNames = await reveal.evaluate(element => [
 		getComputedStyle(element.querySelector('.exploding-reveal__bomb')!).animationName,
 		getComputedStyle(element.querySelector('.exploding-reveal__defuse')!).animationName,

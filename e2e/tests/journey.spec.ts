@@ -143,9 +143,10 @@ test('journey: the hand is home — private draw, playing an immunity, statuses 
 	// package. The engine neither knows token ids nor redraws their content.
 	await expect(ana.locator('#board .journey-car')).toHaveCount(2);
 	await expect(ana.locator('#board .journey-car[data-token]')).toHaveCount(2);
-	const tokenPaths = await ana.locator('#board .journey-car .journey-car__svg path')
-		.evaluateAll(paths => paths.map(path => path.getAttribute('d')));
-	expect(new Set(tokenPaths).size).toBe(2);
+	const tokenDrawings = await ana.locator('#board .journey-car .journey-car__svg')
+		.evaluateAll(svgs => svgs.map(svg => svg.innerHTML));
+	expect(tokenDrawings.every(drawing => drawing.length > 0)).toBe(true);
+	expect(new Set(tokenDrawings).size).toBe(2);
 	// Each dashboard wears its battle-state chip (live-play request: the sighted player
 	// couldn't read his own state). At the start everyone waits for the green light: red
 	// "parado" chips, unnamed — nobody threw you anything yet.
