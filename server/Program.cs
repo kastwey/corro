@@ -1,5 +1,6 @@
 using CorroServer.Extensions;
 using CorroServer.Hubs;
+using CorroServer.Services;
 using Microsoft.Extensions.FileProviders;
 
 internal class Program
@@ -59,7 +60,9 @@ internal class Program
 		}
 
 		app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = webRootFiles });
-		app.UseStaticFiles(new StaticFileOptions { FileProvider = webRootFiles });
+		// Every file goes out told to revalidate (StaticFileCaching): a browser left to guess kept a
+		// deployed lobby stale for days.
+		app.UseStaticFiles(StaticFileCaching.Options(webRootFiles));
 
 		// UseRouting is called HERE, on purpose, and this is load-bearing.
 		//
@@ -111,12 +114,12 @@ internal class Program
 			.OrderBy(name => name, StringComparer.Ordinal))
 		{
 			app.MapFallbackToFile($"/{locale}/{{*path:nonfile}}", $"{locale}/index.html",
-				new StaticFileOptions { FileProvider = webRootFiles });
+				StaticFileCaching.Options(webRootFiles));
 		}
 
 		// SPA-style fallback: any request that is not an API route, the SignalR hub, or a real static
 		// file returns index.html (so direct links / refresh don't 404), from the same provider.
-		app.MapFallbackToFile("index.html", new StaticFileOptions { FileProvider = webRootFiles });
+		app.MapFallbackToFile("index.html", StaticFileCaching.Options(webRootFiles));
 
 		// Make sure every container this build reads exists, in EVERY environment.
 		//

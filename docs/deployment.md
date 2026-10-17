@@ -109,6 +109,11 @@ clone. A remote Claude Code session does the same when its environment carries
   certificates or connection strings.
 - Deployment is direct to the production slot. It restarts the worker and drops active
   SignalR connections. A staging-slot swap would not preserve process-local sessions.
+- Every frontend file is served with `Cache-Control: no-cache` (`StaticFileCaching`): the browser
+  keeps its copy but revalidates it on every load, and the ETag answers with a 304 when nothing
+  changed. Without that header a browser applies its own heuristic lifetime — a tenth of the time
+  since the file last changed — so a lobby script untouched for a month was held for days after a
+  deployment and players kept seeing the previous build until a hard reload.
 - Production already has the `CosmosDB` and `PackageBlobs` App Service connection strings
   configured for durable games and uploaded packages. The deployment changes application
   files only and leaves both connection strings untouched.
