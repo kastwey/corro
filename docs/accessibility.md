@@ -218,9 +218,10 @@ same server (never published: `CorroServer.csproj` drops it). Three things use i
   NVDA and reads its speech over the NVDA Remote protocol) and asserts the facts a player relies
   on being *spoken*: menu, sub menu, unavailable plus the reason, selected, the search count once
   the typing stops, a reading dialog walked in browse mode. Facts, with loose patterns — never the
-  sentence, which is NVDA's. It runs nightly and on demand on a Windows runner and is not a
-  required check; its spoken-phrase logs are attached to every report. [screen-reader/README.md](../screen-reader/README.md)
-  has the how and the rules.
+  sentence, which is NVDA's. It runs on a Windows runner for every pull request that reaches the
+  gallery's import graph, page, stylesheets or locales (a set derived from the sources on each
+  run, never kept by hand) and nightly whatever changed; its spoken-phrase logs are attached to
+  every report. [screen-reader/README.md](../screen-reader/README.md) has the how and the rules.
 - A person reviewing a widget change opens `/gallery.html?story=<id>` and tries it, in both
   themes, with their own screen reader.
 

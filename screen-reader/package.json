@@ -10,6 +10,8 @@
   "scripts": {
     "setup": "guidepup setup --ci && guidepup install nvda",
     "test": "playwright test",
+    "affected": "node affected.mjs",
+    "test:affected-script": "node --test affected.test.mjs",
     "test:headed": "playwright test --headed",
     "report": "playwright show-report"
   },

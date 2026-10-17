@@ -19,9 +19,23 @@ Only on a **Windows desktop session**: NVDA is a Windows screen reader and reads
 has focus, so the browser is headed, there is one worker, and the files run serially
 (`withGuidepup` in `playwright.config.ts` enforces all three). GitHub's `windows-latest` runners
 are such a session: [`.github/workflows/screen-reader.yml`](../.github/workflows/screen-reader.yml)
-runs the suite nightly and on demand. It is deliberately **not** a required check on pull requests:
-a screen reader session is slower and less deterministic than a browser one, and the spoken-phrase
-log of every test is attached to the report so a red run is read, not retried.
+runs the suite on every pull request that reaches it, nightly whatever changed (the browser and
+NVDA move without us), and on demand. The spoken-phrase log of every test is attached to the
+report, so a red run is read, not retried.
+
+**What "reaches it" means is derived, never listed by hand.** `affected.mjs` walks the gallery's
+runtime import graph from `frontend/src/gallery/index.ts`, adds the page and the stylesheets it
+links, the locale files and the suite's own folder, and a pull request runs the suite when it
+changes any of those. The gallery is a closed world (no SignalR, no game state), so its import
+graph *is* what it exercises — the same reason `e2e/affected.mjs` refuses a hand-kept map, solved
+statically because the measured map lives outside the repository. A story that gains an import
+gains its trigger with it; anything the script cannot account for means "run".
+
+```bash
+node screen-reader/affected.mjs --list                      # what the suite listens to, now
+node screen-reader/affected.mjs --base main --head HEAD     # run=true|false for a range
+node --test screen-reader/affected.test.mjs                 # the decision's own tests
+```
 
 Locally, on a Windows machine with no other screen reader running:
 
