@@ -1,1 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 4 h8 v16 h-8 z M13 4 h8 v16 h-8 z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <path d="M3 4H11C12 4 12 5 12 5V20C12 20 12 19 11 19H3Z"/>
+  <path d="M21 4H13C12 4 12 5 12 5V20C12 20 12 19 13 19H21Z"/>
+  <rect x="5" y="7" width="5" height="1.4" rx="0.7" fill="#fdd835"/>
+  <rect x="5" y="10" width="5" height="1.4" rx="0.7" fill="#fdd835"/>
+  <rect x="14" y="7" width="5" height="1.4" rx="0.7" fill="#fdd835"/>
+  <rect x="14" y="10" width="5" height="1.4" rx="0.7" fill="#fdd835"/>
+  <line x1="12" y1="5" x2="12" y2="20" fill="none" stroke="currentColor" stroke-width="1"/>
+</svg>

@@ -243,6 +243,11 @@ has the whole round trip).
 - CSS is modular under `frontend/css/` (plus `frontend/styles.css` for the
   board). No CSS preprocessor.
 - Translations: `frontend/i18n/locales/{en,es}.json`.
+- Package art: `assets/tokens/<id>.svg` (24×24) and `assets/cards/<id>.svg` (64×64) are the
+  canonical files, but the shipped ones are **generated** from scenes with `tools/package-art/`
+  (hidden packages keep their scenes in the private repository's `art/`). Tune the scene and
+  regenerate; never hand-edit a generated SVG. The engine keeps only the SVG art subset in
+  `CORRO_FORMAT.md` and rejects the rest by name, so `npm test` there checks every public scene.
 - Backend: `server/` — `Hubs/` (SignalR), `Services/Commands/` (CQRS-like
   handlers), `Services/Rules/` (`CorroRulebook` partials + `Rules/Cards/`), and
   `Packages/` (shipped package sources; cards target square INDICES so decks are

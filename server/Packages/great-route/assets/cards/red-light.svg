@@ -1,1 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M17 5H47V59H17Z M26 17A6 6 0 1 0 38 17A6 6 0 1 0 26 17Z M26 32A6 6 0 1 0 38 32A6 6 0 1 0 26 32Z M26 47A6 6 0 1 0 38 47A6 6 0 1 0 26 47Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="20" y="4" width="24" height="56" rx="6" fill="#37474f" stroke="#37474f" stroke-width="2.2"/>
+  <circle cx="32" cy="14" r="7" fill="#e53935" stroke="#37474f" stroke-width="1.4"/>
+  <circle cx="32" cy="32" r="7" fill="#5f6a6e" stroke="#37474f" stroke-width="1.4"/>
+  <circle cx="32" cy="50" r="7" fill="#5f6a6e" stroke="#37474f" stroke-width="1.4"/>
+  <polygon points="32,3 35.25,6.15 39.78,6.22 39.85,10.75 43,14 39.85,17.25 39.78,21.78 35.25,21.85 32,25 28.75,21.85 24.22,21.78 24.15,17.25 21,14 24.15,10.75 24.22,6.22 28.75,6.15" fill="#e53935" fill-opacity="0.35"/>
+</svg>

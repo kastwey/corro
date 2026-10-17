@@ -1,1 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M7 32A25 25 0 1 0 57 32A25 25 0 1 0 7 32Z M25 32A7 7 0 1 0 39 32A7 7 0 1 0 25 32Z M29 8H35V29H29Z M11 22L29 32L25 38L7 28Z M53 22L35 32L39 38L57 28Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <circle cx="32" cy="34" r="24" fill="none" stroke="#37474f" stroke-width="7"/>
+  <circle cx="32" cy="34" r="24" fill="none" stroke="#546e7a" stroke-width="4"/>
+  <line x1="32" y1="34" x2="32" y2="14" fill="none" stroke="#37474f" stroke-width="5" stroke-linecap="round"/>
+  <line x1="32" y1="34" x2="49.32" y2="44" fill="none" stroke="#37474f" stroke-width="5" stroke-linecap="round"/>
+  <line x1="32" y1="34" x2="14.68" y2="44" fill="none" stroke="#37474f" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="32" cy="34" r="7" fill="#546e7a" stroke="#37474f" stroke-width="2"/>
+  <polygon points="52,3 54.38,8.72 60.56,9.22 55.85,13.25 57.29,19.28 52,16.05 46.71,19.28 48.15,13.25 43.44,9.22 49.62,8.72" fill="#f2b632" stroke="#96711f" stroke-width="2.2" stroke-linejoin="round"/>
+</svg>

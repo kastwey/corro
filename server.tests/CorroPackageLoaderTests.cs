@@ -50,10 +50,10 @@ public class CorroPackageLoaderTests
 		Assert.Equal("0", def.Cards.Single(c => c.Id == "f1").Effect.Target);
 		Assert.Equal("nearest:transit", def.Cards.Single(c => c.Id == "f3").Effect.Target);
 
-		// Token icons live as files (assets/tokens/<id>.svg); the loader inlines their sanitized path-data.
+		// Token icons live as files (assets/tokens/<id>.svg); the loader inlines their sanitised drawing.
 		var ufo = def.Manifest.Tokens.Single(t => t.Id == "ufo");
 		Assert.False(string.IsNullOrEmpty(ufo.Svg));
-		Assert.DoesNotContain('<', ufo.Svg!); // path-data only — no markup pulled from the file
+		Assert.Matches("^<(g|path|rect|circle|ellipse|line|polyline|polygon)[ />]", ufo.Svg!); // canonical drawing subset only
 	}
 
 	[Theory]
@@ -90,11 +90,10 @@ public class CorroPackageLoaderTests
 			Directory.CreateDirectory(Path.Combine(dir, "assets", "cards"));
 			File.Delete(Path.Combine(dir, "assets", "cards", "leave-shaft.svg"));
 			File.WriteAllText(Path.Combine(dir, "assets", "cards", "firedamp.svg"),
-				"<svg viewBox=\"0 0 64 64\"><path d=\"M1 1h62v62z\"/><script>alert(1)</script></svg>");
+				"<svg viewBox=\"0 0 64 64\"><title>x</title><path d=\"M1 1h62v62z\" fill=\"#B33434\" stroke=\"currentColor\"/></svg>");
 			var definition = await new CorroPackageLoader().LoadAsync(dir);
 			var illustrated = definition.ExplodingDeck!.Single(card => card.Id == "firedamp");
-			Assert.Equal("M1 1h62v62z", illustrated.Svg);
-			Assert.DoesNotContain('<', illustrated.Svg!);
+			Assert.Equal("<path d=\"M1 1h62v62z\" fill=\"#b33434\" stroke=\"currentColor\"/>", illustrated.Svg);
 			Assert.Null(definition.ExplodingDeck!.Single(card => card.Id == "leave-shaft").Svg);
 		}
 		finally
@@ -104,7 +103,7 @@ public class CorroPackageLoaderTests
 	}
 
 	[Fact]
-	public async Task LoadAsync_rejects_orphaned_or_markup_only_card_art_instead_of_silent_fallback()
+	public async Task LoadAsync_rejects_orphaned_or_scripted_card_art_instead_of_silent_fallback()
 	{
 		var orphaned = CopyPackage("the-mine");
 		var malformed = CopyPackage("the-mine");
@@ -120,9 +119,10 @@ public class CorroPackageLoaderTests
 			Directory.CreateDirectory(Path.Combine(malformed, "assets", "cards"));
 			File.WriteAllText(Path.Combine(malformed, "assets", "cards", "firedamp.svg"),
 				"<svg viewBox=\"0 0 64 64\"><script d=\"M0 0h64v64z\">alert(1)</script></svg>");
-			var noPath = await Assert.ThrowsAsync<InvalidOperationException>(
+			var scripted = await Assert.ThrowsAsync<InvalidOperationException>(
 				() => new CorroPackageLoader().LoadAsync(malformed));
-			Assert.Contains("no usable <path>", noPath.Message);
+			Assert.Contains("assets/cards/firedamp.svg", scripted.Message);
+			Assert.Contains("<script>", scripted.Message);
 		}
 		finally
 		{
@@ -354,12 +354,32 @@ public class CorroPackageLoaderTests
 		try
 		{
 			Directory.CreateDirectory(Path.Combine(dir, "assets", "cards"));
-			var oversized = "M0 0 " + new string('L', CorroPackageLoader.MaxCardSvgPathChars);
+			var oversized = "M0 0 " + new string('L', CorroPackageLoader.MaxCardSvgChars);
 			File.WriteAllText(Path.Combine(dir, "assets", "cards", "firedamp.svg"),
 				$"<svg viewBox=\"0 0 64 64\"><path d=\"{oversized}\"/></svg>");
 			var ex = await Assert.ThrowsAsync<InvalidOperationException>(
 				() => new CorroPackageLoader().LoadAsync(dir));
-			Assert.Contains("path limit", ex.Message);
+			Assert.Contains("character limit", ex.Message);
+		}
+		finally
+		{
+			CorroPackageLoader.DeleteExtracted(dir);
+		}
+	}
+
+	[Fact]
+	public async Task LoadAsync_bounds_token_icons_that_ride_with_every_player_list()
+	{
+		var dir = CopyPackage("the-mine");
+		try
+		{
+			var oversized = "M0 0 " + new string('L', CorroPackageLoader.MaxTokenSvgChars);
+			File.WriteAllText(Path.Combine(dir, "assets", "tokens", "helmet.svg"),
+				$"<svg viewBox=\"0 0 24 24\"><path d=\"{oversized}\"/></svg>");
+			var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+				() => new CorroPackageLoader().LoadAsync(dir));
+			Assert.Contains("assets/tokens/helmet.svg", ex.Message);
+			Assert.Contains("character limit", ex.Message);
 		}
 		finally
 		{

@@ -1,1 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M14 5H22V59H14Z M42 5H50V59H42Z M22 13H42V19H22Z M22 27H42V33H22Z M22 41H42V47H22Z M25 13L32 4L39 13Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="10" y="6" width="44" height="52" fill="#5d4037" stroke="#3a2822" stroke-width="2.2"/>
+  <rect x="16" y="6" width="32" height="52" fill="#3e2723"/>
+  <rect x="22" y="6" width="5" height="52" rx="1" fill="#c69c6d" stroke="#7b6144" stroke-width="1.4"/>
+  <rect x="38" y="6" width="5" height="52" rx="1" fill="#c69c6d" stroke="#7b6144" stroke-width="1.4"/>
+  <rect x="22" y="12" width="21" height="4" rx="1" fill="#c69c6d" stroke="#7b6144" stroke-width="1.4"/>
+  <rect x="22" y="22" width="21" height="4" rx="1" fill="#c69c6d" stroke="#7b6144" stroke-width="1.4"/>
+  <rect x="22" y="32" width="21" height="4" rx="1" fill="#c69c6d" stroke="#7b6144" stroke-width="1.4"/>
+  <rect x="22" y="42" width="21" height="4" rx="1" fill="#c69c6d" stroke="#7b6144" stroke-width="1.4"/>
+  <rect x="22" y="52" width="21" height="4" rx="1" fill="#c69c6d" stroke="#7b6144" stroke-width="1.4"/>
+  <g><line x1="52" y1="50" x2="52" y2="23.92" fill="none" stroke="#66bb6a" stroke-width="4" stroke-linecap="round"/><g transform="translate(52 16) rotate(-90 0 0)"><polygon points="1.76,0 -8.8,-6.16 -8.8,6.16" fill="#66bb6a" stroke="#66bb6a" stroke-width="1" stroke-linejoin="round"/></g></g>
+</svg>

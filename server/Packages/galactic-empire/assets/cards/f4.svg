@@ -1,1 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M37 3L13 35H29L24 61L51 27H35Z M6 51L25 32C21 21 30 9 42 12L34 20L37 27L44 30L52 22C55 34 43 43 32 39L13 58Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <polygon points="32,6 56,50.16 8,50.16" fill="#ffca28" stroke="#9e7d19" stroke-width="2.2" stroke-linejoin="round"/>
+  <rect x="29.6" y="22.32" width="4.8" height="16.32" rx="1" fill="#37474f"/>
+  <circle cx="32" cy="44.4" r="2.88" fill="#37474f"/>
+  <path d="M44 46L58 56" stroke="#90a4ae" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="58" cy="57" r="3.5" fill="none" stroke="#90a4ae" stroke-width="3"/>
+</svg>

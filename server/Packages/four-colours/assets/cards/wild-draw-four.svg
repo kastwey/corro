@@ -1,1 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M5 12H24V38H5Z M15 20H34V46H15Z M25 28H44V54H25Z M35 36H54V62H35Z M46 3L61 18L46 33V23H36V13H46Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <g transform="translate(32 32) rotate(-28 0 0) scale(20 28)"><path d="M0 0L-1 0A1 1 0 0 1 0 -1Z" fill="#c62828"/><path d="M0 0L0 -1A1 1 0 0 1 1 0Z" fill="#a66f00"/><path d="M0 0L1 0A1 1 0 0 1 0 1Z" fill="#137a43"/><path d="M0 0L0 1A1 1 0 0 1 -1 0Z" fill="#1769aa"/></g>
+  <ellipse cx="32" cy="32" rx="20" ry="28" fill="none" stroke="#263238" stroke-width="2.2" transform="rotate(-28 32 32)"/>
+  <rect x="15" y="31" width="12" height="17" rx="2" fill="#ffffff" stroke="#263238" stroke-width="1.6" transform="rotate(-15 22 40)"/>
+  <rect x="20" y="28.5" width="12" height="17" rx="2" fill="#ffffff" stroke="#263238" stroke-width="1.6" transform="rotate(-15 22 40)"/>
+  <rect x="25" y="26" width="12" height="17" rx="2" fill="#ffffff" stroke="#263238" stroke-width="1.6" transform="rotate(-15 22 40)"/>
+  <rect x="30" y="23.5" width="12" height="17" rx="2" fill="#ffffff" stroke="#263238" stroke-width="1.6" transform="rotate(-15 22 40)"/>
+  <rect x="38.5" y="14" width="3" height="10" rx="0.9" fill="#ffffff" stroke="#263238" stroke-width="2.2" stroke-linejoin="round"/>
+  <rect x="35" y="17.5" width="10" height="3" rx="0.9" fill="#ffffff" stroke="#263238" stroke-width="2.2" stroke-linejoin="round"/>
+  <rect x="39.5" y="15" width="1" height="8" fill="#ffffff"/>
+  <rect x="36" y="18.5" width="8" height="1" fill="#ffffff"/>
+  <path d="M45.3 20.4L51 11L51.1 10.8L51.4 10.5L51.6 10.4L51.8 10.2L52 10.1L52.2 10.1L52.4 10L52.6 10L52.9 10L53.3 10.1L53.5 10.1L53.7 10.2L53.9 10.4L54.1 10.5L54.3 10.6L54.4 10.8L54.6 11L54.7 11.2L54.7 11.4L54.8 11.6L54.8 11.9L54.9 12.1L54.9 19.4L55.1 19.4L55.4 19.4L55.6 19.5L55.8 19.6L56 19.7L56.2 19.8L56.3 20L56.5 20.1L56.6 20.3L56.8 20.5L56.9 20.7L56.9 20.9L57 21.2L57 21.4L57 21.6L57 21.8L56.9 22.1L56.9 22.3L56.8 22.5L56.6 22.7L56.5 22.9L56.3 23L56.2 23.2L56 23.3L55.8 23.4L55.6 23.5L55.4 23.6L55.1 23.6L54.9 23.6L54.9 27.9L54.8 28.1L54.8 28.4L54.7 28.6L54.7 28.8L54.6 29L54.4 29.2L54.3 29.3L54.1 29.5L53.9 29.6L53.7 29.8L53.5 29.9L53.3 29.9L53.1 30L52.9 30L52.6 30L52.4 30L52.2 29.9L52 29.9L51.8 29.8L51.6 29.6L51.4 29.5L51.2 29.3L51.1 29.2L51 29L50.8 28.8L50.8 28.6L50.7 28.4L50.7 28.1L50.7 27.9L50.7 23.6L47.1 23.6Z" fill="#ffffff" stroke="#263238" stroke-width="2.2" stroke-linejoin="round"/>
+</svg>

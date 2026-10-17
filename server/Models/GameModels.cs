@@ -633,7 +633,7 @@ public record CardDrawnNotification
 	public required string PlayerName { get; init; }
 	public required string CardId { get; init; }
 	public required string DeckType { get; init; } // "chance" | "community" | a package deck id
-		/// <summary>Sanitized path-data from assets/cards/&lt;id&gt;.svg; null uses the neutral client drawing.</summary>
+		/// <summary>Sanitised SVG drawing from assets/cards/&lt;id&gt;.svg; null uses the neutral client drawing.</summary>
 	public string? Svg { get; init; }
 	/// <summary>Whether the package exposes validated raster art for this card.</summary>
 	public bool HasPngArt { get; init; }

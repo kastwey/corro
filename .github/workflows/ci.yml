@@ -40,6 +40,23 @@ jobs:
       - run: npm run build
       - run: npm test
 
+  package-art:
+    # The art generator (tools/package-art) must keep emitting only the engine's SVG art subset
+    # for every public scene; the generated files themselves are tested with the packages.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/package-art
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/package-art/package-lock.json
+      - run: npm ci
+      - run: npm test
+
   server:
     runs-on: ubuntu-latest
     steps:

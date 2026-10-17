@@ -3,7 +3,7 @@
 // A token id: a built-in token ("disc"…) or a package-defined token id.
 export type TokenKey = string;
 
-/** A player token (built-in or package-provided): id + optional SVG path data + i18n name key. */
+/** A player token the package provides: id + its server-sanitised SVG drawing + i18n name key. */
 export interface TokenInfo { id: string; svg?: string; nameKey?: string; }
 
 // === PLAYERS ===
@@ -355,7 +355,7 @@ export interface CategoriesRulesConfig {
 /** One card DEFINITION of the deck catalog (public wire data — only hand/pile CONTENTS are secret). */
 export interface JourneyCardDef {
   id: string;
-  /** Sanitized path-data from optional package file assets/cards/<id>.svg. */
+  /** Server-sanitised SVG drawing from optional package file assets/cards/<id>.svg. */
   svg?: string | null;
   hasPngArt?: boolean;
   /** Optional package-owned #RRGGBB accent. */
@@ -466,7 +466,7 @@ export interface JourneyState {
 /** One card DEFINITION of the assembly deck catalog (public wire data). */
 export interface AssemblyCardDef {
   id: string;
-  /** Sanitized path-data from optional package file assets/cards/<id>.svg. */
+  /** Server-sanitised SVG drawing from optional package file assets/cards/<id>.svg. */
   svg?: string | null;
   hasPngArt?: boolean;
   /** Optional package-owned #RRGGBB accent. */
@@ -529,7 +529,7 @@ export interface AssemblyState {
 /** One card DEFINITION of the draft deck catalog (public wire data). */
 export interface DraftCardDef {
   id: string;
-  /** Sanitized path-data from optional package file assets/cards/<id>.svg. */
+  /** Server-sanitised SVG drawing from optional package file assets/cards/<id>.svg. */
   svg?: string | null;
   hasPngArt?: boolean;
   /** Optional package-owned #RRGGBB accent. */
@@ -604,7 +604,7 @@ export interface DraftState {
 /** One card DEFINITION of the shedding deck catalog (public wire data). */
 export interface SheddingCardDef {
   id: string;
-  /** Sanitized path-data from optional package file assets/cards/<id>.svg. */
+  /** Server-sanitised SVG drawing from optional package file assets/cards/<id>.svg. */
   svg?: string | null;
   hasPngArt?: boolean;
   /** Optional package-owned #RRGGBB accent. */
@@ -699,7 +699,7 @@ export interface SheddingState {
 /** One card DEFINITION of the exploding deck catalog (public wire data). */
 export interface ExplodingCardDef {
   id: string;
-  /** Sanitized path-data from optional package file assets/cards/<id>.svg. */
+  /** Server-sanitised SVG drawing from optional package file assets/cards/<id>.svg. */
   svg?: string | null;
   hasPngArt?: boolean;
   /** Optional package-owned #RRGGBB accent. */
@@ -1447,7 +1447,7 @@ export interface CardDrawnNotification {
   playerName: string;
   cardId: string;
   deckType: string; // 'chance' | 'community' | a package deck id
-  /** Sanitized path-data from assets/cards/<id>.svg; absent uses a neutral illustration. */
+  /** Server-sanitised SVG drawing from assets/cards/<id>.svg; absent uses a neutral illustration. */
   svg?: string | null;
   /** Strictly validated PNG exists at the staged package art endpoint. */
   hasPngArt?: boolean;

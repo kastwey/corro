@@ -215,9 +215,9 @@ public sealed record RuleGroupDef
 }
 
 /// <summary>
-/// A player token the package provides: a string id (stored as the player's token), an inline SVG
-/// image, and an i18n name key for the accessible/visible radio label. A package replaces the
-/// built-in token set with its own.
+/// A player token the package provides: a string id (stored as the player's token), its sanitised
+/// SVG drawing (resolved from assets/tokens/&lt;id&gt;.svg), and an i18n name key for the
+/// accessible/visible radio label. Every package ships its own token set.
 /// </summary>
 public sealed record TokenDef
 {
@@ -314,7 +314,7 @@ public sealed record CardDef
 {
 	public string Id { get; init; } = string.Empty;
 	public string Deck { get; init; } = string.Empty;
-	/// <summary>Sanitized path-data loaded from optional assets/cards/&lt;id&gt;.svg. Package content
+	/// <summary>Sanitised SVG drawing loaded from optional assets/cards/&lt;id&gt;.svg. Package content
 	/// overrides the client's neutral face; null lets the engine render its fallback.</summary>
 	public string? Svg { get; init; }
 	/// <summary>True when validated 256×256 PNG art exists in assets/cards/&lt;id&gt;.png.</summary>

@@ -216,15 +216,20 @@ when you need a realistic example.
 
 Every card works without an image: Corro shows a neutral drawing based on its generic mechanic.
 To replace it, add either `assets/cards/<card-id>.svg` or `assets/cards/<card-id>.png`; for
-example, card id `step25` uses `assets/cards/step25.svg`. SVG uses a 64×64 path-only canvas.
-PNG must be a static, non-interlaced 256×256 8-bit RGB/RGBA image, at most 512 KiB. Never
-provide both formats for one card, and do not add an art field or path to `cards.json`.
+example, card id `step25` uses `assets/cards/step25.svg`. SVG uses a 64×64 canvas and may be
+in colour. PNG must be a static, non-interlaced 256×256 8-bit RGB/RGBA image, at most 512 KiB.
+Never provide both formats for one card, and do not add an art field or path to `cards.json`.
 
-Use a `viewBox="0 0 64 64"` and flatten the drawing to `<path>` geometry. The package loader
-discards colours and all other SVG markup for security; the card frame supplies a readable colour.
+Use a `viewBox="0 0 64 64"` and draw with plain shapes: `path`, `rect`, `circle`, `ellipse`,
+`line`, `polyline`, `polygon` and `g`, with `fill`/`stroke` as hexadecimal colours (or
+`currentColor`, which takes the card's accent) and simple transforms. The package loader keeps
+exactly that subset and rejects anything else for security — text, images, gradients, filters,
+scripts, CSS beyond those paint properties — naming the offending part, so export from your
+editor as *plain SVG* and convert text to outlines. The full list is in
+[`CORRO_FORMAT.md`](../CORRO_FORMAT.md#svg-art-subset-tokens-and-cards).
 The picture is decorative — the localized card name and help remain the accessible information.
-Run `validate`: a misspelled filename, an SVG without a usable path or oversized art is rejected
-instead of being silently ignored.
+Run `validate`: a misspelled filename, an SVG with nothing to draw, an unsupported feature or
+oversized art is rejected instead of being silently ignored.
 
 Optionally add `"artColor": "#2F7185"` to that card in `cards.json` to colour its frame and
 silhouette. It must be a complete `#RRGGBB` value. Treat this as a visual aid only: names and help

@@ -1,8 +1,8 @@
 // cardArt.ts — package-owned card illustrations plus neutral engine fallbacks.
 //
-// A package may provide one path-only 64×64 SVG or one strictly validated 256×256 PNG.
-// SVG geometry rides in state and is sanitized again here; PNG bytes stay at a staged,
-// nosniff endpoint and state carries only a boolean marker. Package art always wins; when
+// A package may provide one 64×64 SVG drawing (a closed, server-sanitised subset validated again
+// here by svgArt.ts) or one strictly validated 256×256 PNG. The SVG rides in state; PNG bytes stay
+// at a staged, nosniff endpoint and state carries only a boolean marker. Package art always wins; when
 // absent, these helpers draw generic MECHANICS and never branch on shipped content ids.
 //
 // ACCESSIBILITY: every SVG is aria-hidden decoration. The hand row / reveal text remains the
@@ -10,6 +10,7 @@
 
 import { escapeHtml } from './escapeHtml.js';
 import { packageCardPngUrl } from './packageCardAssets.js';
+import { sanitizeSvgArt } from './svgArt.js';
 export { setCardArtPackageToken } from './packageCardAssets.js';
 
 export interface CardArtSource {
@@ -19,11 +20,6 @@ export interface CardArtSource {
 	hasPngArt?: boolean;
 	value?: number | null;
 	artColor?: string | null;
-}
-
-/** Defense in depth for server-sanitized SVG path-data. Quotes and markup cannot survive. */
-export function sanitizeCardPathData(pathData: string): string {
-	return pathData.replace(/[^0-9A-Za-z.,\-\s]/g, '');
 }
 
 /** Only a complete #RRGGBB value may enter a style attribute. */
@@ -54,18 +50,16 @@ function safeClass(value: string): string {
 	return value.toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'unknown';
 }
 
-/** Render package path-data on the format's fixed 64×64 art canvas. */
+/** Render a package drawing on the format's fixed 64×64 art canvas; parts in currentColor take the accent. */
 export function packageCardArtSvg(
-	pathData: string | null | undefined,
+	art: string | null | undefined,
 	className = 'card-art__svg',
 	artColor?: string | null,
 ): string | null {
-	if (!pathData) return null;
-	const safe = sanitizeCardPathData(pathData).trim();
-	if (!/^[Mm]/.test(safe) || !/\d/.test(safe)) return null;
+	const inner = sanitizeSvgArt(art);
+	if (!inner) return null;
 	return `<svg class="${className}" viewBox="0 0 64 64" fill="currentColor"${svgColorStyle(artColor)}`
-		+ ` aria-hidden="true" focusable="false" data-card-art="package">`
-		+ `<path d="${safe}" fill-rule="evenodd"/></svg>`;
+		+ ` aria-hidden="true" focusable="false" data-card-art="package">${inner}</svg>`;
 }
 
 /** A safe URL to one prevalidated staged PNG, or null when the card has no raster art. */

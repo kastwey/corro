@@ -1,1 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M32 3L56 12V31C56 46 46 56 32 62C18 56 8 46 8 31V12Z M29 19V28H20V36H29V45H36V36H45V28H36V19Z M5 31A24 24 0 1 0 53 31A24 24 0 1 0 5 31Z M13 31A16 16 0 1 0 45 31A16 16 0 1 0 13 31Z M26 18H32V44H26Z M16 28H42V34H16Z M47 45H61V51H47Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="12" y="23.2" width="28" height="8.4" rx="3.92" fill="#4dd0e1" stroke="#30818c" stroke-width="1.6"/>
+  <line x1="17.6" y1="27.4" x2="34.4" y2="27.4" fill="none" stroke="#30818c" stroke-width="1.2" stroke-linecap="round"/>
+  <rect x="12" y="31.6" width="28" height="8.4" rx="3.92" fill="#4dd0e1" stroke="#30818c" stroke-width="1.6"/>
+  <line x1="17.6" y1="35.8" x2="34.4" y2="35.8" fill="none" stroke="#30818c" stroke-width="1.2" stroke-linecap="round"/>
+  <rect x="12" y="40" width="28" height="8.4" rx="3.92" fill="#4dd0e1" stroke="#30818c" stroke-width="1.6"/>
+  <line x1="17.6" y1="44.2" x2="34.4" y2="44.2" fill="none" stroke="#30818c" stroke-width="1.2" stroke-linecap="round"/>
+  <rect x="12" y="48.4" width="28" height="8.4" rx="3.92" fill="#4dd0e1" stroke="#30818c" stroke-width="1.6"/>
+  <line x1="17.6" y1="52.6" x2="34.4" y2="52.6" fill="none" stroke="#30818c" stroke-width="1.2" stroke-linecap="round"/>
+  <polygon points="48,9 50.91,16 58.46,16.6 52.71,21.53 54.47,28.9 48,24.95 41.53,28.9 43.29,21.53 37.54,16.6 45.09,16" fill="#f2b632" stroke="#96711f" stroke-width="2.2" stroke-linejoin="round"/>
+</svg>

@@ -212,15 +212,22 @@ compárala con el paquete más completo de la [tabla de referencias del SDK](../
 
 Todas las cartas funcionan sin imagen: Corro muestra un dibujo neutro según su mecánica genérica.
 Para sustituirlo, añade `assets/cards/<id-de-carta>.svg` o `assets/cards/<id-de-carta>.png`; por
-ejemplo, la carta `step25` usa `assets/cards/step25.svg`. SVG usa un lienzo 64×64 formado solo
-por trazados. PNG debe ser una imagen estática no entrelazada de 256×256, RGB/RGBA de 8 bits y
-como máximo 512 KiB. No incluyas ambos formatos para la misma carta ni una ruta en `cards.json`.
+ejemplo, la carta `step25` usa `assets/cards/step25.svg`. SVG usa un lienzo 64×64 y puede ir a
+color. PNG debe ser una imagen estática no entrelazada de 256×256, RGB/RGBA de 8 bits y como
+máximo 512 KiB. No incluyas ambos formatos para la misma carta ni una ruta en `cards.json`.
 
-Usa `viewBox="0 0 64 64"` y aplana el dibujo a geometría `<path>`. Por seguridad, el cargador
-descarta colores y cualquier otro marcado SVG; el marco de la carta aporta un color legible. El
-dibujo es decorativo: el nombre localizado y la ayuda de la carta siguen siendo la información
-accesible. Ejecuta `validate`: un nombre de archivo mal escrito, un SVG sin trazado utilizable o un
-dibujo demasiado grande se rechazan en vez de ignorarse silenciosamente.
+Usa `viewBox="0 0 64 64"` y dibuja con formas simples: `path`, `rect`, `circle`, `ellipse`,
+`line`, `polyline`, `polygon` y `g`, con `fill`/`stroke` en colores hexadecimales (o
+`currentColor`, que toma el color de acento de la carta) y transformaciones sencillas. Por
+seguridad, el cargador conserva exactamente ese subconjunto y rechaza todo lo demás (texto,
+imágenes, degradados, filtros, scripts, CSS más allá de esas propiedades de pintura) indicando
+la parte ofensiva, así que exporta desde tu editor como *SVG simple* y convierte el texto en
+contornos. La lista completa está en
+[`CORRO_FORMAT.md`](../CORRO_FORMAT.md#svg-art-subset-tokens-and-cards). El dibujo es
+decorativo: el nombre localizado y la ayuda de la carta siguen siendo la información accesible.
+Ejecuta `validate`: un nombre de archivo mal escrito, un SVG sin nada que dibujar, una
+característica no admitida o un dibujo demasiado grande se rechazan en vez de ignorarse
+silenciosamente.
 
 También puedes añadir `"artColor": "#2F7185"` a esa carta en `cards.json` para colorear su marco
 y silueta. Debe ser un valor `#RRGGBB` completo. Es solo una ayuda visual: el nombre y la ayuda

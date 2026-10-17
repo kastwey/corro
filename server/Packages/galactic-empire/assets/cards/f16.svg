@@ -1,1 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M7 51C7 40 15 34 25 34C35 34 43 40 43 51Z M15 21A10 10 0 1 0 35 21A10 10 0 1 0 15 21Z M35 51C36 43 42 38 50 38C57 38 62 43 63 51Z M42 27A8 8 0 1 0 58 27A8 8 0 1 0 42 27Z M32 4L39 23L59 24L44 37L49 57L32 46L15 57L20 37L5 24L25 23Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <polygon points="32,6 36.76,17.45 49.12,18.44 39.7,26.5 42.58,38.56 32,32.1 21.42,38.56 24.3,26.5 14.88,18.44 27.24,17.45" fill="#f2b632" stroke="#96711f" stroke-width="2.2" stroke-linejoin="round"/>
+  <g transform="translate(18 26) scale(-1 1)"><polygon points="0,0 14,-8 22,-2 12,6" fill="#f2b632" stroke="#96711f" stroke-width="2.2" stroke-linejoin="round"/></g>
+  <g transform="translate(46 26) scale(1 1)"><polygon points="0,0 14,-8 22,-2 12,6" fill="#f2b632" stroke="#96711f" stroke-width="2.2" stroke-linejoin="round"/></g>
+  <rect x="22" y="44" width="20" height="14" rx="2" fill="#5c6bc0" stroke="#394277" stroke-width="2.2"/>
+  <rect x="26" y="44" width="12" height="14" fill="#ef5350"/>
+</svg>

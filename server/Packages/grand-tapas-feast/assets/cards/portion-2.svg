@@ -1,1 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M8 15H56V49H8Z M13 20H51V44H13Z M13 26A5 5 0 1 0 23 26A5 5 0 1 0 13 26Z M27 33A5 5 0 1 0 37 33A5 5 0 1 0 27 33Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <ellipse cx="32" cy="42" rx="28" ry="11" fill="#eceff1" stroke="#90a4ae" stroke-width="2.2"/>
+  <ellipse cx="32" cy="42" rx="20.16" ry="6.6" fill="#ffffff" stroke="#cfd8dc" stroke-width="1"/>
+  <ellipse cx="22" cy="38" rx="7" ry="4" fill="#e0a96d" stroke="#8b6944" stroke-width="1.6"/>
+  <ellipse cx="22" cy="35" rx="5" ry="3" fill="#e53935" stroke="#8e2321" stroke-width="1.4"/>
+  <line x1="22" y1="28" x2="22" y2="39" fill="none" stroke="#8d6e63" stroke-width="3" stroke-linecap="round"/>
+  <line x1="22" y1="28" x2="22" y2="39" fill="none" stroke="#bcaaa4" stroke-width="1.2" stroke-linecap="round"/>
+  <ellipse cx="42" cy="38" rx="7" ry="4" fill="#e0a96d" stroke="#8b6944" stroke-width="1.6"/>
+  <ellipse cx="42" cy="35" rx="5" ry="3" fill="#e53935" stroke="#8e2321" stroke-width="1.4"/>
+  <line x1="42" y1="28" x2="42" y2="39" fill="none" stroke="#8d6e63" stroke-width="3" stroke-linecap="round"/>
+  <line x1="42" y1="28" x2="42" y2="39" fill="none" stroke="#bcaaa4" stroke-width="1.2" stroke-linecap="round"/>
+</svg>

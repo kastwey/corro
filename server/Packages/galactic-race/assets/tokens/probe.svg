@@ -1,1 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 4 a5 5 0 1 1 0 10 a5 5 0 0 1 0 -10 M11 14 h2 v6 h-2 z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <line x1="12" y1="10" x2="12" y2="21" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  <polygon points="6,21 18,21 16,23 8,23"/>
+  <path d="M4 9A8 8 0 0 1 20 9Z"/>
+  <path d="M6 9A6 6 0 0 1 18 9Z" fill="#29b6f6"/>
+  <circle cx="12" cy="9" r="1.8" fill="#e53935"/>
+  <line x1="12" y1="4" x2="12" y2="9" fill="none" stroke="currentColor" stroke-width="1.6"/>
+</svg>

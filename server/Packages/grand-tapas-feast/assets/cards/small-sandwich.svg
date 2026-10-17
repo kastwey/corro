@@ -1,1 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M7 24L32 8L57 24V31H7Z M10 34H54V41H10Z M7 44H57V56H7Z M16 31L24 36L32 31L40 36L49 31Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <ellipse cx="32" cy="50" rx="28" ry="9" fill="#eceff1" stroke="#90a4ae" stroke-width="2.2"/>
+  <ellipse cx="32" cy="50" rx="20.16" ry="5.4" fill="#ffffff" stroke="#cfd8dc" stroke-width="1"/>
+  <ellipse cx="32" cy="44" rx="20" ry="7" fill="#e0a96d" stroke="#8b6944" stroke-width="2.2"/>
+  <path d="M12 40C18 34 46 34 52 40C50 44 14 44 12 40Z" fill="#ef9a9a" stroke="#945f5f" stroke-width="1.4"/>
+  <path d="M13 36C20 32 44 32 51 36L50 39C44 36 20 36 14 39Z" fill="#8bc34a" stroke="#56792e" stroke-width="1.2"/>
+  <ellipse cx="32" cy="30" rx="20" ry="8" fill="#e0a96d" stroke="#8b6944" stroke-width="2.2"/>
+  <ellipse cx="28" cy="27" rx="5" ry="2" fill="#ffffff" fill-opacity="0.45"/>
+  <line x1="40" y1="8" x2="40" y2="34" fill="none" stroke="#8d6e63" stroke-width="3" stroke-linecap="round"/>
+  <line x1="40" y1="8" x2="40" y2="34" fill="none" stroke="#bcaaa4" stroke-width="1.2" stroke-linecap="round"/>
+</svg>

@@ -358,17 +358,19 @@ file exists, its geometry replaces the engine's neutral drawing everywhere that 
 draws a neutral face from generic mechanics such as type/value; text and accessibility never
 depend on the picture.
 
-The art canvas is `viewBox="0 0 64 64"`. As with tokens, flatten the illustration to one or
-more `<path>` elements. The loader extracts and sanitizes **only path geometry**; fills,
-strokes, scripts, text, external resources, event handlers and all other SVG markup are
-discarded. The renderer colours that silhouette through the card type's accessible palette.
-An SVG with no usable path, a file whose basename does not match a card id, or art over the
-per-card/package limits makes the package invalid instead of silently falling back.
+The art canvas is `viewBox="0 0 64 64"`. The drawing may use colour, strokes and groups within
+the **package art subset** described under [SVG art subset](#svg-art-subset-tokens-and-cards):
+the loader rewrites the file into that subset and rejects anything outside it. A part with no
+`fill` of its own takes the card's accent (`artColor`, or the card type's accessible palette), so
+a monochrome silhouette still works unchanged. A file whose basename does not match a card id,
+a drawing with nothing to draw, or art over the per-card/package limits makes the package
+invalid instead of silently falling back.
 
 ```xml
 <!-- assets/cards/my-card.svg -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <path d="M8 8h48v48H8z M20 20h24v24H20z"/>
+  <circle cx="32" cy="32" r="26" fill="#f4d35e" stroke="#7a5c00" stroke-width="3"/>
+  <path d="M20 20h24v24H20z" fill="currentColor"/>
 </svg>
 ```
 
@@ -410,14 +412,50 @@ declares only `id` + `nameKey`; the **drawing** lives in `assets/tokens/<id>.svg
 
 ```xml
 <!-- assets/tokens/ufo.svg -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 14 h18 a9 5 0 0 0 -18 0 z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <path d="M3 14 h18 a9 5 0 0 0 -18 0 z"/>
+  <circle cx="12" cy="9" r="4" fill="#9be7ff"/>
+</svg>
 ```
 
-The loader extracts **only the `<path>` geometry** and **sanitises** it to path
-characters (whitelist), so an uploaded package **cannot inject markup**: draw your tokens
-**with paths** (flatten shapes to `path` in your editor). `nameKey` resolves against the
-i18n (package or app). A `.corro` **without tokens** — or a token missing its
-`assets/tokens/<id>.svg` — **is invalid**.
+The canvas is 24×24 (another square `viewBox` is rescaled onto it). The drawing goes through
+the same [SVG art subset](#svg-art-subset-tokens-and-cards) as card art. On the board a token
+sits on a chip of its **player's colour** with white ink, and in panels it inherits the text
+colour, so keep the main silhouette **unfilled** (it takes `currentColor`) and use fixed colours
+only for small accents: a fixed-colour body can vanish on a chip of the same colour. `nameKey`
+resolves against the i18n (package or app). A `.corro` **without tokens** — or a token missing
+its `assets/tokens/<id>.svg` — **is invalid**.
+
+---
+
+## SVG art subset (tokens and cards)
+
+Package art is uploaded content that the client inlines into the page, so the loader does not
+serve the file: it parses it as XML (DTDs and external resolution disabled), keeps only the
+closed subset below, **rebuilds** the markup from the validated values and stores that. The
+client validates the same subset again before rendering. Anything outside it is not stripped
+quietly: the package is rejected with a message naming the element or attribute, so an author
+learns why a feature of their file would not show instead of shipping a silently broken picture.
+
+| Kept | What is accepted |
+| --- | --- |
+| Elements | `g`, `path`, `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon` |
+| Geometry | `d` (path commands and numbers only), `x y width height rx ry`, `cx cy r`, `rx ry`, `x1 y1 x2 y2`, `points` — unitless numbers (a trailing `px` is accepted) |
+| Paint | `fill` and `stroke` as `#rgb`, `#rrggbb`, `none` or `currentColor` (no named colours, gradients or `url()`); `fill-rule`, `fill-opacity`, `stroke-width`, `stroke-linecap`, `stroke-linejoin`, `stroke-miterlimit`, `stroke-opacity`, `stroke-dasharray`, `stroke-dashoffset`, `opacity` |
+| Transforms | `transform` built only from `translate`, `scale`, `rotate`, `skewX`, `skewY` and `matrix` with numeric arguments |
+| `style` | parsed for the paint properties above; everything else in it is dropped |
+
+Dropped silently: `title`, `desc`, `metadata`, elements and attributes in editor namespaces
+(`inkscape:`, `sodipodi:`…), `id`, `class` and other attributes the subset does not name.
+
+Rejected: any other element (`script`, `style`, `text`, `image`, `use`, `defs`, gradients,
+`filter`, `clipPath`, `mask`, `foreignObject`, `a`, animation…), `href`, event attributes
+(`on*`), `clip-path`, `mask`, `filter`, `marker-*`, and any `url(` reference. Groups nest at most
+12 deep, a drawing has at most 4 000 elements, a token stays under 16 KiB of rebuilt markup, a
+card under 48 KiB and all of a package's card art under 768 KiB (it travels in game state).
+
+A monochrome drawing needs no attributes at all: a part without `fill` inherits `currentColor`
+from the engine (the player colour on a token, the accent on a card).
 
 ---
 

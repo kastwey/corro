@@ -42,7 +42,9 @@ server-authoritative core.
 The package owns every themed asset; the engine owns only neutral mechanics and fallbacks.
 Player pieces live at `assets/tokens/<id>.svg`, optional card illustrations at
 `assets/cards/<card-id>.svg`, and earcons under `assets/sounds/`. SVGs are not served as arbitrary markup:
-the loader extracts sanitized path geometry into the definition/state models. Card art uses
+the loader rebuilds each one into a closed, colour-capable drawing subset (`SvgArtSanitizer`) that
+rides in the definition/state models, and the client validates that subset again before inlining
+it. Card art uses
 a fixed 64×64 canvas and overrides the neutral type/value drawing when present. This keeps
 uploaded packages data-only, makes restore self-contained and prevents shared renderers from
 branching on a known package, token or card id.

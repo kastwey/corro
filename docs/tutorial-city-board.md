@@ -279,7 +279,9 @@ Optional visual art belongs in the package's assets, not inside that JSON. For e
 </svg>
 ```
 
-Use the exact card id as the filename, a 64×64 viewBox and flattened `<path>` geometry.
+Use the exact card id as the filename and a 64×64 viewBox. Colour is welcome (`fill`/`stroke`
+in hexadecimal; an unfilled shape takes the card's accent), drawn with plain shapes and groups —
+see the SVG art subset in `CORRO_FORMAT.md` for what the loader keeps and what it rejects.
 When the file is absent Corro shows a neutral effect drawing. `inspect` reports
 `cardIllustrations`; `validate` rejects a misspelled/orphaned filename or malformed SVG.
 
@@ -351,9 +353,11 @@ only speak one language, it's OK to copy the same values into both for now.
 ## Step 6 — `assets/tokens/` (the player pieces, required)
 
 Every board must ship its own pieces — the engine has none built in. Each token in the
-manifest needs a file at `assets/tokens/<id>.svg`. The loader keeps **only the `<path>` shape** and
-sanitises it, so draw your tokens as a single path (in any editor: draw, then "flatten to
-path"). Here are six ready-to-use ones — copy each into `assets/tokens/<id>.svg`:
+manifest needs a file at `assets/tokens/<id>.svg` on a 24×24 canvas. The loader keeps only plain
+shapes (`path`, `rect`, `circle`… with hexadecimal or `currentColor` paint) and rejects the rest,
+and the board shows each piece on a chip of its player's colour, so leave the main silhouette
+unfilled and use colour only for small accents. Here are six ready-to-use ones — copy each into
+`assets/tokens/<id>.svg`:
 
 `assets/tokens/circle.svg`
 ```xml
@@ -381,8 +385,8 @@ path"). Here are six ready-to-use ones — copy each into `assets/tokens/<id>.sv
 ```
 
 To make **themed** pieces (a tram, a landmark, a local mascot), draw them in a vector editor,
-flatten to a single `<path>`, and drop the SVG in with a matching `assets/tokens/<id>.svg` +
-manifest entry + `tokens.<id>` name.
+export as plain SVG (text converted to outlines, no gradients or filters), and drop the file in
+with a matching `assets/tokens/<id>.svg` + manifest entry + `tokens.<id>` name.
 
 ---
 
@@ -440,8 +444,11 @@ The common ones:
 - **"key 'squares.N' resolves in no locale"** — you referenced a name that isn't defined in
   *any* `i18n/*.json`. Add it (a placeholder counts).
 - **"token 'x' has no icon"** — a manifest token is missing its `assets/tokens/x.svg`.
-- **"card illustration …"** — check that `assets/cards/<id>.svg` matches a `cards.json` id,
-  uses viewBox 0 0 64 64 and contains flattened path geometry.
+- **"card illustration …"** — check that `assets/cards/<id>.svg` matches a `cards.json` id
+  and uses viewBox 0 0 64 64.
+- **"SVG asset … uses <text>"** (or another element/attribute) — the drawing uses something
+  outside the SVG art subset; convert text to outlines, flatten gradients and filters, and
+  export again as plain SVG.
 - **"gameType '…' is not supported"** — check `"gameType": "property"` is spelled exactly.
 - **The board isn't in the lobby list** — the folder isn't under `server/Packages/`, or the
   `manifest.json` failed to parse (a stray comma? a missing quote?). Validate your JSON.

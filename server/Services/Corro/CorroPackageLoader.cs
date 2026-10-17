@@ -3,8 +3,6 @@ using System.IO.Compression;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Xml;
-using System.Xml.Linq;
 using CorroServer.Models.Corro;
 using CorroServer.Services.Corro.Families;
 
@@ -22,9 +20,11 @@ public sealed class CorroPackageLoader
 	public const long MaxEntryUncompressedBytes = 25L * 1024 * 1024;
 	public const long MaxTotalUncompressedBytes = 50L * 1024 * 1024;
 	/// <summary>Card illustrations ride in every persisted/broadcast catalog, so keep each
-	/// flattened path and their package total well below Cosmos' document limit.</summary>
-	public const int MaxCardSvgPathChars = 32 * 1024;
-	public const int MaxCardSvgTotalChars = 512 * 1024;
+	/// sanitised drawing and their package total well below Cosmos' document limit.</summary>
+	public const int MaxCardSvgChars = 48 * 1024;
+	public const int MaxCardSvgTotalChars = 768 * 1024;
+	/// <summary>Token icons travel with every player list, so each one stays small.</summary>
+	public const int MaxTokenSvgChars = 16 * 1024;
 	public const int CardPngWidth = 256;
 	public const int CardPngHeight = 256;
 	public const int MaxCardPngBytes = 512 * 1024;
@@ -158,19 +158,26 @@ public sealed class CorroPackageLoader
 	}
 
 	/// <summary>
-	/// Fill each token's icon path-data: the manifest keeps tokens lean (id + nameKey), so the art
-	/// lives as files under assets/tokens/&lt;id&gt;.svg. Only the geometry of &lt;path&gt; elements is taken and it
-	/// is whitelisted to path chars, so an uploaded package can't inject markup. An inline `svg` on
-	/// the token still wins if present (small icons / back-compat).
+	/// Fill each token's icon: the manifest keeps tokens lean (id + nameKey), so the art lives as
+	/// files under assets/tokens/&lt;id&gt;.svg. The file goes through <see cref="SvgArtSanitizer"/>, so
+	/// an uploaded package can only contribute the closed drawing subset it allows. An inline `svg`
+	/// on the token (legacy path data) still wins if present.
 	/// </summary>
 	private static List<TokenDef> ResolveTokenSvgs(List<TokenDef> tokens, string packageDir)
 		=> tokens.Select(t =>
 		{
-			var raw = !string.IsNullOrEmpty(t.Svg) ? t.Svg : ReadTokenSvgFile(packageDir, t.Id);
-			return t with { Svg = raw is null ? null : SanitizePathData(raw) };
+			var svg = !string.IsNullOrEmpty(t.Svg)
+				? SvgArtSanitizer.FromPathData(t.Svg, $"token '{t.Id}' (manifest svg)")
+				: ReadTokenSvgFile(packageDir, t.Id);
+			if (svg is not null && svg.Length > MaxTokenSvgChars)
+			{
+				throw new InvalidOperationException(
+					$"token icon 'assets/tokens/{t.Id}.svg' exceeds the {MaxTokenSvgChars}-character limit.");
+			}
+			return t with { Svg = svg };
 		}).ToList();
 
-	/// <summary>Read assets/tokens/&lt;id&gt;.svg and return the concatenated path-data of its &lt;path&gt; elements, or null.</summary>
+	/// <summary>Read assets/tokens/&lt;id&gt;.svg and return its sanitised drawing, or null when absent.</summary>
 	private static string? ReadTokenSvgFile(string packageDir, string id)
 	{
 		var safeId = Regex.Replace(id, "[^A-Za-z0-9_-]", ""); // never let a token id escape the asset folder
@@ -179,19 +186,14 @@ public sealed class CorroPackageLoader
 		{
 			return null;
 		}
-
-		var joined = ReadSvgPaths(path, expectedViewBox: null);
-		return joined.Length == 0 ? null : joined;
+		return SvgArtSanitizer.SanitizeFile(path, SvgArtSanitizer.Profile.Token, $"assets/tokens/{safeId}.svg", MaxEntryUncompressedBytes);
 	}
-
-	/// <summary>Whitelist to SVG path-data characters — mirrors the client sanitizer.</summary>
-	private static string SanitizePathData(string d) => Regex.Replace(d, "[^0-9A-Za-z.,\\-\\s]", "");
 
 	/// <summary>
 	/// Resolve optional card illustrations for EVERY deck shape in one place, so adding a family
 	/// cannot accidentally bypass package content. A package owns one assets/cards/&lt;id&gt;.svg or
-	/// .png; JSON stays rules-only. Missing art uses the neutral client fallback. SVG geometry is
-	/// sanitized into state; PNG remains staged on disk and contributes only a marker to state.
+	/// .png; JSON stays rules-only. Missing art uses the neutral client fallback. SVG drawings are
+	/// sanitised into state; PNG remains staged on disk and contributes only a marker to state.
 	/// </summary>
 	private static GameDefinition ResolveCardArt(GameDefinition definition, string packageDir)
 	{
@@ -260,24 +262,19 @@ public sealed class CorroPackageLoader
 				continue;
 			}
 
-			var pathData = SanitizePathData(ReadSvgPaths(file, expectedViewBox: [0, 0, 64, 64])).Trim();
-			if (!LooksLikeSvgPath(pathData))
+			var svg = SvgArtSanitizer.SanitizeFile(file, SvgArtSanitizer.Profile.Card, $"assets/cards/{id}.svg", MaxEntryUncompressedBytes);
+			if (svg.Length > MaxCardSvgChars)
 			{
 				throw new InvalidOperationException(
-					$"card illustration 'assets/cards/{id}.svg' contains no usable <path> geometry.");
+					$"card illustration 'assets/cards/{id}.svg' exceeds the {MaxCardSvgChars}-character limit.");
 			}
-			if (pathData.Length > MaxCardSvgPathChars)
-			{
-				throw new InvalidOperationException(
-					$"card illustration 'assets/cards/{id}.svg' exceeds the {MaxCardSvgPathChars}-character path limit.");
-			}
-			svgTotal = checked(svgTotal + pathData.Length);
+			svgTotal = checked(svgTotal + svg.Length);
 			if (svgTotal > MaxCardSvgTotalChars)
 			{
 				throw new InvalidOperationException(
 					$"SVG card illustrations exceed the {MaxCardSvgTotalChars}-character package limit.");
 			}
-			result.Add(id, new CardArt(pathData, false));
+			result.Add(id, new CardArt(svg, false));
 		}
 		return result;
 	}
@@ -470,53 +467,6 @@ public sealed class CorroPackageLoader
 			crc = (crc & 1) != 0 ? 0xedb88320u ^ (crc >> 1) : crc >> 1;
 		}
 		return crc;
-	}
-
-	private static bool LooksLikeSvgPath(string pathData)
-		=> pathData.Length > 0
-		   && (pathData[0] == 'M' || pathData[0] == 'm')
-		   && pathData.Any(char.IsDigit);
-
-	/// <summary>Parse one SVG as XML with all external resolution disabled and extract only
-	/// actual &lt;path d="…"&gt; attributes. This deliberately ignores every other shape/attribute.</summary>
-	private static string ReadSvgPaths(string file, double[]? expectedViewBox)
-	{
-		var settings = new XmlReaderSettings
-		{
-			DtdProcessing = DtdProcessing.Prohibit,
-			XmlResolver = null,
-			MaxCharactersInDocument = MaxEntryUncompressedBytes,
-		};
-		using var reader = XmlReader.Create(file, settings);
-		var document = XDocument.Load(reader, LoadOptions.None);
-		var root = document.Root;
-		if (root?.Name.LocalName != "svg")
-		{
-			throw new InvalidOperationException($"SVG asset '{Path.GetFileName(file)}' has no <svg> root.");
-		}
-		if (expectedViewBox is not null && !ViewBoxMatches(root, expectedViewBox))
-		{
-			throw new InvalidOperationException(
-				$"card illustration 'assets/cards/{Path.GetFileName(file)}' must use viewBox=\"0 0 64 64\".");
-		}
-
-		return string.Join(" ", root.Descendants()
-			.Where(element => element.Name.LocalName == "path")
-			.Select(element => element.Attributes().FirstOrDefault(attribute => attribute.Name.LocalName == "d")?.Value)
-			.Where(value => !string.IsNullOrWhiteSpace(value))).Trim();
-	}
-
-	private static bool ViewBoxMatches(XElement root, double[] expected)
-	{
-		var raw = root.Attributes().FirstOrDefault(attribute => attribute.Name.LocalName == "viewBox")?.Value;
-		if (raw is null)
-		{
-			return false;
-		}
-		var parts = raw.Split([' ', '\t', '\r', '\n', ','], StringSplitOptions.RemoveEmptyEntries);
-		return parts.Length == expected.Length && parts.Select((part, index) =>
-			double.TryParse(part, NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
-			&& Math.Abs(value - expected[index]) < 0.0001).All(matches => matches);
 	}
 
 	private static void RejectInlineCardArt(string packageDir)
