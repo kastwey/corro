@@ -19,7 +19,7 @@ import { MentionList } from './mentionList.js';
 import { winningSide } from './endScreen.js';
 import {
 	applyHouseRuleValues, readHouseRuleValues, renderHouseRules, syncHouseRuleVisibility,
-	watchHouseRuleVisibility,
+	watchHouseRuleVisibility, lockSeatingAtTable, bounceLockedChoice,
 } from './houseRules.js';
 import { RovingToolbar, type ToolbarItem } from './rovingToolbar.js';
 import { RovingToolbarList } from './accessibleList.js';
@@ -138,6 +138,8 @@ export class TableView {
 	private rulesFields: HTMLElement | null = null;
 	/** The package whose rules are on screen, so they are fetched and built once per table. */
 	private rulesPackageToken: string | null = null;
+	/** The staged board behind the rules panel, for what its seating rule may and may not do here. */
+	private rulesPackage: PackageUploadResponse | null = null;
 	/**
 	 * Set while a bot the host just asked for is on its way. The table it comes back in may no
 	 * longer offer the chair, so the next render decides where the keyboard goes: another bot if
@@ -205,7 +207,16 @@ export class TableView {
 		// elements: it is obtained once and never replaced, only refilled, so its listener belongs
 		// where the ones that never change do. It delegates, so it reaches whatever was rendered
 		// into it last.
-		this.rulesFields?.addEventListener('change', () => void this.saveRules());
+		this.rulesFields?.addEventListener('change', event => {
+			// A seating option the table's shape rules out is bounced back and explained, never
+			// sent: the server would refuse it, and a refusal after the fact says less.
+			const bounced = this.rulesFields ? bounceLockedChoice(this.rulesFields, event.target) : null;
+			if (bounced !== null) {
+				if (bounced) this.deps?.announce(bounced);
+				return;
+			}
+			void this.saveRules();
+		});
 	}
 
 	isVisible(): boolean {
@@ -273,8 +284,10 @@ export class TableView {
 				// A board that declares no rules has nothing to offer here.
 				this.rulesBox.hidden = true;
 				this.rulesFields.replaceChildren();
+				this.rulesPackage = null;
 				return;
 			}
+			this.rulesPackage = pkg;
 			this.rulesFields.innerHTML = renderHouseRules(
 				pkg!.ruleGroups ?? [], rules, key => this.deps!.t(key));
 			watchHouseRuleVisibility(this.rulesFields);
@@ -288,6 +301,13 @@ export class TableView {
 		// whose own change was refused — sees what the server actually holds.
 		if (!this.rulesBox.hidden) {
 			applyHouseRuleValues(this.rulesFields, table.ruleValues);
+			// A table's shape — its size, and whether it was arranged in teams — was settled when it
+			// was created, so a seating that would need a different one is locked here, with the
+			// reason, rather than refused by the server after the click.
+			if (this.rulesPackage) {
+				lockSeatingAtTable(this.rulesFields, this.rulesPackage, (table.teamCount ?? 0) >= 2,
+					this.deps.t('table.seatingFixed'));
+			}
 			// After restoring, because which conditional rules apply depends on the values just put back.
 			syncHouseRuleVisibility(this.rulesFields);
 		}

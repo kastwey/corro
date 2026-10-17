@@ -520,14 +520,27 @@ test('three players play everyone for themselves, with no teams to arrange', asy
 	const carla = await newPlayerPage(browser, 'es-ES');
 	const pages = [ana, berto, carla];
 
+	// Three players and nothing else: the count alone seats the table for themselves.
 	const code = await createGame(ana, 'Ana', BOARD, {
-		houseRules: { forbiddenMode: 'solo', forbiddenCycles: 1 },
+		houseRules: { forbiddenCycles: 1 },
 		maxPlayers: 3,
 		contentLanguage: 'es',
 	});
 	// No teams to arrange, so the host lands straight at the table, like any other board.
 	await expect(ana.locator('#table-view')).toBeVisible();
 	await expect(ana.locator('#table-team-panel')).toBeHidden();
+	// The table's rules panel offers the next match's rules, and the one seating this table of
+	// three can play is the one it has: the other stays focusable and says why.
+	await ana.locator('#table-rules').evaluate(el => { (el as HTMLDetailsElement).open = true; });
+	const tableSolo = ana.locator('#table-rules-fields [data-rule-id="forbiddenMode"][value="solo"]');
+	const tableTeams = ana.locator('#table-rules-fields [data-rule-id="forbiddenMode"][value="teams"]');
+	await expect(tableSolo).toBeChecked();
+	await expect(tableTeams).toHaveAttribute('aria-disabled', 'true');
+	await expect(tableTeams).toHaveAttribute('aria-describedby', 'seating-table-hint');
+	await expect(ana.locator('#seating-table-hint')).toContainText('create another table');
+	await tableTeams.dispatchEvent('click');
+	await expect(tableSolo).toBeChecked();
+	await flushAxeAudit(ana);
 	await joinGame(berto, code, 'Berto');
 	await joinGame(carla, code, 'Carla');
 	await flushAxeAudit(ana);

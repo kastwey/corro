@@ -1338,11 +1338,14 @@ values `teams` / `solo`), `forbiddenEndMode` (`"type": "choice"`, values `rounds
 the numbers `forbiddenCycles`, `forbiddenTargetScore` and `forbiddenTurnSeconds`.
 
 Packages declare a player range from 3 up to the engine's table limit of 16 and enough tokens for
-`players.max`. The range need not be even: in team play the lobby offers only the even sizes of
-four and up and forces exactly two equal, full teams before starting; everyone for themselves takes
-any size from three and has no teams to arrange, so the table starts like any other board's.
-A package that offers `forbiddenMode` should start its range at 3; one that does not is only ever
-seated in teams, whatever its minimum says. Bots are not supported in this family.
+`players.max`. The range need not be even. A package that offers `forbiddenMode` has every size in
+its range offered by the lobby, and the player count decides the seating: a count that cannot
+split into two teams of at least two (three, or any odd table) locks the choice onto everyone for
+themselves, with the reason on the locked option; an even count of four or more leaves the choice
+to the host. In team play the lobby forces exactly two equal, full teams before starting; everyone
+for themselves has no teams to arrange, so the table starts like any other board's. A package that
+does not offer `forbiddenMode` is only ever seated in teams, so the lobby offers only its even sizes
+of four and up, whatever its minimum says. Bots are not supported in this family.
 
 ### Forbidden-word rules the engine implements
 

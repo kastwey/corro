@@ -14,7 +14,7 @@ import { i18nBinder } from '../i18nBinder.js';
 import { isLobbyPathFor, lobbyPathFor } from '../languageUrl.js';
 import {
 	renderHouseRules, readHouseRuleValues, syncHouseRuleVisibility, watchHouseRuleVisibility,
-	requiredTeamCountUnder, houseRuleDefaults,
+	requiredTeamCountUnder, houseRuleDefaults, syncSeatingWithPlayerCount, bounceLockedChoice,
 } from '../houseRules.js';
 import { GameSessionStore, SavedGame } from '../sessionUtils.js';
 import { dialogManager } from '../dialogManager.js';
@@ -474,19 +474,26 @@ class UnifiedLobbyUI {
 		const handler = async (e: Event) => { e.preventDefault(); await this.createGame(); };
 		form?.addEventListener('submit', handler);
 		btn?.addEventListener('click', handler);
-		// The valid team counts depend on the CHOSEN player count: refresh them together.
+		// The seating follows the CHOSEN player count (a count that cannot split into teams is
+		// seated without them), and the valid team counts follow both: refresh them together.
 		getElement<HTMLSelectElement>('max-players')?.addEventListener('change', () => {
-			if (this.uploadedPackage) this.renderTeamCountOptions(this.uploadedPackage);
+			if (this.uploadedPackage) this.syncSeating(this.uploadedPackage, { speak: true });
 		});
 		// A board whose team requirement hangs on one of its own house rules (Forbidden Words,
-		// "everyone for themselves") changes shape when that rule is flipped: the table sizes it
-		// seats and whether there are teams to count at all are re-offered on the spot.
+		// "everyone for themselves") changes shape when that rule is flipped: whether there are
+		// teams to count at all is re-offered on the spot. An option the player count has locked
+		// is bounced back, and the reason is spoken — the browser already moved the radio.
 		getElement('package-rules')?.addEventListener('change', event => {
 			const pkg = this.uploadedPackage;
+			const panel = getElement('package-rules');
+			if (!pkg || !panel) return;
+			const bounced = bounceLockedChoice(panel, event.target);
+			if (bounced !== null) {
+				if (bounced) this.announceInLobby(bounced);
+				return;
+			}
 			const rule = (event.target as HTMLElement | null)?.dataset?.ruleId;
-			if (!pkg || !rule || rule !== pkg.teamsWaivedWhen?.rule) return;
-			this.renderPlayerCount(pkg);
-			this.renderTeamCountOptions(pkg);
+			if (rule && rule === pkg.teamsWaivedWhen?.rule) this.renderTeamCountOptions(pkg);
 		});
 	}
 
@@ -571,11 +578,11 @@ class UnifiedLobbyUI {
 			details?.classList.add('hidden');
 		}
 		// Fill the player-count selector from this board's supported range (min..max). After the
-		// rules, on purpose: a board's team requirement may hang on one of its own rules, and the
-		// sizes it seats are read off the panel as it stands.
+		// rules, on purpose: the seating rule follows the count, and that rule has to be on the
+		// form before it can.
 		this.renderPlayerCount(pkg);
-		// Team families offer their legal equal-team layouts for the chosen player count.
-		this.renderTeamCountOptions(pkg);
+		// The seating for that count, then the equal-team layouts it leaves.
+		this.syncSeating(pkg, { speak: false });
 		// Open the rules panel so the host actually sees the board's rules (both the shipped-board
 		// picker and the upload land here; previously only the upload path opened it, so a shipped
 		// board rendered its rules into a still-collapsed <details> — "nothing showed up inside").
@@ -680,6 +687,33 @@ class UnifiedLobbyUI {
 	}
 
 	/**
+	 * The count decides the seating, not the other way round. Reported from the first evening a
+	 * family of three tried it: the player count offered only even tables until a rule further
+	 * down the form was flipped, and nothing on the count said so — with a screen reader that
+	 * reads as "three cannot play". Now every size the package seats is offered; a size that
+	 * cannot split into teams locks the seating onto the option that needs none, and says why on
+	 * the option itself. The change is spoken when the host caused it with the count.
+	 */
+	private syncSeating(pkg: PackageUploadResponse, options: { speak: boolean }): void {
+		const panel = getElement('package-rules');
+		const players = Number(getElement<HTMLSelectElement>('max-players')?.value) || pkg.maxPlayers || 0;
+		if (panel && pkg.teamsWaivedWhen && pkg.requiredTeamCount) {
+			const { forced, changed } = syncSeatingWithPlayerCount(panel, pkg, players, option =>
+				i18nBinder.tSync('lobby.seatingForcedByCount', { count: players, option }));
+			if (changed) {
+				// Which conditional rules apply depends on the value that just moved.
+				syncHouseRuleVisibility(panel);
+				if (options.speak) {
+					this.announceInLobby(forced
+						? panel.querySelector('#seating-count-hint')?.textContent ?? ''
+						: i18nBinder.tSync('lobby.seatingFree', { count: players }));
+				}
+			}
+		}
+		this.renderTeamCountOptions(pkg);
+	}
+
+	/**
 	 * Journey offers optional equal teams. A team-only board (Forbidden Words in teams) requires
 	 * exactly its team count, and offers nothing else. Hidden for other families — and for a
 	 * team-only board playing without teams — and rebuilt with the chosen player count.
@@ -754,9 +788,10 @@ class UnifiedLobbyUI {
 		const max = Math.max(pkg.maxPlayers || 8, min);
 		// A team-only board (forbidden: clue-giver vs the opposing monitor) only seats tables that
 		// split evenly into its teams, with at least two players each. The SERVER says how many —
-		// the lobby no longer guesses which family that is — and which house rule waives them,
-		// after which every size in the package's range is on offer.
-		const teams = this.requiredTeamCount(pkg) ?? 0;
+		// the lobby no longer guesses which family that is. A board with a house rule that waives
+		// its teams offers every size in its range instead, and the seating follows the count
+		// (syncSeating): the host picks how many, never a rule first.
+		const teams = pkg.teamsWaivedWhen ? 0 : (pkg.requiredTeamCount ?? 0);
 		const counts: SelectOption[] = [];
 		for (let n = min; n <= max; n++) {
 			if (teams > 0 && (n % teams !== 0 || n / teams < 2)) continue;

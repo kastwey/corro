@@ -11,7 +11,7 @@ Every turn has three roles.
 - The **monitor** also sees the private card and reports when the clue-giver says the target or any listed word.
 - Other players wait for their next role.
 
-The host chooses how the table plays when creating the game.
+The host chooses how the table plays when creating the game, and the number of players decides what can be chosen: with three players, or any odd number, the table cannot split into teams, so everyone for themselves is selected on its own; with an even number of four or more the host picks either.
 
 **In two teams**, the classic: the host creates two equal teams of at least two, and turns alternate between them. The clue-giver and the guesser are teammates, the monitor comes from the other team, and roles rotate in team order, so every player gives clues once in a complete rotation. The team scores.
 

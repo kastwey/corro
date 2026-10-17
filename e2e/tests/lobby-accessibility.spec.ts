@@ -327,9 +327,11 @@ test('Four Colours lets the host say how the match ends, and with which number',
 });
 
 // The maintainer asked for a ten-seat Forbidden Words and found the family, not the game, saying
-// no. The whole chain — package range, server summary, lobby select — has to offer every even
-// count up to the package's own maximum, with a token to pick for each seat.
-test('Forbidden Words seats every even table up to ten', async ({ browser }) => {
+// no. The whole chain — package range, server summary, lobby select — has to offer every count
+// up to the package's own maximum, with a token to pick for each seat. Then a family of three
+// found the count offering only even tables until a rule further down the form was flipped,
+// which with a screen reader reads as "three cannot play": the count now decides the seating.
+test('Forbidden Words seats every table from three to ten, and the count decides the seating', async ({ browser }) => {
 	const page = await newPlayerPage(browser, 'es-ES');
 	await gotoLobbyHome(page);
 	await page.locator('#go-create-btn').click();
@@ -337,7 +339,7 @@ test('Forbidden Words seats every even table up to ten', async ({ browser }) => 
 
 	const counts = await page.locator('#max-players option').evaluateAll(
 		options => options.map(option => (option as HTMLOptionElement).value));
-	expect(counts).toEqual(['4', '6', '8', '10']);
+	expect(counts).toEqual(['3', '4', '5', '6', '7', '8', '9', '10']);
 	const tokens = packageManifest(FORBIDDEN_BOARD).tokens as { id: string }[];
 	expect(tokens.length).toBeGreaterThanOrEqual(10);
 	for (const token of tokens) {
@@ -346,30 +348,60 @@ test('Forbidden Words seats every even table up to ten', async ({ browser }) => 
 	await page.locator('#max-players').selectOption('10');
 	await expect(page.locator('#max-players')).toHaveValue('10');
 	await expect(page.locator('#team-count-group')).toBeVisible();
-	await flushAxeAudit(page);
-
-	// Everyone for themselves: the same board, every size from three up, and no teams to count.
-	// Asked for by a family of three, who found the lobby could not seat them at all.
 	await page.locator('#rules-details').evaluate(el => { (el as HTMLDetailsElement).open = true; });
 	const seating = page.locator('#package-rules fieldset.rule-choice', {
 		has: page.locator('[data-rule-id="forbiddenMode"]'),
 	});
+	const teams = page.locator('#package-rules [data-rule-id="forbiddenMode"][value="teams"]');
+	const solo = page.locator('#package-rules [data-rule-id="forbiddenMode"][value="solo"]');
 	await expect(seating.locator('legend')).toHaveText('Cómo se juega');
-	await expect(seating.locator('[data-rule-id="forbiddenMode"]').nth(0)).toBeChecked(); // teams, the classic
-	await page.locator('#package-rules [data-rule-id="forbiddenMode"][value="solo"]').dispatchEvent('click');
-	const soloCounts = await page.locator('#max-players option').evaluateAll(
-		options => options.map(option => (option as HTMLOptionElement).value));
-	expect(soloCounts).toEqual(['3', '4', '5', '6', '7', '8', '9', '10']);
-	await expect(page.locator('#team-count-group')).toBeHidden();
-	await page.locator('#max-players').selectOption('3');
+	await expect(teams).toBeChecked(); // the classic, at a table that splits
+	await expect(teams).not.toHaveAttribute('aria-disabled', /.*/);
 	await flushAxeAudit(page);
 
-	// And back: the even sizes return, with the team count beside them.
-	await page.locator('#package-rules [data-rule-id="forbiddenMode"][value="teams"]').dispatchEvent('click');
-	const teamCounts = await page.locator('#max-players option').evaluateAll(
-		options => options.map(option => (option as HTMLOptionElement).value));
-	expect(teamCounts).toEqual(['4', '6', '8', '10']);
+	// Three: the seating follows, the team count goes, the locked option stays focusable and says
+	// why, and the room hears what just moved — a radio changing on its own says nothing.
+	await page.evaluate(() => { ((window as any).__announcements as string[]).length = 0; });
+	await page.locator('#max-players').selectOption('3');
+	await expect(solo).toBeChecked();
+	await expect(teams).toHaveAttribute('aria-disabled', 'true');
+	await expect(teams).not.toHaveAttribute('disabled', /.*/);
+	const hint = page.locator('#seating-count-hint');
+	await expect(teams).toHaveAttribute('aria-describedby', 'seating-count-hint');
+	await expect(hint).toHaveText(
+		'Con 3 jugadores la mesa no se divide en equipos, así que se juega «Todos contra todos (tres jugadores o más, también en número impar)». Para elegir otra forma de jugar, cambia el número de jugadores.');
+	await expect(page.locator('#lobby-live')).toHaveText(/Con 3 jugadores la mesa no se divide en equipos/);
+	await expect(page.locator('#team-count-group')).toBeHidden();
+	await flushAxeAudit(page);
+
+	// Clicking the locked option bounces straight back, and the reason is spoken again.
+	await page.evaluate(() => { ((window as any).__announcements as string[]).length = 0; });
+	await teams.dispatchEvent('click');
+	await expect(solo).toBeChecked();
+	await expect(teams).not.toBeChecked();
+	await expect(page.locator('#lobby-live')).toHaveText(/Con 3 jugadores/);
+
+	// Five is odd too: still everyone for themselves, nothing to say twice.
+	await page.locator('#max-players').selectOption('5');
+	await expect(solo).toBeChecked();
+	await expect(teams).toHaveAttribute('aria-disabled', 'true');
+
+	// Back to an even table: the lock lifts and the host gets their earlier choice (teams) back.
+	await page.locator('#max-players').selectOption('4');
+	await expect(teams).toBeChecked();
+	await expect(teams).not.toHaveAttribute('aria-disabled', /.*/);
+	await expect(hint).toBeHidden();
+	await expect(page.locator('#lobby-live')).toHaveText('Con 4 jugadores puedes elegir cómo se juega.');
 	await expect(page.locator('#team-count-group')).toBeVisible();
+	await flushAxeAudit(page);
+
+	// An even table may still choose everyone for themselves, and then has no teams to count.
+	await solo.dispatchEvent('click');
+	await expect(solo).toBeChecked();
+	await expect(page.locator('#team-count-group')).toBeHidden();
+	await page.locator('#max-players').selectOption('6');
+	await expect(solo).toBeChecked(); // a choice, not a lock: six keeps it
+	await expect(page.locator('#team-count-group')).toBeHidden();
 	await flushAxeAudit(page);
 });
 

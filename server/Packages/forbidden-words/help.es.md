@@ -11,7 +11,7 @@ Cada turno tiene tres funciones.
 - El **supervisor** también ve la carta privada y señala cuando el portavoz dice el objetivo o cualquier palabra de la lista.
 - Los demás jugadores esperan su próxima función.
 
-El anfitrión elige cómo se juega al crear la partida.
+El anfitrión elige cómo se juega al crear la partida, y el número de jugadores decide qué se puede elegir: con tres jugadores, o cualquier número impar, la mesa no se divide en equipos, así que todos contra todos queda marcado solo; con un número par de cuatro o más, el anfitrión elige.
 
 **Por equipos**, el modo clásico: el anfitrión crea dos equipos iguales de al menos dos personas y los turnos se alternan entre ellos. El portavoz y el adivinante son compañeros, el supervisor lo aporta el equipo contrario y las funciones rotan siguiendo el orden del equipo, de modo que cada persona es portavoz una vez en cada rotación completa. Puntúa el equipo.
 
