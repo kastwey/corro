@@ -1282,6 +1282,7 @@
     "assembly_not_your_turn": "It is not your turn",
     "pick_cancelled": "Cancelled, the card stays in your hand",
     "assembly_pick_victim": "Whom does {{card}} target?",
+    "assembly_pick_victim_slot": "{{player}}: {{slot}}",
     "assembly_pick_slot": "Which of {{player}}'s pieces?",
     "assembly_pick_own_slot": "Which of your pieces gets {{card}}?",
     "assembly_pick_give_slot": "Which of your pieces do you give in exchange?",
