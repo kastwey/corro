@@ -332,10 +332,10 @@ export class SheddingBoard {
 
 		// Reordering the hand without walking into the Shift+F10 menu: Shift+N flips the two
 		// value ends (which one you want changes with the hand you hold), Shift+C groups by
-		// colour, Shift+O returns to the order the cards arrived in. The engine binds all three
-		// chords to its property/board commands, which a card family has no board for — they are
-		// inert here and already hidden from this family's help, so the letters are free
-		// (exploding shadows plain N the same way).
+		// colour, Shift+O returns to the order the cards arrived in. The engine binds Shift+N and
+		// Shift+C to board commands (NextOccupied, AnnounceGroup) that a card family has no board
+		// for — they are inert here and already hidden from this family's help — and leaves
+		// Shift+O unbound, so all three letters are free (exploding shadows plain N the same way).
 		this.element.addEventListener('keydown', (e) => {
 			if (!e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
 			// Shift+N alternates rather than picking a side: from colour or deal order it enters
