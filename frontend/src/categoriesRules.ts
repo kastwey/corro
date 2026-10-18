@@ -32,7 +32,8 @@ export function categoriesRoleLabel(role: CategoriesRole, t: T): string {
 /**
  * The headline of the round: which round, which letter, who rules on it. The letter is the one
  * fact every single answer depends on, so it is never left to a visual badge — it is said in the
- * same sentence as the round.
+ * same sentence as the round. While the round is being prepared there is no letter yet (the
+ * server withholds it until the clock starts), and that phase's wording asks for none.
  */
 export function categoriesNowPlayingText(gs: GameState, playerId: string, t: T): string | null {
 	const state = gs.categories;

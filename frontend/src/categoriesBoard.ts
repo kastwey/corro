@@ -307,7 +307,11 @@ export class CategoriesBoard {
 		event.preventDefault();
 		event.stopPropagation();
 		if (query === 'letter') {
-			this.say(this.t('categories_letter_label', { letter: round.letter }));
+			// There is no letter yet while the clock is stopped, and the server does not send one:
+			// saying "the letter is" followed by nothing would read as a bug.
+			this.say(round.letter
+				? this.t('categories_letter_label', { letter: round.letter })
+				: this.t('categories_letter_waiting'));
 			return;
 		}
 		this.say(round.phase === 'writing'
@@ -485,10 +489,13 @@ export class CategoriesBoard {
 	 * The die shows the round's letter. Re-stamping the round NUMBER (not the letter) restarts
 	 * the roll, so two rounds that happen to draw the same letter still read as two rolls — and
 	 * a repaint for any other reason never re-rolls a die that is already sitting there.
+	 *
+	 * Before the clock starts there is no letter to show, and the die is a die: it shows a
+	 * question mark rather than a blank face, which reads as a die that failed to draw.
 	 */
 	private renderDie(letter: string, roundNumber: number): void {
 		const face = this.required<HTMLElement>('.categories-die');
-		this.required<HTMLElement>('.categories-die__letter').textContent = letter;
+		this.required<HTMLElement>('.categories-die__letter').textContent = letter || '?';
 		if (face.dataset.round === String(roundNumber)) return;
 		face.dataset.round = String(roundNumber);
 		// Restart the CSS animation: removing the class and forcing a reflow is the only way to
@@ -504,7 +511,12 @@ export class CategoriesBoard {
 	 */
 	private renderSheet(gs: GameState): void {
 		const round = gs.categories!.round;
-		this.sheetHeading.textContent = this.t('categories_sheet_title', { letter: round.letter });
+		// The sheet is on screen during the preparing phase so the categories can be READ before
+		// the clock runs, which is the whole point of that phase. Its heading cannot promise a
+		// letter that has not been dealt, so until then it says what it is waiting for.
+		this.sheetHeading.textContent = round.letter
+			? this.t('categories_sheet_title', { letter: round.letter })
+			: this.t('categories_sheet_title_waiting');
 		if (this.sheetRound === round.roundNumber) return;
 
 		this.sheetRound = round.roundNumber;

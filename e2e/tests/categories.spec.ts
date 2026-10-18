@@ -64,6 +64,15 @@ test('a shared Spanish deck, per-player interfaces and one full judged round', a
 	await expect(ana.locator('.categories-duty')).toHaveText(/do not write this round/i);
 	await expect(berto.locator('.categories-duty')).toContainText('Ana');
 
+	// The letter is dealt WITH the clock, never before it. Reading the categories is what this
+	// phase is for; knowing the letter here would hand every writer unlimited time to think of
+	// answers, and the round's clock would stop measuring anything.
+	await expect(berto.locator('.categories-die__letter')).toHaveText('?');
+	await expect(berto.locator('#categories-sheet-title')).not.toContainText('empezando por');
+	await berto.locator('.categories-shell').focus();
+	await berto.keyboard.press('l');
+	await expectAnnouncement(berto, /La letra se reparte/i);
+
 	// Named sibling regions, no nesting and no skipped level; the headings that ANNOUNCE as one
 	// level also LOOK like one level (a miss no Axe rule would ever see).
 	await expect(ana.locator('.categories-shell > section:not([hidden])')).toHaveCount(2);
@@ -208,6 +217,11 @@ test('the surface answers the reading keys without a screen reader having to hun
 	await ana.locator('.categories-shell').focus();
 	await ana.keyboard.press('r');
 	await expectAnnouncement(ana, new RegExp(appI18n('en').game.categories_timer_not_running as string));
+
+	// L before the round starts says when the letter comes, rather than "the letter is" and then
+	// nothing — there is no letter on the wire yet.
+	await ana.keyboard.press('l');
+	await expectAnnouncement(ana, new RegExp(appI18n('en').game.categories_letter_waiting as string));
 
 	// S is my own standing; Shift+S surveys the others and leaves me out.
 	await ana.keyboard.press('s');

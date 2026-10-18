@@ -194,6 +194,45 @@ public class CategoriesFamilyTests
 	}
 
 	[Fact]
+	public async Task The_letter_reaches_nobody_until_the_clock_starts()
+	{
+		var game = await StartGame();
+		var state = game.State;
+		var round = state.Categories!.Round;
+		var family = new CategoriesFamily();
+
+		Assert.Equal(CategoriesRoundPhase.Preparing, round.Phase);
+		foreach (var viewer in new[] { "p0", "p1", null })
+		{
+			var seen = family.ProjectFor(state, viewer).Categories!.Round;
+			// The categories DO travel: reading them is what the preparing phase is for.
+			Assert.Equal(string.Empty, seen.Letter);
+			Assert.Equal(round.Prompts.Count, seen.Prompts.Count);
+			Assert.Equal(round.Prompts[0].Name, seen.Prompts[0].Name);
+		}
+		Assert.NotEmpty(round.Letter);
+
+		round.Phase = CategoriesRoundPhase.Writing;
+
+		Assert.Equal(round.Letter, family.ProjectFor(state, "p1").Categories!.Round.Letter);
+		Assert.Equal(round.Letter, family.ProjectFor(state, null).Categories!.Round.Letter);
+	}
+
+	[Fact]
+	public async Task The_round_card_does_not_say_the_letter_the_projection_withholds()
+	{
+		var game = await StartGame();
+		var announced = new List<(string Key, Dictionary<string, object>? Vars)>();
+
+		await game.PostStartAsync!((key, vars) => { announced.Add((key, vars)); return Task.CompletedTask; });
+
+		var (announcedKey, vars) = Assert.Single(announced);
+		Assert.Equal("game.categories_round_preparing", announcedKey);
+		Assert.DoesNotContain("letter", vars!.Keys);
+		Assert.Equal(game.State.Categories!.Round.Prompts.Count, vars["count"]);
+	}
+
+	[Fact]
 	public async Task The_undealt_deck_never_reaches_a_client()
 	{
 		var game = await StartGame();
