@@ -408,10 +408,12 @@ test('text chat: the panel, the mention list, sending, and a message arriving wh
 
 	const toggle = page.locator('#chat-toggle');
 	const panel = page.locator('#chat-panel');
-	await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+	// The panel's state travels in the label, which says what a press will do; no aria-expanded.
+	await expect(toggle).toHaveAccessibleName('Open text chat');
+	await expect(toggle).not.toHaveAttribute('aria-expanded', /.*/);
 	await toggle.click();
 	await expect(panel).toBeVisible();
-	await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+	await expect(toggle).toHaveAccessibleName('Close text chat');
 	// First contact lands on the unencrypted-messages notice, a focusable stop.
 	await expect(page.locator('#chat-disclaimer-text')).toBeFocused();
 	await expect(page.locator('#chat-messages li')).toHaveCount(2);
@@ -441,7 +443,7 @@ test('text chat: the panel, the mention list, sending, and a message arriving wh
 	// it open) and focus returns to the toggle; a message arriving while closed shows the badge.
 	await toggle.click();
 	await expect(panel).toBeHidden();
-	await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+	await expect(toggle).toHaveAccessibleName('Open text chat');
 	await expect(toggle).toBeFocused();
 	await page.locator('#story-chat-receive').click();
 	await expect(page.locator('#chat-notification')).toBeVisible();

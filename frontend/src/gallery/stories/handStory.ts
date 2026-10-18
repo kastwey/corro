@@ -36,10 +36,22 @@ export const handStory: Story = {
 		+ 'enters a card\'s actions, Enter plays, Space draws, Delete discards after a confirmation, '
 		+ 'Shift+F1 reads the card\'s help and Shift+F10 opens the menu with all of it plus sorting.',
 	mount(host, context) {
+		// On the board the hand sits inside the game surface, `#board role="application"`, and
+		// that is not decoration: inside an application a screen reader hands the arrow keys to
+		// the page instead of walking its own browse buffer, which is how Up and Down move between
+		// cards at all. Mounted on a plain page the rows are list items, so NVDA stayed in browse
+		// mode and Down read the row's buttons instead of moving (the first NVDA run). The story
+		// gives the hand the same surface the board gives it.
+		const surface = document.createElement('div');
+		surface.className = 'gallery-surface';
+		surface.setAttribute('role', 'application');
+		surface.setAttribute('aria-label', 'Game surface');
+		host.appendChild(surface);
+
 		// The journey family's wrapper: it is what lays the rows out as a fan of cards.
 		const mount = document.createElement('div');
 		mount.className = 'journey-hand';
-		host.appendChild(mount);
+		surface.appendChild(mount);
 
 		let cards = startingHand();
 		const pile = [...DRAW_PILE];

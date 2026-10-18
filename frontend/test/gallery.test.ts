@@ -312,15 +312,14 @@ test('the chat story opens the panel, completes a mention and delivers an incomi
 	story.mount(host, ctx);
 
 	const toggle = host.querySelector<HTMLButtonElement>('#chat-toggle')!;
-	// Said in full on failure: one CI run saw a toggle without its state and nothing else, and no
-	// local run has shown it since, so the document around it is the evidence worth keeping.
-	const scene = () => `toggles: ${document.querySelectorAll('#chat-toggle').length}, mains: ${document.querySelectorAll('main').length}, `
-		+ `panels: ${document.querySelectorAll('#chat-panel').length}, toggle: ${toggle.outerHTML.slice(0, 200)}`;
-	assert.equal(document.querySelectorAll('#chat-toggle').length, 1, scene());
-	assert.equal(toggle.getAttribute('aria-expanded'), 'false', scene());
+	// The panel's state travels in the label, which says what a press will do; there is no
+	// aria-expanded on top of it (it said the same thing twice in one breath).
+	assert.equal(toggle.getAttribute('aria-label'), 'Open text chat');
+	assert.equal(toggle.getAttribute('aria-expanded'), null);
 	toggle.click();
 	const panel = document.getElementById('chat-panel')!;
 	assert.equal(panel.hidden, false);
+	assert.equal(toggle.getAttribute('aria-label'), 'Close text chat');
 	assert.ok(panel.closest('main'), 'the panel is hosted inside the landmark');
 	assert.equal(document.querySelectorAll('#chat-messages li').length, 2, 'the history is shown');
 	document.getElementById('chat-disclaimer-dismiss')!.click();
