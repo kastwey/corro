@@ -1,0 +1,65 @@
+{
+  "format": "corro/v1",
+  "gameType": "bluff",
+  "engineVersion": "^1.0",
+  "id": "tall-tales",
+  "name": {
+    "en": "Tall Tales",
+    "es": "Trola"
+  },
+  "author": "Corro contributors",
+  "version": "1.0.0",
+  "locales": ["en", "es"],
+  "players": {
+    "min": 3,
+    "max": 500
+  },
+  "bluffRules": {
+    "writeSeconds": 45,
+    "voteSeconds": 30,
+    "rounds": 5,
+    "truthPoints": 1000,
+    "foolPoints": 500,
+    "ballotSize": 7,
+    "finalists": 6
+  },
+  "tokens": [],
+  "ruleGroups": [
+    { "id": "bluff", "nameKey": "rules.groupBluff" }
+  ],
+  "houseRules": [
+    {
+      "id": "bluffRounds",
+      "group": "bluff",
+      "type": "number",
+      "default": 5,
+      "min": 1,
+      "max": 20,
+      "step": 1,
+      "editableByHost": true,
+      "nameKey": "rules.bluffRounds"
+    },
+    {
+      "id": "bluffWriteSeconds",
+      "group": "bluff",
+      "type": "number",
+      "default": 45,
+      "min": 15,
+      "max": 300,
+      "step": 5,
+      "editableByHost": true,
+      "nameKey": "rules.bluffWriteSeconds"
+    },
+    {
+      "id": "bluffVoteSeconds",
+      "group": "bluff",
+      "type": "number",
+      "default": 30,
+      "min": 10,
+      "max": 180,
+      "step": 5,
+      "editableByHost": true,
+      "nameKey": "rules.bluffVoteSeconds"
+    }
+  ]
+}

@@ -141,6 +141,8 @@ public sealed record Manifest
 	public ForbiddenRulesConfig? ForbiddenRules { get; init; }
 	/// <summary>Rules of the "categories" family (manifest "categoriesRules"). Null for other families.</summary>
 	public CategoriesRulesConfig? CategoriesRules { get; init; }
+	/// <summary>Rules of the "bluff" family (manifest "bluffRules"). Null for other families.</summary>
+	public BluffRulesConfig? BluffRules { get; init; }
 	/// <summary>The host-customizable rules this board exposes (each a generic catalog code with its
 	/// default, type, bounds, group and i18n name key). The lobby renders the editable ones.</summary>
 	public List<HouseRuleDef> HouseRules { get; init; } = new();
@@ -349,6 +351,9 @@ public sealed record GameDefinition
 	/// The host's game language resolves one deck at start, and the whole table then writes to the
 	/// same prompts in the same language. Null for other families.</summary>
 	public Dictionary<string, CategoryDeckDef>? CategoryDecks { get; init; }
+	/// <summary>The bluff question decks, keyed by locale: each a list of questions with their true
+	/// answer. The host's game language resolves one deck at start. Null for other families.</summary>
+	public Dictionary<string, List<BluffQuestionDef>>? BluffQuestions { get; init; }
 	/// <summary>The journey deck catalog (cards.json as card definitions with copy counts).
 	/// Null for other families — the journey family has no board at all.</summary>
 	public List<JourneyCardDef>? JourneyDeck { get; init; }

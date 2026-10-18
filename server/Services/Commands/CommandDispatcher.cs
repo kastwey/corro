@@ -75,6 +75,15 @@ public class CommandDispatcher
 		RegisterHandler(new CategoriesRulePromptHandler());
 		RegisterHandler(new CategoriesExpireRoundHandler());
 
+		// Bluff family: the master opens each round and moves past each reveal, everybody writes
+		// and votes at once, and the authoritative clock closes every timed phase.
+		RegisterHandler(new BluffStartRoundHandler());
+		RegisterHandler(new BluffWriteHandler());
+		RegisterHandler(new BluffFinishWritingHandler());
+		RegisterHandler(new BluffVoteHandler());
+		RegisterHandler(new BluffNextRoundHandler());
+		RegisterHandler(new BluffExpirePhaseHandler());
+
 		// Holding handlers
 		RegisterHandler(new PayReleaseCostHandler(rulebook));
 		RegisterHandler(new UseReleasePassHandler(rulebook));

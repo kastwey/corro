@@ -1,0 +1,7 @@
+[
+  { "id": "octopus-hearts", "question": "An octopus has ___ hearts.", "truth": "three", "alsoTrue": ["3"] },
+  { "id": "banana-berry", "question": "To a botanist, a banana is a ___.", "truth": "berry", "alsoTrue": ["a berry"] },
+  { "id": "wooden-mouse", "question": "The first computer mouse was made of ___.", "truth": "wood", "alsoTrue": ["a block of wood"] },
+  { "id": "scotland-animal", "question": "The national animal of Scotland is the ___.", "truth": "unicorn", "alsoTrue": ["a unicorn"] },
+  { "id": "sharks-trees", "question": "Sharks have been around longer than ___.", "truth": "trees", "alsoTrue": ["the trees"] }
+]

@@ -62,6 +62,12 @@ public sealed record PackageSummary
 					content[$"words.{locale}"] = words.Count;
 				}
 				break;
+			case "bluff":
+				foreach (var (locale, truths) in definition.BluffQuestions ?? [])
+				{
+					content[$"truths.{locale}"] = truths.Count;
+				}
+				break;
 			case "journey":
 				AddDeck(content, definition.JourneyDeck, card => card.Count, card => !string.IsNullOrWhiteSpace(card.Svg) || card.HasPngArt);
 				break;

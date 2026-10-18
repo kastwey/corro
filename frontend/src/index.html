@@ -200,13 +200,16 @@
 					 form that silently decides how others will see you is worse than one that asks. -->
 				<p class="form-hint" id="host-name-known" hidden></p>
 
-				<fieldset class="token-fieldset">
+				<fieldset class="token-fieldset" id="create-token-fieldset">
 					<legend data-i18n="lobby.selectToken">Choose your piece:</legend>
 					<ul class="token-list">
 
 						<!-- Generated dynamically -->
 					</ul>
 				</fieldset>
+				<!-- A board without pieces (a bluffing hall) replaces the picker with the one fact
+					 the host needs: their name is their seat. -->
+				<p class="form-hint" id="create-no-pieces" data-i18n="lobby.noPiecesHint" hidden>This game has no pieces. Your name is your seat.</p>
 
 				<!-- Race boards only: pick your seat (squadron colour). Hidden for property boards. -->
 				<fieldset class="token-fieldset hidden" id="seat-fieldset">
@@ -224,11 +227,13 @@
 					</label>
 				</div>
 
-				<div class="form-group">
+				<div class="form-group" id="max-players-group">
 					<label for="max-players" data-i18n="lobby.maxPlayers">Maximum players:</label>
 					<!-- Options are generated from the staged board's min..max range. -->
 					<select id="max-players"></select>
 				</div>
+				<!-- A board with open seating asks for no count: whoever is in when it starts plays. -->
+				<p class="form-hint" id="open-seating-hint" data-i18n="lobby.openSeatingHint" hidden>No seat limit: everyone who is at the table when the match starts plays.</p>
 
 				<!-- Journey boards only: team mode. Options are the divisors of the chosen
 					 player count that give equal teams of at least two; with teams, the
@@ -466,12 +471,13 @@
 						</div>
 						<p class="form-hint" id="player-name-known" hidden></p>
 
-						<fieldset class="token-fieldset">
+						<fieldset class="token-fieldset" id="join-token-fieldset">
 							<legend data-i18n="lobby.selectToken">Choose your piece:</legend>
 							<ul class="token-list" id="join-token-list">
 								<!-- Generated dynamically -->
 							</ul>
 						</fieldset>
+						<p class="form-hint" id="join-no-pieces" data-i18n="lobby.noPiecesHint" hidden>This game has no pieces. Your name is your seat.</p>
 
 						<!-- Race boards only: pick your seat; taken seats say who holds them. -->
 						<fieldset class="token-fieldset hidden" id="join-seat-fieldset">

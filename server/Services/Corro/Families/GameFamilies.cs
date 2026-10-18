@@ -22,6 +22,7 @@ public static class GameFamilies
 		new TriviaFamily(),
 		new ForbiddenFamily(),
 		new CategoriesFamily(),
+		new BluffFamily(),
 	};
 
 	private static readonly Dictionary<string, IGameFamily> ByType =

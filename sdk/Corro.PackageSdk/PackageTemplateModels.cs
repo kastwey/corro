@@ -35,6 +35,7 @@ public static class PackageTemplateCatalog
 		"trivia",
 		"forbidden",
 		"categories",
+		"bluff",
 	};
 
 	public static bool IsSupported(string? family)

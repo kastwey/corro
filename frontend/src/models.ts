@@ -350,6 +350,111 @@ export interface CategoriesRulesConfig {
   cycles: number;
 }
 
+// ── Bluff family ────────────────────────────────────────────────────────────
+
+export type BluffPhase = 'preparing' | 'writing' | 'voting' | 'final_voting' | 'reveal' | 'finished';
+
+export interface BluffPlayerState {
+  playerId: string;
+  score: number;
+}
+
+/** One player's tall tale for the round. Blank in every rival's projection until the reveal. */
+export interface BluffEntryState {
+  playerId: string;
+  text: string;
+  finished: boolean;
+}
+
+/** One distinct tall tale once the writing closed: identical texts merged, every author named.
+ *  Absent from every projection until the reveal. */
+export interface BluffLieState {
+  id: string;
+  text: string;
+  authorIds: string[];
+  shownCount: number;
+  believerIds: string[];
+  funnyVoterIds: string[];
+  finalist: boolean;
+  finalBelieverIds: string[];
+}
+
+/** One line of a ballot. The key is always blank on the wire: which line is the truth is the
+ *  whole question. */
+export interface BluffOptionState {
+  index: number;
+  text: string;
+  key: string;
+}
+
+/** A ballot, projected to its owner alone. */
+export interface BluffBallotState {
+  playerId: string;
+  options: BluffOptionState[];
+  asksFunny: boolean;
+  truthKnown: boolean;
+  truthPick?: number | null;
+  funnyPick?: number | null;
+}
+
+export interface BluffPlayerResult {
+  playerId: string;
+  foundTruth: boolean;
+  truthPoints: number;
+  fooledCount: number;
+  foolPoints: number;
+  shownCount: number;
+  total: number;
+}
+
+export interface BluffRevealState {
+  truthFinderCount: number;
+  bestLieId?: string | null;
+  funniestLieId?: string | null;
+  results: BluffPlayerResult[];
+}
+
+export interface BluffRoundState {
+  roundNumber: number;
+  questionId: string;
+  /** The question in the table's shared content language — content, not a translation key. */
+  question: string;
+  /** Blank until the reveal. */
+  truth: string;
+  phase: BluffPhase;
+  startedAt?: string | null;
+  durationSeconds: number;
+  entries: BluffEntryState[];
+  lies: BluffLieState[];
+  ballots: BluffBallotState[];
+  hasFinal: boolean;
+  finalBallots: BluffBallotState[];
+  truthFinderIds: string[];
+  finalTruthFinderIds: string[];
+  reveal?: BluffRevealState | null;
+  /** How many players the current timed phase is still waiting for (server-computed, since the
+   *  other players' ballots never reach this client). */
+  pendingCount: number;
+}
+
+export interface BluffState {
+  players: BluffPlayerState[];
+  masterId: string;
+  questionCursor: number;
+  roundsToPlay: number;
+  round: BluffRoundState;
+}
+
+export interface BluffRulesConfig {
+  writeSeconds: number;
+  voteSeconds: number;
+  rounds: number;
+  truthPoints: number;
+  foolPoints: number;
+  ballotSize: number;
+  finalists: number;
+}
+
 // ── Journey family (Mil Millas genre) ───────────────────────────────────────
 
 /** One card DEFINITION of the deck catalog (public wire data — only hand/pile CONTENTS are secret). */
@@ -873,6 +978,9 @@ export interface GameState {
   /** Categories scores and the round in play (my hidden-information projection) plus its rules. */
   categories?: CategoriesState | null;
   categoriesRules?: CategoriesRulesConfig | null;
+  /** Bluff scores and the round in play (my hidden-information projection) plus its rules. */
+  bluff?: BluffState | null;
+  bluffRules?: BluffRulesConfig | null;
   /** Journey sub-state (my projected view), deck catalog and rules; journey games only. */
   journey?: JourneyState | null;
   journeyDeck?: JourneyCardDef[] | null;
@@ -982,6 +1090,8 @@ export interface GameInfo {
   lastMatch?: GameState | null;
   /** How many matches this table has finished. */
   matchesPlayed?: number;
+  /** False for a family without pieces: the joiner is asked for a name and nothing else. */
+  usesTokens?: boolean;
   /** The board's player tokens (id + SVG + name key); absent => the joiner uses the 8 built-ins. */
   tokens?: TokenInfo[];
   /** A race board's seats (squadron colours) so the joiner can pick one; absent otherwise. */
@@ -1088,6 +1198,11 @@ export interface PackageUploadResponse {
   minPlayers: number;
   /** Most players this board supports (caps the player-count selector). */
   maxPlayers: number;
+  /** False for a family without pieces (bluff): no token is picked, on either form. */
+  usesTokens?: boolean;
+  /** True when the host is not asked for a player count: whoever is at the table when the match
+   *  starts plays, up to maxPlayers. */
+  openSeating?: boolean;
   /** A race board's seats (squadron colours) for the lobby's seat picker; empty for property. */
   seats?: LobbySeatInfo[];
   /** The languages this package's language-split CONTENT offers; empty when it has none.
@@ -1240,6 +1355,15 @@ export type GameCommand =
   | { $type: 'CATEGORIES_START_ROUND'; roundNumber: number }
   | { $type: 'CATEGORIES_WRITE'; roundNumber: number; entries: CategoriesEntry[] }
   | { $type: 'CATEGORIES_FINISH_WRITING'; roundNumber: number }
+  // Bluff
+  | { $type: 'BLUFF_START_ROUND'; roundNumber: number }
+  | { $type: 'BLUFF_WRITE'; roundNumber: number; text: string }
+  | { $type: 'BLUFF_FINISH_WRITING'; roundNumber: number }
+  | {
+      $type: 'BLUFF_VOTE'; roundNumber: number; final: boolean;
+      truthPick?: number; funnyPick?: number;
+    }
+  | { $type: 'BLUFF_NEXT_ROUND'; roundNumber: number }
   | {
       $type: 'CATEGORIES_RULE_PROMPT'; roundNumber: number; promptIndex: number;
       rulings: CategoriesRuling[];

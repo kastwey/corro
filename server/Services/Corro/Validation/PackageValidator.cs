@@ -118,6 +118,12 @@ public sealed class PackageValidator : IPackageValidator
 	/// </summary>
 	private static void CheckTokens(GameDefinition d, List<string> problems)
 	{
+		// A family whose seats are not pieces (bluff: a hall writing on its phones) ships no
+		// tokens at all, and the validator has nothing to ask of it here.
+		if (GameFamilies.IsSupported(d.Manifest.GameType) && !GameFamilies.For(d.Manifest.GameType).UsesTokens)
+		{
+			return;
+		}
 		if (d.Manifest.Tokens.Count == 0)
 		{
 			problems.Add("package defines no tokens (a board must ship its own player pieces)");

@@ -72,5 +72,8 @@ public static class LobbyInput
 		return true;
 	}
 
-	public static bool IsPlayerCount(int value) => value is >= 2 and <= MaxPlayersPerGame;
+	/// <summary>Whether a requested table size is one a table may have. The ceiling is the engine's
+	/// own unless the family that will play seats more (<see cref="Corro.Families.IGameFamily.SeatLimit"/>).</summary>
+	public static bool IsPlayerCount(int value, int seatLimit = MaxPlayersPerGame)
+		=> value >= 2 && value <= Math.Max(seatLimit, MaxPlayersPerGame);
 }

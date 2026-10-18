@@ -7,7 +7,7 @@
   "properties": {
     "format": { "const": "corro/v1", "description": "Corro package format version." },
     "gameType": {
-      "enum": ["property", "race", "track", "journey", "assembly", "draft", "shedding", "exploding", "trivia", "forbidden", "categories"],
+      "enum": ["property", "race", "track", "journey", "assembly", "draft", "shedding", "exploding", "trivia", "forbidden", "categories", "bluff"],
       "description": "The engine family that owns this package's interaction model."
     },
     "engineVersion": { "type": "string", "minLength": 1 },
@@ -58,6 +58,7 @@
     "triviaRules": { "$ref": "#/$defs/triviaRules" },
     "forbiddenRules": { "$ref": "#/$defs/forbiddenRules" },
     "categoriesRules": { "$ref": "#/$defs/categoriesRules" },
+    "bluffRules": { "$ref": "#/$defs/bluffRules" },
     "ruleGroups": {
       "type": "array",
       "items": {
@@ -121,6 +122,10 @@
     {
       "if": { "properties": { "gameType": { "const": "categories" } }, "required": ["gameType"] },
       "then": { "required": ["categoriesRules"] }
+    },
+    {
+      "if": { "properties": { "gameType": { "const": "bluff" } }, "required": ["gameType"] },
+      "then": { "required": ["bluffRules"] }
     }
   ],
   "additionalProperties": false,
@@ -347,6 +352,19 @@
         "categoriesPerRound": { "type": "integer", "minimum": 3, "maximum": 12 },
         "pointsPerAnswer": { "type": "integer", "minimum": 1, "maximum": 10 },
         "cycles": { "type": "integer", "minimum": 1, "maximum": 5 }
+      },
+      "additionalProperties": false
+    },
+    "bluffRules": {
+      "type": "object",
+      "properties": {
+        "writeSeconds": { "type": "integer", "minimum": 15, "maximum": 300 },
+        "voteSeconds": { "type": "integer", "minimum": 10, "maximum": 180 },
+        "rounds": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "truthPoints": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "foolPoints": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "ballotSize": { "type": "integer", "minimum": 3, "maximum": 9 },
+        "finalists": { "type": "integer", "minimum": 2, "maximum": 9, "description": "At most ballotSize." }
       },
       "additionalProperties": false
     },

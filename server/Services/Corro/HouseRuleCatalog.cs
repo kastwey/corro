@@ -145,6 +145,22 @@ public static class HouseRuleCatalog
 	public static ForbiddenRulesConfig ApplyForbidden(ForbiddenRulesConfig rules, string id, JsonElement value)
 		=> ForbiddenAppliers.TryGetValue(id, out var apply) ? apply(rules, value) : rules;
 
+	// ── Bluff family ──────────────────────────────────────────────────────────
+
+	private static readonly Dictionary<string, Func<BluffRulesConfig, JsonElement, BluffRulesConfig>> BluffAppliers = new()
+	{
+		["bluffRounds"] = (r, v) => r with { Rounds = v.GetInt32() },
+		["bluffWriteSeconds"] = (r, v) => r with { WriteSeconds = v.GetInt32() },
+		["bluffVoteSeconds"] = (r, v) => r with { VoteSeconds = v.GetInt32() },
+	};
+
+	/// <summary>Whether the engine knows this BLUFF rule code.</summary>
+	public static bool IsKnownBluff(string id) => BluffAppliers.ContainsKey(id);
+
+	/// <summary>Returns bluff rules with the rule applied; unknown ids are left unchanged.</summary>
+	public static BluffRulesConfig ApplyBluff(BluffRulesConfig rules, string id, JsonElement value)
+		=> BluffAppliers.TryGetValue(id, out var apply) ? apply(rules, value) : rules;
+
 	// ── Choice rules: the values the engine actually accepts ──────────────────
 
 	/// <summary>The value set each CHOICE rule code accepts. A package declares its own options

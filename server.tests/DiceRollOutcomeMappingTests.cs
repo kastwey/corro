@@ -24,6 +24,7 @@ public class DiceRollOutcomeMappingTests
 		nameof(DiceRolledResponse.Type),
 		nameof(DiceRolledResponse.Timestamp),
 		nameof(DiceRolledResponse.ReachesEveryPlayer),
+		nameof(DiceRolledResponse.BroadcastsState),
 		// Identity: the HANDLER knows who rolled, the rulebook's outcome does not carry it.
 		nameof(DiceRolledResponse.PlayerId),
 		nameof(DiceRolledResponse.PlayerName),

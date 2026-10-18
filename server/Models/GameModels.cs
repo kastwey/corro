@@ -358,6 +358,15 @@ public record GameState
 	/// <summary>The categories-family rules in effect, persisted for restore and shown in the
 	/// active-rules dialog.</summary>
 	public Corro.CategoriesRulesConfig? CategoriesRules { get; set; }
+	/// <summary>Bluff-family scores and the round in play. Every bluff, ballot and the truth itself
+	/// are projected by BluffFamily.ProjectFor until the phase that makes them public.</summary>
+	public BluffState? Bluff { get; set; }
+	/// <summary>The resolved host-language question deck, shuffled at start. Server-only: it holds
+	/// every truth the match has not dealt yet, so ProjectFor removes it.</summary>
+	public List<Corro.BluffQuestionDef>? BluffDeck { get; set; }
+	/// <summary>The bluff-family rules in effect, persisted for restore and shown in the
+	/// active-rules dialog.</summary>
+	public Corro.BluffRulesConfig? BluffRules { get; set; }
 	/// <summary>The property rules in effect (economy, holding, buildings) — public config the
 	/// client shows in the active-rules dialog. Null outside the property family.</summary>
 	public GameSettings? Settings { get; set; }

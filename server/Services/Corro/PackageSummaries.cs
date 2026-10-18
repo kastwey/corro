@@ -29,6 +29,8 @@ public static class PackageSummaries
 			BotNames = definition.Manifest.BotNames,
 			MinPlayers = definition.Manifest.Players.Min,
 			MaxPlayers = definition.Manifest.Players.Max,
+			UsesTokens = family.UsesTokens,
+			OpenSeating = family.OpenSeating,
 			Seats = definition.RaceBoard?.Seats
 				.Select(s => new LobbySeatInfo { Id = s.Id, Color = s.Color, NameKey = s.NameKey })
 				.ToList() ?? new(),

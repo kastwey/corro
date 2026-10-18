@@ -63,6 +63,10 @@ import {
 /** How long a lobby announcement is left in the spoken region before it is wiped. */
 const LIVE_CLEAR_MS = 3000;
 
+/** The piece every seat carries on a board without pieces. The server never refuses it as
+ *  taken there, and the panels draw it as the neutral disc. */
+const SEATLESS_TOKEN = 'seat' as TokenKey;
+
 class UnifiedLobbyUI {
 	private currentGame: GameInfo | null = null;
 	/** The shipped boards offered in the picker (engine boards served as packages). */
@@ -548,6 +552,9 @@ class UnifiedLobbyUI {
 		// Offer the package's own tokens (if any); empty falls back to the built-in set.
 		setPackageTokens(pkg.tokens);
 		this.renderAllTokenSelectors();
+		// A family without pieces (a bluffing hall) asks the host for a name and nothing else:
+		// the picker goes, and one line says why there is none.
+		this.showPiecePicker('create-token-fieldset', 'create-no-pieces', pkg.usesTokens !== false);
 		// A race board also offers its seats (squadron colours): the host picks theirs here;
 		// joiners pick from the remaining ones. Hidden (and never submitted) for property.
 		const seatFieldset = getElement('seat-fieldset');
@@ -786,6 +793,19 @@ class UnifiedLobbyUI {
 		if (!select) return;
 		const min = pkg.minPlayers || 2;
 		const max = Math.max(pkg.maxPlayers || 8, min);
+		// Open seating: the host is not asked how many. The control holds the board's own
+		// maximum, which is what the request carries, and a line in its place says the rule.
+		const group = getElement('max-players-group');
+		const openHint = getElement('open-seating-hint');
+		const open = pkg.openSeating === true;
+		group?.classList.toggle('hidden', open);
+		if (group) group.hidden = open;
+		if (openHint) openHint.hidden = !open;
+		if (open) {
+			syncSelectOptions(select, [{ value: String(max), label: String(max) }]);
+			select.value = String(max);
+			return;
+		}
 		// A team-only board (forbidden: clue-giver vs the opposing monitor) only seats tables that
 		// split evenly into its teams, with at least two players each. The SERVER says how many —
 		// the lobby no longer guesses which family that is. A board with a house rule that waives
@@ -1431,7 +1451,10 @@ class UnifiedLobbyUI {
 		// package, never the previous staged one (hidden packages made this race easy to hit).
 		await this.waitForPackageStage();
 		const hostName = getInputValue('host-name');
-		const token = getSelectedRadio('#create-form', 'token') as TokenKey | null;
+		// A board without pieces seats the host under a placeholder every seat shares.
+		const token = this.uploadedPackage?.usesTokens === false
+			? SEATLESS_TOKEN
+			: getSelectedRadio('#create-form', 'token') as TokenKey | null;
 
 		if (!hostName) return showError(t('lobby.errors.enterName'));
 		if (!token) return showError(t('lobby.errors.selectToken'));
@@ -1534,7 +1557,9 @@ class UnifiedLobbyUI {
 
 	private async joinGame(): Promise<void> {
 		const playerName = getInputValue('player-name-step2');
-		const token = getSelectedRadio('#join-token-list', 'token') as TokenKey | null;
+		const token = this.currentGame?.usesTokens === false
+			? SEATLESS_TOKEN
+			: getSelectedRadio('#join-token-list', 'token') as TokenKey | null;
 
 		if (!this.currentGame) return showError(t('lobby.errors.enterCode'));
 		if (!playerName) return showError(t('lobby.errors.enterName'));
@@ -2106,6 +2131,7 @@ class UnifiedLobbyUI {
 			const usedTokens = getUsedTokens(gameInfo);
 			renderTokenSelector(container, t, null, usedTokens);
 		}
+		this.showPiecePicker('join-token-fieldset', 'join-no-pieces', gameInfo.usesTokens !== false);
 
 		// A race board also offers its seats; the ones already picked say who holds them
 		// and bounce the selection (accessible unavailability, no `disabled`).
@@ -2199,6 +2225,17 @@ class UnifiedLobbyUI {
 	private stageSelectedBoard(id: string): Promise<void> {
 		this.boardPicker?.setValue(id);
 		return this.pendingPackageStage;
+	}
+
+	/** The piece picker, or the one-line reason there is none: a board without pieces. */
+	private showPiecePicker(fieldsetId: string, hintId: string, shown: boolean): void {
+		const fieldset = getElement(fieldsetId);
+		const hint = getElement(hintId);
+		if (fieldset) {
+			fieldset.hidden = !shown;
+			fieldset.classList.toggle('hidden', !shown);
+		}
+		if (hint) hint.hidden = shown;
 	}
 
 	private renderAllTokenSelectors(): void {

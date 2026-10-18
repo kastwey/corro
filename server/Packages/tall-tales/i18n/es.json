@@ -1,0 +1,8 @@
+{
+  "rules": {
+    "groupBluff": "Rondas y relojes",
+    "bluffRounds": "Rondas que se juegan",
+    "bluffWriteSeconds": "Segundos para escribir la trola",
+    "bluffVoteSeconds": "Segundos para votar"
+  }
+}

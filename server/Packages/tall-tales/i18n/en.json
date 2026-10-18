@@ -1,0 +1,8 @@
+{
+  "rules": {
+    "groupBluff": "Rounds and clocks",
+    "bluffRounds": "Rounds to play",
+    "bluffWriteSeconds": "Seconds to write a tall tale",
+    "bluffVoteSeconds": "Seconds to vote"
+  }
+}

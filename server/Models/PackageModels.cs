@@ -28,6 +28,12 @@ public record PackageUploadResponse
 	public int MinPlayers { get; init; }
 	/// <summary>Most players this board supports (the lobby caps the player-count selector at it).</summary>
 	public int MaxPlayers { get; init; }
+	/// <summary>Whether a seat is a PIECE the player picks (see IGameFamily.UsesTokens). False for a
+	/// family without pieces: the lobby then asks for a name and nothing else, on both forms.</summary>
+	public bool UsesTokens { get; init; } = true;
+	/// <summary>True when the host is not asked for a player count (see IGameFamily.OpenSeating):
+	/// whoever is at the table when the match starts plays, up to <see cref="MaxPlayers"/>.</summary>
+	public bool OpenSeating { get; init; }
 	/// <summary>A race board's seats (squadron colours) so the lobby offers a seat picker;
 	/// empty for the property family.</summary>
 	public List<LobbySeatInfo> Seats { get; init; } = new();

@@ -153,6 +153,17 @@ const ANNOUNCEMENT_SOUND_MAP: Readonly<Record<string, string>> = {
 	'game.categories_time_up': 'categories.time_up',
 	'game.categories_prompt_ruled': 'categories.ruled',
 	'game.categories_final_score': 'game.over',
+
+	// Bluff: the question lands with the clock, a vote opening is the moment to stop typing and
+	// read, the reveal is the laugh, and a clock running out is the same bell every time. The
+	// per-player result lines carry no cue of their own: the reveal already rang.
+	'game.bluff_round_started': 'bluff.start',
+	'game.bluff_writing_closed': 'bluff.vote_open',
+	'game.bluff_time_up_writing': 'bluff.time_up',
+	'game.bluff_final_started': 'bluff.vote_open',
+	'game.bluff_time_up_voting': 'bluff.time_up',
+	'game.bluff_reveal_truth': 'bluff.reveal',
+	'game.bluff_final_score': 'game.over',
 	// Race family: losing a piece stings — the VICTIM's targeted line carries an earcon
 	// so the loss registers even before the sentence is spoken.
 	'game.race_captured_victim': 'piece.captured',

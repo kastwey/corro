@@ -1,0 +1,7 @@
+[
+  { "id": "octopus-hearts", "question": "Un pulpo tiene ___ corazones.", "truth": "tres", "alsoTrue": ["3"] },
+  { "id": "banana-berry", "question": "Para un botánico, el plátano es una ___.", "truth": "baya", "alsoTrue": ["una baya"] },
+  { "id": "wooden-mouse", "question": "El primer ratón de ordenador estaba hecho de ___.", "truth": "madera", "alsoTrue": ["un bloque de madera"] },
+  { "id": "scotland-animal", "question": "El animal nacional de Escocia es el ___.", "truth": "unicornio", "alsoTrue": ["un unicornio"] },
+  { "id": "sharks-trees", "question": "Los tiburones existen desde antes que ___.", "truth": "los árboles", "alsoTrue": ["los arboles", "árboles"] }
+]

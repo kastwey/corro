@@ -44,6 +44,7 @@ export const FAMILY_TRAITS: readonly FamilyTraits[] = [
   { gameType: 'exploding', homeSurface: 'hand', rollOnly: false, noToolbar: true, showGoToPlayer: false, hasTrades: false, supportsBots: true },
   { gameType: 'forbidden', homeSurface: 'activity', rollOnly: false, noToolbar: true, showGoToPlayer: false, hasTrades: false },
   { gameType: 'categories', homeSurface: 'activity', rollOnly: false, noToolbar: true, showGoToPlayer: false, hasTrades: false, simultaneous: true },
+  { gameType: 'bluff', homeSurface: 'activity', rollOnly: false, noToolbar: true, showGoToPlayer: false, hasTrades: false, simultaneous: true },
 ];
 
 /** The traits of a registered family — null for property/unknown (default behaviour). */

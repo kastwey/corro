@@ -414,7 +414,7 @@ public class CorroPackageSdkTests
 			new[]
 			{
 				"board.schema.json", "cards.schema.json", "categories.schema.json", "i18n.schema.json",
-				"manifest.schema.json", "questions.schema.json", "words.schema.json",
+				"manifest.schema.json", "questions.schema.json", "truths.schema.json", "words.schema.json",
 			},
 			schemaFiles.Select(Path.GetFileName).OrderBy(name => name, StringComparer.Ordinal).ToArray());
 		foreach (var schema in schemaFiles)
@@ -450,13 +450,15 @@ public class CorroPackageSdkTests
 			// the two writers whose answers can coincide.
 			"forbidden" => 4,
 			"categories" => 3,
+			// A hall of bluffers is three at its smallest, and seats nobody on a piece.
+			"bluff" => 3,
 			_ => 2,
 		};
-		var players = definition.Manifest.Tokens.Take(playerCount).Select((token, index) => new CorroServer.Models.Player
+		var players = Enumerable.Range(0, playerCount).Select(index => new CorroServer.Models.Player
 		{
 			Id = "player-" + index,
 			Name = "Player " + (index + 1),
-			Token = token.Id,
+			Token = definition.Manifest.Tokens.ElementAtOrDefault(index)?.Id ?? "seat",
 		}).ToList();
 		var teams = family == "forbidden"
 			? new List<List<string>>

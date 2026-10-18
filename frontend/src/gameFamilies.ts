@@ -31,6 +31,8 @@ import { ForbiddenBoard } from './forbiddenBoard.js';
 import { forbiddenStatusText } from './forbiddenRules.js';
 import { CategoriesBoard } from './categoriesBoard.js';
 import { categoriesRole, categoriesRoleLabel, categoriesStatusText } from './categoriesRules.js';
+import { BluffBoard } from './bluffBoard.js';
+import { bluffIsMaster, bluffPlace, bluffStatusText } from './bluffRules.js';
 import { gameManager } from './gameManager.js';
 import { soundEvents } from './soundEvents.js';
 import { seatDisplayName } from './raceGeometry.js';
@@ -522,9 +524,48 @@ function buildCategoriesBoard(deps: FamilyDeps) {
 	return board;
 }
 
+// The round card IS the home surface: the question, the job and the clock. A player lands on
+// their text box, their ballot or the results — whichever the round asks of them right now.
+const bluffFamily: GameFamily = {
+	...makeCardFamily('bluff', bluffStatusText, deps => buildBluffBoard(deps)),
+
+	/** Score, place and whether they run the table — the three things this family keeps about a
+	*  player. */
+	playerDetailLines(gs, playerId) {
+		const state = gs.bluff;
+		const entry = state?.players.find(player => player.playerId === playerId);
+		if (!state || !entry) return [];
+		const lines = [
+			i18nBinder.tSync('game.bluff_detail_score', { score: entry.score }),
+			i18nBinder.tSync('game.bluff_detail_place', { place: bluffPlace(state, playerId), count: state.players.length }),
+		];
+		if (bluffIsMaster(state, playerId)) lines.push(i18nBinder.tSync('game.bluff_detail_master'));
+		return lines;
+	},
+};
+
+function buildBluffBoard(deps: FamilyDeps) {
+	const board = new BluffBoard(deps.boardElement, {
+		getGameState: deps.getGameState,
+		getMyPlayerId: deps.getMyPlayerId,
+		announce: deps.announce,
+		tSync: deps.tSync,
+		sounds: soundEvents,
+		commands: {
+			startRound: round => { void gameManager.bluffStartRound(round); },
+			write: (round, text) => { void gameManager.bluffWrite(round, text); },
+			finishWriting: round => { void gameManager.bluffFinishWriting(round); },
+			vote: (round, final, truthPick, funnyPick) => { void gameManager.bluffVote(round, final, truthPick, funnyPick); },
+			nextRound: round => { void gameManager.bluffNextRound(round); },
+		},
+	});
+	gameManager.on('roundClockTick', ({ secondsRemaining }) => board.handleTimerTick(secondsRemaining));
+	return board;
+}
+
 const FAMILIES: readonly GameFamily[] = [
 	raceFamily, trackFamily, triviaFamily, journeyFamily, assemblyFamily, draftFamily, sheddingFamily,
-	explodingFamily, forbiddenFamily, categoriesFamily,
+	explodingFamily, forbiddenFamily, categoriesFamily, bluffFamily,
 ];
 
 /** The registered family for a state's gameType — null for property/unknown (default surfaces). */

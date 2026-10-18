@@ -332,6 +332,7 @@ public class GameHubRoutingTests
 	[InlineData("SHEDDING_PLAY", typeof(SheddingPlayCommand), ",\"instanceId\":\"red5#0\"")]
 	[InlineData("EXPLODING_NOPE", typeof(ExplodingNopeCommand), ",\"instanceId\":\"nope#0\"")]
 	[InlineData("PROPOSE_TRADE", typeof(ProposeTradeCommand), ",\"targetPlayerId\":\"b\"")]
+	[InlineData("BLUFF_VOTE", typeof(BluffVoteCommand), ",\"roundNumber\":1,\"final\":true,\"truthPick\":2")]
 	public void GameCommand_DeserializesFromItsWireDiscriminator(string discriminator, Type expected, string payload)
 	{
 		var json = $$"""{"$type":"{{discriminator}}","playerId":"a"{{payload}}}""";
@@ -353,11 +354,31 @@ public class GameHubRoutingTests
 	[InlineData("END_AUCTION")]
 	[InlineData("EXPLODING_RESOLVE_WINDOW")]
 	[InlineData("FORBIDDEN_EXPIRE_TURN")]
+	[InlineData("BLUFF_EXPIRE_PHASE")]
 	public void GameCommand_ServerOnlyCommands_CannotBeDeserializedFromTheWire(string discriminator)
 	{
 		var json = $$"""{"$type":"{{discriminator}}","playerId":"a"}""";
 
 		Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<GameCommand>(json, WireJson));
+	}
+
+	/// <summary>
+	/// A response that calls its change private keeps the table-wide snapshot for the next one
+	/// that is not: a hall saving bluffs as they type must not cost one broadcast per keystroke per
+	/// seat. The response still reaches the caller, and an ordinary response still flushes.
+	/// </summary>
+	[Theory]
+	[InlineData(true, false)]
+	[InlineData(false, true)]
+	public async Task ExecuteCommand_AQuietResponse_SkipsTheStateSnapshotForTheTable(bool quiet, bool snapshotExpected)
+	{
+		var service = new FakeGameService(new BluffActionResponse { Action = "write", Quiet = quiet });
+		var (hub, clients, _) = BuildHub(service);
+
+		await hub.ExecuteCommand(new BluffWriteCommand { PlayerId = "a", RoundNumber = 1, Text = "a tall tale" });
+
+		Assert.True(clients.Caller.Received("CommandResponse"));
+		Assert.Equal(snapshotExpected, service.NotifyStateChangedCalled);
 	}
 
 	/// <summary>

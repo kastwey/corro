@@ -433,7 +433,7 @@ production deployment fetch them.
 
 The format is designed for **game families**: every package declares a `gameType`, and
 each family plugs its own rulebook and board topology under the same package envelope.
-This engine version implements eleven: `property` (roll-and-move property trading),
+This engine version implements twelve: `property` (roll-and-move property trading),
 `race` (cross-and-circle races), `track` (shared-path race games), `journey`
 (distance-and-hazard card games), `assembly` (set-building card games), `draft`
 (simultaneous card drafting), `shedding` (match-and-discard card games), `exploding`
@@ -441,7 +441,8 @@ This engine version implements eleven: `property` (roll-and-move property tradin
 (spoken clue games with private role cards and an authoritative clock, in two teams or everyone
 for themselves), and
 `categories` (simultaneous written games where everyone answers the same prompts under one
-letter and a rotating judge rules). See
+letter and a rotating judge rules), and `bluff` (a room of any size writes a convincing lie to
+one question, then votes for the truth among the lies). See
 [`CORRO_FORMAT.md`](CORRO_FORMAT.md)
 for the package specification and [`CONTRIBUTING.md`](CONTRIBUTING.md) for the rules on
 which games can be bundled into this repository (original or freely licensed content

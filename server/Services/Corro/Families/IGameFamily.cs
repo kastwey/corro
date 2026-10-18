@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CorroServer.Models;
 using CorroServer.Models.Corro;
+using CorroServer.Services;
 using CorroServer.Services.Commands;
 
 namespace CorroServer.Services.Corro.Families;
@@ -127,6 +128,31 @@ public interface IGameFamily
 	HouseRuleCondition? TeamsWaivedWhen => null;
 
 	/// <summary>
+	/// Whether a seat at this family's table is a PIECE. Every spatial and card family answers yes:
+	/// a player picks a token in the lobby, no two players share one, and a package must ship at
+	/// least as many as it seats. A family that answers no has no pieces at all — a whole room
+	/// writing on their phones does not pick a kite — so the lobby asks only for a name, the join
+	/// flow never refuses a token as taken, and the package validator does not demand token art.
+	/// </summary>
+	bool UsesTokens => true;
+
+	/// <summary>
+	/// The most players one table of this family can seat. The engine's ordinary limit
+	/// (<see cref="LobbyInput.MaxPlayersPerGame"/>) is the ceiling for a board around which people
+	/// take turns; a family built for a hall answers more, and the lobby's player-count check reads
+	/// the answer from here instead of from one constant.
+	/// </summary>
+	int SeatLimit => LobbyInput.MaxPlayersPerGame;
+
+	/// <summary>
+	/// True when the host is never asked how many players to expect: whoever is at the table when
+	/// the match starts plays, up to <see cref="SeatLimit"/>. The lobby then hides the player-count
+	/// control and sends the package's own maximum. False — the default — keeps the count the
+	/// host's decision, which matters wherever seats, teams or pieces are finite.
+	/// </summary>
+	bool OpenSeating => false;
+
+	/// <summary>
 	/// The spoken line when a player leaves the game for good (the "leave game"
 	/// flow). Only the property family has an estate to forfeit — its override keeps the
 	/// bankruptcy wording; everywhere else leaving is a plain retirement.
@@ -176,6 +202,14 @@ public sealed record FamilyStartContext
 
 	/// <summary>Language used to resolve server-side square names (property family).</summary>
 	public string Lang { get; init; } = "en";
+
+	/// <summary>
+	/// The table's host, for a family that gives one seat the running of the match (the bluff
+	/// family's rounds advance when the host says so). Null when the caller has no host to name —
+	/// a unit test, or a family that never asks — and a family must then fall back to its first
+	/// seat rather than fail.
+	/// </summary>
+	public string? HostId { get; init; }
 
 	/// <summary>The lobby's customized settings; null means the package's own defaults.</summary>
 	public GameSettings? Settings { get; init; }

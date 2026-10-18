@@ -1,0 +1,37 @@
+{
+  "format": "corro/v1",
+  "gameType": "bluff",
+  "engineVersion": "^1.0",
+  "id": "starter-bluff",
+  "name": { "en": "Starter Tall Tales", "es": "Trola inicial" },
+  "author": "Your name",
+  "version": "0.1.0",
+  "locales": ["en", "es"],
+  "players": { "min": 3, "max": 500 },
+  "bluffRules": {
+    "writeSeconds": 45,
+    "voteSeconds": 30,
+    "rounds": 3,
+    "truthPoints": 1000,
+    "foolPoints": 500,
+    "ballotSize": 7,
+    "finalists": 6
+  },
+  "tokens": [],
+  "ruleGroups": [
+    { "id": "bluff", "nameKey": "rules.groupBluff" }
+  ],
+  "houseRules": [
+    {
+      "id": "bluffRounds",
+      "group": "bluff",
+      "type": "number",
+      "default": 3,
+      "min": 1,
+      "max": 20,
+      "step": 1,
+      "editableByHost": true,
+      "nameKey": "rules.bluffRounds"
+    }
+  ]
+}

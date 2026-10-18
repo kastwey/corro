@@ -115,6 +115,12 @@ is common to all families.
   afterwards. No board, no hand and no turn order; a package supplies `categories.<lang>.json`
   and `categoriesRules` — see [The categories family](#the-categories-family). This family has
   **no bots**, and answers are hidden information until the review opens.
+- `"gameType": "bluff"` — simultaneous bluffing for a room of any size: one question with a true
+  answer that sounds made up, everybody writes a convincing lie against the clock, then everybody
+  votes for the truth among a handful of those lies and for the funniest. No board, no hand, no
+  turn order and **no pieces**; a package supplies `truths.<lang>.json` and `bluffRules` — see
+  [The bluff family](#the-bluff-family). This family has **no bots**; bluffs, ballots and the
+  truth are hidden information until the reveal.
 
 A package declaring a family the engine version doesn't implement is **rejected at
 upload with a clear message** listing the supported families — it is never loaded into
@@ -578,6 +584,12 @@ simply silent** — declare only what you ship.
 | `categories.finished` | categories: a writer declares their sheet finished |
 | `categories.time_up` | categories: the writing clock expires, or the last writer finishes |
 | `categories.ruled` | categories: the judge confirms one category |
+| `bluff.start` | bluff: the master opens the round and the question is read |
+| `bluff.tick` | bluff: optional audible clock loop while a timed phase runs (client-local lifecycle, never narration) |
+| `bluff.warning` | bluff: ten seconds remain (client-local, never a spoken countdown) |
+| `bluff.vote_open` | bluff: the writing closes and a vote (or the final) opens |
+| `bluff.time_up` | bluff: a writing or voting clock expires |
+| `bluff.reveal` | bluff: the truth and the best tall tales are revealed |
 | `forbidden.time_up` | forbidden: the authoritative turn clock expires |
 
 ---
@@ -1547,6 +1559,122 @@ variants where the listener is the actor). Writing: `categories_writer_finished`
 `categories_round_scored` (`_self`), `categories_tie_breaker`, `categories_final_score` (`_self`),
 `categories_judge_left`, `categories_abandoned`. Surfaces, roles, status, verdicts, timer and
 active-rule text use `categories_*`.
+---
+
+## The bluff family
+
+A `"gameType": "bluff"` package is a simultaneous BLUFFING game for a room of any size, with no
+turn order, no judge and no pieces: one round asks a question whose true answer sounds made up,
+everybody writes a convincing lie against an authoritative clock, then everybody votes for the
+truth among a handful of those lies — and for the funniest. The only seat with a job is the
+**master** (the table's host), who opens each round and moves the table past each reveal so the
+results can be read out. It reuses the common package envelope (identity, locales, sounds and
+guides) and has **no spatial board, hand, tokens, `board.json` or `cards.json`**.
+
+The engine decides nothing about what is true: the deck says, and the votes say the rest.
+
+### truths.&lt;lang&gt;.json
+
+Each declared locale ships its own real deck: the questions everybody bluffs about and the truth
+that hides among the bluffs. It is language-split CONTENT, not a UI translation. The create form
+defaults the shared content language to the host's interface locale; the host can choose another
+available deck and change it while the table is still waiting. One deck is used for the whole
+match; each player's buttons, help and announcements still use that player's own language.
+
+```jsonc
+[
+  {
+    "id": "octopus-hearts",                    // stable id
+    "question": "An octopus has ___ hearts.",  // read when the writing clock starts
+    "truth": "three",                          // revealed; a bluff matching it is refused
+    "alsoTrue": ["3"]                          // other wordings refused like the truth
+  }
+]
+```
+
+Every locale needs at least `rounds` questions, every question needs a text and a truth of at most
+80 characters, and ids are unique within a locale. Bluffs are compared to the truth after the same
+normalisation the categories family uses (case, accents and punctuation never count).
+
+### manifest bluffRules
+
+```jsonc
+"bluffRules": {
+  "writeSeconds": 45,    // 15..300, authoritative server clock for the writing
+  "voteSeconds": 30,     // 10..180, for each vote
+  "rounds": 5,           // 1..20; a tie at the top adds one
+  "truthPoints": 1000,   // 1..10000
+  "foolPoints": 500,     // 0..10000, per player fooled, shared between the authors of one bluff
+  "ballotSize": 7,       // 3..9 bluffs beside the truth
+  "finalists": 6         // 2..ballotSize bluffs that go through to a final
+}
+```
+
+Packages declare a player range from 3 through 500 and **no tokens**: the lobby asks a joiner
+for a name alone, and the host is never asked for a player count — whoever is at the table when
+the match starts plays. Bots are not supported. The host-editable house-rule codes are
+`bluffRounds`, `bluffWriteSeconds` and `bluffVoteSeconds`.
+
+### Bluff rules the engine implements
+
+- The master opens the round; the question is read the moment the writing clock starts, so
+  everybody gets the same seconds to think.
+- Each player keeps ONE bluff, saved as it is typed; the whole text travels every time, so the
+  command is idempotent. A bluff that is the truth (or one of its `alsoTrue` wordings) is refused
+  privately. A player may finish early; when everybody has, the vote opens without waiting out the
+  clock. A bluff arriving after the deadline is refused; the clock's own expiry closes the phase.
+- Identical bluffs are merged into one with every author. Each ballot carries the truth and up to
+  `ballotSize` bluffs, never the voter's own; with more bluffs than that, the least-shown are dealt
+  first, so every bluff lands on practically the same number of ballots. Options are shuffled per
+  ballot and their keys never leave the server.
+- A ballot asks two questions when it carries two or more bluffs: which line is the truth, and
+  which of the others is the funniest. Both marks save at once and may change while the vote is
+  open; they may never point at the same line.
+- With more than twice `ballotSize` distinct bluffs, the first vote only narrows the field: the
+  `finalists` bluffs with the most truth-plus-funny votes (fewer authors first, then the draw)
+  come back with the truth for a final, and everybody votes again. A player who already found the
+  truth gets a final ballot without it, asking which finalist would have fooled them.
+- Finding the truth scores `truthPoints` (half that in a final). Every player a bluff fools scores
+  its authors `foolPoints` each, divided between them when several wrote the same thing; with a
+  final, the first vote pays half and the final pays full. The funniest bluff earns the mention,
+  not points.
+- The reveal is one spoken sentence each for the truth, the most believed bluff and the funniest,
+  plus a private line to every player with their own result. The master then deals the next round
+  or ends the match after the agreed rounds; a tie at the top adds one round.
+- A player who leaves takes their bluff and ballot with them, so no phase waits on them; if the
+  master leaves, the next seat in order takes over. Below three players the match ends and the
+  leader takes it.
+
+### Hidden information and accessible surface
+
+Persistence stores the selected content language, the full shuffled deck, every bluff and every
+ballot with its keys. Every client state is projected: until the reveal a bluff reaches its writer
+alone, the truth reaches nobody, and a ballot reaches its voter alone with every option's key
+blank; who found the truth is each player's own secret. At the reveal the bluffs, their authors
+and their believers become the shared subject of the room, while a ballot stays its owner's.
+
+A bluff saved as it is typed, and a mark on a ballot that does not complete it, answer with a
+response that calls its change private (`BroadcastsState`), so a hall of two hundred does not
+receive one snapshot per keystroke per seat; a finish or a completed ballot moves the table's
+counter at every tenth and in the last three, and the phase change always reaches everyone.
+
+The client renders the writer's text box with a real label and the question beside it; Enter
+FOCUSES the finish button rather than pressing it. The ballot is two `fieldset`s, one radio group
+each; the second appears from the first answer and omits it. The reveal is a list of sentences.
+P announces the question and R the clock from the surface, never from inside the text box.
+
+### Overridable voice (`game.bluff_*`)
+
+Round preparation and start: `bluff_round_preparing`, `bluff_round_started` (with `_self`
+variants where the listener is the master). Writing: `bluff_writing_closed`, `bluff_time_up_writing`,
+`bluff_voting_started`, the private `bluff_you_finished`. Voting: `bluff_final_started`,
+`bluff_time_up_voting`, the private `bluff_you_voted`. The reveal: `bluff_reveal_truth`,
+`bluff_reveal_best` (`_self`, `_more`), `bluff_reveal_funniest` (`_self`, `_more`), the private
+`bluff_result_truth_fooled`, `bluff_result_truth_none`, `bluff_result_truth_nolie`,
+`bluff_result_miss_fooled`, `bluff_result_miss_none`, `bluff_result_miss_nolie`, and
+`bluff_leader` (`_self`). Match outcomes: `bluff_tie_breaker`, `bluff_final_score` (`_self`),
+`bluff_master_left` (`_self`), `bluff_abandoned`. Surfaces, duties, status, ballots, timer and
+active-rule text use `bluff_*`.
 ---
 
 ## Design notes

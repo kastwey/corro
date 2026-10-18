@@ -31,6 +31,11 @@ namespace CorroServer.Models;
 [JsonDerivedType(typeof(CategoriesWriteCommand), "CATEGORIES_WRITE")]
 [JsonDerivedType(typeof(CategoriesFinishWritingCommand), "CATEGORIES_FINISH_WRITING")]
 [JsonDerivedType(typeof(CategoriesRulePromptCommand), "CATEGORIES_RULE_PROMPT")]
+[JsonDerivedType(typeof(BluffStartRoundCommand), "BLUFF_START_ROUND")]
+[JsonDerivedType(typeof(BluffWriteCommand), "BLUFF_WRITE")]
+[JsonDerivedType(typeof(BluffFinishWritingCommand), "BLUFF_FINISH_WRITING")]
+[JsonDerivedType(typeof(BluffVoteCommand), "BLUFF_VOTE")]
+[JsonDerivedType(typeof(BluffNextRoundCommand), "BLUFF_NEXT_ROUND")]
 [JsonDerivedType(typeof(JourneyDrawCommand), "JOURNEY_DRAW")]
 [JsonDerivedType(typeof(JourneyPlayCommand), "JOURNEY_PLAY")]
 [JsonDerivedType(typeof(JourneyDiscardCommand), "JOURNEY_DISCARD")]
@@ -246,6 +251,56 @@ public record CategoriesRuling
 public record CategoriesExpireRoundCommand : GameCommand
 {
 	public override string Type => "CATEGORIES_EXPIRE_ROUND";
+}
+
+/// <summary>Bluff family: the master opens the round's writing clock, once the table is in.</summary>
+public record BluffStartRoundCommand : GameCommand
+{
+	public override string Type => "BLUFF_START_ROUND";
+	public int RoundNumber { get; init; }
+}
+
+/// <summary>Bluff family: store (or replace) this player's bluff as it is typed. Idempotent, so
+/// a lost message costs nothing: the next one carries the whole text again.</summary>
+public record BluffWriteCommand : GameCommand
+{
+	public override string Type => "BLUFF_WRITE";
+	public int RoundNumber { get; init; }
+	public string Text { get; init; } = string.Empty;
+}
+
+/// <summary>Bluff family: this writer has nothing more to add. When everyone has said so, the
+/// vote opens without waiting the clock out.</summary>
+public record BluffFinishWritingCommand : GameCommand
+{
+	public override string Type => "BLUFF_FINISH_WRITING";
+	public int RoundNumber { get; init; }
+}
+
+/// <summary>Bluff family: mark a ballot — the line taken for the truth, the line called the
+/// funniest, or both. Either may be sent alone and changed while the vote is open.</summary>
+public record BluffVoteCommand : GameCommand
+{
+	public override string Type => "BLUFF_VOTE";
+	public int RoundNumber { get; init; }
+	/// <summary>True for the final ballot of a big table's round.</summary>
+	public bool Final { get; init; }
+	public int? TruthPick { get; init; }
+	public int? FunnyPick { get; init; }
+}
+
+/// <summary>Bluff family: the master moves the table past the reveal — the next round, or the
+/// end of the match after the last one.</summary>
+public record BluffNextRoundCommand : GameCommand
+{
+	public override string Type => "BLUFF_NEXT_ROUND";
+	public int RoundNumber { get; init; }
+}
+
+/// <summary>Bluff family: server-only resolution when the authoritative phase clock expires.</summary>
+public record BluffExpirePhaseCommand : GameCommand
+{
+	public override string Type => "BLUFF_EXPIRE_PHASE";
 }
 
 /// <summary>Journey family: draw the top card (the start of your turn).</summary>
@@ -604,6 +659,16 @@ public abstract record ServerResponse
 	/// type names, and the REASON lives next to the response it applies to.
 	/// </summary>
 	public virtual bool ReachesEveryPlayer => false;
+
+	/// <summary>
+	/// Whether the state this command left behind is worth sending to the table. True by default:
+	/// a command changed the game, so every client repaints. A response says false when the
+	/// change it reports is PRIVATE to the caller and already on their screen — a lie being typed,
+	/// a vote being marked — so that a hall of players saving as they type does not cost one
+	/// broadcast per keystroke per seat. The change is still authoritative: the next broadcast
+	/// carries it, and the caller never needed it echoed back.
+	/// </summary>
+	public virtual bool BroadcastsState => true;
 }
 
 /// <summary>Race family: outcome of a die roll (the move itself may need a piece choice).</summary>
@@ -658,6 +723,22 @@ public record CategoriesActionResponse : ServerResponse
 	public required string Action { get; init; }
 	/// <summary>True when this action closed the writing phase and opened the review.</summary>
 	public bool ReviewStarted { get; init; }
+	public bool RoundEnded { get; init; }
+	public bool GameEnded { get; init; }
+}
+
+/// <summary>Bluff family: outcome of a start/write/finish/vote/next/timeout action.</summary>
+public record BluffActionResponse : ServerResponse
+{
+	public override string Type => "BLUFF_ACTION";
+	/// <summary>"start" | "write" | "finish" | "vote" | "next" | "timeout".</summary>
+	public required string Action { get; init; }
+	/// <summary>True when the change is the caller's own and already on their screen (a bluff
+	/// saved as it is typed, a mark on a ballot), so no table-wide snapshot follows it.</summary>
+	public bool Quiet { get; init; }
+	public override bool BroadcastsState => !Quiet;
+	/// <summary>True when this action closed a phase (the vote opened, the final, the reveal).</summary>
+	public bool PhaseEnded { get; init; }
 	public bool RoundEnded { get; init; }
 	public bool GameEnded { get; init; }
 }

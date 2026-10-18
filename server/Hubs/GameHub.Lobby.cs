@@ -29,8 +29,7 @@ public partial class GameHub
 				|| !LobbyInput.IsIdentifier(request.HostToken)
 				|| !LobbyInput.TryNormalizeDisplayName(request.Board, out var boardName)
 				|| !LobbyInput.IsIdentifier(request.PackageToken, optional: true)
-				|| !LobbyInput.IsIdentifier(request.HostSeatId, optional: true)
-				|| !LobbyInput.IsPlayerCount(request.MaxPlayers))
+				|| !LobbyInput.IsIdentifier(request.HostSeatId, optional: true))
 			{
 				await Clients.Caller.SendAsync("Error",
 					request is not null && !LobbyInput.TryNormalizePlayerName(request.HostName, out _)
@@ -82,6 +81,13 @@ public partial class GameHub
 			// are part of the question: the same family seated "everyone for themselves" has no
 			// teams to arrange, and then a team count is the thing that does not fit.
 			var family = GameFamilies.For(stagedDefinition?.Manifest.GameType);
+			// How big a table may be is the family's answer, not one engine constant: a family
+			// built for a hall seats far more than a board people take turns around.
+			if (!LobbyInput.IsPlayerCount(request.MaxPlayers, family.SeatLimit))
+			{
+				await Clients.Caller.SendAsync("Error", "INVALID_LOBBY_REQUEST");
+				return;
+			}
 			var requiredTeams = family.RequiredTeamsUnder(request.RuleValues);
 			if (requiredTeams is { } required
 				&& (request.TeamCount != required
@@ -604,7 +610,10 @@ public partial class GameHub
 				return;
 			}
 
-			if (game.Players.Any(p => p.Token == request.PlayerToken))
+			// A piece is exclusive — unless the family has no pieces at all, where every seat
+			// carries the same placeholder and nothing is being taken from anybody.
+			if (GameFamilies.For(game.GameType).UsesTokens
+				&& game.Players.Any(p => p.Token == request.PlayerToken))
 			{
 				_logger?.LogWarning("JoinGameLobby: Token in use: {Token}", request.PlayerToken);
 				await Clients.Caller.SendAsync("Error", "TOKEN_IN_USE");
@@ -925,6 +934,8 @@ public partial class GameHub
 			contentLanguages = game.ContentLanguages,
 			packageToken = game.PackageToken,
 			teamCount = game.TeamCount, // null = individual play
+			// A family without pieces asks a joiner for a name and nothing else.
+			usesTokens = GameFamilies.For(game.GameType).UsesTokens,
 			tokens = definition?.Manifest.Tokens, // the board's player pieces; null => client uses the 8 built-ins
 												  // A race board's seats (squadron colours) so the joiner can pick one; null otherwise.
 			seats = definition?.RaceBoard?.Seats
@@ -1296,7 +1307,10 @@ public partial class GameHub
 				teams: arrangedTeams,
 				// What this table has already been dealt from this deck, so a group playing several
 				// matches in a row is dealt what it has not seen before it meets a repeat.
-				alreadyDealt: game.DealtFrom(definition.Manifest.GameType, game.Language));
+				alreadyDealt: game.DealtFrom(definition.Manifest.GameType, game.Language),
+				// A family that puts one seat in charge of the match (bluff: the rounds advance
+				// when the host says so) needs to know which seat that is.
+				hostId: game.HostId);
 			if (gameService.GameState is { } packageState)
 			{
 				packageState.PackageToken = packageToken; // released with the table; the client's sound pack id

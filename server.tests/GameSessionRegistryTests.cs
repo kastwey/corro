@@ -559,7 +559,7 @@ public class GameSessionRegistryTests
 		public Task<ServerResponse> ExecuteCommandAsync(GameCommand command) => Task.FromResult<ServerResponse>(new ErrorResponse { Message = "", Code = "" });
 		public Task NotifyStateChangedAsync() => Task.CompletedTask;
 		public Task SetPlayerConnectedAsync(string playerId, bool connected) => Task.CompletedTask;
-		public Task InitializeFromDefinitionAsync(List<Player> players, GameDefinition definition, string lang = "en", GameSettings? settings = null, bool raceTeams = false, Dictionary<string, System.Text.Json.JsonElement>? ruleValues = null, List<List<string>>? teams = null, IReadOnlyCollection<string>? alreadyDealt = null) => Task.CompletedTask;
+		public Task InitializeFromDefinitionAsync(List<Player> players, GameDefinition definition, string lang = "en", GameSettings? settings = null, bool raceTeams = false, Dictionary<string, System.Text.Json.JsonElement>? ruleValues = null, List<List<string>>? teams = null, IReadOnlyCollection<string>? alreadyDealt = null, string? hostId = null) => Task.CompletedTask;
 		public void ConfigureSettings(GameSettings settings) { }
 		public Task RestoreGameAsync(GameState savedState) => Task.CompletedTask;
 		public void AttachPackageDefinition(GameDefinition definition) { }

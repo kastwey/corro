@@ -80,8 +80,12 @@ public partial class GameHub
 		// been sent. Keep the authoritative snapshot here, after that flush (and after the
 		// response handlers that arm movement), so no ordinary handler can make a hand or
 		// board repaint overtake its narration. Mid-command snapshots use the explicitly
-		// ordered CheckpointTurnSegmentAsync path instead.
-		await gameService.NotifyStateChangedAsync();
+		// ordered CheckpointTurnSegmentAsync path instead. A response that calls its change
+		// private (ServerResponse.BroadcastsState) keeps the snapshot for the next one that is not.
+		if (response.BroadcastsState)
+		{
+			await gameService.NotifyStateChangedAsync();
+		}
 
 		// Free finished games so they don't accumulate in memory.
 		await _registry.CleanupIfGameOverAsync(gameId, gameService);

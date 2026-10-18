@@ -418,9 +418,15 @@ export async function createGame(
 	// Staging the package re-renders the token list with the BOARD's own pieces
 	// (from its manifest); waiting for the first of them proves the package is
 	// active before submitting — a generic label could still be a built-in piece.
-	const firstPackageToken = packageManifest(boardId).tokens[0].id as string;
+	// A board without pieces (a bluffing hall) proves it the other way round: the picker
+	// goes, and the line saying why stands in its place.
+	const packageTokens = packageManifest(boardId).tokens as { id: string }[];
 	const tokenList = page.locator('.token-list:not(#join-token-list)');
-	await expect(tokenList.locator(`input[value="${firstPackageToken}"]`)).toBeAttached();
+	if (packageTokens.length > 0) {
+		await expect(tokenList.locator(`input[value="${packageTokens[0].id}"]`)).toBeAttached();
+	} else {
+		await expect(page.locator('#create-no-pieces')).toBeVisible();
+	}
 	// Flip declared toggle house rules in the package rules panel before creating.
 	// The long create form defeats Playwright's scroll-into-view inside this lobby (same as
 	// the token radios), so drive the controls by events rather than positional clicks.
@@ -460,7 +466,9 @@ export async function createGame(
 	// The real control is an invisible radio absolutely positioned inside the label (the
 	// label is the visual), so its own geometry is useless to Playwright's hit testing.
 	// Dispatch the click as an event: same app-visible behaviour (checked + change), no geometry.
-	await tokenList.locator('input.token-radio').first().dispatchEvent('click');
+	if (packageTokens.length > 0) {
+		await tokenList.locator('input.token-radio').first().dispatchEvent('click');
+	}
 	// Race boards: pick a specific seat (squadron colour); default = the first one.
 	if (opts.seat) {
 		await page.locator(`#seat-list input[value="${opts.seat}"]`).dispatchEvent('click');
@@ -521,8 +529,11 @@ export async function joinGame(
 	page: Page, code: string, playerName: string, opts: { seat?: string } = {},
 ): Promise<void> {
 	await openJoinForm(page, code, playerName);
-	// Taken tokens are aria-disabled + data-taken (never `disabled`): pick the first free.
-	await page.locator('#join-token-list input.token-radio:not([data-taken])').first().dispatchEvent('click');
+	// Taken tokens are aria-disabled + data-taken (never `disabled`): pick the first free. A
+	// board without pieces offers no picker at all, and the join asks for the name alone.
+	if (await page.locator('#join-token-fieldset').isVisible()) {
+		await page.locator('#join-token-list input.token-radio:not([data-taken])').first().dispatchEvent('click');
+	}
 	if (opts.seat) {
 		await page.locator(`#join-seat-list input[value="${opts.seat}"]`).dispatchEvent('click');
 	}
@@ -544,7 +555,7 @@ export async function startGame(host: Page, allPages: Page[]): Promise<void> {
 		// render hand rows, and Forbidden Words renders its role activity surface.
 		await expect(page.locator(
 			'#board .square, #board .race-cell, #board .track-cell, #board .trivia-cell, '
-			+ '#board .hand-card, #board .forbidden-shell, #board .categories-shell',
+			+ '#board .hand-card, #board .forbidden-shell, #board .categories-shell, #board .bluff-shell',
 		).first()).toBeVisible();
 	}
 }

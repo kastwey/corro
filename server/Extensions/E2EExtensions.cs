@@ -124,9 +124,17 @@ public static class E2EExtensions
 				{
 					return Results.NotFound();
 				}
+				// A bluff phase that expires opens the NEXT timed phase with a fresh clock, so "still
+				// running" there means the phase we aged is the one still on the table.
+				BluffPhase? agedBluffPhase = null;
 				if (state.Forbidden?.Turn is { Phase: ForbiddenTurnPhase.Active } turn)
 				{
 					turn.StartedAt = DateTime.UtcNow.AddSeconds(-turn.DurationSeconds - 1);
+				}
+				else if (state.Bluff?.Round is { } bluffRound && BluffRulebook.IsTimed(bluffRound))
+				{
+					agedBluffPhase = bluffRound.Phase;
+					bluffRound.StartedAt = DateTime.UtcNow.AddSeconds(-bluffRound.DurationSeconds - 1);
 				}
 				else
 				{
@@ -137,7 +145,8 @@ public static class E2EExtensions
 				// the last two, and a scenario would be left waiting on a screen nobody updated.
 				await registry.ExpireRoundViaCommand(gameId);
 				var stillRunning = registry.TryGetService(gameId, out var after)
-					&& after.GameState?.Forbidden?.Turn.Phase == ForbiddenTurnPhase.Active;
+					&& (after.GameState?.Forbidden?.Turn.Phase == ForbiddenTurnPhase.Active
+						|| (agedBluffPhase is { } aged && after.GameState?.Bluff?.Round.Phase == aged));
 				return stillRunning
 					? Results.BadRequest(new { error = "the turn is still active" })
 					: Results.Ok(new { expired = true });

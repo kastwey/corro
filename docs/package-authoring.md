@@ -60,6 +60,7 @@ player decisions already resemble your idea; names and theme do not matter.
 | `trivia` | moves around a six-category wheel and answers questions | `questions.en.json` and `questions.es.json` | Medium |
 | `forbidden` | alternates two teams giving spoken clues without listed words | `words.en.json` and `words.es.json` | Medium |
 | `categories` | has everyone write to shared prompts under one letter, then a judge rules | `categories.en.json` and `categories.es.json` | Medium |
+| `bluff` | has a room of any size write a convincing lie to one question, then vote for the truth among the lies | `truths.en.json` and `truths.es.json` | Medium |
 
 For a first experiment, `track` or `shedding` is the shortest route. Use `property` only if the
 economy, auctions, sets and construction are genuinely part of your game.
@@ -111,6 +112,7 @@ are authoring aids and are automatically left out of the packed `.corro` file.
 | `questions.en.json`, `questions.es.json` | Real question banks for `trivia` | Trivia only |
 | `words.en.json`, `words.es.json` | Real target and forbidden-word decks for `forbidden` | Forbidden only |
 | `categories.en.json`, `categories.es.json` | Real prompt and letter decks for `categories` | Categories only |
+| `truths.en.json`, `truths.es.json` | Real questions with their true answer for `bluff` | Bluff only |
 | `i18n/en.json`, `i18n/es.json` | Names and text referenced by keys | Yes |
 | `assets/tokens/*.svg` | Player-piece geometry | Later |
 | `CREDITS.md` | Sources and redistribution licences for art and sounds | Before sharing |
@@ -123,15 +125,16 @@ Card families do not have a `board.json`. That is expected. `race` and `track` d
 
 Where a family's CONTENT is language-split, every locale file you ship becomes an option in the
 create form's content-language picker: `words.<locale>.json` for `forbidden`,
-`questions.<locale>.json` for `trivia` and `categories.<locale>.json` for `categories` (whose
-letter pool is language-split too — the alphabet itself differs). The host chooses one shared deck for the whole match — every
+`questions.<locale>.json` for `trivia`, `categories.<locale>.json` for `categories` (whose
+letter pool is language-split too — the alphabet itself differs) and `truths.<locale>.json` for `bluff`. The host chooses one shared deck for the whole match — every
 player is guessing the same words, or answering the same questions — while each player still reads
 the interface in their own language. Ship a locale file only when its content is really translated:
 a locale the manifest lists but has no content file for is not offered.
 
 Most starters support exactly two players so they stay small and easy to understand; `forbidden`
 starts with the four players its two teams require, and `categories` with the three it needs for a
-judge and two writers. To support more players, increase `players.max`, add enough distinct tokens or seats, and expand card decks when
+judge and two writers; `bluff` starts with three and declares no pieces at all, because a seat there
+is a name and the whole room may sit down. To support more players, increase `players.max`, add enough distinct tokens or seats, and expand card decks when
 necessary. Run `validate`: it reports the exact capacity requirement for that family.
 
 ## Step 5: make the first safe edits

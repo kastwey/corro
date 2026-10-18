@@ -46,6 +46,7 @@ public class WireContractTests
 		["GameState.triviaDeck"] = "carries the correct answers; TriviaFamily.ProjectFor blanks it",
 		["GameState.forbiddenDeck"] = "carries every target word; ForbiddenFamily.ProjectFor removes it",
 		["GameState.categoryDeck"] = "holds every letter and category still undealt; CategoriesFamily.ProjectFor removes it",
+		["GameState.bluffDeck"] = "holds every truth still undealt; BluffFamily.ProjectFor removes it",
 		// Server bookkeeping with no display or input meaning.
 		["GameState.consecutiveDoubles"] = "speeding counter; the client only needs mustRollAgain",
 		["GameState.packageCards"] = "the draw piles' catalog; a drawn card arrives via CardDrawn",

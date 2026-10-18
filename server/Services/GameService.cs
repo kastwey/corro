@@ -102,7 +102,7 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 	/// and rent rules all come from the package (board names resolved for <paramref name="lang"/>,
 	/// with the per-locale names carried for the client). The rulebook then drives it generically.
 	/// </summary>
-	public async Task InitializeFromDefinitionAsync(List<Player> players, GameDefinition definition, string lang = "en", GameSettings? settings = null, bool raceTeams = false, Dictionary<string, System.Text.Json.JsonElement>? ruleValues = null, List<List<string>>? teams = null, IReadOnlyCollection<string>? alreadyDealt = null)
+	public async Task InitializeFromDefinitionAsync(List<Player> players, GameDefinition definition, string lang = "en", GameSettings? settings = null, bool raceTeams = false, Dictionary<string, System.Text.Json.JsonElement>? ruleValues = null, List<List<string>>? teams = null, IReadOnlyCollection<string>? alreadyDealt = null, string? hostId = null)
 	{
 		if (IsGameActive)
 		{
@@ -123,6 +123,7 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 			Teams = teams,
 			Random = _random,
 			AlreadyDealt = alreadyDealt ?? Array.Empty<string>(),
+			HostId = hostId,
 		});
 
 		_gameState = game.State;

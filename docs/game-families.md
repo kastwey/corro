@@ -19,6 +19,7 @@ and sounds. Different packages can therefore share mechanics without sharing nam
 | `shedding` | Match the discard or draw | yes | hand and discard pile | yes |
 | `exploding` | Play actions, then draw against elimination risk | yes | hand and draw pile | yes |
 | `categories` | Everyone writes to shared prompts at once; a rotating judge rules | yes, until the review | round card, sheet and answer list | — |
+| `bluff` | A room of any size writes a lie to one question, then votes for the truth among the lies | yes, until the reveal | round card, text box, ballot and reveal | — |
 
 The server registry in `server/Services/Corro/Families/GameFamilies.cs` is authoritative.
 The format details for each family live in [`../CORRO_FORMAT.md`](../CORRO_FORMAT.md).
@@ -80,6 +81,14 @@ answer reaches its own writer and nobody else — not a rival, not the round's j
 view. It is the one family whose hidden information becomes PUBLIC mid-round: at review the answers
 are read out and ruled on, so everybody sees them all.
 
+Bluff hides more, for longer: a tall tale reaches its writer alone until the reveal, the truth reaches
+nobody, and a ballot reaches its voter alone with every option's key removed — a ballot that said
+which line was the truth would be no vote. It is also the one family with no pieces and no seat count
+(`IGameFamily.UsesTokens` and `OpenSeating`): whoever is at the table when the host starts plays, up
+to the family's `SeatLimit`, and the host is the seat that opens each round (`FamilyStartContext.HostId`).
+A hall saving bluffs as it types answers with a private response (`ServerResponse.BroadcastsState`),
+so the table-wide snapshot waits for a change the table can see.
+
 Forbidden Words also separates **content language** from interface language. The host chooses one
 package-supplied word deck in the lobby (defaulting to the host interface), and that shared choice is
 visible to the room and locked when play starts. The clue-giver and monitor therefore adjudicate the
@@ -95,7 +104,7 @@ recomputed from the start stamp and the duration, so a reconnecting player, a re
 every other client agree on the same deadline. The expiry travels the ordinary command pipeline,
 so the rules and the spoken voice of a timeout live in a handler like every other outcome.
 
-Forbidden Words and Categories both use it, and neither has a line of timer code.
+Forbidden Words, Categories and Bluff all use it, and none of them has a line of timer code.
 
 ## Movement pacing
 

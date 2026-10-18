@@ -9,6 +9,7 @@ import type {
 	TriviaRulesConfig,
 	ForbiddenRulesConfig,
 	CategoriesRulesConfig,
+	BluffRulesConfig,
 } from './models.js';
 import { forbiddenPlaysSolo } from './models.js';
 
@@ -139,6 +140,29 @@ export function buildCategoriesRulesLines(rules: CategoriesRulesConfig | null | 
 		t('game.categories_rules_categories', { count: r.categoriesPerRound }),
 		t('game.categories_rules_points', { points: r.pointsPerAnswer }),
 		t('game.categories_rules_cycles', { count: r.cycles }),
+	];
+}
+
+// ── Bluff ──────────────────────────────────────────────────────────────────────
+
+export function buildBluffRulesLines(rules: BluffRulesConfig | null | undefined, t: T): string[] {
+	const r = rules ?? {
+		writeSeconds: 45,
+		voteSeconds: 30,
+		rounds: 5,
+		truthPoints: 1000,
+		foolPoints: 500,
+		ballotSize: 7,
+		finalists: 6,
+	};
+	return [
+		t('game.bluff_rules_rounds', { count: r.rounds }),
+		t('game.bluff_rules_write', { seconds: r.writeSeconds }),
+		t('game.bluff_rules_vote', { seconds: r.voteSeconds }),
+		t('game.bluff_rules_truth', { points: r.truthPoints }),
+		t('game.bluff_rules_fool', { points: r.foolPoints }),
+		t('game.bluff_rules_ballot', { count: r.ballotSize }),
+		t('game.bluff_rules_final', { count: r.finalists, threshold: r.ballotSize * 2 + 1 }),
 	];
 }
 

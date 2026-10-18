@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CorroServer.Tests;
+using CorroServer.Tests.Doubles;
 
 public class GameHubVoiceTests
 {
@@ -259,101 +260,5 @@ public class GameHubVoiceTests
 			DeletedRooms.Add(roomName);
 			return Task.CompletedTask;
 		}
-	}
-
-	private sealed record CapturedSend(string Method, object?[] Args);
-
-	private sealed class RecordingProxy : ISingleClientProxy
-	{
-		public List<CapturedSend> Sends { get; } = new();
-		public bool Received(string method) => Sends.Any(s => s.Method == method);
-		public string? LastError() => Sends.LastOrDefault(s => s.Method == "Error")?.Args.FirstOrDefault() as string;
-		public Task SendCoreAsync(string method, object?[] args, CancellationToken cancellationToken = default)
-		{
-			Sends.Add(new CapturedSend(method, args));
-			return Task.CompletedTask;
-		}
-		public Task<T> InvokeCoreAsync<T>(string method, object?[] args, CancellationToken cancellationToken = default)
-			=> throw new NotImplementedException();
-	}
-
-	private sealed class CapturingCallerClients : IHubCallerClients
-	{
-		private readonly Dictionary<string, RecordingProxy> _groups = new();
-		private readonly RecordingProxy _shared = new();
-		public RecordingProxy Caller { get; } = new();
-		public RecordingProxy Group(string name)
-		{
-			if (!_groups.TryGetValue(name, out var proxy))
-			{
-				proxy = new RecordingProxy();
-				_groups[name] = proxy;
-			}
-			return proxy;
-		}
-		ISingleClientProxy IHubCallerClients.Caller => Caller;
-		ISingleClientProxy IHubCallerClients.Client(string connectionId) => _shared;
-		IClientProxy IHubCallerClients<IClientProxy>.Caller => Caller;
-		IClientProxy IHubCallerClients<IClientProxy>.Others => _shared;
-		IClientProxy IHubCallerClients<IClientProxy>.OthersInGroup(string groupName) => _shared;
-		IClientProxy IHubClients<IClientProxy>.All => _shared;
-		IClientProxy IHubClients<IClientProxy>.AllExcept(IReadOnlyList<string> excludedConnectionIds) => _shared;
-		IClientProxy IHubClients<IClientProxy>.Client(string connectionId) => _shared;
-		IClientProxy IHubClients<IClientProxy>.Clients(IReadOnlyList<string> connectionIds) => _shared;
-		IClientProxy IHubClients<IClientProxy>.Group(string groupName) => Group(groupName);
-		IClientProxy IHubClients<IClientProxy>.GroupExcept(string groupName, IReadOnlyList<string> excludedConnectionIds) => _shared;
-		IClientProxy IHubClients<IClientProxy>.Groups(IReadOnlyList<string> groupNames) => _shared;
-		IClientProxy IHubClients<IClientProxy>.User(string userId) => _shared;
-		IClientProxy IHubClients<IClientProxy>.Users(IReadOnlyList<string> userIds) => _shared;
-	}
-
-	private sealed class FakeCallerContext : HubCallerContext
-	{
-		public FakeCallerContext(string connectionId) => ConnectionId = connectionId;
-		public override string ConnectionId { get; }
-		public override string? UserIdentifier => null;
-		public override System.Security.Claims.ClaimsPrincipal? User => null;
-		public override IDictionary<object, object?> Items { get; } = new Dictionary<object, object?>();
-		public override Microsoft.AspNetCore.Http.Features.IFeatureCollection Features { get; }
-			= new Microsoft.AspNetCore.Http.Features.FeatureCollection();
-		public override CancellationToken ConnectionAborted => CancellationToken.None;
-		public override void Abort() { }
-	}
-
-	private sealed class NoopAuctionTimer : IAuctionTimerService
-	{
-		public event Func<string, AuctionTimerTickEventArgs, Task>? OnTimerTick { add { } remove { } }
-		public event Func<string, Task>? OnBidTimeout { add { } remove { } }
-		public void StartTimers(string gameId, GameSettings settings, AuctionState auction) { }
-		public void StopTimers(string gameId) { }
-	}
-
-	private sealed class NoopHubContext : IHubContext<GameHub>
-	{
-		public IHubClients Clients { get; } = new NoopHubClients();
-		public IGroupManager Groups { get; } = new NoopGroupManager();
-	}
-
-	private sealed class NoopHubClients : IHubClients
-	{
-		private readonly RecordingProxy _proxy = new();
-		ISingleClientProxy IHubClients.Client(string connectionId) => _proxy;
-		IClientProxy IHubClients<IClientProxy>.All => _proxy;
-		IClientProxy IHubClients<IClientProxy>.AllExcept(IReadOnlyList<string> excludedConnectionIds) => _proxy;
-		IClientProxy IHubClients<IClientProxy>.Client(string connectionId) => _proxy;
-		IClientProxy IHubClients<IClientProxy>.Clients(IReadOnlyList<string> connectionIds) => _proxy;
-		IClientProxy IHubClients<IClientProxy>.Group(string groupName) => _proxy;
-		IClientProxy IHubClients<IClientProxy>.GroupExcept(string groupName, IReadOnlyList<string> excludedConnectionIds) => _proxy;
-		IClientProxy IHubClients<IClientProxy>.Groups(IReadOnlyList<string> groupNames) => _proxy;
-		IClientProxy IHubClients<IClientProxy>.User(string userId) => _proxy;
-		IClientProxy IHubClients<IClientProxy>.Users(IReadOnlyList<string> userIds) => _proxy;
-	}
-
-	private sealed class NoopGroupManager : IGroupManager
-	{
-		public Task AddToGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default)
-			=> Task.CompletedTask;
-		public Task RemoveFromGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default)
-			=> Task.CompletedTask;
 	}
 }

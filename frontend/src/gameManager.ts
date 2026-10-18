@@ -668,6 +668,31 @@ export class GameManager {
 		await this.send({ $type: 'CATEGORIES_RULE_PROMPT', roundNumber, promptIndex, rulings });
 	}
 
+	/** Bluff family: the master opens the round's writing clock. */
+	async bluffStartRound(roundNumber: number): Promise<void> {
+		await this.send({ $type: 'BLUFF_START_ROUND', roundNumber });
+	}
+
+	/** Bluff family: save this player's tall tale as it is typed. The WHOLE text travels every
+	 *  time, so a dropped message costs nothing — the next one carries it again. */
+	async bluffWrite(roundNumber: number, text: string): Promise<void> {
+		await this.send({ $type: 'BLUFF_WRITE', roundNumber, text });
+	}
+
+	async bluffFinishWriting(roundNumber: number): Promise<void> {
+		await this.send({ $type: 'BLUFF_FINISH_WRITING', roundNumber });
+	}
+
+	/** Bluff family: one mark on my ballot — the truth, the funniest, or both. */
+	async bluffVote(roundNumber: number, final: boolean, truthPick?: number, funnyPick?: number): Promise<void> {
+		await this.send({ $type: 'BLUFF_VOTE', roundNumber, final, truthPick, funnyPick });
+	}
+
+	/** Bluff family: the master moves the table past the reveal. */
+	async bluffNextRound(roundNumber: number): Promise<void> {
+		await this.send({ $type: 'BLUFF_NEXT_ROUND', roundNumber });
+	}
+
 	/** Journey family: draw the top card (the start of your turn). */
 	async journeyDraw(): Promise<void> {
 		await this.send({ $type: 'JOURNEY_DRAW' }, { requireTurn: true });
