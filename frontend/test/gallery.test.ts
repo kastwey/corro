@@ -312,7 +312,12 @@ test('the chat story opens the panel, completes a mention and delivers an incomi
 	story.mount(host, ctx);
 
 	const toggle = host.querySelector<HTMLButtonElement>('#chat-toggle')!;
-	assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+	// Said in full on failure: one CI run saw a toggle without its state and nothing else, and no
+	// local run has shown it since, so the document around it is the evidence worth keeping.
+	const scene = () => `toggles: ${document.querySelectorAll('#chat-toggle').length}, mains: ${document.querySelectorAll('main').length}, `
+		+ `panels: ${document.querySelectorAll('#chat-panel').length}, toggle: ${toggle.outerHTML.slice(0, 200)}`;
+	assert.equal(document.querySelectorAll('#chat-toggle').length, 1, scene());
+	assert.equal(toggle.getAttribute('aria-expanded'), 'false', scene());
 	toggle.click();
 	const panel = document.getElementById('chat-panel')!;
 	assert.equal(panel.hidden, false);
