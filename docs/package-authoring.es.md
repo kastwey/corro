@@ -174,6 +174,13 @@ La clave debe resolverse en al menos un idioma, y un paquete pensado para ambos 
 los dos. Conserva estable la clave y traduce el valor. Nunca pongas un secreto, como un código de
 desbloqueo, dentro de las traducciones: estas se envían a los navegadores.
 
+Una carta también se nombra dentro de una frase que dice el motor («Ana juega **un** 7 rojo»), y
+el artículo de esa frase depende del nombre que tú elegiste, no del motor. Por eso una carta puede
+llevar esa segunda forma junto a la normal — `"step25_indefinite": "un avance de 25"`, o
+`"una Reversa azul"` si el nombre es femenino — y una carta que no la lleva se anuncia simplemente
+con su nombre. Consulta
+[Naming a thing inside a sentence](../CORRO_FORMAT.md#naming-a-thing-inside-a-sentence-key_indefinite).
+
 ### Poner nombre a los bots de tu tablero
 
 El anfitrión puede sentar un bot y pedir un nombre al azar. Si no haces nada, esos nombres salen de

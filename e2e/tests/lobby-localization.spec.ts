@@ -9,7 +9,7 @@
 
 import { test, expect } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
-import { appI18n, newPlayerPage } from '../helpers/game';
+import { appI18n, gotoLobbyHome, newPlayerPage } from '../helpers/game';
 import { E2E_BASE_URL } from '../playwright.config';
 
 test('the Spanish lobby is translated in the served HTML, before any script runs', async ({ browser }) => {
@@ -24,6 +24,37 @@ test('the Spanish lobby is translated in the served HTML, before any script runs
 	// The English fallback the source file carries must not survive into the Spanish build.
 	expect(html).not.toContain(appI18n('en').lobby.createGame);
 	expect(html).toContain('<html lang="es"');
+});
+
+// Reported from play: the name field said "Enter your name" in a Spanish lobby. The markup asked
+// for a placeholder with a hyphen — data-i18n-attr-placeholder — where both the build-time
+// localizer and the runtime binder match "data-i18n-attr:", so neither ever saw it and the English
+// fallback shipped in every language. The hints are now paragraphs the fields point at, which also
+// fixes what a placeholder could never do: stay put once there is something in the box.
+test('the field hints are translated, and stay while you type', async ({ browser }) => {
+	// Spanish, because the second half walks the real lobby: gotoLobbyHome follows the browser's
+	// own language, and an English page would compare the hint against the wrong words.
+	const page = await newPlayerPage(browser, 'es-ES');
+	const es = appI18n('es').lobby as Record<string, string>;
+	const en = appI18n('en').lobby as Record<string, string>;
+
+	const html = await (await page.request.get(`${E2E_BASE_URL}/es/`)).text();
+	for (const key of ['playerNamePlaceholder', 'gameCodePlaceholder']) {
+		expect(html, `${key} reaches the Spanish page`).toContain(`>${es[key]}<`);
+		expect(html, `${key} leaves no English behind`).not.toContain(`>${en[key]}<`);
+	}
+
+	await gotoLobbyHome(page);
+	await page.click('#go-join-btn');
+	const code = page.locator('#lobby-code-input');
+	expect(await code.getAttribute('aria-describedby'), 'the field names its hint')
+		.toBe('lobby-code-hint');
+	await expect(page.locator('#lobby-code-hint')).toHaveText(es.gameCodePlaceholder);
+
+	// The whole point of the change: a placeholder would be gone by now.
+	await code.fill('ABC123');
+	await expect(page.locator('#lobby-code-hint')).toBeVisible();
+	await flushAxeAudit(page);
 });
 
 test('a saved Spanish choice moves the player off the default page, and stays there', async ({ browser }) => {

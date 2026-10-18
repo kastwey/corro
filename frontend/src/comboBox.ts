@@ -119,8 +119,8 @@ export class ComboBox {
 
 	/**
 	 * Choose an item programmatically (restoring a saved choice, or defaulting to the first). The
-	 * field shows its name and the SEARCH is cleared, because a field showing "Uno" that is also
-	 * filtering by "Uno" is a trap: the reader sees one item and assumes there is only one.
+	 * field shows its name and the SEARCH is cleared, because a field showing "Tundra" that is also
+	 * filtering by "Tundra" is a trap: the reader sees one item and assumes there is only one.
 	 */
 	setValue(id: string | null, options: { notify?: boolean } = {}): void {
 		const item = this.items.find(candidate => candidate.id === id) ?? null;

@@ -111,3 +111,27 @@ test('D reads both pile counts and is listed in the localized shortcuts help', (
 	key(card, 'd', { ctrlKey: true });
 	assert.deepEqual(announced, [], 'Ctrl+D remains available to the global dialog shortcut');
 });
+
+test('a victim whose only reachable piece is known reads with that piece and its state', () => {
+	// Two rivals, one piece each of the attack's colour: a clean one and a damaged one. The
+	// slot step would auto-select, so the victim list must carry what the play will hit.
+	state.assembly!.seats = [
+		seat('me', ['attack-a']),
+		{ ...seat('berto', [], true), slots: [{ color: 'a', piece: instance('piece-a', 1), afflictions: [], shields: [] }] },
+		seat('carla', [], true),
+	];
+	state.players = [
+		{ id: 'me', name: 'Ana', color: '#ed4747' },
+		{ id: 'berto', name: 'Berto', color: '#268be8' },
+		{ id: 'carla', name: 'Carla', color: '#2e9e4f' },
+	] as GameState['players'];
+	view.update(state);
+	const card = boardElement.querySelector<HTMLElement>('.hand-card')!;
+	card.focus();
+	key(card, 'Enter');
+	const items = Array.from(document.querySelectorAll('.popup-menu [role="menuitem"]')).map(item => item.textContent?.trim());
+	assert.deepEqual(items, [
+		'game.assembly_pick_victim_slot(Berto|cards.piece_a (game.assembly_state_ok))',
+		'game.assembly_pick_victim_slot(Carla|cards.piece_a (game.assembly_state_afflicted))',
+	]);
+});
