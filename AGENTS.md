@@ -265,6 +265,15 @@ has the whole round trip).
   never be removed, or the account becomes unreachable forever. Signing in is never a precondition
   for creating, joining or playing a game.
 - Tests: `frontend/test/` (node:test/jsdom) and `server.tests/` (xUnit).
+- Component gallery: `frontend/src/gallery.html` + `frontend/src/gallery/` mounts ONE reusable
+  widget from plain data (`?story=<id>`; the catalogue is `gallery/catalogue.ts`). Every reusable
+  widget gets a story there, its keyboard states in `e2e/tests/gallery.spec.ts` (Axe on each), and
+  a scenario in `screen-reader/` when what it SAYS matters — that suite drives a real NVDA over the
+  gallery (Guidepup, Windows runner: `.github/workflows/screen-reader.yml`) and asserts spoken
+  facts, never sentences. It runs on every PR that reaches the gallery's import graph, page,
+  stylesheets or locales — derived by `screen-reader/affected.mjs`, never hand-listed — and
+  nightly. The gallery is built with the client but dropped from the publish artifact
+  (`CorroServer.csproj`); read [screen-reader/README.md](screen-reader/README.md) first.
 - Game families (genres): registered in `server/.../Families/GameFamilies.cs` +
   client `gameFamilies.ts`/`familyTraits.ts`. Read `docs/game-families.md` and the
   relevant section of `CORRO_FORMAT.md` first: a family is a distinct *interaction

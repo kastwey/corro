@@ -155,6 +155,12 @@ between matches would tear down the LiveKit connection and cut the conversation 
 lines and the announcement pipeline are all exercised without a browser. The real-browser
 coverage lives in `e2e/` (see [flows.md](flows.md)).
 
+The reusable widgets — the popup menu, tabs, combobox, roving toolbar, the roster list with its
+context menu, the checkbox list, the dialog manager — also have a **component gallery**
+(`src/gallery.html`, `src/gallery/`): one page that mounts one widget from plain data, which
+`e2e/tests/gallery.spec.ts` audits state by state and `screen-reader/` listens to with a real NVDA.
+See [accessibility.md](accessibility.md#hearing-it-the-component-gallery-and-the-screen-reader-suite).
+
 ## Local session recovery
 
 Corro requires no account. The browser stores the games this player may resume under the

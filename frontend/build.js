@@ -77,6 +77,9 @@ console.log('Copying web files...');
 const webFiles = [
 	{ src: 'src/index.html', dest: 'dist/index.html' },
 	{ src: 'src/board.html', dest: 'dist/board.html' },
+	// The component gallery: a development page the E2E and screen-reader suites drive. It is
+	// built like any other page but never published (CorroServer.csproj drops it on publish).
+	{ src: 'src/gallery.html', dest: 'dist/gallery.html' },
 	{ src: 'styles.css', dest: 'dist/styles.css' }
 ];
 
