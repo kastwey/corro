@@ -15,10 +15,10 @@ import { ComboBox, filterItems, normalizeForSearch, sortItems } from '../src/com
 setupDom();
 
 const GAMES = [
-	{ id: 'uno', label: 'Uno' },
-	{ id: 'espana', label: 'España moderna' },
+	{ id: 'tundra', label: 'Tundra' },
+	{ id: 'exodo', label: 'Éxodo estelar' },
 	{ id: 'mine', label: 'La mina' },
-	{ id: 'sushi', label: 'Sushi Go' },
+	{ id: 'susurros', label: 'Susurros' },
 ];
 
 interface Harness {
@@ -80,24 +80,24 @@ function harness(items = GAMES): Harness {
 }
 
 test('the catalogue is alphabetical in the reader language, not in code-point order', () => {
-	// "España" sorts under E in Spanish; a naive sort would file it after every ASCII letter.
+	// "Éxodo" sorts under E in Spanish; a naive sort would file it after every ASCII letter.
 	assert.deepEqual(
 		sortItems(GAMES, 'es').map(item => item.label),
-		['España moderna', 'La mina', 'Sushi Go', 'Uno']);
+		['Éxodo estelar', 'La mina', 'Susurros', 'Tundra']);
 });
 
 test('searching ignores case and accents', () => {
-	assert.equal(normalizeForSearch('  España  '), 'espana');
-	assert.deepEqual(filterItems(GAMES, 'espana').map(item => item.id), ['espana']);
-	assert.deepEqual(filterItems(GAMES, 'ESPAÑA').map(item => item.id), ['espana']);
-	assert.deepEqual(filterItems(GAMES, 'go').map(item => item.id), ['sushi']);
+	assert.equal(normalizeForSearch('  Éxodo  '), 'exodo');
+	assert.deepEqual(filterItems(GAMES, 'exodo').map(item => item.id), ['exodo']);
+	assert.deepEqual(filterItems(GAMES, 'ÉXODO').map(item => item.id), ['exodo']);
+	assert.deepEqual(filterItems(GAMES, 'sur').map(item => item.id), ['susurros']);
 	assert.deepEqual(filterItems(GAMES, '').length, GAMES.length, 'no query means everything');
 });
 
 test('the list is on screen in full, and is never a tab stop', () => {
 	const h = harness();
 
-	assert.deepEqual(h.labels(), ['España moderna', 'La mina', 'Sushi Go', 'Uno']);
+	assert.deepEqual(h.labels(), ['Éxodo estelar', 'La mina', 'Susurros', 'Tundra']);
 	// The way in is the arrow key, which is the bargain the combobox role advertises.
 	assert.deepEqual(h.options().map(option => option.tabIndex), [-1, -1, -1, -1]);
 	assert.equal(h.input.getAttribute('aria-expanded'), 'true');
@@ -121,13 +121,13 @@ test('Down enters the list at the top; Up jumps straight to its end', () => {
 // every single time you go back in.
 test('Down goes back to the game already chosen, not to the top of the list', () => {
 	const h = harness();
-	h.combo.setValue('sushi');            // third alphabetically
+	h.combo.setValue('susurros');            // third alphabetically
 	h.input.focus();
 
 	h.press('ArrowDown');
 
 	assert.equal(document.activeElement, h.options()[2]);
-	assert.equal(h.options()[2].textContent, 'Sushi Go');
+	assert.equal(h.options()[2].textContent, 'Susurros');
 
 	// Up keeps its own job — the end of the list — which is also what the APG's combobox says.
 	h.input.focus();
@@ -137,14 +137,14 @@ test('Down goes back to the game already chosen, not to the top of the list', ()
 
 test('a chosen game filtered out of view does not drag Down away from the top', () => {
 	const h = harness();
-	h.combo.setValue('uno');
-	h.type('s');                          // "Uno" is not among these
+	h.combo.setValue('tundra');
+	h.type('s');                          // "Tundra" is not among these
 
 	h.input.focus();
 	h.press('ArrowDown');
 
 	assert.equal(document.activeElement, h.options()[0], 'the top is the only sensible start');
-	assert.deepEqual(h.labels(), ['España moderna', 'Sushi Go']);
+	assert.deepEqual(h.labels(), ['Éxodo estelar', 'Susurros']);
 });
 
 test('the list is a loop hanging off the field, not a wall at either end', () => {
@@ -175,9 +175,9 @@ test('typing filters, and the field keeps the whole catalogue when emptied', () 
 	const h = harness();
 
 	h.type('s');
-	assert.deepEqual(h.labels(), ['España moderna', 'Sushi Go']);
+	assert.deepEqual(h.labels(), ['Éxodo estelar', 'Susurros']);
 	h.type('sus');
-	assert.deepEqual(h.labels(), ['Sushi Go']);
+	assert.deepEqual(h.labels(), ['Susurros']);
 	h.type('');
 	assert.equal(h.labels().length, 4);
 });
@@ -193,7 +193,7 @@ test('a keystroke from inside the list lands in the field, and the filter follow
 	h.press('s');
 	assert.equal(document.activeElement, h.input, 'typing belongs to the field');
 	assert.equal(h.input.value, 's');
-	assert.deepEqual(h.labels(), ['España moderna', 'Sushi Go']);
+	assert.deepEqual(h.labels(), ['Éxodo estelar', 'Susurros']);
 
 	// …and so does erasing.
 	h.press('ArrowDown');
@@ -210,11 +210,11 @@ test('choosing an item names it in the field and reports it once', () => {
 	h.press('ArrowDown');
 	h.press('Enter');
 
-	assert.equal(h.combo.value, 'espana');
-	assert.equal(h.input.value, 'España moderna');
+	assert.equal(h.combo.value, 'exodo');
+	assert.equal(h.input.value, 'Éxodo estelar');
 	assert.equal(document.activeElement, h.input, 'the reader is put back where they can carry on');
-	assert.deepEqual(h.selected, ['espana']);
-	// The whole list comes back: a field showing "España moderna" that is ALSO filtering by it
+	assert.deepEqual(h.selected, ['exodo']);
+	// The whole list comes back: a field showing "Éxodo estelar" that is ALSO filtering by it
 	// would leave one item on screen and read as "there is only one".
 	assert.equal(h.labels().length, 4);
 	assert.equal(h.options()[0].getAttribute('aria-selected'), 'true');
@@ -228,7 +228,7 @@ test('with one candidate left, Enter in the field takes it — and never submits
 	h.input.dispatchEvent(enter);
 
 	assert.equal(enter.defaultPrevented, true, 'Enter must not reach the create form');
-	assert.equal(h.combo.value, 'sushi');
+	assert.equal(h.combo.value, 'susurros');
 });
 
 test('an empty result set is not an expanded popup, whatever is on screen', () => {
@@ -265,20 +265,20 @@ test('the visible count is hidden from assistive tech, so it is never said twice
 
 test('Escape restores the chosen game and the full list rather than emptying the field', () => {
 	const h = harness();
-	h.combo.setValue('uno');
+	h.combo.setValue('tundra');
 	h.type('sus');
-	assert.deepEqual(h.labels(), ['Sushi Go']);
+	assert.deepEqual(h.labels(), ['Susurros']);
 
 	h.input.focus();
 	h.press('Escape');
-	assert.equal(h.input.value, 'Uno');
+	assert.equal(h.input.value, 'Tundra');
 	assert.equal(h.labels().length, 4);
-	assert.equal(h.combo.value, 'uno', 'looking around is not choosing');
+	assert.equal(h.combo.value, 'tundra', 'looking around is not choosing');
 });
 
 test('a catalogue that loses the chosen game says so instead of silently picking another', () => {
 	const h = harness();
-	h.combo.setValue('uno');
+	h.combo.setValue('tundra');
 	h.selected.length = 0;
 
 	h.combo.setItems([{ id: 'mine', label: 'La mina' }]);
@@ -287,19 +287,19 @@ test('a catalogue that loses the chosen game says so instead of silently picking
 	assert.deepEqual(h.selected, ['<none>']);
 });
 
-// Typing continues the SEARCH, never the committed name: appending to "Sushi Go" would look for
+// Typing continues the SEARCH, never the committed name: appending to "Susurros" would look for
 // something nobody asked for and find nothing.
 test('typing from the list after a choice starts a fresh search, not a longer name', () => {
 	const h = harness();
-	h.combo.setValue('sushi');
-	assert.equal(h.input.value, 'Sushi Go');
+	h.combo.setValue('susurros');
+	assert.equal(h.input.value, 'Susurros');
 
 	h.input.focus();
 	h.press('ArrowDown');
 	h.press('e');
 
 	assert.equal(h.input.value, 'e', 'the game name was replaced, not extended');
-	assert.deepEqual(h.labels(), ['España moderna'], 'only one game has an e in it');
+	assert.deepEqual(h.labels(), ['Éxodo estelar'], 'only one game has an e in it');
 });
 
 test('Escape from inside the list comes back to the field without choosing', () => {
