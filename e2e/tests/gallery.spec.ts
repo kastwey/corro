@@ -11,7 +11,7 @@ import { test, expect, type Page } from '../helpers/test';
 import { flushAxeAudit } from '../helpers/axeAudit';
 import { newPlayerPage } from '../helpers/game';
 
-const STORIES = ['popup-menu', 'tabs', 'combobox', 'toolbar', 'list-with-actions', 'checkbox-list', 'dialog'];
+const STORIES = ['popup-menu', 'tabs', 'combobox', 'toolbar', 'list-with-actions', 'checkbox-list', 'dialog', 'hand', 'chat', 'trade'];
 
 async function openStory(page: Page, id: string): Promise<void> {
 	await page.goto(`/gallery.html?story=${id}`);
@@ -313,5 +313,192 @@ test('dialogs: a native modal question with arrow-walked answers, and a reading 
 	await dialog.locator('button', { hasText: 'Close' }).click();
 	await expect(dialog).toBeHidden();
 	await expect(page.locator('#story-dialog-guide')).toBeFocused();
+	await flushAxeAudit(page);
+});
+
+test('card hand: rows read as one line, play, the refused card offers a discard, help, menu, draw', async ({ browser }) => {
+	const page = await newPlayerPage(browser, 'en-US');
+	await openStory(page, 'hand');
+
+	const rows = page.locator('.hand-card');
+	await expect(rows).toHaveCount(5);
+	await expect(page.locator('.hand-panel__list')).toHaveAccessibleName('Your hand');
+	await rows.first().focus();
+	await expect(rows.first()).toHaveAccessibleName('Move 75');
+	await page.keyboard.press('ArrowDown');
+	await expect(rows.nth(1)).toBeFocused();
+	await expect(rows.nth(1)).toHaveAccessibleName('Move 25');
+
+	// Right enters the row's own toolbar; Escape comes back to the card.
+	await page.keyboard.press('ArrowRight');
+	await expect(rows.nth(1).locator('.hand-card__actions button').first()).toBeFocused();
+	await page.keyboard.press('Escape');
+	await expect(rows.nth(1)).toBeFocused();
+	await flushAxeAudit(page);
+
+	// An unplayable card says so in its line; Enter reads the reason and offers the discard.
+	const flat = page.locator('.hand-card', { hasText: 'Flat tyre' });
+	await expect(flat).toHaveAccessibleName('Flat tyre. not playable');
+	await flat.focus();
+	await page.keyboard.press('Enter');
+	const dialog = page.locator('dialog#game-dialog');
+	await expect(dialog).toBeVisible();
+	await expect(dialog.locator('.dialog-content')).toHaveText('No rival is on the road. Discard Flat tyre?');
+	await expect(dialog.locator('button', { hasText: 'Discard' })).toBeFocused();
+	await flushAxeAudit(page);
+	await page.keyboard.press('Escape');
+	await expect(dialog).toBeHidden();
+	await expect(flat).toBeFocused();
+
+	// Shift+F1 reads the card's help as a document; Shift+F10 opens the hand's menu.
+	await rows.first().focus();
+	await page.keyboard.press('Shift+F1');
+	await expect(dialog).toBeVisible();
+	await expect(dialog).toHaveAccessibleName('Move 75');
+	await expect(dialog.locator('.dialog-content')).toContainText('Advance seventy-five');
+	await flushAxeAudit(page);
+	await page.keyboard.press('Escape');
+	await expect(dialog).toBeHidden();
+	await expect(rows.first()).toBeFocused();
+	await page.keyboard.press('Shift+F10');
+	const menu = page.locator('.hand-context-menu[role="menu"]');
+	await expect(menu).toBeVisible();
+	await expect(menu.locator('[role="menuitem"]', { hasText: 'Play' })).toBeFocused();
+	await expect(menu.locator('[aria-haspopup="menu"]').first()).toBeVisible();
+	await flushAxeAudit(page);
+	await page.keyboard.press('Escape');
+	await expect(menu).toHaveCount(0);
+	await expect(rows.first()).toBeFocused();
+	// The same menu in the dark theme: it used to wear hard-coded light colours whatever the theme.
+	await page.locator('#theme-toggle').click();
+	await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+	await rows.first().focus();
+	await page.keyboard.press('Shift+F10');
+	await expect(menu.locator('[role="menuitem"]', { hasText: 'Play' })).toBeFocused();
+	await flushAxeAudit(page);
+	await page.keyboard.press('Escape');
+	await expect(menu).toHaveCount(0);
+	await page.locator('#theme-toggle').click();
+	await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+	await rows.first().focus();
+
+	// Enter plays, Space draws, Delete discards after the confirmation.
+	await page.keyboard.press('Enter');
+	await expect(log(page).last()).toHaveText('You played Move 75.');
+	await expect(rows).toHaveCount(4);
+	await page.keyboard.press('Space');
+	await expect(log(page).last()).toHaveText('You drew Move 100.');
+	await expect(rows).toHaveCount(5);
+	await flushAxeAudit(page);
+	await page.locator('.hand-card', { hasText: 'Green light' }).focus();
+	await page.keyboard.press('Delete');
+	await expect(dialog.locator('.dialog-content')).toHaveText('Discard Green light?');
+	// The player asked to discard, so the answer takes the focus (a moment after opening).
+	await expect(dialog.locator('button', { hasText: 'Discard' })).toBeFocused();
+	await page.keyboard.press('Enter');
+	await expect(dialog).toBeHidden();
+	await expect(log(page).last()).toHaveText('You discarded Green light.');
+	await expect(rows).toHaveCount(4);
+	await flushAxeAudit(page);
+});
+
+test('text chat: the panel, the mention list, sending, and a message arriving while closed', async ({ browser }) => {
+	const page = await newPlayerPage(browser, 'en-US');
+	await openStory(page, 'chat');
+
+	const toggle = page.locator('#chat-toggle');
+	const panel = page.locator('#chat-panel');
+	await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+	await toggle.click();
+	await expect(panel).toBeVisible();
+	await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+	// First contact lands on the unencrypted-messages notice, a focusable stop.
+	await expect(page.locator('#chat-disclaimer-text')).toBeFocused();
+	await expect(page.locator('#chat-messages li')).toHaveCount(2);
+	await flushAxeAudit(page);
+	await page.locator('#chat-disclaimer-dismiss').click();
+	const input = page.locator('#chat-input');
+	await expect(input).toBeFocused();
+
+	// "@C" opens the players listbox on its one match and moves focus into it; Enter completes.
+	await page.keyboard.type('@C');
+	const options = page.locator('#chat-mention-list [role="option"]');
+	await expect(options).toHaveCount(1);
+	await expect(options.first()).toHaveText('Carmen');
+	await expect(options.first()).toBeFocused();
+	await flushAxeAudit(page);
+	await page.keyboard.press('Enter');
+	await expect(input).toBeFocused();
+	await expect(input).toHaveValue(/^@Carmen /);
+	await page.keyboard.type('shall we trade?');
+	await page.keyboard.press('Enter');
+	await expect(page.locator('#chat-messages li')).toHaveCount(3);
+	await expect(page.locator('#chat-messages li').last()).toContainText('shall we trade?');
+	await expect(input).toHaveValue('');
+	await flushAxeAudit(page);
+
+	// The toggle closes the panel (on the board, Escape only parks focus on the board and leaves
+	// it open) and focus returns to the toggle; a message arriving while closed shows the badge.
+	await toggle.click();
+	await expect(panel).toBeHidden();
+	await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+	await expect(toggle).toBeFocused();
+	await page.locator('#story-chat-receive').click();
+	await expect(page.locator('#chat-notification')).toBeVisible();
+	await expect(toggle).toHaveAccessibleName(/unread messages: 1/);
+	await flushAxeAudit(page);
+	await page.locator('#chat-notification').click();
+	await expect(panel).toBeVisible();
+	await expect(page.locator('#chat-messages li').last()).toContainText('Anyone trading the harbour?');
+	await expect(page.locator('#chat-notification')).toBeHidden();
+	await flushAxeAudit(page);
+});
+
+test('trade: the modal builder with its spoken validation, and the non-modal review', async ({ browser }) => {
+	const page = await newPlayerPage(browser, 'en-US');
+	await openStory(page, 'trade');
+
+	await page.locator('#story-trade-propose').click();
+	const dialog = page.locator('dialog#trade-dialog');
+	await expect(dialog).toBeVisible();
+	await expect(dialog).toHaveAttribute('data-modal', 'true');
+	await expect(dialog).toHaveAccessibleName('Propose a trade');
+	const target = dialog.locator('#trade-target');
+	await expect(target).toHaveValue('p2');
+	await flushAxeAudit(page);
+
+	// Ana's three squares are checkboxes in one roving group; the valuation follows the choice.
+	const give = dialog.locator('.trade-give-props input.trade-prop-check');
+	await expect(give).toHaveCount(3);
+	await give.first().focus();
+	await page.keyboard.press('Space');
+	await expect(give.first()).toBeChecked();
+	await expect(dialog.locator('.trade-valuation')).toContainText('You give 60');
+
+	// Too much cash is refused with a spoken reason, on the field, while typing.
+	const money = dialog.locator('#trade-give-money');
+	await money.fill('2000');
+	await expect(dialog.locator('#trade-give-money-error')).toBeVisible();
+	await expect(dialog.locator('#trade-give-money-error')).toContainText('You only have');
+	await flushAxeAudit(page);
+	await money.fill('100');
+	await expect(dialog.locator('#trade-give-money-error')).toBeHidden();
+	await dialog.locator('.trade-propose-btn').click();
+	await expect(dialog).toBeHidden();
+	await expect(log(page).last()).toHaveText('Offer sent to Berto: you give Harbour Road, 100 in cash for nothing.');
+	await expect(page.locator('#story-trade-propose')).toBeFocused();
+	await flushAxeAudit(page);
+
+	// The partner's side: a non-modal review that reads the offer and asks for an answer.
+	await page.locator('#story-trade-review').click();
+	await expect(dialog).toBeVisible();
+	await expect(dialog).toHaveAttribute('data-modal', 'false');
+	await expect(dialog).toHaveAccessibleName('Trade offer from Berto');
+	await expect(dialog).toContainText('Orchard Street');
+	await expect(dialog).toContainText('North Station');
+	await flushAxeAudit(page);
+	await dialog.locator('.trade-accept-btn').click();
+	await expect(dialog).toBeHidden();
+	await expect(log(page).last()).toHaveText('You accepted the trade with Berto.');
 	await flushAxeAudit(page);
 });

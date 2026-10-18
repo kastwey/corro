@@ -55,7 +55,8 @@ function context(): StoryContext & { announced: string[] } {
 	return {
 		announced,
 		announce: text => announced.push(text),
-		t: key => key,
+		// The real English strings (installFakeI18next), as the gallery page has them.
+		t: (key, vars) => (globalThis as any).window.i18next.t(key, vars),
 	};
 }
 
@@ -261,4 +262,107 @@ test('the dialog story opens a native modal confirmation and a reading dialog', 
 	assert.equal(dialog.hasAttribute('aria-describedby'), false);
 	assert.equal(dialog.querySelector('.dialog-content h3')!.textContent, 'Rent');
 	assert.equal(dialog.querySelector<HTMLButtonElement>('.dialog-buttons button')!.textContent, 'Close');
+});
+
+test('the hand story mounts the real hand: rows that read as one line, play, refuse, draw', async () => {
+	const { stories } = await import('../src/gallery/catalogue.js');
+	const story = stories.find(s => s.id === 'hand')!;
+	const ctx = context();
+	const host = document.getElementById('host')!;
+	story.mount(host, ctx);
+
+	const list = host.querySelector<HTMLElement>('.hand-panel__list')!;
+	assert.equal(list.getAttribute('role'), 'list');
+	assert.equal(list.getAttribute('aria-label'), 'Your hand');
+	const rows = Array.from(list.querySelectorAll<HTMLElement>('.hand-card'));
+	assert.equal(rows.length, 5);
+	// Sorted by value by default; an unplayable card says so in its own line.
+	assert.equal(rows[0].getAttribute('aria-label'), 'Move 75');
+	const flat = rows.find(r => r.getAttribute('aria-label')?.startsWith('Flat tyre'))!;
+	assert.equal(flat.getAttribute('aria-label'), 'Flat tyre. not playable');
+
+	// Enter on an unplayable card: the family discards, so the refusal and the offer to discard
+	// come in one breath, as a confirmation dialog landing on the answer.
+	flat.focus();
+	flat.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+	const dialog = document.querySelector<HTMLDialogElement>('dialog#game-dialog')!;
+	assert.equal(dialog.open, true);
+	assert.equal(dialog.querySelector('.dialog-content')!.textContent, 'No rival is on the road. Discard Flat tyre?');
+	dialog.querySelector<HTMLButtonElement>('.dialog-buttons button')!.click(); // Cancel
+	assert.equal(dialog.open, false);
+	assert.deepEqual(ctx.announced, [], 'nothing is announced: the dialog carried the reason');
+
+	// Enter on a playable card plays it and the hand shrinks.
+	rows[0].focus();
+	rows[0].dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+	assert.equal(ctx.announced.at(-1), 'You played Move 75.');
+	assert.equal(list.querySelectorAll('.hand-card').length, 4);
+
+	// The draw button draws from the story's pile.
+	host.querySelector<HTMLButtonElement>('.hand-panel__draw')!.click();
+	assert.equal(ctx.announced.at(-1), 'You drew Move 100.');
+	assert.equal(list.querySelectorAll('.hand-card').length, 5);
+});
+
+test('the chat story opens the panel, completes a mention and delivers an incoming message', async () => {
+	const { stories } = await import('../src/gallery/catalogue.js');
+	const story = stories.find(s => s.id === 'chat')!;
+	const ctx = context();
+	const host = document.getElementById('host')!;
+	story.mount(host, ctx);
+
+	const toggle = host.querySelector<HTMLButtonElement>('#chat-toggle')!;
+	assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+	toggle.click();
+	const panel = document.getElementById('chat-panel')!;
+	assert.equal(panel.hidden, false);
+	assert.ok(panel.closest('main'), 'the panel is hosted inside the landmark');
+	assert.equal(document.querySelectorAll('#chat-messages li').length, 2, 'the history is shown');
+	document.getElementById('chat-disclaimer-dismiss')!.click();
+
+	// "@B" opens the listbox with the one matching player; choosing completes the name.
+	const input = document.getElementById('chat-input') as HTMLTextAreaElement;
+	input.value = '@B';
+	input.setSelectionRange(2, 2);
+	input.dispatchEvent(new window.Event('input', { bubbles: true }));
+	const options = Array.from(document.querySelectorAll<HTMLElement>('#chat-mention-list [role="option"]'));
+	assert.deepEqual(options.map(o => o.textContent), ['Berto']);
+	options[0].dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+	assert.ok(input.value.startsWith('@Berto'), `completed to "${input.value}"`);
+
+	// An incoming message while the panel is closed shows the unread badge.
+	toggle.click();
+	assert.equal(panel.hidden, true);
+	host.querySelector<HTMLButtonElement>('#story-chat-receive')!.click();
+	assert.equal(document.querySelectorAll('#chat-messages li').length, 3);
+	assert.equal(document.getElementById('chat-notification')!.hidden, false);
+});
+
+test('the trade story opens the modal builder and the non-modal review', async () => {
+	const { stories } = await import('../src/gallery/catalogue.js');
+	const story = stories.find(s => s.id === 'trade')!;
+	const ctx = context();
+	const host = document.getElementById('host')!;
+	story.mount(host, ctx);
+
+	host.querySelector<HTMLButtonElement>('#story-trade-propose')!.click();
+	const dialog = document.getElementById('trade-dialog') as HTMLDialogElement;
+	assert.equal(dialog.open, true);
+	assert.equal(dialog.dataset.modal, 'true');
+	assert.equal(dialog.querySelector('.dialog-title')!.textContent, 'Propose a trade');
+	const partners = Array.from(dialog.querySelectorAll<HTMLOptionElement>('#trade-target option')).map(o => o.textContent);
+	assert.deepEqual(partners, ['Berto', 'Carmen']);
+	assert.equal(dialog.querySelectorAll('.trade-give-props input.trade-prop-check').length, 3, 'Ana\'s three squares');
+	const give = dialog.querySelector<HTMLInputElement>('.trade-give-props input.trade-prop-check')!;
+	give.click();
+	dialog.querySelector<HTMLButtonElement>('.trade-propose-btn')!.click();
+	assert.match(ctx.announced.at(-1) ?? '', /^Offer sent to Berto: you give Harbour Road for nothing\.$/);
+	assert.equal(dialog.open, false);
+
+	host.querySelector<HTMLButtonElement>('#story-trade-review')!.click();
+	assert.equal(dialog.open, true);
+	assert.equal(dialog.dataset.modal, 'false');
+	assert.ok(dialog.querySelector('.dialog-title')!.textContent?.includes('Berto'));
+	dialog.querySelector<HTMLButtonElement>('.trade-accept-btn')!.click();
+	assert.equal(ctx.announced.at(-1), 'You accepted the trade with Berto.');
 });

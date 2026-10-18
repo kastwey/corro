@@ -208,7 +208,8 @@ where a blind player lives.
 So the reusable widgets have a **gallery** (`frontend/src/gallery.html`, `frontend/src/gallery/`):
 one page that mounts ONE widget from invented data — the popup menu with its submenu and a refused
 entry, the tab strip, the combobox, the toolbar, the roster list with its Shift+F10 menu, the
-checkbox list, the two voices of the dialog manager. Each story calls the real component, so it is
+checkbox list, the two voices of the dialog manager, the card hand, the text chat with its mention
+list, and the trade on both sides of an offer. Each story calls the real component, so it is
 the lobby's and the board's code with nothing but a match removed, and the page is served by the
 same server (never published: `CorroServer.csproj` drops it). Three things use it:
 

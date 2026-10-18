@@ -181,4 +181,104 @@ test.describe('component gallery with NVDA', () => {
 		await nvda.press('ArrowDown');
 		expect(await heard(nvda), 'browse mode walks the guide text').toContain('move your token');
 	});
+	test('card hand: every row reads as one line, a refused card offers its discard, play and draw are heard', async ({ page, nvda }) => {
+		await openStory(page, nvda, 'hand', '.hand-card');
+		const arrival = await heard(nvda);
+		expect(arrival).toContain('move 75');
+		expect(arrival, 'the card is counted inside the hand').toMatch(NVDA.position(1, 5));
+
+		await nvda.clearSpokenPhraseLog();
+		await nvda.press('ArrowDown');
+		await nvda.press('ArrowDown');
+		const onRefused = await heard(nvda);
+		expect(onRefused).toContain('flat tyre');
+		expect(onRefused, 'an unplayable card says so in its own line').toContain('not playable');
+
+		await nvda.clearSpokenPhraseLog();
+		await nvda.press('Enter');
+		const offer = await heard(nvda);
+		expect(offer, 'the refusal and the offer to discard come as one dialog').toMatch(NVDA.dialog);
+		expect(offer).toContain('no rival is on the road');
+		expect(offer).toContain('discard flat tyre');
+		expect(offer, 'focus lands on the answer the player asked for').toContain('discard');
+
+		await nvda.clearSpokenPhraseLog();
+		await nvda.press('Escape');
+		expect(await heard(nvda), 'Escape returns to the card').toContain('flat tyre');
+
+		await nvda.clearSpokenPhraseLog();
+		await nvda.press('Home');
+		await nvda.clearSpokenPhraseLog();
+		await nvda.press('Enter');
+		expect(await heard(nvda), 'playing is announced').toContain('you played move 75');
+
+		await nvda.clearSpokenPhraseLog();
+		await nvda.press(' ');
+		expect(await heard(nvda), 'drawing is announced').toContain('you drew move 100');
+	});
+
+	test('text chat: the toggle, the players listbox on "@", a sent line and an arriving one', async ({ page, nvda }) => {
+		// The first-contact notice is a focusable stop of its own; it is not what this scenario
+		// listens for, so it is marked as already read.
+		await page.addInitScript(() => { try { localStorage.setItem('corro.chatDisclaimerDismissed', '1'); } catch { /* session only */ } });
+		await openStory(page, nvda, 'chat', '#chat-toggle');
+		const arrival = await heard(nvda);
+		expect(arrival).toContain('open text chat');
+		expect(arrival).toMatch(NVDA.button);
+
+		await nvda.clearSpokenPhraseLog();
+		await nvda.press('Enter');
+		expect(await heard(nvda), 'opening lands in the message field').toContain('message');
+
+		await nvda.clearSpokenPhraseLog();
+		await nvda.type('@c');
+		const list = await heard(nvda);
+		expect(list, 'the players list opens on the one match and takes focus').toContain('carmen');
+		expect(list).toMatch(NVDA.position(1, 1));
+
+		await nvda.clearSpokenPhraseLog();
+		await nvda.press('Enter');
+		await nvda.type(' hello');
+		await nvda.clearSpokenPhraseLog();
+		await nvda.press('Enter');
+		expect(await heard(nvda), 'the sent line is spoken from the log').toContain('hello');
+
+		// The toggle closes the panel (on the board, Escape only parks focus on the board).
+		await page.locator('#chat-toggle').click();
+		await page.locator('#story-chat-receive').focus();
+		await nvda.clearSpokenPhraseLog();
+		await nvda.press('Enter');
+		const incoming = await heard(nvda);
+		expect(incoming, 'a message arriving while the panel is closed is spoken').toContain('anyone trading the harbour');
+	});
+
+	test('trade: the builder is a dialog with a partner combo box and spoken property checkboxes', async ({ page, nvda }) => {
+		await openStory(page, nvda, 'trade', '#story-trade-propose');
+		expect(await heard(nvda)).toContain('propose a trade');
+
+		await nvda.clearSpokenPhraseLog();
+		await nvda.press('Enter');
+		const opened = await heard(nvda);
+		expect(opened, 'the builder is a native dialog').toMatch(NVDA.dialog);
+		expect(opened).toContain('propose a trade');
+		expect(opened, 'focus lands on the partner choice').toMatch(NVDA.comboBox);
+		expect(opened).toContain('berto');
+
+		await nvda.clearSpokenPhraseLog();
+		await nvda.press('Tab');
+		const onProperty = await heard(nvda);
+		expect(onProperty).toContain('harbour road');
+		expect(onProperty, 'a property is a checkbox').toMatch(/check ?box/);
+		expect(onProperty).toMatch(NVDA.notChecked);
+
+		await nvda.clearSpokenPhraseLog();
+		await nvda.press(' ');
+		const ticked = await heard(nvda);
+		expect(ticked).toMatch(NVDA.checked);
+		expect(ticked, 'the valuation line follows the choice, as a live status').toContain('you give 60');
+
+		await nvda.clearSpokenPhraseLog();
+		await nvda.press('Escape');
+		expect(await heard(nvda), 'Escape returns to the opener').toContain('propose a trade');
+	});
 });

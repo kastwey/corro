@@ -96,9 +96,13 @@ body.gallery-page {
 }
 
 /* forms.css stretches every button to its container for the lobby's forms; a widget's buttons are
-   their own width, as they are everywhere else the widgets appear. */
-.gallery-story__host .btn {
+   their own width, as they are everywhere else the widgets appear (the board page never loads
+   forms.css, and its hand toolbars came out as a stack of full-width bars here until this). */
+.gallery-story__host button {
 	width: auto;
+}
+
+.gallery-story__host .btn {
 	padding: 0.55rem 1rem;
 }
 
@@ -235,6 +239,25 @@ body.gallery-page {
 
 .gallery-checkboxes__row label {
 	margin: 0;
+}
+
+/* ---- Text chat ------------------------------------------------------------- */
+
+.gallery-chat__controls {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+/* The chat's spoken log wears this class on the board page (styles.css), which the gallery does
+   not load: without it the log would sit on screen as a second, visible copy of every line. */
+.visually-hidden {
+	position: absolute !important;
+	height: 1px;
+	width: 1px;
+	overflow: hidden;
+	clip: rect(1px, 1px, 1px, 1px);
+	white-space: nowrap;
 }
 
 /* ---- Announcement log ----------------------------------------------------- */

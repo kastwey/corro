@@ -723,30 +723,56 @@
   .journey-car { transition: none; }
 }
 
-/* The Shift+F10 context menu mirrors the manage dialog's menu look. */
+/* The Shift+F10 context menu, dressed exactly like the roster's (context-menu.css): the same
+   surface, the same accent on the focused entry, the same muted ink on a refused one.
+
+   It used to name tokens no stylesheet defines (--dialog-bg, --square-band-bg, --focus-color,
+   --border-color) and so always wore their cream and pale-blue fallbacks, with whatever ink the
+   page gave a button: in the dark theme that was light text on a cream surface, and the
+   component gallery's first Axe pass over the open menu flagged the entries at 1.2:1. */
 .hand-context-menu {
   position: fixed;
   z-index: 60;
   display: flex;
   flex-direction: column;
   min-width: 12rem;
-  padding: 0.25rem;
-  border-radius: 0.4rem;
-  border: 2px solid var(--border-color, #666);
-  background: var(--dialog-bg, #fffdf5);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-md, 0 8px 28px rgba(0, 0, 0, 0.45));
 }
 
 .hand-context-menu-item {
+  width: auto;
   text-align: left;
-  padding: 0.4rem 0.6rem;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  color: var(--text);
   border: none;
-  background: transparent;
-  border-radius: 0.3rem;
+  background: none;
+  box-shadow: none;
+  border-radius: 6px;
   cursor: pointer;
 }
 
-.hand-context-menu-item:focus {
-  outline: 2px solid var(--focus-color, #1e88e5);
-  background: var(--square-band-bg, #e4efff);
+.hand-context-menu-item:hover,
+.hand-context-menu-item:focus-visible {
+  background: var(--accent);
+  color: var(--on-accent);
+  outline: none;
+}
+
+.hand-context-menu-item[aria-disabled="true"] {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* A refused entry under the keyboard keeps readable ink on the quiet surface, as the board's
+   popup menu does (action-bar.css): muted-on-accent is not a colour anybody can read. */
+.hand-context-menu-item[aria-disabled="true"]:hover,
+.hand-context-menu-item[aria-disabled="true"]:focus-visible {
+  background: var(--surface-3);
+  color: var(--text-muted);
+  box-shadow: var(--focus-ring);
 }

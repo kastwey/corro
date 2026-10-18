@@ -12,6 +12,9 @@ import { toolbarStory } from './stories/toolbarStory.js';
 import { actionListStory } from './stories/actionListStory.js';
 import { checkboxListStory } from './stories/checkboxListStory.js';
 import { dialogStory } from './stories/dialogStory.js';
+import { handStory } from './stories/handStory.js';
+import { chatStory } from './stories/chatStory.js';
+import { tradeStory } from './stories/tradeStory.js';
 
 export const stories: readonly Story[] = [
 	popupMenuStory,
@@ -21,4 +24,7 @@ export const stories: readonly Story[] = [
 	actionListStory,
 	checkboxListStory,
 	dialogStory,
+	handStory,
+	chatStory,
+	tradeStory,
 ];
