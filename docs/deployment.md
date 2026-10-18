@@ -79,7 +79,13 @@ stored under each name.
 is tested with that branch; anything else uses the private `main`. That is how an engine change
 and the package change it needs travel together: same branch name in both repositories, and CI
 proves them against each other before either merges. Production always ships the private
-`main`, so merge the package branch no later than the engine one.
+`main`, so merge the package branch right after the engine one.
+
+The lookup happens when the engine's CI runs, and nothing in the private repository starts a
+run there — a push to a private branch triggers nothing anywhere. So the order matters: push
+the private branch before the engine one, or, if the engine branch is already up, push it again
+or close and reopen its pull request. An engine change that needs no package change needs no
+private branch either; its pull request is tested with the private `main`.
 
 **Without the token** — a fork, or a repository that has not set the secret — the action does
 nothing and says so, and the pipeline runs with the committed packages only, exactly as a clone
