@@ -255,12 +255,13 @@ public class ForbiddenFamilyTests
 		Assert.Equal((2, "p2", "p0", "p1"),
 			(state.Turn.TeamIndex, state.Turn.ClueGiverId, state.Turn.GuesserId, state.Turn.MonitorId));
 
-		// Three turns, nobody scored: the rotation is complete and level, so another whole one.
+		// Three turns, nobody scored: the rotation is complete and level, so another whole one —
+		// in which the pairs turn round, so p0 now gives clues to p2 rather than to p1 again.
 		var tie = ForbiddenRulebook.CompleteTurn(state, deck, rules);
 		Assert.False(tie.GameOver);
 		Assert.True(tie.TieBreakerStarted);
 		Assert.Equal(2, state.Cycle);
-		Assert.Equal((0, "p0", "p1", "p2"),
+		Assert.Equal((0, "p0", "p2", "p1"),
 			(state.Turn.TeamIndex, state.Turn.ClueGiverId, state.Turn.GuesserId, state.Turn.MonitorId));
 
 		// A lead shared by two of the three is still a tie at the top; a lone leader ends it.
@@ -307,6 +308,76 @@ public class ForbiddenFamilyTests
 		Assert.Equal(everyone, gave.OrderBy(id => id));
 		Assert.Equal(everyone, guessed.OrderBy(id => id));
 		Assert.Equal(everyone, monitored.OrderBy(id => id));
+	}
+
+	[Fact]
+	public void Three_players_for_themselves_swap_partners_every_rotation()
+	{
+		// Asked for by a table of three: with a fixed rotation the first player only ever gave
+		// clues to the second, all evening. Now the direction turns round each rotation, so in two
+		// rotations everybody has given clues to everybody — and monitored for everybody.
+		var deck = Deck(12);
+		var rules = new ForbiddenRulesConfig { Cycles = 4, Mode = "solo" };
+		var state = ForbiddenRulebook.CreateInitialState(Sides(3), deck, rules);
+		var turns = new List<(int Cycle, string Giver, string Guesser, string Monitor)>();
+		for (var turn = 0; turn < 9; turn++)
+		{
+			turns.Add((state.Cycle, state.Turn.ClueGiverId, state.Turn.GuesserId, state.Turn.MonitorId));
+			Assert.False(ForbiddenRulebook.CompleteTurn(state, deck, rules).GameOver);
+		}
+
+		Assert.Equal(new[]
+		{
+			(1, "p0", "p1", "p2"), (1, "p1", "p2", "p0"), (1, "p2", "p0", "p1"),
+			(2, "p0", "p2", "p1"), (2, "p1", "p0", "p2"), (2, "p2", "p1", "p0"),
+			(3, "p0", "p1", "p2"), (3, "p1", "p2", "p0"), (3, "p2", "p0", "p1"),
+		}, turns);
+		Assert.Equal(6, turns.Take(6).Select(turn => (turn.Giver, turn.Guesser)).Distinct().Count());
+		Assert.Equal(6, turns.Take(6).Select(turn => (turn.Giver, turn.Monitor)).Distinct().Count());
+	}
+
+	[Fact]
+	public void Five_players_for_themselves_give_clues_to_each_of_the_others_once_in_four_rotations()
+	{
+		// The guesser sits one seat further along with every rotation, so four rotations pair
+		// every player with each of the other four exactly once; the fifth starts over. Within
+		// any one rotation the table stays as fair as before: everybody gives, guesses and
+		// monitors once, and the three jobs of a turn are always three different people.
+		var deck = Deck(12);
+		var rules = new ForbiddenRulesConfig { Cycles = 6, Mode = "solo" };
+		var state = ForbiddenRulebook.CreateInitialState(Sides(5), deck, rules);
+		var everyone = Sides(5).Select(side => side[0]).OrderBy(id => id).ToList();
+		var pairs = new List<(string Giver, string Guesser)>();
+		var watched = new List<(string Giver, string Monitor)>();
+
+		for (var cycle = 1; cycle <= 5; cycle++)
+		{
+			var gave = new List<string>();
+			var guessed = new List<string>();
+			var monitored = new List<string>();
+			for (var turn = 0; turn < 5; turn++)
+			{
+				Assert.Equal(cycle, state.Cycle);
+				var cast = new[] { state.Turn.ClueGiverId, state.Turn.GuesserId, state.Turn.MonitorId };
+				Assert.Equal(3, cast.Distinct().Count());
+				gave.Add(cast[0]);
+				guessed.Add(cast[1]);
+				monitored.Add(cast[2]);
+				pairs.Add((cast[0], cast[1]));
+				watched.Add((cast[0], cast[2]));
+				Assert.False(ForbiddenRulebook.CompleteTurn(state, deck, rules).GameOver);
+			}
+			Assert.Equal(everyone, gave.OrderBy(id => id));
+			Assert.Equal(everyone, guessed.OrderBy(id => id));
+			Assert.Equal(everyone, monitored.OrderBy(id => id));
+		}
+
+		Assert.Equal(20, pairs.Take(20).Distinct().Count());   // 5 players x 4 partners, no repeat
+		Assert.Equal(20, watched.Take(20).Distinct().Count()); // and every player monitored for every other
+		Assert.Equal(pairs.Take(5), pairs.Skip(20));           // the fifth rotation is the first again
+		Assert.Equal((1, 2), ForbiddenRulebook.SoloSeatDistances(5, 1));
+		Assert.Equal((4, 1), ForbiddenRulebook.SoloSeatDistances(5, 4));
+		Assert.Equal((1, 2), ForbiddenRulebook.SoloSeatDistances(5, 5));
 	}
 
 	[Fact]

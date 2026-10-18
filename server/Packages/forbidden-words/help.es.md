@@ -15,7 +15,7 @@ El anfitrión elige cómo se juega al crear la partida, y el número de jugadore
 
 **Por equipos**, el modo clásico: el anfitrión crea dos equipos iguales de al menos dos personas y los turnos se alternan entre ellos. El portavoz y el adivinante son compañeros, el supervisor lo aporta el equipo contrario y las funciones rotan siguiendo el orden del equipo, de modo que cada persona es portavoz una vez en cada rotación completa. Puntúa el equipo.
 
-**Todos contra todos** sirve para tres jugadores o más, también en número impar: no hay equipos. En cada turno el jugador activo da las pistas, el siguiente adivina y el de después supervisa, así que en una rotación completa todos dan pistas, adivinan y supervisan una vez. Cada acierto suma un punto al portavoz **y** al adivinante; un desliz señalado se lo resta solo al portavoz. Gana la persona con más puntos.
+**Todos contra todos** sirve para tres jugadores o más, también en número impar: no hay equipos. En cada turno el jugador activo da las pistas, el siguiente adivina y el de después supervisa, así que en una rotación completa todos dan pistas, adivinan y supervisan una vez. La pareja cambia en cada rotación: en la segunda le das las pistas a quien está dos asientos más allá, en la siguiente al de después, y así dando la vuelta a la mesa, de modo que no siempre juegan juntas las mismas dos personas. Cada acierto suma un punto al portavoz **y** al adivinante; un desliz señalado se lo resta solo al portavoz. Gana la persona con más puntos.
 
 ## Empezar un turno
 

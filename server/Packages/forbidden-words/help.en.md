@@ -15,7 +15,7 @@ The host chooses how the table plays when creating the game, and the number of p
 
 **In two teams**, the classic: the host creates two equal teams of at least two, and turns alternate between them. The clue-giver and the guesser are teammates, the monitor comes from the other team, and roles rotate in team order, so every player gives clues once in a complete rotation. The team scores.
 
-**Everyone for themselves** works with three players or more, odd numbers included: there are no teams. Each turn the active player gives the clues, the next player guesses and the one after monitors, so in a complete rotation everybody gives, guesses and monitors once. A correct guess scores a point for the clue-giver **and** for the guesser; a reported slip costs the clue-giver alone. The match is won by the player with the most points.
+**Everyone for themselves** works with three players or more, odd numbers included: there are no teams. Each turn the active player gives the clues, the next player guesses and the one after monitors, so in a complete rotation everybody gives, guesses and monitors once. The partner changes with every rotation: in the second one you give your clues to the player two seats along, in the next to the one after, and so on round the table, so the same two people are not paired all evening. A correct guess scores a point for the clue-giver **and** for the guesser; a reported slip costs the clue-giver alone. The match is won by the player with the most points.
 
 ## Starting a turn
 

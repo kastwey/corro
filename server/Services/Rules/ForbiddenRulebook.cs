@@ -48,7 +48,7 @@ public static class ForbiddenRulebook
 		{
 			Teams = teams,
 			ActiveTeamIndex = 0,
-			Turn = BuildTurn(teams, activeTeamIndex: 0, turnNumber: 1, rules),
+			Turn = BuildTurn(teams, activeTeamIndex: 0, turnNumber: 1, rules, cycle: 1),
 		};
 		DealNextCard(state, deck);
 		return state;
@@ -178,30 +178,51 @@ public static class ForbiddenRulebook
 			state.Teams,
 			state.ActiveTeamIndex,
 			state.Turn.TurnNumber + 1,
-			rules);
+			rules,
+			state.Cycle);
 		DealNextCard(state, deck);
 		return new TurnAdvance(false, null, tieBreaker);
+	}
+
+	/// <summary>
+	/// Who guesses for the active player when everyone plays for themselves, as a distance along
+	/// the table: the next seat in the first rotation, the one after in the second, and so on round
+	/// the table before starting again. With three players the direction alternates each rotation;
+	/// with five every player gives clues to each of the other four once in four rotations. A fixed
+	/// distance paired the same two people all evening (asked for by a table of three, where the
+	/// first player only ever gave clues to the second). The monitor is the next seat after the
+	/// guesser's distance, so monitoring walks the table too, and the two never coincide.
+	/// </summary>
+	internal static (int Guesser, int Monitor) SoloSeatDistances(int playerCount, int cycle)
+	{
+		var partners = playerCount - 1;
+		var guesser = (cycle - 1) % partners + 1;
+		var monitor = guesser % partners + 1;
+		return (guesser, monitor);
 	}
 
 	private static ForbiddenTurnState BuildTurn(
 		IReadOnlyList<ForbiddenTeamState> teams,
 		int activeTeamIndex,
 		int turnNumber,
-		ForbiddenRulesConfig rules)
+		ForbiddenRulesConfig rules,
+		int cycle)
 	{
 		if (rules.PlaysSolo())
 		{
-			// Everyone for themselves: the active player gives the clues, the next seat guesses and
-			// the one after monitors. Over a whole rotation every player holds every role once, so
-			// the seating is as fair as two teams — with any number of players from three up.
+			// Everyone for themselves: the active player gives the clues, and the guesser and the
+			// monitor sit a distance along the table that changes with the rotation. Over a whole
+			// rotation every player still holds every role once, so the seating is as fair as two
+			// teams — with any number of players from three up — without always pairing the same two.
 			var count = teams.Count;
+			var (guesser, monitor) = SoloSeatDistances(count, cycle);
 			return new ForbiddenTurnState
 			{
 				TurnNumber = turnNumber,
 				TeamIndex = activeTeamIndex,
 				ClueGiverId = teams[activeTeamIndex].MemberIds[0],
-				GuesserId = teams[(activeTeamIndex + 1) % count].MemberIds[0],
-				MonitorId = teams[(activeTeamIndex + 2) % count].MemberIds[0],
+				GuesserId = teams[(activeTeamIndex + guesser) % count].MemberIds[0],
+				MonitorId = teams[(activeTeamIndex + monitor) % count].MemberIds[0],
 				DurationSeconds = rules.TurnSeconds,
 			};
 		}

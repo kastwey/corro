@@ -1391,7 +1391,10 @@ of four and up, whatever its minimum says. Bots are not supported in this family
   order and the next teammate is the guesser; the opposing monitor rotates in the rival team's
   order.
 - Everyone for themselves: the active player gives the clues, the next seat guesses and the one
-  after monitors. Over a complete rotation every player holds every role once. A correct guess
+  after monitors. Over a complete rotation every player holds every role once. The guesser's
+  distance along the table grows by one seat with each rotation (two seats along in the second,
+  three in the third, round the table and back to one), and the monitor sits one seat beyond
+  that, so the same two players are not paired rotation after rotation. A correct guess
   scores for the clue-giver **and** the guesser; a violation costs the clue-giver alone. Every
   rule below reads "side" for "team": the match is decided and ranked by individual score.
 - Only the clue-giver may start the clock. They coordinate readiness through voice chat or in person;

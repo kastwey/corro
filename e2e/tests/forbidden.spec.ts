@@ -522,7 +522,7 @@ test('three players play everyone for themselves, with no teams to arrange', asy
 
 	// Three players and nothing else: the count alone seats the table for themselves.
 	const code = await createGame(ana, 'Ana', BOARD, {
-		houseRules: { forbiddenCycles: 1 },
+		houseRules: { forbiddenCycles: 2 },
 		maxPlayers: 3,
 		contentLanguage: 'es',
 	});
@@ -611,8 +611,7 @@ test('three players play everyone for themselves, with no teams to arrange', asy
 		'You are the monitor: press V if Berto says the target or any forbidden word.');
 	await flushAxeAudit(ana);
 
-	// Berto banks one word, then the last two turns run out, so the rotation ends with a lone
-	// leader: Berto 3, Ana 1, Carla 1.
+	// Berto banks one word, then the last turn of the rotation runs out: Berto 3, Ana 1, Carla 1.
 	const bertoCard = berto.locator('.forbidden-secret__text');
 	await bertoCard.focus();
 	await berto.keyboard.press('Enter');
@@ -626,6 +625,23 @@ test('three players play everyone for themselves, with no teams to arrange', asy
 	await carla.locator('.forbidden-start').click();
 	await expect(carla.locator('.forbidden-correct')).toBeVisible();
 	await expireRoundClock(tableId);
+
+	// The second rotation turns the pairs round: Ana gives her clues to CARLA this time, with
+	// Berto monitoring — the whole evening with the same partner was what a table of three
+	// complained about. Everyone still gives, guesses and monitors once per rotation.
+	await expect(ana.locator('.forbidden-now__line')).toHaveText('You are about to play.');
+	await expect(ana.locator('.forbidden-role-list li')).toHaveText([
+		'You give the clues.', 'Carla guesses.', 'Berto monitors.',
+	]);
+	await expect(berto.locator('.forbidden-role-detail')).toHaveText(
+		'Eres el supervisor: pulsa V si Ana dice el objetivo o cualquiera de las palabras prohibidas.');
+	await flushAxeAudit(ana);
+	for (const giver of [ana, berto, carla]) {
+		await expect(giver.locator('.forbidden-start')).toBeVisible();
+		await giver.locator('.forbidden-start').click();
+		await expect(giver.locator('.forbidden-correct')).toBeVisible();
+		await expireRoundClock(tableId);
+	}
 
 	// Won by a person: the banner names Berto, nobody is told a team won, and the standings are a
 	// real ranking with the two tied for second sharing their place.
