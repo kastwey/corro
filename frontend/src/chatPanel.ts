@@ -245,7 +245,9 @@ export class ChatPanel {
 	private syncToggleButton(): void {
 		if (!this.toggleButton || !this.deps) return;
 		const open = this.isOpen();
-		this.toggleButton.setAttribute('aria-expanded', String(open));
+		// The label says what a press will do — "close the text chat" only makes sense while
+		// it is open — so aria-expanded repeated it a second time in the same breath. The
+		// unread count stays in the label: that is news, not the button's state.
 		const label = this.deps.t(open
 			? 'game.chat_close'
 			: this.unreadCount > 0 ? 'game.chat_open_unread' : 'game.chat_open',

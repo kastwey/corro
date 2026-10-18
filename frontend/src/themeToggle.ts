@@ -55,10 +55,14 @@ export function initThemeToggle(mount: HTMLElement, labels?: ThemeToggleLabels):
 	btn.id = 'theme-toggle';
 	btn.className = 'icon-btn';
 
+	// The icon and the label both change with the theme, and each says the same thing on
+	// its own: the sun and "switch to light theme" are the same sentence. aria-pressed
+	// would be a THIRD voice for it, and the one that contradicts the other two — in the
+	// dark theme a screen reader read "switch to light theme, pressed", which sounds like
+	// light is already on. A button whose name changes is not a toggle button.
 	const sync = () => {
 		const isDark = currentTheme() === 'dark';
 		btn.innerHTML = isDark ? SUN_ICON : MOON_ICON;
-		btn.setAttribute('aria-pressed', String(isDark));
 		const label = isDark
 			? labels?.toLight ?? t('theme_to_light')
 			: labels?.toDark ?? t('theme_to_dark');
