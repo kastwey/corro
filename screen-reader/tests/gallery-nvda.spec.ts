@@ -127,9 +127,11 @@ test.describe('component gallery with NVDA', () => {
 	test('toolbar: a tool bar whose refused action is unavailable and explains itself', async ({ page, nvda }) => {
 		// A container's role is spoken when focus ENTERS it, and NVDA's "report current focus"
 		// describes the object alone ("Roll the dice, button, R"). So the story is opened on the
-		// control just before the toolbar — the current story's link in the index — and the toolbar
-		// is reached the way a player reaches it: with a Tab that NVDA sends.
-		await openStory(page, nvda, 'toolbar', '#gallery-stories a[aria-current="page"]');
+		// control just before the toolbar — the LAST link of the story index, since the index comes
+		// before the mounted story and nothing between them is focusable — and the toolbar is
+		// reached the way a player reaches it: with a Tab that NVDA sends. (The current story's
+		// link is not the last one: Tab from it only reached the next link.)
+		await openStory(page, nvda, 'toolbar', '#gallery-stories li:last-child a');
 		await nvda.clearSpokenPhraseLog();
 		await nvda.press('Tab');
 		const arrival = await heard(nvda);
