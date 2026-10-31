@@ -222,6 +222,20 @@ export class AssemblyBoard {
 		return `${name} (${this.deps.tSync(stateKey)})`;
 	}
 
+	/** A victim's pick-list label. When the card can only reach ONE of that rival's pieces,
+	 *  the slot step is auto-selected and never seen, so its piece and state ride here
+	 *  ("Alfonso: Bone (damaged)") and the consequence of the play can be weighed per rival. */
+	private victimLabel(
+		target: { seat: AssemblySeatState; slots: AssemblySlot[] },
+		nameOf: (seat: AssemblySeatState) => string,
+		catalog: Map<string, AssemblyCardDef>,
+	): string {
+		const player = nameOf(target.seat);
+		return target.slots.length === 1
+			? this.deps.tSync('game.assembly_pick_victim_slot', { player, slot: this.slotLabel(target.slots[0], catalog) })
+			: player;
+	}
+
 	/** One picker step: auto-select a lone option, otherwise open the popup. */
 	private pick<T>(
 		items: T[],
@@ -275,7 +289,7 @@ export class AssemblyBoard {
 
 			case 'attack': {
 				const targets = attackTargets(gs, myId, def);
-				this.pick(targets, t => nameOf(t.seat),
+				this.pick(targets, t => this.victimLabel(t, nameOf, catalog),
 					this.deps.tSync('game.assembly_pick_victim', { card: card.label }),
 					t => this.pick(t.slots, s => this.slotLabel(s, catalog),
 						this.deps.tSync('game.assembly_pick_slot', { player: nameOf(t.seat) }),
@@ -295,7 +309,7 @@ export class AssemblyBoard {
 				switch (def.specialKind) {
 					case 'stealPiece': {
 						const targets = stealTargets(gs, myId);
-						this.pick(targets, t => nameOf(t.seat),
+						this.pick(targets, t => this.victimLabel(t, nameOf, catalog),
 							this.deps.tSync('game.assembly_pick_victim', { card: card.label }),
 							t => this.pick(t.slots, s => this.slotLabel(s, catalog),
 								this.deps.tSync('game.assembly_pick_slot', { player: nameOf(t.seat) }),
@@ -304,7 +318,7 @@ export class AssemblyBoard {
 					}
 					case 'swapPiece': {
 						const targets = swapTargets(gs, myId);
-						this.pick(targets, t => nameOf(t.seat),
+						this.pick(targets, t => this.victimLabel(t, nameOf, catalog),
 							this.deps.tSync('game.assembly_pick_victim', { card: card.label }),
 							t => this.pick(t.slots, s => this.slotLabel(s, catalog),
 								this.deps.tSync('game.assembly_pick_slot', { player: nameOf(t.seat) }),

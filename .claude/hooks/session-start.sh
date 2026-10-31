@@ -13,7 +13,8 @@
 #   3. the .NET SDK          -> dotnet build / dotnet test
 #   4. e2e npm packages
 #   5. the matching browser  -> …without which the Playwright suite cannot start
-#   6. a warm server build   -> so the first dotnet test is a test run, not a first build
+#   6. the hidden packages   -> so the local-package half of AGENTS.md can be done and proven here
+#   7. a warm server build   -> so the first dotnet test is a test run, not a first build
 #
 # …and then points git at the repository's shared pre-push hook, which a fresh clone does not
 # inherit: core.hooksPath is per-CLONE config, so the gate that refuses a red push was simply
@@ -109,7 +110,48 @@ step "e2e packages" npm install --prefix "$ROOT/e2e" --no-audit --no-fund
 install_browser() { ( cd "$ROOT/e2e" && npx --yes playwright install chromium ); }
 step "Playwright browser" install_browser
 
-# ── 6. Warm the .NET build ──────────────────────────────────────────────────────────────────
+# ── 6. The hidden packages ──────────────────────────────────────────────────────────────────
+# They live in a private repository, so a clean clone has none of them and the local-package
+# rule in AGENTS.md could neither be followed nor checked from here. With HIDDEN_PACKAGES_TOKEN
+# in the environment (a token that can read and push that repository), the clone lands next to
+# the working tree and every package is linked under server/Packages/, where the tests, the
+# validator and the server see it like a committed one. Edits are committed and pushed FROM
+# that clone; CI tests a pull request with the private branch of the same name.
+#
+# The token is never written to disk: git asks the credential helper, which reads the variable
+# when a fetch or push actually happens. Without the variable this step only says so — the
+# packages are absent, and AGENTS.md asks the session to report that rather than green.
+HIDDEN_CLONE="$HOME/corro-hidden-packages"
+if [ -n "${HIDDEN_PACKAGES_TOKEN:-}" ]; then
+	HIDDEN_REPOSITORY="${HIDDEN_PACKAGES_REPOSITORY:-}"
+	if [ -z "$HIDDEN_REPOSITORY" ]; then
+		origin_owner="$(git -C "$ROOT" remote get-url origin 2>/dev/null | sed -E 's#.*[:/]([^/]+)/[^/]+$#\1#')"
+		HIDDEN_REPOSITORY="${origin_owner:-kastwey}/corro-hidden-packages"
+	fi
+	clone_hidden() {
+		if [ ! -d "$HIDDEN_CLONE/.git" ]; then
+			GIT_TERMINAL_PROMPT=0 git -c credential.helper='!f() { echo "username=x-access-token"; echo "password=${HIDDEN_PACKAGES_TOKEN}"; }; f' \
+				clone --quiet "https://github.com/$HIDDEN_REPOSITORY.git" "$HIDDEN_CLONE"
+			git -C "$HIDDEN_CLONE" config credential.helper '!f() { echo "username=x-access-token"; echo "password=${HIDDEN_PACKAGES_TOKEN}"; }; f'
+		fi
+		# Branch to branch: the private branch named like this session's engine branch, when one exists.
+		branch="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+		if [ -n "$branch" ] && [ "$branch" != "HEAD" ] && git -C "$HIDDEN_CLONE" ls-remote --exit-code --heads origin "refs/heads/$branch" > /dev/null 2>&1; then
+			git -C "$HIDDEN_CLONE" fetch --quiet origin "$branch" && git -C "$HIDDEN_CLONE" checkout --quiet "$branch"
+		fi
+	}
+	step "hidden packages ($HIDDEN_REPOSITORY)" clone_hidden
+	pwsh -NoProfile -File "$ROOT/tools/link-hidden-packages.ps1" -RepositoryRoot "$ROOT" -Source "$HIDDEN_CLONE" >> "$LOG" 2>&1 \
+		|| echo "[session-start] hidden packages NOT linked; the local-package rule cannot be checked here (see $LOG)"
+	if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+		echo "export CORRO_HIDDEN_PACKAGES=\"$HIDDEN_CLONE\"" >> "$CLAUDE_ENV_FILE"
+	fi
+	echo "[session-start] hidden packages linked from $HIDDEN_CLONE ($(git -C "$HIDDEN_CLONE" rev-parse --abbrev-ref HEAD)); commit and push them from there."
+else
+	echo "[session-start] HIDDEN_PACKAGES_TOKEN is not set: the hidden packages are absent, say so if the change touches a package family."
+fi
+
+# ── 7. Warm the .NET build ──────────────────────────────────────────────────────────────────
 # Restores the NuGet packages and compiles the server once. Never fatal: a warm-up is a
 # convenience, and failing the whole start-up over one would throw away everything above.
 echo "[session-start] warming the server build"

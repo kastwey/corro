@@ -1,1 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M23 20C23 10 41 10 41 20C50 24 52 44 42 53H22C12 44 14 24 23 20Z M30 22H34V53H30Z M19 27L7 17L3 22L16 33Z M16 34H3V41H16Z M19 44L7 55L3 50L16 39Z M45 27L57 17L61 22L48 33Z M48 34H61V41H48Z M45 44L57 55L61 50L48 39Z M24 13L15 6L12 10L22 18Z M40 13L49 6L52 10L42 18Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <circle cx="22" cy="40" r="14" fill="#8d6e63" stroke="#57443d" stroke-width="2.2"/>
+  <circle cx="16" cy="34" r="2" fill="#57443d" fill-opacity="0.5"/>
+  <circle cx="26" cy="46" r="2" fill="#57443d" fill-opacity="0.5"/>
+  <circle cx="28" cy="36" r="2" fill="#57443d" fill-opacity="0.5"/>
+  <circle cx="18" cy="46" r="2" fill="#57443d" fill-opacity="0.5"/>
+  <line x1="44" y1="36" x2="34" y2="26" fill="none" stroke="#222c31" stroke-width="2.4" stroke-linecap="round"/>
+  <line x1="44" y1="42" x2="32" y2="46" fill="none" stroke="#222c31" stroke-width="2.4" stroke-linecap="round"/>
+  <line x1="44" y1="36" x2="54" y2="26" fill="none" stroke="#222c31" stroke-width="2.4" stroke-linecap="round"/>
+  <line x1="44" y1="42" x2="56" y2="46" fill="none" stroke="#222c31" stroke-width="2.4" stroke-linecap="round"/>
+  <ellipse cx="44" cy="38" rx="11" ry="14" fill="#37474f" stroke="#222c31" stroke-width="2.2"/>
+  <line x1="44" y1="28" x2="44" y2="52" fill="none" stroke="#222c31" stroke-width="1.6"/>
+  <ellipse cx="44" cy="36" rx="8" ry="10" fill="#546e7a" fill-opacity="0.4"/>
+  <circle cx="44" cy="22" r="5" fill="#37474f" stroke="#222c31" stroke-width="2.2"/>
+  <circle cx="42" cy="21" r="1.4" fill="#ffffff"/>
+  <circle cx="46" cy="21" r="1.4" fill="#ffffff"/>
+  <circle cx="42.5" cy="21" r="0.63" fill="#37474f"/>
+  <circle cx="46.5" cy="21" r="0.63" fill="#37474f"/>
+  <line x1="42" y1="18" x2="38" y2="12" fill="none" stroke="#222c31" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="46" y1="18" x2="50" y2="12" fill="none" stroke="#222c31" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

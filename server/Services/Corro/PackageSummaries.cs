@@ -36,6 +36,7 @@ public static class PackageSummaries
 			// and no required team count unless it plays only in teams.
 			ContentLanguages = family.ContentLanguages(definition).ToList(),
 			RequiredTeamCount = family.RequiredTeamCount,
+			TeamsWaivedWhen = family.TeamsWaivedWhen,
 			// The board's create-time notice key (if any). NOT the unlock code — that never leaves the server.
 			Warning = definition.Manifest.Warning,
 		};

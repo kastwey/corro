@@ -240,3 +240,10 @@ body {
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* A choice option a form rule has locked (the seating a player count rules out). It stays in the
+   group and focusable; aria-disabled plus the hint it is described by carry the reason, and the
+   muted ink is a cue on top of them, never the only one. Shared by the lobby form and the table. */
+.rule-choice__option:has(input[aria-disabled="true"]) { color: var(--text-muted); }
+.rule-choice__option input[aria-disabled="true"] { cursor: not-allowed; }
+.rule-choice__hint { margin: 0.35rem 0 0; font-size: 0.9rem; color: var(--text-muted); max-width: 60ch; }

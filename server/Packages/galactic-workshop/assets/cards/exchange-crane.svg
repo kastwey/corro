@@ -1,1 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M8 8H48V15H25V22H48V29H35V48H29V29H15V57H8Z M48 8H56V43C56 50 52 56 45 56C38 56 34 51 34 45H41C41 48 43 50 46 50C49 50 50 47 50 44V15H48Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="6" y="54" width="52" height="6" rx="1" fill="#90a4ae" stroke="#59666c" stroke-width="1.6"/>
+  <rect x="12" y="20" width="6" height="34" rx="1" fill="#f9a825" stroke="#9a6817" stroke-width="2.2"/>
+  <rect x="12" y="16" width="40" height="6" rx="1" fill="#f9a825" stroke="#9a6817" stroke-width="2.2"/>
+  <line x1="14" y1="22" x2="44" y2="46" fill="none" stroke="#9a6817" stroke-width="1.4"/>
+  <line x1="48" y1="22" x2="48" y2="36" fill="none" stroke="#37474f" stroke-width="1.6"/>
+  <path d="M48 36C44 36 42 40 44 44C46 46 50 46 52 44" fill="none" stroke="#37474f" stroke-width="2.4" stroke-linecap="round"/>
+  <rect x="36" y="44" width="24" height="12" rx="2" fill="#1e88e5" stroke="#13548e" stroke-width="2.2"/>
+  <rect x="40" y="47" width="16" height="6" rx="1" fill="#83bef1"/>
+</svg>

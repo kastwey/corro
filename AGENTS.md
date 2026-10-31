@@ -195,15 +195,41 @@ token id/title. Optional card art lives in `assets/cards/<id>.svg` (64×64 path 
 the loader/format first, update every relevant family/model/schema/SDK/doc surface, grep for leaked
 content ids, and add a boundary regression.
 
-**Local packages ship too (mandatory).** Some packages under `server/Packages/` are gitignored
-(`git check-ignore server/Packages/<id>` tells you which). They are not drafts: they are published
-as hidden packages on the maintainer's server, so they must work as well as the committed ones —
-and no diff, review or CI run will ever show them. Every rule, house rule, key or engine
-improvement that lands in a shipped package MUST land in every local package of the same family
-too: manifest, both locales and both help files. Then prove it, don't assume it —
+**Hidden packages ship too (mandatory).** Some packages under `server/Packages/` are not in this
+repository: they live in the private `kastwey/corro-hidden-packages` and reach a working tree as
+links (`git check-ignore server/Packages/<id>` tells you which; `tools/dev.ps1` and the remote
+session-start hook create them from a clone next to this one, or the path in
+`CORRO_HIDDEN_PACKAGES`). They are not drafts: they are published as hidden packages on the
+maintainer's server, so they must work as well as the committed ones. Every rule, house rule, key
+or engine improvement that lands in a shipped package MUST land in every hidden package of the
+same family too: manifest, both locales and both help files. Then prove it, don't assume it —
 `dotnet test` runs `KeyIntegrityTests` over every package present on disk, and
 `dotnet tools/Corro.PackageCli/bin/Debug/net10.0/corro-package.dll validate server/Packages/<id>`
-checks one. Say in your summary which local packages you touched, since the diff cannot.
+checks one.
+
+**Branch to branch.** A hidden-package change is committed and pushed FROM the private clone, on a
+branch **named exactly like the engine branch** it belongs to. CI tests a pull request with the
+private branch of the same name when one exists, and with the private `main` otherwise, so an
+engine change and the package change it needs are proven together before either merges. Only the
+ENGINE side triggers anything: a push to a private branch runs nothing, and the engine's CI looks
+the branch up when IT runs — so push the private branch first, and if the engine branch was already
+pushed, push it again or close and reopen its PR to get a run that sees the package change. A
+change that does not need a package change needs no private branch at all: the PR is tested with
+the private `main`. Merge the package branch right after the engine one, never later: production
+ships the private `main`, and an engine merged without its package half is exactly the drift this
+setup exists to prevent. Say in your summary which hidden packages you touched and which private
+branch carries them, since the engine diff cannot show them.
+
+**A session without them must say so.** "Present on disk" is the whole strength of those gates
+and their whole weakness: without the private clone the hidden packages are absent and every
+check above passes without having looked at a single one. That is not compliance with this rule,
+it is the rule going unenforced — so when they are missing (a remote session without
+`HIDDEN_PACKAGES_TOKEN`, a clone without access), say plainly that the hidden-package half of the
+change could not be made or verified, rather than reporting green. Production is guarded
+independently: `deploy-production` validates every package between restoring the hidden packages
+and publishing, and refuses to ship a board the current engine rejects
+(`tools/tests/deployment-gate.tests.ps1` pins that order; [docs/deployment.md](docs/deployment.md)
+has the whole round trip).
 
 **Style.** No inline styles in HTML. No `console.log` in production (use
 `console.debug`). Handlers emit events, not direct DOM manipulation.
@@ -222,6 +248,11 @@ checks one. Say in your summary which local packages you touched, since the diff
 - CSS is modular under `frontend/css/` (plus `frontend/styles.css` for the
   board). No CSS preprocessor.
 - Translations: `frontend/i18n/locales/{en,es}.json`.
+- Package art: `assets/tokens/<id>.svg` (24×24) and `assets/cards/<id>.svg` (64×64) are the
+  canonical files, but the shipped ones are **generated** from scenes with `tools/package-art/`
+  (hidden packages keep their scenes in the private repository's `art/`). Tune the scene and
+  regenerate; never hand-edit a generated SVG. The engine keeps only the SVG art subset in
+  `CORRO_FORMAT.md` and rejects the rest by name, so `npm test` there checks every public scene.
 - Backend: `server/` — `Hubs/` (SignalR), `Services/Commands/` (CQRS-like
   handlers), `Services/Rules/` (`CorroRulebook` partials + `Rules/Cards/`), and
   `Packages/` (shipped package sources; cards target square INDICES so decks are
@@ -234,6 +265,15 @@ checks one. Say in your summary which local packages you touched, since the diff
   never be removed, or the account becomes unreachable forever. Signing in is never a precondition
   for creating, joining or playing a game.
 - Tests: `frontend/test/` (node:test/jsdom) and `server.tests/` (xUnit).
+- Component gallery: `frontend/src/gallery.html` + `frontend/src/gallery/` mounts ONE reusable
+  widget from plain data (`?story=<id>`; the catalogue is `gallery/catalogue.ts`). Every reusable
+  widget gets a story there, its keyboard states in `e2e/tests/gallery.spec.ts` (Axe on each), and
+  a scenario in `screen-reader/` when what it SAYS matters — that suite drives a real NVDA over the
+  gallery (Guidepup, Windows runner: `.github/workflows/screen-reader.yml`) and asserts spoken
+  facts, never sentences. It runs on every PR that reaches the gallery's import graph, page,
+  stylesheets or locales — derived by `screen-reader/affected.mjs`, never hand-listed — and
+  nightly. The gallery is built with the client but dropped from the publish artifact
+  (`CorroServer.csproj`); read [screen-reader/README.md](screen-reader/README.md) first.
 - Game families (genres): registered in `server/.../Families/GameFamilies.cs` +
   client `gameFamilies.ts`/`familyTraits.ts`. Read `docs/game-families.md` and the
   relevant section of `CORRO_FORMAT.md` first: a family is a distinct *interaction

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="robots" content="noindex, nofollow">
+	<title>Component gallery</title>
+	<script>
+		// Theme before first paint, as the board does: a dark-theme reviewer must not see the page
+		// flash light, and the Axe audit of the first settled state must see the real theme.
+		(function () {
+			try {
+				var stored = localStorage.getItem('corro-theme');
+				var theme = stored === 'dark' || stored === 'light'
+					? stored
+					: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+				document.documentElement.setAttribute('data-theme', theme);
+			} catch (e) { /* the toggle applies it once the script runs */ }
+		})();
+	</script>
+	<!-- The same stylesheets the widgets wear in the lobby and on the board, so a story looks and
+		 measures (focus rings, contrast, target sizes) exactly as the real thing does. -->
+	<link rel="stylesheet" href="css/theme.css">
+	<link rel="stylesheet" href="css/global.css">
+	<link rel="stylesheet" href="css/forms.css">
+	<link rel="stylesheet" href="css/lobby.css">
+	<link rel="stylesheet" href="css/modal.css">
+	<link rel="stylesheet" href="css/document.css">
+	<link rel="stylesheet" href="css/context-menu.css">
+	<link rel="stylesheet" href="css/action-bar.css">
+	<!-- The hand's rows, menu and fan layout; the trade dialog. -->
+	<link rel="stylesheet" href="css/journey-board.css">
+	<link rel="stylesheet" href="css/trade.css">
+	<link rel="stylesheet" href="css/gallery.css">
+</head>
+<body class="gallery-page">
+	<main class="gallery-page__main" aria-labelledby="gallery-heading">
+		<div class="gallery-page__toolbar">
+			<a class="gallery-page__back" href="/">Back to the lobby</a>
+			<span id="gallery-theme-toggle"></span>
+		</div>
+
+		<h1 id="gallery-heading">Component gallery</h1>
+		<p class="gallery-page__intro">
+			Every reusable widget of the client, alone and with made-up data. Pick one to try it with the
+			keyboard or a screen reader; what it would have announced in a game appears in the log below.
+		</p>
+
+		<ul id="gallery-stories" class="gallery-page__stories" aria-label="Stories"></ul>
+
+		<div id="gallery-story" class="gallery-story" hidden>
+			<h2 id="story-title"></h2>
+			<p id="story-description" class="gallery-story__description"></p>
+			<div id="story-host" class="gallery-story__host"></div>
+		</div>
+
+		<h2 id="gallery-log-heading">Announcements</h2>
+		<!-- Plain paragraphs, not a list: a list item in a live region reaches the ear as "bullet,
+			 Rename chosen" and the game's announcer never says bullet. -->
+		<div id="gallery-log" class="gallery-log" role="log" aria-live="polite" aria-labelledby="gallery-log-heading">
+			<div id="gallery-log-entries"></div>
+		</div>
+	</main>
+
+	<script src="libs/i18next.min.js"></script>
+	<script type="module" src="gallery/index.js"></script>
+</body>
+</html>

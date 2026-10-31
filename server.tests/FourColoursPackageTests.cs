@@ -116,6 +116,25 @@ public class FourColoursPackageTests
 	}
 
 	[Fact]
+	public async Task Every_card_ships_the_Spanish_form_a_sentence_says_it_in()
+	{
+		// "Ana juega un 7 rojo": the article comes from the card's own `_indefinite` form, and a
+		// card that forgets one is not a crash — the sentence falls back to the plain name and
+		// quietly loses its article while the rest of the deck keeps it. Nothing else catches it.
+		var def = await Loaded;
+		var es = def.I18n["es"];
+		var names = def.SheddingDeck!.Select(c => c.NameKey).Distinct().ToList();
+
+		Assert.All(names, key => Assert.True(
+			es.ContainsKey($"{key}_indefinite"), $"es is missing the indefinite form of '{key}'"));
+
+		// And nothing the other way round: a form left behind by a rename is never spoken again.
+		Assert.Empty(es.Keys
+			.Where(k => k.EndsWith("_indefinite", StringComparison.Ordinal))
+			.Where(k => !names.Contains(k[..^"_indefinite".Length])));
+	}
+
+	[Fact]
 	public async Task The_identity_shuffle_two_player_deal_is_the_known_E2E_contract()
 	{
 		var def = await Loaded;
@@ -123,7 +142,7 @@ public class FourColoursPackageTests
 			new[] { "ana", "berto" }, def.SheddingDeck!, def.Manifest.SheddingRules!,
 			new ScriptedRandomSource());
 
-		// Mirrored hands (each tail pair splits one copy per player), Amarillo 0 flips.
+		// Mirrored hands (each tail pair splits one copy per player), 0 amarillo flips.
 		Assert.Equal(
 			new[]
 			{

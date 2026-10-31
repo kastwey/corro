@@ -223,3 +223,64 @@ test('assembly: a scrapped empty hand passes and refills automatically instead o
 	await expect(berto.locator('.visual-narrative')).toContainText(/Robas 3:/i);
 	await expect(ana.locator('#turn-indicator .turn-indicator__name')).toHaveText('Ana');
 });
+
+test('assembly: the victim picker names each rival\'s only reachable piece and its state', async ({ browser }) => {
+	// Three players: the tail deal goes round the table one card at a time, so everyone holds a
+	// Reactor and the Sobrecargas sit with Ana, Berto and Carla. Once each rack carries its
+	// Reactor, an attack reaches TWO rivals with ONE piece each: the slot step would be
+	// auto-selected and never seen, so the victim list has to say what the play will hit.
+	const ana = await newPlayerPage(browser);
+	const berto = await newPlayerPage(browser);
+	const carla = await newPlayerPage(browser);
+
+	const code = await createGame(ana, 'Ana', BOARD);
+	await joinGame(berto, code, 'Berto');
+	await joinGame(carla, code, 'Carla');
+	await startGame(ana, [ana, berto, carla]);
+
+	const install = async (page: typeof ana, listener: typeof ana, name: string) => {
+		await page.locator('#board').focus();
+		const reactor = page.locator('.hand-card:not(.hand-card--info)', { hasText: /Reactor/ }).first();
+		await reactor.focus();
+		await page.keyboard.press('Enter');
+		await expectAnnouncement(listener, new RegExp(`${name} instala un módulo`));
+	};
+	await install(ana, berto, 'Ana');
+	await install(berto, carla, 'Berto');
+	await install(carla, ana, 'Carla');
+	await expect(ana.locator('#board .assembly-rack .assembly-module')).toHaveCount(3);
+
+	// ── Ana's Sobrecarga: both rivals hold exactly one Reactor, both operational. ──
+	await ana.locator('#board').focus();
+	const anaAttack = ana.locator('.hand-card:not(.hand-card--info)', { hasText: /Sobrecarga/ }).first();
+	await anaAttack.focus();
+	await ana.keyboard.press('Enter');
+	const anaMenu = ana.locator('.popup-menu[role="menu"]');
+	await expect(anaMenu).toBeVisible();
+	await expect(anaMenu).toHaveAttribute('aria-label', /Sobrecarga/);
+	await expect(anaMenu.locator('[role="menuitem"]')).toHaveText([
+		'Berto: Reactor (operativo)',
+		'Carla: Reactor (operativo)',
+	]);
+	await flushAxeAudit(ana);
+	await anaMenu.locator('[role="menuitem"]', { hasText: 'Carla' }).click();
+	await expectAnnouncement(carla, /sobrecarga tu reactor/i);
+	await expect(anaMenu).toBeHidden();
+
+	// ── Berto's Sobrecarga: Carla's Reactor now reads as broken, Ana's still operational, so
+	// the list says which throw destroys a module and which one only breaks it. ──
+	await berto.locator('#board').focus();
+	const bertoAttack = berto.locator('.hand-card:not(.hand-card--info)', { hasText: /Sobrecarga/ }).first();
+	await bertoAttack.focus();
+	await berto.keyboard.press('Enter');
+	const bertoMenu = berto.locator('.popup-menu[role="menu"]');
+	await expect(bertoMenu.locator('[role="menuitem"]')).toHaveText([
+		'Ana: Reactor (operativo)',
+		'Carla: Reactor (averiado)',
+	]);
+	await flushAxeAudit(berto);
+	// Escape aborts the whole play and says so; the card stays in hand.
+	await berto.keyboard.press('Escape');
+	await expect(bertoMenu).toBeHidden();
+	await expect(bertoAttack).toHaveAttribute('aria-label', /Sobrecarga/);
+});

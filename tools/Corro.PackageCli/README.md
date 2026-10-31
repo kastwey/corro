@@ -66,7 +66,9 @@ deliberately never printed or included in JSON.
 ## Optional card illustrations
 
 For any card declared in `cards.json`, place optional art at `assets/cards/<card-id>.svg` or
-`assets/cards/<card-id>.png`, never both. SVG uses `viewBox="0 0 64 64"` and path geometry only.
+`assets/cards/<card-id>.png`, never both. SVG uses `viewBox="0 0 64 64"` and the format's SVG art
+subset (plain shapes and groups, hexadecimal or `currentColor` paint, numeric transforms; anything
+else is rejected by name).
 PNG is static 256×256 8-bit RGB/RGBA, non-interlaced and at most 512 KiB; animation and free-form
 metadata are rejected. Do not add an art property to JSON: the schema and validator point to the
 file convention. Packages without an illustration receive Corro's neutral mechanic-based drawing.

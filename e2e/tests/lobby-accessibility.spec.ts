@@ -326,6 +326,85 @@ test('Four Colours lets the host say how the match ends, and with which number',
 	await flushAxeAudit(page);
 });
 
+// The maintainer asked for a ten-seat Forbidden Words and found the family, not the game, saying
+// no. The whole chain — package range, server summary, lobby select — has to offer every count
+// up to the package's own maximum, with a token to pick for each seat. Then a family of three
+// found the count offering only even tables until a rule further down the form was flipped,
+// which with a screen reader reads as "three cannot play": the count now decides the seating.
+test('Forbidden Words seats every table from three to ten, and the count decides the seating', async ({ browser }) => {
+	const page = await newPlayerPage(browser, 'es-ES');
+	await gotoLobbyHome(page);
+	await page.locator('#go-create-btn').click();
+	await chooseBoard(page, FORBIDDEN_BOARD);
+
+	const counts = await page.locator('#max-players option').evaluateAll(
+		options => options.map(option => (option as HTMLOptionElement).value));
+	expect(counts).toEqual(['3', '4', '5', '6', '7', '8', '9', '10']);
+	const tokens = packageManifest(FORBIDDEN_BOARD).tokens as { id: string }[];
+	expect(tokens.length).toBeGreaterThanOrEqual(10);
+	for (const token of tokens) {
+		await expect(page.locator(`#create-form input.token-radio[value="${token.id}"]`)).toBeAttached();
+	}
+	await page.locator('#max-players').selectOption('10');
+	await expect(page.locator('#max-players')).toHaveValue('10');
+	await expect(page.locator('#team-count-group')).toBeVisible();
+	await page.locator('#rules-details').evaluate(el => { (el as HTMLDetailsElement).open = true; });
+	const seating = page.locator('#package-rules fieldset.rule-choice', {
+		has: page.locator('[data-rule-id="forbiddenMode"]'),
+	});
+	const teams = page.locator('#package-rules [data-rule-id="forbiddenMode"][value="teams"]');
+	const solo = page.locator('#package-rules [data-rule-id="forbiddenMode"][value="solo"]');
+	await expect(seating.locator('legend')).toHaveText('Cómo se juega');
+	await expect(teams).toBeChecked(); // the classic, at a table that splits
+	await expect(teams).not.toHaveAttribute('aria-disabled', /.*/);
+	await flushAxeAudit(page);
+
+	// Three: the seating follows, the team count goes, the locked option stays focusable and says
+	// why, and the room hears what just moved — a radio changing on its own says nothing.
+	await page.evaluate(() => { ((window as any).__announcements as string[]).length = 0; });
+	await page.locator('#max-players').selectOption('3');
+	await expect(solo).toBeChecked();
+	await expect(teams).toHaveAttribute('aria-disabled', 'true');
+	await expect(teams).not.toHaveAttribute('disabled', /.*/);
+	const hint = page.locator('#seating-count-hint');
+	await expect(teams).toHaveAttribute('aria-describedby', 'seating-count-hint');
+	await expect(hint).toHaveText(
+		'Con 3 jugadores la mesa no se divide en equipos, así que se juega «Todos contra todos (tres jugadores o más, también en número impar)». Para elegir otra forma de jugar, cambia el número de jugadores.');
+	await expect(page.locator('#lobby-live')).toHaveText(/Con 3 jugadores la mesa no se divide en equipos/);
+	await expect(page.locator('#team-count-group')).toBeHidden();
+	await flushAxeAudit(page);
+
+	// Clicking the locked option bounces straight back, and the reason is spoken again.
+	await page.evaluate(() => { ((window as any).__announcements as string[]).length = 0; });
+	await teams.dispatchEvent('click');
+	await expect(solo).toBeChecked();
+	await expect(teams).not.toBeChecked();
+	await expect(page.locator('#lobby-live')).toHaveText(/Con 3 jugadores/);
+
+	// Five is odd too: still everyone for themselves, nothing to say twice.
+	await page.locator('#max-players').selectOption('5');
+	await expect(solo).toBeChecked();
+	await expect(teams).toHaveAttribute('aria-disabled', 'true');
+
+	// Back to an even table: the lock lifts and the host gets their earlier choice (teams) back.
+	await page.locator('#max-players').selectOption('4');
+	await expect(teams).toBeChecked();
+	await expect(teams).not.toHaveAttribute('aria-disabled', /.*/);
+	await expect(hint).toBeHidden();
+	await expect(page.locator('#lobby-live')).toHaveText('Con 4 jugadores puedes elegir cómo se juega.');
+	await expect(page.locator('#team-count-group')).toBeVisible();
+	await flushAxeAudit(page);
+
+	// An even table may still choose everyone for themselves, and then has no teams to count.
+	await solo.dispatchEvent('click');
+	await expect(solo).toBeChecked();
+	await expect(page.locator('#team-count-group')).toBeHidden();
+	await page.locator('#max-players').selectOption('6');
+	await expect(solo).toBeChecked(); // a choice, not a lock: six keeps it
+	await expect(page.locator('#team-count-group')).toBeHidden();
+	await flushAxeAudit(page);
+});
+
 test('Forbidden Words offers the same ending choice, with its own numbers', async ({ browser }) => {
 	// The point of the rule: one mechanism, values that belong to each game. A party word game
 	// counts in tens of points and a handful of rotations, not in hundreds.
@@ -772,5 +851,44 @@ test('the lobby reflows at 200% text instead of scrolling sideways', async ({ br
 	await page.locator('#go-join-btn').click();
 	await expect(page.locator('#lobby-code-input')).toBeVisible();
 	await expectNoSidewaysScroll(page, 'the join form');
+	await flushAxeAudit(page);
+});
+
+// The create form showed two kinds of hint at once: the board filter's in ordinary ink, and the
+// name field's, two fields below, in muted grey, because each had its own class. One class now,
+// which also pins the single distinction worth keeping — a line that ANSWERS you (a name taken,
+// a list that would not load) is the page replying, not a hint, and is not dimmed.
+test('every lobby hint reads alike, and a status line keeps its ink', async ({ browser }) => {
+	const page = await newPlayerPage(browser);
+	await gotoLobbyHome(page);
+	await page.locator('#go-create-btn').click();
+	await expect(page.locator('#view-create')).toBeVisible();
+	await waitForDefaultPackage(page);
+
+	// Compared against the label rather than a hex value: what has to hold is that a hint reads
+	// quieter than the words it belongs to, in whichever palette, and that an answer does not.
+	const ink = () => page.evaluate(() => {
+		const colour = (selector: string) => getComputedStyle(document.querySelector(selector)!).color;
+		return {
+			field: colour('#host-name-hint'),
+			block: colour('#board-results-hint'),
+			status: colour('#online-status'),
+			label: colour('label[for="host-name"]'),
+		};
+	});
+
+	for (const theme of ['light', 'dark']) {
+		const colours = await ink();
+		expect(colours.field, `the field hint and the block hint match in ${theme}`)
+			.toBe(colours.block);
+		expect(colours.field, `a hint stays quieter than its label in ${theme}`)
+			.not.toBe(colours.label);
+		expect(colours.status, `an answer is not dimmed in ${theme}`).toBe(colours.label);
+
+		if (theme === 'light') {
+			await page.locator('#theme-toggle').click();
+			await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+		}
+	}
 	await flushAxeAudit(page);
 });

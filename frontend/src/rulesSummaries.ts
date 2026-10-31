@@ -10,6 +10,7 @@ import type {
 	ForbiddenRulesConfig,
 	CategoriesRulesConfig,
 } from './models.js';
+import { forbiddenPlaysSolo } from './models.js';
 
 type T = (key: string, vars?: Record<string, unknown>) => string;
 
@@ -109,11 +110,13 @@ export function buildForbiddenRulesLines(rules: ForbiddenRulesConfig | null | un
 		cycles: 1,
 	};
 	// Only the ending in force is read: hearing both numbers would leave the table working out
-	// which one decides the match.
+	// which one decides the match. Who the ending is won BY depends on the seating.
+	const solo = forbiddenPlaysSolo(r);
 	const ending = r.endMode === 'score'
-		? t('game.forbidden_rules_target', { score: r.targetScore ?? 30 })
+		? t(solo ? 'game.forbidden_rules_target_solo' : 'game.forbidden_rules_target', { score: r.targetScore ?? 30 })
 		: t('game.forbidden_rules_cycles', { count: r.cycles });
 	return [
+		t(solo ? 'game.forbidden_rules_mode_solo' : 'game.forbidden_rules_mode_teams'),
 		t('game.forbidden_rules_time', { seconds: r.turnSeconds }),
 		t('game.forbidden_rules_passes', { count: r.passesPerTurn }),
 		t('game.forbidden_rules_correct', { points: r.correctPoints }),

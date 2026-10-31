@@ -484,6 +484,25 @@ test('the sort radios: value-desc is the default; ascending, original and type a
 	assert.deepEqual(rowLabels().map(l => l.split('.')[0]), ['Stop', '25 km', '100 km']);
 });
 
+test('applySort is the keyboard door to the orderings, and it refuses one not offered', () => {
+	// A family binds a key to an ordering (shedding: Shift+N). It must reach the same code the
+	// toolbar does — announcement included, or the reorder is silent to a screen reader — and
+	// must refuse an id the hand does not offer, which would strand the list in a mode with no
+	// button to leave it by.
+	assert.equal(panel.currentSort(), 'value', 'the generic default');
+
+	assert.equal(panel.applySort('valueAsc'), true);
+	assert.equal(panel.currentSort(), 'valueAsc');
+	assert.deepEqual(rowLabels().map(l => l.split('.')[0]), ['Stop', '25 km', '100 km']);
+	assert.deepEqual(announced, ['game.hand_sorted_valueAsc'], 'spoken like a toolbar click');
+	assert.equal(listAction('sort-value-asc').getAttribute('aria-pressed'), 'true');
+
+	announced.length = 0;
+	assert.equal(panel.applySort('by-vibes'), false, 'an unknown ordering is refused');
+	assert.equal(panel.currentSort(), 'valueAsc', 'and changes nothing');
+	assert.deepEqual(announced, [], 'nor does it say anything happened');
+});
+
 test('a family can replace meaningless generic sort axes with scoped semantic orderings', () => {
 	const preferenceKey = 'corro.handPreferences.test-family';
 	(globalThis as any).window.localStorage.removeItem(preferenceKey);

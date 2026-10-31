@@ -70,11 +70,14 @@ registry is the one place they're enumerated:
 
   `CorroPackageLoader` resolves asset conventions before family validation. Required
   `assets/tokens/<id>.svg` and optional `assets/cards/<card-id>.svg` are parsed as XML with external entities
-  and DTDs disabled; only `<path d>` geometry survives. Card art additionally requires a 64×64
-  viewBox, a matching card id and per-file/package size limits. Invalid or orphaned files reject
-  the package; a genuinely absent card file remains `Svg = null` and selects the client fallback.
+  and DTDs disabled and rebuilt by `SvgArtSanitizer` into a closed drawing subset (eight shape
+  elements, hexadecimal or `currentColor` paint, numeric transforms); anything outside it rejects
+  the package by name. Card art additionally requires a 64×64 viewBox, a matching card id and
+  per-file/package size limits; a token's square viewBox is rescaled onto 24×24. Invalid or
+  orphaned files reject the package; a genuinely absent card file remains `Svg = null` and selects
+  the client fallback.
 
-  The resolved geometry rides in the relevant token/card definition, so folder packages,
+  The resolved drawing rides in the relevant token/card definition, so folder packages,
   uploaded archives, persisted games and restored games follow one path. `PackageSummary` exposes
   `cardIllustrations` through `corro-package inspect`. Sounds differ because binary audio is served
   through the sound-pack provider instead of being embedded in game state.

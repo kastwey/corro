@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { setupDom } from './helpers/dom.js';
 import {
 	renderHouseRules, readHouseRuleValues, syncHouseRuleVisibility, watchHouseRuleVisibility,
+	requiredTeamCountUnder, houseRuleDefaults, syncSeatingWithPlayerCount, bounceLockedChoice, lockSeatingAtTable,
 } from '../src/houseRules.js';
 
 const tr = (k: string) => (({
@@ -218,4 +219,152 @@ test('focus never stays on a rule that is being hidden', () => {
 	// place in a long form.
 	assert.equal(document.activeElement, roundsRadio);
 	container.remove();
+});
+
+// A team-only board's requirement can hang on one of its own rules: Forbidden Words seated
+// "everyone for themselves" has no teams to arrange. The lobby asks this with whatever the panel
+// reads, so the sizes it offers follow the host's pick.
+test('requiredTeamCountUnder lifts a board\'s team requirement only under the waiving choice', () => {
+	const board = { requiredTeamCount: 2, teamsWaivedWhen: { rule: 'forbiddenMode', is: 'solo' } };
+	assert.equal(requiredTeamCountUnder(board, {}), 2);
+	assert.equal(requiredTeamCountUnder(board, { forbiddenMode: 'teams' }), 2);
+	assert.equal(requiredTeamCountUnder(board, { forbiddenMode: 'solo' }), null);
+	// A value of another rule, or of another kind, waives nothing.
+	assert.equal(requiredTeamCountUnder(board, { forbiddenEndMode: 'solo' }), 2);
+	assert.equal(requiredTeamCountUnder(board, { forbiddenMode: true }), 2);
+	// A board with no requirement has nothing to waive; one with no waiver keeps it whatever is chosen.
+	assert.equal(requiredTeamCountUnder({ requiredTeamCount: null, teamsWaivedWhen: null }, { forbiddenMode: 'solo' }), null);
+	assert.equal(requiredTeamCountUnder({ requiredTeamCount: 2 }, { forbiddenMode: 'solo' }), 2);
+});
+
+test('houseRuleDefaults reads what the panel would say before the host touches it', () => {
+	assert.deepEqual(houseRuleDefaults([
+		{ id: 'mode', type: 'choice', default: 'teams', editableByHost: true, options: [{ id: 'teams' }, { id: 'solo' }] },
+		{ id: 'unset', type: 'choice', editableByHost: true, options: [{ id: 'first' }, { id: 'second' }] },
+		{ id: 'cycles', type: 'number', default: 5, editableByHost: true },
+		{ id: 'auctions', type: 'toggle', default: true, editableByHost: true },
+		{ id: 'shortage', type: 'toggle', editableByHost: true },
+	]), { mode: 'teams', unset: 'first', cycles: 5, auctions: true, shortage: false });
+	assert.deepEqual(houseRuleDefaults(undefined), {});
+});
+
+// The count decides the seating. Reported from the first evening a family of three tried
+// Forbidden Words: the player count offered only even tables until a rule further down the form
+// was flipped, and nothing on the count said so. Now a count that cannot split into the board's
+// teams locks the seating onto the option that needs none — focusable, with the reason — and a
+// count that can gives the host back what they had chosen.
+const seatingBoard = { requiredTeamCount: 2, teamsWaivedWhen: { rule: 'forbiddenMode', is: 'solo' } };
+const seatingRules = [
+	{
+		id: 'forbiddenMode', type: 'choice', default: 'teams', editableByHost: true, nameKey: 'rules.mode',
+		options: [{ id: 'teams', nameKey: 'rules.teams' }, { id: 'solo', nameKey: 'rules.solo' }],
+	},
+	{ id: 'forbiddenCycles', type: 'number', default: 5, editableByHost: true, nameKey: 'rules.cycles' },
+];
+const seatingLabels = (k: string) => (({
+	'rules.mode': 'How the table plays', 'rules.teams': 'In two teams', 'rules.solo': 'Everyone for themselves',
+	'rules.cycles': 'Rounds',
+}) as Record<string, string>)[k] ?? k;
+const reason = (option: string) => `Three players cannot split into teams, so the table plays as ${option}.`;
+
+function seatingPanel(): HTMLElement {
+	const container = document.createElement('div');
+	container.innerHTML = renderHouseRules([], seatingRules as any, seatingLabels);
+	document.body.appendChild(container);
+	return container;
+}
+const radio = (c: HTMLElement, value: string) =>
+	c.querySelector<HTMLInputElement>(`[data-rule-id="forbiddenMode"][value="${value}"]`)!;
+
+test('an odd count locks the seating onto the waiving option, with the reason on the locked radio', () => {
+	const container = seatingPanel();
+
+	const odd = syncSeatingWithPlayerCount(container, seatingBoard, 3, reason);
+
+	assert.deepEqual(odd, { forced: true, changed: true });
+	assert.equal(radio(container, 'solo').checked, true);
+	const teams = radio(container, 'teams');
+	assert.equal(teams.checked, false);
+	assert.equal(teams.getAttribute('aria-disabled'), 'true');
+	assert.equal(teams.disabled, false, 'the disabled attribute is forbidden: the option must stay focusable');
+	const hint = container.querySelector<HTMLElement>(`#${teams.getAttribute('aria-describedby')}`)!;
+	assert.equal(hint.hidden, false);
+	assert.equal(hint.textContent, 'Three players cannot split into teams, so the table plays as Everyone for themselves.');
+	// The waiving option itself is never locked: it is the one thing the host can have.
+	assert.equal(radio(container, 'solo').hasAttribute('aria-disabled'), false);
+	// Saying it again for the same count changes nothing, so nothing is spoken twice.
+	assert.deepEqual(syncSeatingWithPlayerCount(container, seatingBoard, 5, reason), { forced: true, changed: false });
+	container.remove();
+});
+
+test('an even count unlocks the seating and gives back what the host had chosen', () => {
+	const container = seatingPanel();
+	// The host chose teams at four (the default), went to five, and comes back to six.
+	syncSeatingWithPlayerCount(container, seatingBoard, 5, reason);
+	assert.equal(radio(container, 'solo').checked, true);
+
+	const even = syncSeatingWithPlayerCount(container, seatingBoard, 6, reason);
+
+	assert.deepEqual(even, { forced: false, changed: true });
+	assert.equal(radio(container, 'teams').checked, true, 'a lock is not a choice: teams comes back');
+	assert.equal(radio(container, 'teams').hasAttribute('aria-disabled'), false);
+	assert.equal(radio(container, 'teams').hasAttribute('aria-describedby'), false);
+	assert.equal(container.querySelector<HTMLElement>('#seating-count-hint')!.hidden, true);
+
+	// A host who had chosen everyone-for-themselves at four keeps it through five and six.
+	radio(container, 'solo').checked = true;
+	syncSeatingWithPlayerCount(container, seatingBoard, 5, reason);
+	assert.deepEqual(syncSeatingWithPlayerCount(container, seatingBoard, 6, reason), { forced: false, changed: false });
+	assert.equal(radio(container, 'solo').checked, true);
+	container.remove();
+});
+
+test('boards without a waiver, or without the rule on the form, are left alone', () => {
+	const container = seatingPanel();
+	assert.deepEqual(syncSeatingWithPlayerCount(container, { requiredTeamCount: 2 }, 3, reason), { forced: false, changed: false });
+	assert.deepEqual(syncSeatingWithPlayerCount(container, { requiredTeamCount: null, teamsWaivedWhen: null }, 3, reason), { forced: false, changed: false });
+	assert.equal(radio(container, 'teams').checked, true);
+	const empty = document.createElement('div');
+	assert.deepEqual(syncSeatingWithPlayerCount(empty, seatingBoard, 3, reason), { forced: false, changed: false });
+	container.remove();
+});
+
+test('a locked radio the browser checked is bounced back, and the reason is handed over to be spoken', () => {
+	const container = seatingPanel();
+	syncSeatingWithPlayerCount(container, seatingBoard, 3, reason);
+	const teams = radio(container, 'teams');
+	teams.checked = true; // what a click does before any listener runs
+
+	const spoken = bounceLockedChoice(container, teams);
+
+	assert.equal(radio(container, 'solo').checked, true);
+	assert.equal(teams.checked, false);
+	assert.match(spoken!, /cannot split into teams/);
+	// An ordinary change is not the guard's business.
+	assert.equal(bounceLockedChoice(container, radio(container, 'solo')), null);
+	assert.equal(bounceLockedChoice(container, container.querySelector('[data-rule-id="forbiddenCycles"]')), null);
+	container.remove();
+});
+
+test('at a table the seating that would need a different shape is locked, with the reason', () => {
+	// A table of three without teams: "in two teams" would need teams nobody arranged.
+	const solo = seatingPanel();
+	lockSeatingAtTable(solo, seatingBoard, false, 'The shape is settled.');
+	assert.equal(radio(solo, 'teams').getAttribute('aria-disabled'), 'true');
+	assert.equal(radio(solo, 'solo').checked, true, 'the only option this table can play is the one checked');
+	assert.equal(solo.querySelector('#seating-table-hint')!.textContent, 'The shape is settled.');
+
+	// A table arranged in two teams: everyone-for-themselves would drop them.
+	const teams = seatingPanel();
+	lockSeatingAtTable(teams, seatingBoard, true, 'The shape is settled.');
+	assert.equal(radio(teams, 'solo').getAttribute('aria-disabled'), 'true');
+	assert.equal(radio(teams, 'teams').hasAttribute('aria-disabled'), false);
+	assert.equal(radio(teams, 'teams').checked, true);
+
+	// A board whose seating is not tied to the table's shape has nothing to lock.
+	const plain = seatingPanel();
+	lockSeatingAtTable(plain, { requiredTeamCount: null }, false, 'The shape is settled.');
+	assert.equal(plain.querySelectorAll('[aria-disabled="true"]').length, 0);
+	assert.equal(plain.querySelector('#seating-table-hint'), null);
+	solo.remove(); teams.remove(); plain.remove();
 });

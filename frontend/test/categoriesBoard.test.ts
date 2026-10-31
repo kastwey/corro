@@ -42,7 +42,10 @@ function gameState(phase: CategoriesRoundPhase = 'preparing'): GameState {
 			round: {
 				roundNumber: 1,
 				judgeId: 'p0',
-				letter: 'R',
+				// Exactly what the server projects: while the round is being prepared there IS no
+				// letter on the wire, so a fixture that carried one would test a state no client
+				// ever receives.
+				letter: phase === 'preparing' ? '' : 'R',
 				phase,
 				startedAt: phase === 'writing' ? new Date().toISOString() : null,
 				durationSeconds: 120,
@@ -153,7 +156,7 @@ test('the sheet is one labelled text box per category, and the judge is given no
 });
 
 test('the letter die shows the round letter and re-rolls only when a new round deals one', () => {
-	const h = harness('p1');
+	const h = harness('p1', 'writing');
 	const die = h.element.querySelector<HTMLElement>('.categories-die')!;
 
 	assert.equal(die.getAttribute('aria-hidden'), 'true', 'the die is decoration, never the only copy');
@@ -176,7 +179,7 @@ test('the letter die shows the round letter and re-rolls only when a new round d
 });
 
 test('the whole sheet is ONE named group, named by the heading it sits under', () => {
-	const h = harness('p1');
+	const h = harness('p1', 'writing');
 
 	const group = h.element.querySelector<HTMLElement>('.categories-sheet-group')!;
 	const heading = h.element.querySelector<HTMLElement>('#categories-sheet-title')!;
@@ -307,11 +310,29 @@ test('the surface declares both queries to the shortcuts help', () => {
 });
 
 test('the round heading names the letter every answer has to start with', () => {
-	const writer = harness('p1');
+	const writer = harness('p1', 'writing');
 
 	const heading = writer.element.querySelector('#categories-sheet-title')!.textContent!;
 
 	assert.match(heading, /\bR\b/);
+});
+
+test('while the clock is stopped the surface has no letter to give away', () => {
+	// The categories are on screen to be read — that is what the preparing phase is for — but a
+	// writer who knew the letter early would have all the time in the world to think of answers,
+	// and the clock would stop measuring anything.
+	const h = harness('p1');
+
+	assert.equal(h.element.querySelector('.categories-die__letter')!.textContent, '?');
+	const heading = h.element.querySelector('#categories-sheet-title')!.textContent!;
+	assert.doesNotMatch(heading, /\bR\b/, 'the heading promises no letter it has not been dealt');
+	assert.equal(inputs(h).length, 2, 'the categories themselves are still there to read');
+
+	ask(h, 'l');
+
+	// It answers the question that was asked instead of saying "the letter is" and stopping.
+	assert.match(h.announced.at(-1)!, /clock/i);
+	assert.doesNotMatch(h.announced.at(-1)!, /\bR\b/);
 });
 
 test('typing saves the WHOLE sheet once, after the pause, and never a command per keystroke', () => {

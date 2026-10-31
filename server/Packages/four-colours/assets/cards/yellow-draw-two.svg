@@ -1,1 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M8 10H39V47H8Z M17 17H48V54H41V24H17Z M47 7L60 20L47 33V25H38V15H47Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <ellipse cx="32" cy="32" rx="20" ry="28" fill="#ffffff" stroke="#263238" stroke-width="2.2" transform="rotate(-28 32 32)"/>
+  <rect x="17" y="29" width="12" height="17" rx="2" fill="currentColor" stroke="#263238" stroke-width="1.6" transform="rotate(-15 24 38)"/>
+  <rect x="22" y="26.5" width="12" height="17" rx="2" fill="currentColor" stroke="#263238" stroke-width="1.6" transform="rotate(-15 24 38)"/>
+  <rect x="38.5" y="15" width="3" height="10" rx="0.9" fill="currentColor" stroke="#263238" stroke-width="2.2" stroke-linejoin="round"/>
+  <rect x="35" y="18.5" width="10" height="3" rx="0.9" fill="currentColor" stroke="#263238" stroke-width="2.2" stroke-linejoin="round"/>
+  <rect x="39.5" y="16" width="1" height="8" fill="currentColor"/>
+  <rect x="36" y="19.5" width="8" height="1" fill="currentColor"/>
+  <path d="M45.4 27.7L52.8 16.9L49.3 16.6L49.2 16.8L49.2 17L49.1 17.2L49 17.4L48.8 17.6L48.7 17.8L48.5 17.9L48.3 18.1L48.1 18.2L47.9 18.3L47.7 18.3L47.5 18.4L47.3 18.4L47.1 18.4L46.8 18.4L46.6 18.3L46.4 18.3L46.2 18.2L46 18.1L45.8 17.9L45.6 17.8L45.5 17.6L45.4 17.4L45.3 17.2L45.2 17L45.1 16.8L45.1 16.6L45.1 16.3L45.1 16.1L45.1 15.9L50.6 11L53.8 11.7L56.7 18.9L55.6 20.8L55.5 21L55.3 21.1L55.2 21.3L55 21.4L54.8 21.4L51.1 26.8L54.9 26.8L55.1 26.8L55.4 26.8L55.6 26.9L55.8 27L56 27.1L56.2 27.2L56.3 27.4L56.5 27.5L56.6 27.7L56.8 27.9L56.9 28.1L56.9 28.3L57 28.6L57 28.8L57 29L57 29.2L56.9 29.5L56.9 29.7L56.8 29.9L56.6 30.1L56.5 30.3L56.3 30.4L56.2 30.6L56 30.7L55.8 30.8L55.6 30.9L55.4 31L55.1 31L54.9 31L47.1 31Z" fill="currentColor" stroke="#263238" stroke-width="2.2" stroke-linejoin="round"/>
+</svg>

@@ -1,1 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M4 42C14 22 29 14 47 18V7L61 23L47 39V29C34 26 23 33 14 51Z M5 53A5 5 0 1 0 15 53A5 5 0 1 0 5 53Z M5 31A24 24 0 1 0 53 31A24 24 0 1 0 5 31Z M13 31A16 16 0 1 0 45 31A16 16 0 1 0 13 31Z M16 28H42V34H16Z M47 45H61V51H47Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="8" y="46" width="10" height="14" rx="2" fill="#546e7a" stroke="#34444c" stroke-width="2.2"/>
+  <g transform="translate(12 44) rotate(-30 0 0)"><rect x="0" y="-4" width="48" height="8" rx="3" fill="#ffffff" stroke="#37474f" stroke-width="2.2"/><rect x="4" y="-4" width="6" height="8" fill="#ef5350"/><rect x="16" y="-4" width="6" height="8" fill="#ef5350"/><rect x="28" y="-4" width="6" height="8" fill="#ef5350"/><rect x="40" y="-4" width="6" height="8" fill="#ef5350"/></g>
+  <polygon points="50,42 56.93,46 56.93,54 50,58 43.07,54 43.07,46" fill="#4dd0e1" stroke="#30818c" stroke-width="2.2" stroke-linejoin="round"/>
+  <polygon points="50,44.4 54.85,47.2 54.85,52.8 50,55.6 45.15,52.8 45.15,47.2" fill="none" stroke="#30818c" stroke-width="1.4" stroke-linejoin="round"/>
+  <circle cx="50" cy="50" r="2.24" fill="#30818c"/>
+</svg>

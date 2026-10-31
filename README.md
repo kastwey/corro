@@ -425,6 +425,12 @@ Packages can be **bundled**
 with the server (`server/Packages/`) or **uploaded** at runtime from the lobby; the
 engine treats both identically.
 
+The maintainer's server also ships a few **hidden** packages that are not part of this repository. They
+live in a private repository and are linked into `server/Packages/` by `pwsh tools/dev.ps1` when
+a clone of it sits next to this one; without one, the engine simply runs with the committed
+packages. [docs/deployment.md](docs/deployment.md#the-hidden-packages) describes how CI and the
+production deployment fetch them.
+
 The format is designed for **game families**: every package declares a `gameType`, and
 each family plugs its own rulebook and board topology under the same package envelope.
 This engine version implements eleven: `property` (roll-and-move property trading),
@@ -432,7 +438,8 @@ This engine version implements eleven: `property` (roll-and-move property tradin
 (distance-and-hazard card games), `assembly` (set-building card games), `draft`
 (simultaneous card drafting), `shedding` (match-and-discard card games), `exploding`
 (push-your-luck elimination card games), `trivia` (category quiz games), `forbidden`
-(two-team spoken clue games with private role cards and an authoritative clock), and
+(spoken clue games with private role cards and an authoritative clock, in two teams or everyone
+for themselves), and
 `categories` (simultaneous written games where everyone answers the same prompts under one
 letter and a rotating judge rules). See
 [`CORRO_FORMAT.md`](CORRO_FORMAT.md)

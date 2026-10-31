@@ -636,6 +636,125 @@ public class GameHubRoutingTests
 		store.Release(token);
 	}
 
+	private static async Task<(GameHub Hub, CapturingRepository Repository, FakeClients Clients, CorroPackageStore Store, string Token)> ForbiddenLobby()
+	{
+		var repository = new CapturingRepository();
+		var store = new CorroPackageStore(
+			new CompositeSoundPackProvider(new DefaultSoundPackProvider()),
+			Path.Combine(Path.GetTempPath(), "corro_seating_" + Guid.NewGuid().ToString("N")));
+		var token = "forbidden-" + Guid.NewGuid().ToString("N");
+		await store.StageFromDirectoryAsync(token, CorroTestPaths.PackageDir("forbidden-words"));
+		store.SetOrigin(token, new PackageOrigin { ShippedId = "forbidden-words" });
+		var registry = new GameSessionRegistry(
+			new FakeHubContext(), repository, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
+		var hub = CreateLobbyHub(repository, registry, out var clients, store);
+		return (hub, repository, clients, store, token);
+	}
+
+	private static Dictionary<string, JsonElement> Seating(string mode)
+		=> new() { ["forbiddenMode"] = JsonSerializer.SerializeToElement(mode) };
+
+	// Asked for by a family of three. The two-team seating has no legal table of three, and the
+	// lobby used to say so before the host had any other seating to choose.
+	[Fact]
+	public async Task CreateGameLobby_SeatsThreeWithoutTeamsWhenEveryonePlaysForThemselves()
+	{
+		var (hub, repository, clients, store, token) = await ForbiddenLobby();
+
+		await hub.CreateGameLobby(new CreateGameRequest
+		{
+			HostName = "Host",
+			HostToken = "spark",
+			Board = "Forbidden Words",
+			PackageToken = token,
+			Language = "es",
+			MaxPlayers = 3,
+			RuleValues = Seating("solo"),
+		});
+
+		Assert.NotNull(repository.Created);
+		Assert.Equal(3, repository.Created!.MaxPlayers);
+		Assert.Null(repository.Created.TeamCount);
+		Assert.Null(clients.Caller.LastError());
+		store.Release(token);
+	}
+
+	[Fact]
+	public async Task CreateGameLobby_RefusesATeamCountWhenEveryonePlaysForThemselves()
+	{
+		// The two settings cannot disagree: a table seated for themselves has no teams to arrange.
+		var (hub, repository, clients, store, token) = await ForbiddenLobby();
+
+		await hub.CreateGameLobby(new CreateGameRequest
+		{
+			HostName = "Host",
+			HostToken = "spark",
+			Board = "Forbidden Words",
+			PackageToken = token,
+			Language = "es",
+			MaxPlayers = 4,
+			TeamCount = 2,
+			RuleValues = Seating("solo"),
+		});
+
+		Assert.Null(repository.Created);
+		Assert.Equal("BAD_TEAM_COUNT", clients.Caller.LastError());
+		store.Release(token);
+	}
+
+	[Fact]
+	public async Task CreateGameLobby_StillRefusesAnOddTableInTeams()
+	{
+		var (hub, repository, clients, store, token) = await ForbiddenLobby();
+
+		await hub.CreateGameLobby(new CreateGameRequest
+		{
+			HostName = "Host",
+			HostToken = "spark",
+			Board = "Forbidden Words",
+			PackageToken = token,
+			Language = "es",
+			MaxPlayers = 3,
+			TeamCount = 2,
+			RuleValues = Seating("teams"),
+		});
+
+		Assert.Null(repository.Created);
+		Assert.Equal("BAD_TEAM_COUNT", clients.Caller.LastError());
+		store.Release(token);
+	}
+
+	[Fact]
+	public async Task Host_cannot_change_a_waiting_table_from_teams_to_everyone_for_themselves()
+	{
+		// The table's shape was fixed at creation: four seats arranged in two teams. Flipping the
+		// seating would leave teams nobody can play in — or, the other way, a solo table that
+		// suddenly needs teams nobody arranged. Refused here, not discovered at the start.
+		var repository = new CapturingRepository();
+		repository.Seed(WaitingForbiddenGame() with { GameType = "forbidden", MaxPlayers = 4, TeamCount = 2 });
+		var registry = new GameSessionRegistry(
+			new FakeHubContext(), repository, new FakeAuctionTimer(), TestFixtures.NewPackageRestorer());
+		var hub = CreateLobbyHub(repository, registry, out var clients);
+		registry.MapConnectionToGame(hub.Context.ConnectionId, "g1");
+		registry.AuthenticateConnection(hub.Context.ConnectionId, "host");
+
+		await hub.SetTableRules(new SetTableRulesRequest
+		{
+			GameId = "g1",
+			HostId = "host",
+			RuleValues = Seating("solo"),
+		});
+
+		Assert.Null(repository.Created!.RuleValues);
+		Assert.Equal("BAD_TEAM_COUNT", clients.Caller.LastError());
+
+		// Any other rule of the same table changes freely, the seating staying what it was.
+		var kept = Seating("teams");
+		kept["forbiddenCycles"] = JsonSerializer.SerializeToElement(2);
+		await hub.SetTableRules(new SetTableRulesRequest { GameId = "g1", HostId = "host", RuleValues = kept });
+		Assert.Equal(2, repository.Created!.RuleValues!["forbiddenCycles"].GetInt32());
+	}
+
 	[Fact]
 	public async Task Host_can_change_the_shared_content_language_while_waiting()
 	{

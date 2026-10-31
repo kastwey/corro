@@ -1,1 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M9 50C9 31 19 20 32 20C45 20 55 31 55 50Z M20 26L14 12L29 21Z M44 26L50 12L35 21Z M22 36A3 3 0 1 0 28 36A3 3 0 1 0 22 36Z M36 36A3 3 0 1 0 42 36A3 3 0 1 0 36 36Z M27 45Q32 50 37 45L34 42Q32 45 30 42Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="8" y="46" width="48" height="10" rx="3" fill="#5d4037"/>
+  <path d="M14 48C9.47 45.33 13.6 32 16 28C18.4 24 27.73 18 32 18C36.27 18 45.6 24 48 28C50.4 32 54.53 45.33 50 48C45.47 50.67 18.53 50.67 14 48Z" fill="#6d4c41" stroke="#442f28" stroke-width="2.2" stroke-linejoin="round"/>
+  <ellipse cx="32" cy="38" rx="5" ry="4" fill="#f8bbd0" stroke="#442f28" stroke-width="1.4"/>
+  <line x1="24" y1="30" x2="29" y2="32" fill="none" stroke="#442f28" stroke-width="2" stroke-linecap="round"/>
+  <line x1="40" y1="30" x2="35" y2="32" fill="none" stroke="#442f28" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="18,44 10,42 10,48 18,50" fill="#f8bbd0" stroke="#442f28" stroke-width="1.4" stroke-linejoin="round"/>
+  <polygon points="46,44 54,42 54,48 46,50" fill="#f8bbd0" stroke="#442f28" stroke-width="1.4" stroke-linejoin="round"/>
+</svg>

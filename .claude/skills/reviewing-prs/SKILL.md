@@ -107,10 +107,14 @@ is wrong or missing in *both* passes it. Check that the key exists, that somethi
 both locales carry it, and that a server announcement also has its `_self`. When a key is
 deleted, grep for it before believing it is dead.
 
-**Packages that never appear in a diff.** `git check-ignore server/Packages/<id>` tells you
-which are local. They ship, so a rule, key or help change in one package of a family belongs in
-every package of that family — and no diff, review or CI run will ever show you that it is
-missing.
+**Packages that never appear in the diff.** `git check-ignore server/Packages/<id>` tells you
+which are hidden: they live in the private `kastwey/corro-hidden-packages` and ship, so a rule,
+key or help change in one package of a family belongs in every package of that family. Look for a
+private branch named like the PR's head branch — that is where such a change travels, and CI
+tests the PR with it — and when there is none, the PR's own diff will never show you that it is
+missing. When there is one, check that the latest run actually used it: the hidden-packages step
+prints `Hidden packages: N from <repository>@<branch>`, and a run that started before the private
+branch existed says `@main` — re-run it before believing green.
 
 **Keyboard bindings live in three scopes**: the engine keymap, the family's own keys, and the
 lobby's page chords. A new key has to be searched for in all three, and then against what the

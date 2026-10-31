@@ -13,7 +13,7 @@ interest.
 | --- | --- |
 | [architecture.md](architecture.md) | The big picture: the three parts (client / server / package), the authoritative-server rule, the tech stack, how a turn travels end to end. |
 | [client.md](client.md) | The frontend: vanilla TypeScript, no bundler; how it's organized, how it renders, how it sends commands and receives state, the sound layer. |
-| [accessibility.md](accessibility.md) | The heart of the project: the server-owned spoken voice, the live regions and the composed-line doctrine, dialogs, focus, the accessible hand, earcons. Read this even if you only touch the server — it constrains everything. |
+| [accessibility.md](accessibility.md) | The heart of the project: the server-owned spoken voice, the live regions and the composed-line doctrine, dialogs, focus, the accessible hand, earcons, and the component gallery a real NVDA is run against. Read this even if you only touch the server — it constrains everything. |
 | [server.md](server.md) | The backend: the SignalR hub, the command pipeline, the rulebooks, the game-family registry, hidden-information projection, persistence and bots. |
 | [game-families.md](game-families.md) | What a "family" is, what the families share and what they deliberately don't, and the design decisions about what to unify (and what NOT to — with the reasoning). |
 | [flows.md](flows.md) | Concrete end-to-end walkthroughs: playing a card, starting a game, a bot's turn, reconnecting after a restart. Follow one event from a keypress to the screen reader. |

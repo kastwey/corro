@@ -819,6 +819,23 @@ export class HandPanel {
 		this.deps.onDraw();
 	}
 
+	/** The ordering in force, so a family key can decide what "the next one" means. */
+	currentSort(): string {
+		return this.sortMode;
+	}
+
+	/** Apply an ordering from OUTSIDE the toolbar — a family binding a key to it. Refuses an
+	 *  id this hand does not offer, so a stale key can never leave the list in a mode with no
+	 *  button to escape it. Announces the change like the toolbar does: the reordering is
+	 *  invisible to a screen reader otherwise. */
+	applySort(id: string): boolean {
+		const offered = this.customSorting()?.options.some(option => option.id === id)
+			?? SORT_MODES.some(mode => mode === id);
+		if (!offered || !this.deps) return false;
+		this.setSort(id);
+		return true;
+	}
+
 	private setSort(mode: string): void {
 		this.sortMode = mode;
 		this.savePreferences();

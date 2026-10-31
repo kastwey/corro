@@ -1,1 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M24 7H40V16L45 23V55H19V23L24 16Z M24 30H40V48H24Z M8 50C12 40 16 40 20 50C24 60 28 60 32 50C36 40 40 40 44 50C48 60 52 60 56 50V60H8Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="24" y="4" width="16" height="8" rx="2" fill="#8d6e63" stroke="#57443d" stroke-width="2.2"/>
+  <path d="M26 12H38V20C44 22 46 30 46 36V54A4 4 0 0 1 42 58H22A4 4 0 0 1 18 54V36C18 30 20 22 26 20Z" fill="#e53935" stroke="#8e2321" stroke-width="2.2" stroke-linejoin="round"/>
+  <rect x="22" y="32" width="20" height="16" rx="2" fill="#ffffff" stroke="#8e2321" stroke-width="1.4"/>
+  <path d="M28 46C30 36 34 34 36 36C38 40 34 44 32 46Z" fill="#e53935"/>
+  <polygon points="37,34 37.71,36.03 39.85,36.07 38.14,37.37 38.76,39.43 37,38.2 35.24,39.43 35.86,37.37 34.15,36.07 36.29,36.03" fill="#ffca28"/>
+  <ellipse cx="23" cy="28" rx="1.6" ry="8" fill="#ffffff" fill-opacity="0.4"/>
+</svg>

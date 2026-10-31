@@ -1,1 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M9 27A18 18 0 1 0 45 27A18 18 0 1 0 9 27Z M17 27A10 10 0 1 0 37 27A10 10 0 1 0 17 27Z M39 39L60 56L55 62L35 43Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <circle cx="26" cy="26" r="17" fill="#b3e5fc" fill-opacity="0.6" stroke="#37474f" stroke-width="4"/>
+  <circle cx="26" cy="26" r="17" fill="none" stroke="#90a4ae" stroke-width="1.4"/>
+  <line x1="38" y1="38" x2="54" y2="54" fill="none" stroke="#37474f" stroke-width="8" stroke-linecap="round"/>
+  <line x1="40" y1="40" x2="54" y2="54" fill="none" stroke="#8d6e63" stroke-width="4" stroke-linecap="round"/>
+  <polygon points="26,18 28,23.25 33.61,23.53 29.23,27.05 30.7,32.47 26,29.4 21.3,32.47 22.77,27.05 18.39,23.53 24,23.25" fill="#c62828"/>
+  <ellipse cx="18" cy="18" rx="4" ry="2" fill="#ffffff" fill-opacity="0.7" transform="rotate(-40 18 18)"/>
+</svg>

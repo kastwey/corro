@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { ForbiddenBoard, protectReadOnlyTextArea } from '../src/forbiddenBoard.js';
 import {
 	forbiddenCastLines,
+	forbiddenDutyText,
+	forbiddenNowPlayingText,
 	forbiddenRivalStatus,
 	forbiddenRole,
 	forbiddenStatusText,
@@ -572,6 +574,87 @@ test('status shortcuts and pure role helpers produce flowing team sentences', ()
 		'Target word: faro.\nForbidden words:\ncosta,\nluz,\ntorre.',
 		'host-selected Spanish content remains Spanish while English supplies connective UI words',
 	);
+
+	root.remove();
+});
+
+/** Three people playing for themselves: one side each, the three roles spread across them. */
+function soloGameState(): GameState {
+	const state = gameState();
+	state.players = [player('p0', 'Ada'), player('p1', 'Berto'), player('p2', 'Cora')];
+	state.forbiddenRules!.mode = 'solo';
+	state.forbidden!.teams = [
+		{ teamIndex: 0, memberIds: ['p0'], score: 2, turnsTaken: 1 },
+		{ teamIndex: 1, memberIds: ['p1'], score: 3, turnsTaken: 1 },
+		{ teamIndex: 2, memberIds: ['p2'], score: 0, turnsTaken: 0 },
+	];
+	state.forbidden!.activeTeamIndex = 2;
+	state.forbidden!.turn.teamIndex = 2;
+	state.forbidden!.turn.clueGiverId = 'p2';
+	state.forbidden!.turn.guesserId = 'p0';
+	state.forbidden!.turn.monitorId = 'p1';
+	return state;
+}
+
+// Asked for by a family of three. Everyone for themselves has no teams, so every line that used
+// to say "Red team" names the person instead — on the surface, on S and Shift+S, and in the turn
+// headline — while the three jobs of a turn read exactly as they always did.
+test('everyone for themselves names players, never teams, on every surface and shortcut', () => {
+	const root = document.createElement('div');
+	document.body.appendChild(root);
+	const state = soloGameState();
+	const announced: string[] = [];
+	const board = new ForbiddenBoard(root, {
+		getGameState: () => state,
+		getMyPlayerId: () => 'p0',
+		announce: text => announced.push(text),
+		tSync: translate,
+		sounds: soundSpy().player,
+		commands: { start() {}, correct() {}, pass() {}, violation() {} },
+	});
+	board.update(state);
+
+	assert.equal(root.querySelector('#forbidden-score-title')!.textContent, 'Scores');
+	assert.deepEqual(
+		[...root.querySelectorAll('.forbidden-score')].map(item => item.textContent),
+		['Ada: 2 points.', 'Berto: 3 points.', 'Cora: 0 points.'],
+	);
+	assert.equal(root.querySelector('.forbidden-now__line')!.textContent, 'Cora is about to play.');
+	assert.equal(root.querySelector('.forbidden-role-detail')!.textContent,
+		'You guess the target word this turn, out loud.');
+	assert.deepEqual(
+		[...root.querySelectorAll('.forbidden-role-list li')].map(item => item.textContent),
+		['Cora gives the clues.', 'You guess.', 'Berto monitors.'],
+	);
+
+	root.dispatchEvent(new window.KeyboardEvent('keydown', { key: 's', bubbles: true, cancelable: true }));
+	assert.equal(announced.at(-1), 'You have 2 points; your role is guesser.');
+	root.dispatchEvent(new window.KeyboardEvent('keydown', {
+		key: 'S', shiftKey: true, bubbles: true, cancelable: true,
+	}));
+	assert.equal(announced.at(-1), 'Berto: 3 points. Cora: 0 points.');
+	assert.equal(
+		forbiddenTurnContextText(state, 'p0', translate),
+		'Cora is about to play. Cora gives the clues. You guess. Berto monitors.',
+	);
+	assert.equal(forbiddenNowPlayingText(state, 'p2', translate), 'You are about to play.');
+	state.forbidden!.turn.phase = 'active';
+	state.forbidden!.turn.startedAt = new Date().toISOString();
+	assert.equal(forbiddenNowPlayingText(state, 'p2', translate), 'You are playing.');
+	assert.equal(forbiddenNowPlayingText(state, 'p1', translate), 'Cora is playing.');
+	assert.doesNotMatch(forbiddenStatusText(state, 'p0', translate)!, /team/i);
+	assert.doesNotMatch(forbiddenRivalStatus(state, 'p0', translate)!, /team/i);
+
+	// Five for themselves: the two with no job this turn are waiting, not "supporting a team".
+	state.players.push(player('p3', 'Dani'), player('p4', 'Eli'));
+	state.forbidden!.teams.push(
+		{ teamIndex: 3, memberIds: ['p3'], score: 1, turnsTaken: 0 },
+		{ teamIndex: 4, memberIds: ['p4'], score: 1, turnsTaken: 0 },
+	);
+	assert.equal(forbiddenDutyText(state, 'p3', translate), 'You wait this turn, with no action of your own.');
+	assert.equal(forbiddenStatusText(state, 'p3', translate), 'You have 1 points; your role is waiting.');
+	assert.equal(forbiddenRivalStatus(state, 'p3', translate),
+		'Ada: 2 points. Berto: 3 points. Cora: 0 points. Eli: 1 points.');
 
 	root.remove();
 });

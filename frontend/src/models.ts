@@ -3,7 +3,7 @@
 // A token id: a built-in token ("disc"…) or a package-defined token id.
 export type TokenKey = string;
 
-/** A player token (built-in or package-provided): id + optional SVG path data + i18n name key. */
+/** A player token the package provides: id + its server-sanitised SVG drawing + i18n name key. */
 export interface TokenInfo { id: string; svg?: string; nameKey?: string; }
 
 // === PLAYERS ===
@@ -270,6 +270,14 @@ export interface ForbiddenRulesConfig {
   endMode?: string;
   /** Points that win the match when endMode is "score". */
   targetScore?: number;
+  /** House rule: "teams" (two equal teams, the classic) or "solo" (everyone for themselves —
+   *  the three roles rotate through the whole table, so three players or an odd table can play). */
+  mode?: string;
+}
+
+/** True when the match seats everyone for themselves rather than in two teams. */
+export function forbiddenPlaysSolo(rules: ForbiddenRulesConfig | null | undefined): boolean {
+  return rules?.mode === 'solo';
 }
 
 // ── Categories family ───────────────────────────────────────────────────────
@@ -347,7 +355,7 @@ export interface CategoriesRulesConfig {
 /** One card DEFINITION of the deck catalog (public wire data — only hand/pile CONTENTS are secret). */
 export interface JourneyCardDef {
   id: string;
-  /** Sanitized path-data from optional package file assets/cards/<id>.svg. */
+  /** Server-sanitised SVG drawing from optional package file assets/cards/<id>.svg. */
   svg?: string | null;
   hasPngArt?: boolean;
   /** Optional package-owned #RRGGBB accent. */
@@ -458,7 +466,7 @@ export interface JourneyState {
 /** One card DEFINITION of the assembly deck catalog (public wire data). */
 export interface AssemblyCardDef {
   id: string;
-  /** Sanitized path-data from optional package file assets/cards/<id>.svg. */
+  /** Server-sanitised SVG drawing from optional package file assets/cards/<id>.svg. */
   svg?: string | null;
   hasPngArt?: boolean;
   /** Optional package-owned #RRGGBB accent. */
@@ -521,7 +529,7 @@ export interface AssemblyState {
 /** One card DEFINITION of the draft deck catalog (public wire data). */
 export interface DraftCardDef {
   id: string;
-  /** Sanitized path-data from optional package file assets/cards/<id>.svg. */
+  /** Server-sanitised SVG drawing from optional package file assets/cards/<id>.svg. */
   svg?: string | null;
   hasPngArt?: boolean;
   /** Optional package-owned #RRGGBB accent. */
@@ -596,7 +604,7 @@ export interface DraftState {
 /** One card DEFINITION of the shedding deck catalog (public wire data). */
 export interface SheddingCardDef {
   id: string;
-  /** Sanitized path-data from optional package file assets/cards/<id>.svg. */
+  /** Server-sanitised SVG drawing from optional package file assets/cards/<id>.svg. */
   svg?: string | null;
   hasPngArt?: boolean;
   /** Optional package-owned #RRGGBB accent. */
@@ -691,7 +699,7 @@ export interface SheddingState {
 /** One card DEFINITION of the exploding deck catalog (public wire data). */
 export interface ExplodingCardDef {
   id: string;
-  /** Sanitized path-data from optional package file assets/cards/<id>.svg. */
+  /** Server-sanitised SVG drawing from optional package file assets/cards/<id>.svg. */
   svg?: string | null;
   hasPngArt?: boolean;
   /** Optional package-owned #RRGGBB accent. */
@@ -1112,6 +1120,9 @@ export interface PackageUploadResponse {
   /** How many teams this board REQUIRES, or absent when team play is optional. The player-count
    *  selector offers only the table sizes that split evenly into that many. */
   requiredTeamCount?: number | null;
+  /** The house-rule choice under which the board plays WITHOUT its required teams (the forbidden
+   *  family seated "everyone for themselves"), or absent when the requirement always holds. */
+  teamsWaivedWhen?: { rule: string; is: string } | null;
   /**
    * An i18n key (in the PACKAGE's own translations) shown to the host as a notice when they create a
    * game with this board. Absent when the package declares none. The engine carries it verbatim and
@@ -1460,7 +1471,7 @@ export interface CardDrawnNotification {
   playerName: string;
   cardId: string;
   deckType: string; // 'chance' | 'community' | a package deck id
-  /** Sanitized path-data from assets/cards/<id>.svg; absent uses a neutral illustration. */
+  /** Server-sanitised SVG drawing from assets/cards/<id>.svg; absent uses a neutral illustration. */
   svg?: string | null;
   /** Strictly validated PNG exists at the staged package art endpoint. */
   hasPngArt?: boolean;

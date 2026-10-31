@@ -12,9 +12,7 @@ It creates:
 
 - a user-assigned identity with a GitHub OIDC credential restricted to the protected
   `production` environment in `kastwey/corro`;
-- `Website Contributor` scoped only to the existing `Imperio` Web App;
-- a private Blob container for package sources intentionally excluded from Git;
-- `Storage Blob Data Reader` scoped only to that container.
+- `Website Contributor` scoped only to the existing `Imperio` Web App.
 
 `Website Contributor` also lets the production workflow idempotently enforce `Always On` on the
 existing S1 Web App. This keeps the in-process daily game-retention worker scheduled without a
@@ -23,6 +21,13 @@ second Function App, identity or set of Cosmos/Blob credentials.
 No client secret, publish profile, storage key or Cosmos credential is stored in GitHub.
 The federated subject uses the repository's immutable owner/repository IDs, as returned by
 GitHub's OIDC customization endpoint, rather than relying only on renameable display names.
+
+The hidden packages are not an Azure concern: they come from a private GitHub repository, as
+described in [docs/deployment.md](../docs/deployment.md#the-hidden-packages). An earlier design
+kept them as a bundle in a private container of the `imperio` storage account (`deployment`) with
+a `Storage Blob Data Reader` assignment for the identity; the template no longer declares either,
+and removing a resource from a template does not delete it — both can be removed by hand once the
+repository-based delivery has shipped.
 
 ## Provision or update
 
@@ -72,11 +77,6 @@ gh variable set AZURE_SUBSCRIPTION_ID --repo $repository --env $environment `
   --body $subscriptionId
 gh variable set AZURE_RESOURCE_GROUP --repo $repository --env $environment --body 'Imperio'
 gh variable set AZURE_WEBAPP_NAME --repo $repository --env $environment --body 'Imperio'
-gh variable set AZURE_STORAGE_ACCOUNT --repo $repository --env $environment --body 'imperio'
-gh variable set AZURE_PRIVATE_PACKAGES_CONTAINER --repo $repository --env $environment `
-  --body $deployment.privatePackageContainer.value
-gh variable set AZURE_PRIVATE_PACKAGES_BLOB --repo $repository --env $environment `
-  --body 'private-packages.zip'
 ```
 
 The environment restriction and the OIDC subject are both required: the subject names
@@ -88,18 +88,3 @@ the template and pass the returned `sub_claim_prefix` as `githubSubjectPrefix`:
 ```powershell
 gh api repos/kastwey/corro/actions/oidc/customization/sub
 ```
-
-## Private package bundle
-
-The public repository deliberately ignores non-distributable package folders. Publish
-the bundle once during setup and again after changing any of those packages:
-
-```powershell
-pwsh ./tools/publish-private-packages.ps1
-```
-
-The script discovers ignored folders without hardcoding or printing their names, uploads
-one private archive using the operator's Microsoft Entra identity, and deletes the local
-temporary archive. CI later downloads it directly with read-only data-plane RBAC. The
-combined application is never stored as a GitHub Actions artifact because it contains
-those private packages.

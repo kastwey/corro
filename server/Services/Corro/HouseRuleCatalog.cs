@@ -113,11 +113,25 @@ public static class HouseRuleCatalog
 	public static readonly IReadOnlySet<string> ForbiddenEndModes =
 		new HashSet<string> { "rounds", "score" };
 
+	/// <summary>What the "forbiddenMode" choice rule accepts: "teams" = two equal teams (the
+	/// classic), "solo" = everyone for themselves, which is how an odd table — or three people —
+	/// gets to play at all.</summary>
+	public static readonly IReadOnlySet<string> ForbiddenModes =
+		new HashSet<string> { ForbiddenMode.Teams, ForbiddenMode.Solo };
+
+	/// <summary>The rule code whose "solo" value lifts the family's two-team requirement. The
+	/// family and the lobby both read it from here, so the waiver is written once.</summary>
+	public const string ForbiddenModeRule = "forbiddenMode";
+
 	private static readonly Dictionary<string, Func<ForbiddenRulesConfig, JsonElement, ForbiddenRulesConfig>> ForbiddenAppliers = new()
 	{
 		["forbiddenEndMode"] = (r, v) => v.ValueKind == JsonValueKind.String
 										   && ForbiddenEndModes.Contains(v.GetString()!)
 			? r with { EndMode = v.GetString()! }
+			: r,
+		[ForbiddenModeRule] = (r, v) => v.ValueKind == JsonValueKind.String
+										   && ForbiddenModes.Contains(v.GetString()!)
+			? r with { Mode = v.GetString()! }
 			: r,
 		["forbiddenCycles"] = (r, v) => r with { Cycles = v.GetInt32() },
 		["forbiddenTargetScore"] = (r, v) => r with { TargetScore = v.GetInt32() },
@@ -144,6 +158,7 @@ public static class HouseRuleCatalog
 			["sheddingScoring"] = SheddingScoringModes,
 			["sheddingEndMode"] = SheddingEndModes,
 			["forbiddenEndMode"] = ForbiddenEndModes,
+			[ForbiddenModeRule] = ForbiddenModes,
 		};
 
 	/// <summary>

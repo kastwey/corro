@@ -1,1 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M5 32A27 27 0 1 0 59 32A27 27 0 1 0 5 32Z M14 32A18 18 0 1 0 50 32A18 18 0 1 0 14 32Z M21 32A11 11 0 1 0 43 32A11 11 0 1 0 21 32Z M27 32A5 5 0 1 0 37 32A5 5 0 1 0 27 32Z M7 12L16 16L12 25L4 21Z M52 42L61 46L57 56L48 51Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <polygon points="8,7.6 8.64,9.36 10.4,10 8.64,10.64 8,12.4 7.36,10.64 5.6,10 7.36,9.36" fill="#ffe082"/>
+  <polygon points="54,5.6 54.64,7.36 56.4,8 54.64,8.64 54,10.4 53.36,8.64 51.6,8 53.36,7.36" fill="#ffe082"/>
+  <polygon points="12,47.6 12.64,49.36 14.4,50 12.64,50.64 12,52.4 11.36,50.64 9.6,50 11.36,49.36" fill="#ffe082"/>
+  <polygon points="56,49.6 56.64,51.36 58.4,52 56.64,52.64 56,54.4 55.36,52.64 53.6,52 55.36,51.36" fill="#ffe082"/>
+  <polygon points="30,3.6 30.64,5.36 32.4,6 30.64,6.64 30,8.4 29.36,6.64 27.6,6 29.36,5.36" fill="#ffe082"/>
+  <ellipse cx="32" cy="34" rx="30" ry="13.5" fill="none" stroke="#7e57c2" stroke-width="2.4" transform="rotate(-25 32 34)"/>
+  <ellipse cx="32" cy="34" rx="23" ry="10.35" fill="none" stroke="#9575cd" stroke-width="2.4" transform="rotate(-25 32 34)"/>
+  <ellipse cx="32" cy="34" rx="17" ry="7.65" fill="none" stroke="#b39ddb" stroke-width="2.4" transform="rotate(-25 32 34)"/>
+  <circle cx="32" cy="34" r="10" fill="#1a1a2e" stroke="#b39ddb" stroke-width="2.2"/>
+  <g transform="translate(14 14) scale(0.3929 0.3929)"><polygon points="-22,0 -10,-10 14,-10 24,0 14,10 -10,10" fill="#eceff1" stroke="#6d767a" stroke-width="2.2" stroke-linejoin="round"/><polygon points="-22,0 -30,-8 -30,8" fill="#ef5350" stroke="#943332" stroke-width="2.2" stroke-linejoin="round"/><circle cx="4" cy="0" r="4.5" fill="#81d4fa" stroke="#50839b" stroke-width="1.4"/><rect x="-14" y="-3" width="10" height="6" rx="2" fill="#90a4ae"/></g>
+</svg>

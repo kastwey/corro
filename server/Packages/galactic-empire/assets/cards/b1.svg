@@ -1,1 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M32 3C45 13 49 29 43 43L32 54L21 43C15 29 19 13 32 3Z M27 20A5 5 0 1 0 37 20A5 5 0 1 0 27 20Z M20 43L10 55L23 52Z M44 43L54 55L41 52Z M5 31A24 24 0 1 0 53 31A24 24 0 1 0 5 31Z M13 31A16 16 0 1 0 45 31A16 16 0 1 0 13 31Z M26 18H32V44H26Z M16 28H42V34H16Z M47 45H61V51H47Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <polygon points="9,10 33.48,10 43,19.52 43,54 9,54" fill="#ffffff" stroke="#37474f" stroke-width="2.2" stroke-linejoin="round"/>
+  <polygon points="33.48,10 33.48,19.52 43,19.52" fill="#eceff1" stroke="#37474f" stroke-width="2.2" stroke-linejoin="round"/>
+  <line x1="14.44" y1="27.6" x2="37.56" y2="27.6" fill="none" stroke="#90a4ae" stroke-width="1.98" stroke-linecap="round"/>
+  <line x1="14.44" y1="33.32" x2="37.56" y2="33.32" fill="none" stroke="#90a4ae" stroke-width="1.98" stroke-linecap="round"/>
+  <line x1="14.44" y1="39.04" x2="37.56" y2="39.04" fill="none" stroke="#90a4ae" stroke-width="1.98" stroke-linecap="round"/>
+  <line x1="14.44" y1="44.76" x2="28.04" y2="44.76" fill="none" stroke="#90a4ae" stroke-width="1.98" stroke-linecap="round"/>
+  <polyline points="36,44 42,52 56,36" fill="none" stroke="#66bb6a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

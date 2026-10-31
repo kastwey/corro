@@ -99,8 +99,10 @@ never the source of authoritative rules and never interferes with the screen rea
   the **hand** (an accessible list — `handPanel.ts`), and the "table" (racks, tables,
   discards, direction) is an aria-hidden echo of information already spoken by the status
   line and the announcements.
-- `cardArt.ts` renders optional sanitized `assets/cards/<id>.svg` geometry from the package. If it
-  is absent, it chooses a neutral icon from generic type/value data. The renderer never reads
+- `cardArt.ts` renders the optional `assets/cards/<id>.svg` drawing from the package after
+  `svgArt.ts` has validated it again against the format's SVG art subset (the server already
+  rebuilt it; the client accepts only that canonical form). If it is absent or rejected, it chooses
+  a neutral icon from generic type/value data. The renderer never reads
   a package/card/token id to choose a picture, and all art remains `aria-hidden`; the localized
   row label and card help are authoritative.
 
@@ -152,6 +154,12 @@ between matches would tear down the LiveKit connection and cut the conversation 
 `frontend/test/` runs `node:test` with jsdom: game surfaces, the hand panel, the status
 lines and the announcement pipeline are all exercised without a browser. The real-browser
 coverage lives in `e2e/` (see [flows.md](flows.md)).
+
+The reusable widgets — the popup menu, tabs, combobox, roving toolbar, the roster list with its
+context menu, the checkbox list, the dialog manager — also have a **component gallery**
+(`src/gallery.html`, `src/gallery/`): one page that mounts one widget from plain data, which
+`e2e/tests/gallery.spec.ts` audits state by state and `screen-reader/` listens to with a real NVDA.
+See [accessibility.md](accessibility.md#hearing-it-the-component-gallery-and-the-screen-reader-suite).
 
 ## Local session recovery
 

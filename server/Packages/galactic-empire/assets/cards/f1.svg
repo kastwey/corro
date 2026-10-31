@@ -1,1 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M32 3C45 13 49 29 43 43L32 54L21 43C15 29 19 13 32 3Z M27 20A5 5 0 1 0 37 20A5 5 0 1 0 27 20Z M20 43L10 55L23 52Z M44 43L54 55L41 52Z M4 42C14 22 29 14 47 18V7L61 23L47 39V29C34 26 23 33 14 51Z M5 53A5 5 0 1 0 15 53A5 5 0 1 0 5 53Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <polygon points="8,7.6 8.64,9.36 10.4,10 8.64,10.64 8,12.4 7.36,10.64 5.6,10 7.36,9.36" fill="#ffe082"/>
+  <polygon points="54,5.6 54.64,7.36 56.4,8 54.64,8.64 54,10.4 53.36,8.64 51.6,8 53.36,7.36" fill="#ffe082"/>
+  <polygon points="12,47.6 12.64,49.36 14.4,50 12.64,50.64 12,52.4 11.36,50.64 9.6,50 11.36,49.36" fill="#ffe082"/>
+  <polygon points="56,49.6 56.64,51.36 58.4,52 56.64,52.64 56,54.4 55.36,52.64 53.6,52 55.36,51.36" fill="#ffe082"/>
+  <polygon points="30,3.6 30.64,5.36 32.4,6 30.64,6.64 30,8.4 29.36,6.64 27.6,6 29.36,5.36" fill="#ffe082"/>
+  <g transform="translate(26 36) rotate(-45 0 0) scale(0.9167 0.9167)"><polygon points="-5,14 -12,22 -7,22" fill="#ef5350" stroke="#943332" stroke-width="2.4000000000000004" stroke-linejoin="round"/><polygon points="5,14 12,22 7,22" fill="#ef5350" stroke="#943332" stroke-width="2.4000000000000004" stroke-linejoin="round"/><path d="M0 -24C8 -12 8 6 6 18H-6C-8 6 -8 -12 0 -24Z" fill="#eceff1" stroke="#6d767a" stroke-width="2.4000000000000004" stroke-linejoin="round"/><path d="M0 -24C4 -18 5 -14 5.5 -10H-5.5C-5 -14 -4 -18 0 -24Z" fill="#ef5350"/><circle cx="0" cy="0" r="3.6" fill="#81d4fa" stroke="#50839b" stroke-width="1.5272727272727273"/><polygon points="-4,19 4,19 0,30" fill="#ffb300"/><polygon points="-2,19 2,19 0,25" fill="#fff176"/></g>
+  <g><line x1="42" y1="50" x2="54.78" y2="21.24" fill="none" stroke="#29b6f6" stroke-width="4" stroke-linecap="round"/><g transform="translate(58 14) rotate(-66.04 0 0)"><polygon points="1.76,0 -8.8,-6.16 -8.8,6.16" fill="#29b6f6" stroke="#29b6f6" stroke-width="1" stroke-linejoin="round"/></g></g>
+</svg>

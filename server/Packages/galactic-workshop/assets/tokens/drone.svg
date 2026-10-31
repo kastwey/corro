@@ -1,1 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M2 5 L8 5 L8 6.2 L5.6 6.2 L9 9.6 L15 9.6 L18.4 6.2 L16 6.2 L16 5 L22 5 L22 6.2 L19.8 6.2 L16 10 L16.8 10 Q18 10 18 11.2 L18 13 Q18 14.2 16.8 14.2 L14.5 14.2 L14.5 16 L17 18.5 L15.9 19.6 L12 15.7 L8.1 19.6 L7 18.5 L9.5 16 L9.5 14.2 L7.2 14.2 Q6 14.2 6 13 L6 11.2 Q6 10 7.2 10 L8 10 L4.2 6.2 L2 6.2 z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <rect x="8" y="10" width="8" height="5" rx="2"/>
+  <line x1="8" y1="12" x2="3" y2="8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="16" y1="12" x2="21" y2="8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="8" y1="13" x2="3" y2="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="16" y1="13" x2="21" y2="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <ellipse cx="3" cy="8" rx="3" ry="1.1" fill="#29b6f6"/>
+  <ellipse cx="21" cy="8" rx="3" ry="1.1" fill="#29b6f6"/>
+  <ellipse cx="3" cy="17" rx="3" ry="1.1" fill="#29b6f6"/>
+  <ellipse cx="21" cy="17" rx="3" ry="1.1" fill="#29b6f6"/>
+  <circle cx="12" cy="12.5" r="1.4" fill="#e53935"/>
+</svg>

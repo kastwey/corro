@@ -1,1 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M9 27A18 18 0 1 0 45 27A18 18 0 1 0 9 27Z M17 27A10 10 0 1 0 37 27A10 10 0 1 0 17 27Z M39 39L60 56L55 62L35 43Z M5 30L32 7L59 30V58H40V40H24V58H5Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="16" y="10" width="32" height="46" rx="3" fill="#fff8e1" stroke="#37474f" stroke-width="2.2"/>
+  <rect x="24" y="6" width="16" height="8" rx="2" fill="#546e7a" stroke="#34444c" stroke-width="1.6"/>
+  <rect x="21" y="20" width="6" height="6" rx="1" fill="none" stroke="#37474f" stroke-width="1.4"/>
+  <line x1="30" y1="23" x2="43" y2="23" fill="none" stroke="#90a4ae" stroke-width="2.4" stroke-linecap="round"/>
+  <rect x="21" y="30" width="6" height="6" rx="1" fill="none" stroke="#37474f" stroke-width="1.4"/>
+  <line x1="30" y1="33" x2="43" y2="33" fill="none" stroke="#90a4ae" stroke-width="2.4" stroke-linecap="round"/>
+  <rect x="21" y="40" width="6" height="6" rx="1" fill="none" stroke="#37474f" stroke-width="1.4"/>
+  <line x1="30" y1="43" x2="43" y2="43" fill="none" stroke="#90a4ae" stroke-width="2.4" stroke-linecap="round"/>
+  <polyline points="22,23 24,25 27,20" fill="none" stroke="#66bb6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="22,33 24,35 27,30" fill="none" stroke="#66bb6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

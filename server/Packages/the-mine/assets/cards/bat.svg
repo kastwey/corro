@@ -1,1 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M32 23C38 12 48 12 59 20L52 27L61 35L47 36L42 48L32 40L22 48L17 36L3 35L12 27L5 20C16 12 26 12 32 23Z M25 29A2 2 0 1 0 29 29A2 2 0 1 0 25 29Z M35 29A2 2 0 1 0 39 29A2 2 0 1 0 35 29Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <path d="M4 30C10 16 24 18 32 28C40 18 54 16 60 30C52 28 46 32 44 40C40 36 36 34 32 36C28 34 24 36 20 40C18 32 12 28 4 30Z" fill="#5e4b8b" stroke="#3a2f56" stroke-width="2.2" stroke-linejoin="round"/>
+  <ellipse cx="32" cy="32" rx="7" ry="9" fill="#5e4b8b" stroke="#3a2f56" stroke-width="2.2"/>
+  <polygon points="26,26 28,18 31,25" fill="#5e4b8b" stroke="#3a2f56" stroke-width="1.6" stroke-linejoin="round"/>
+  <polygon points="38,26 36,18 33,25" fill="#5e4b8b" stroke="#3a2f56" stroke-width="1.6" stroke-linejoin="round"/>
+  <circle cx="29" cy="31" r="2" fill="#ffffff"/>
+  <circle cx="35" cy="31" r="2" fill="#ffffff"/>
+  <circle cx="29.5" cy="31" r="0.9" fill="#37474f"/>
+  <circle cx="35.5" cy="31" r="0.9" fill="#37474f"/>
+  <polygon points="30,36 32,39 34,36" fill="#ffffff"/>
+</svg>

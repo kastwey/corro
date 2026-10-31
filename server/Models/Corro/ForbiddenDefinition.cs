@@ -46,4 +46,21 @@ public sealed record ForbiddenRulesConfig
 
 	/// <summary>Points that win the match when <see cref="EndMode"/> is "score".</summary>
 	public int TargetScore { get; init; } = 30;
+
+	/// <summary>House rule: how the table is organised. <see cref="ForbiddenMode.Teams"/> (the
+	/// classic) seats two equal teams whose clue-giver is watched by the other side's monitor.
+	/// <see cref="ForbiddenMode.Solo"/> seats everyone for themselves: each turn one player gives
+	/// clues, the next guesses and the one after monitors, so a complete rotation hands every player
+	/// every role once — and three people, or any odd table, can play.</summary>
+	public string Mode { get; init; } = ForbiddenMode.Teams;
+}
+
+/// <summary>The values <see cref="ForbiddenRulesConfig.Mode"/> takes.</summary>
+public static class ForbiddenMode
+{
+	public const string Teams = "teams";
+	public const string Solo = "solo";
+
+	/// <summary>True when the rules seat every player for themselves rather than in two teams.</summary>
+	public static bool PlaysSolo(this ForbiddenRulesConfig rules) => rules.Mode == Solo;
 }

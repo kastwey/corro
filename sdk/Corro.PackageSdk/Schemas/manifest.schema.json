@@ -330,7 +330,13 @@
         "passesPerTurn": { "type": "integer", "minimum": 0, "maximum": 10 },
         "correctPoints": { "type": "integer", "minimum": 1, "maximum": 10 },
         "violationPenalty": { "type": "integer", "minimum": 0, "maximum": 10 },
-        "cycles": { "type": "integer", "minimum": 1, "maximum": 5 }
+        "cycles": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "endMode": { "enum": ["rounds", "score"] },
+        "targetScore": { "type": "integer", "minimum": 1 },
+        "mode": {
+          "enum": ["teams", "solo"],
+          "description": "\"teams\" seats two equal teams (the classic); \"solo\" seats everyone for themselves, so three players or any odd table can play."
+        }
       },
       "additionalProperties": false
     },

@@ -6,7 +6,7 @@ Todo el mundo escribe a la vez. Cada ronda reparte una letra y doce categorías,
 
 Cada ronda la juzga un jugador, y el puesto rota para que todos juzguen el mismo número de veces. El juez:
 
-- pone el reloj en marcha cuando la mesa ha leído la letra y las categorías;
+- pone el reloj en marcha cuando la mesa ha leído las categorías; la letra se reparte con el reloj, nunca antes;
 - espera mientras los demás escriben;
 - decide sobre cada respuesta cuando termina la escritura.
 

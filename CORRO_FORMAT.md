@@ -103,9 +103,10 @@ is common to all families.
   question deck ships as per-locale `questions.<lang>.json`, and the rules live in the
   manifest's `triviaRules` — see [The trivia family](#the-trivia-family). This family has
   **no bots**.
-- `"gameType": "forbidden"` — two-team spoken clue play: a rotating clue-giver describes
-  a private target without saying its forbidden words, a teammate guesses aloud and an opposing
-  monitor adjudicates violations. **No `board.json` or `cards.json`** — real content ships in
+- `"gameType": "forbidden"` — spoken clue play: a rotating clue-giver describes a private
+  target without saying its forbidden words, a second player guesses aloud and a third monitors
+  violations — in two teams, or everyone for themselves when the table is odd or small. **No
+  `board.json` or `cards.json`** — real content ships in
   `words.<lang>.json`; the host explicitly selects one shared word language in the lobby, and rules live in
   `forbiddenRules` — see [The forbidden-word family](#the-forbidden-word-family). This family has
   **no bots**; voice chat is optional because players may share a physical room.
@@ -249,6 +250,25 @@ Partial translations are allowed: a key present in some locales falls back to an
 that has it at runtime. A key referenced anywhere but defined in **no** locale fails
 validation.
 
+### Naming a thing inside a sentence (`<key>_indefinite`)
+
+An engine sentence cannot carry the article itself: in a gendered language "un" fits *7 rojo*
+and betrays *Reversa roja*, and a deck the engine has never seen decides which one it ships. So
+the sentence asks the package for the name **as it sounds after the verb** —
+`$t(<nameKey>, {"context": "indefinite"})` — and the package defines that form next to the
+plain name:
+
+```jsonc
+"cards": {
+  "red_7": "7 rojo",              "red_7_indefinite": "un 7 rojo",
+  "blue_reverse": "Reversa azul", "blue_reverse_indefinite": "una Reversa azul"
+}
+```
+
+The form is OPTIONAL and falls back to the plain name, so a deck that omits it is announced
+exactly as before — which is what the English locales do today, where the engine sentences ask
+for no article.
+
 ## Hidden packages (self-hosting)
 
 Two OPTIONAL manifest fields let a self-hosted server keep some boards private. Both live entirely in
@@ -338,17 +358,19 @@ file exists, its geometry replaces the engine's neutral drawing everywhere that 
 draws a neutral face from generic mechanics such as type/value; text and accessibility never
 depend on the picture.
 
-The art canvas is `viewBox="0 0 64 64"`. As with tokens, flatten the illustration to one or
-more `<path>` elements. The loader extracts and sanitizes **only path geometry**; fills,
-strokes, scripts, text, external resources, event handlers and all other SVG markup are
-discarded. The renderer colours that silhouette through the card type's accessible palette.
-An SVG with no usable path, a file whose basename does not match a card id, or art over the
-per-card/package limits makes the package invalid instead of silently falling back.
+The art canvas is `viewBox="0 0 64 64"`. The drawing may use colour, strokes and groups within
+the **package art subset** described under [SVG art subset](#svg-art-subset-tokens-and-cards):
+the loader rewrites the file into that subset and rejects anything outside it. A part with no
+`fill` of its own takes the card's accent (`artColor`, or the card type's accessible palette), so
+a monochrome silhouette still works unchanged. A file whose basename does not match a card id,
+a drawing with nothing to draw, or art over the per-card/package limits makes the package
+invalid instead of silently falling back.
 
 ```xml
 <!-- assets/cards/my-card.svg -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <path d="M8 8h48v48H8z M20 20h24v24H20z"/>
+  <circle cx="32" cy="32" r="26" fill="#f4d35e" stroke="#7a5c00" stroke-width="3"/>
+  <path d="M20 20h24v24H20z" fill="currentColor"/>
 </svg>
 ```
 
@@ -390,14 +412,50 @@ declares only `id` + `nameKey`; the **drawing** lives in `assets/tokens/<id>.svg
 
 ```xml
 <!-- assets/tokens/ufo.svg -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 14 h18 a9 5 0 0 0 -18 0 z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <path d="M3 14 h18 a9 5 0 0 0 -18 0 z"/>
+  <circle cx="12" cy="9" r="4" fill="#9be7ff"/>
+</svg>
 ```
 
-The loader extracts **only the `<path>` geometry** and **sanitises** it to path
-characters (whitelist), so an uploaded package **cannot inject markup**: draw your tokens
-**with paths** (flatten shapes to `path` in your editor). `nameKey` resolves against the
-i18n (package or app). A `.corro` **without tokens** — or a token missing its
-`assets/tokens/<id>.svg` — **is invalid**.
+The canvas is 24×24 (another square `viewBox` is rescaled onto it). The drawing goes through
+the same [SVG art subset](#svg-art-subset-tokens-and-cards) as card art. On the board a token
+sits on a chip of its **player's colour** with white ink, and in panels it inherits the text
+colour, so keep the main silhouette **unfilled** (it takes `currentColor`) and use fixed colours
+only for small accents: a fixed-colour body can vanish on a chip of the same colour. `nameKey`
+resolves against the i18n (package or app). A `.corro` **without tokens** — or a token missing
+its `assets/tokens/<id>.svg` — **is invalid**.
+
+---
+
+## SVG art subset (tokens and cards)
+
+Package art is uploaded content that the client inlines into the page, so the loader does not
+serve the file: it parses it as XML (DTDs and external resolution disabled), keeps only the
+closed subset below, **rebuilds** the markup from the validated values and stores that. The
+client validates the same subset again before rendering. Anything outside it is not stripped
+quietly: the package is rejected with a message naming the element or attribute, so an author
+learns why a feature of their file would not show instead of shipping a silently broken picture.
+
+| Kept | What is accepted |
+| --- | --- |
+| Elements | `g`, `path`, `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon` |
+| Geometry | `d` (path commands and numbers only), `x y width height rx ry`, `cx cy r`, `rx ry`, `x1 y1 x2 y2`, `points` — unitless numbers (a trailing `px` is accepted) |
+| Paint | `fill` and `stroke` as `#rgb`, `#rrggbb`, `none` or `currentColor` (no named colours, gradients or `url()`); `fill-rule`, `fill-opacity`, `stroke-width`, `stroke-linecap`, `stroke-linejoin`, `stroke-miterlimit`, `stroke-opacity`, `stroke-dasharray`, `stroke-dashoffset`, `opacity` |
+| Transforms | `transform` built only from `translate`, `scale`, `rotate`, `skewX`, `skewY` and `matrix` with numeric arguments |
+| `style` | parsed for the paint properties above; everything else in it is dropped |
+
+Dropped silently: `title`, `desc`, `metadata`, elements and attributes in editor namespaces
+(`inkscape:`, `sodipodi:`…), `id`, `class` and other attributes the subset does not name.
+
+Rejected: any other element (`script`, `style`, `text`, `image`, `use`, `defs`, gradients,
+`filter`, `clipPath`, `mask`, `foreignObject`, `a`, animation…), `href`, event attributes
+(`on*`), `clip-path`, `mask`, `filter`, `marker-*`, and any `url(` reference. Groups nest at most
+12 deep, a drawing has at most 4 000 elements, a token stays under 16 KiB of rebuilt markup, a
+card under 48 KiB and all of a package's card art under 768 KiB (it travels in game state).
+
+A monochrome drawing needs no attributes at all: a part without `fill` inherits `currentColor`
+from the engine (the player colour on a token, the accent on a card).
 
 ---
 
@@ -1027,6 +1085,9 @@ game for every player, sighted or not — never a reflex race.
   package's `colors.<id>` i18n key (the wilds name it out loud; validated).
 - The round opener flips from the pile until a NUMBER shows (flipped actions slide under
   the pile), so every deck needs at least one number card and two colours.
+- A play is announced around the card's name ("Ana juega **un** 7 rojo"), so a deck whose
+  names need an article ships it per card — see
+  [Naming a thing inside a sentence](#naming-a-thing-inside-a-sentence-key_indefinite).
 
 ### manifest sheddingRules
 
@@ -1261,11 +1322,13 @@ keys (each with its `_self` variant where the actor differs): `trivia_rolled`, `
 
 ## The forbidden-word family
 
-A `"gameType": "forbidden"` package is a spoken team game with a distinct role/state model:
-two equal teams alternate timed turns; the active team's clue-giver and the opposing team's monitor
-receive one private card, while the guesser and every spectator receive no target data. It reuses the
-common package envelope (identity, locales, tokens, sounds and guides) and has **no spatial board,
-hand, `board.json` or `cards.json`**.
+A `"gameType": "forbidden"` package is a spoken game with a distinct role/state model: every
+timed turn has a clue-giver, a guesser and a monitor. In the classic seating two equal teams
+alternate turns and the monitor comes from the rival team; with **everyone for themselves** the
+three roles rotate through the whole table, which is how three players — or any odd table — can
+play. The clue-giver and the monitor receive one private card, while the guesser and every
+spectator receive no target data. It reuses the common package envelope (identity, locales, tokens,
+sounds and guides) and has **no spatial board, hand, `board.json` or `cards.json`**.
 
 Voice chat is deliberately optional. Remote players may opt into Corro's platform voice room; people
 playing together in person can leave it off. Corro never records or transcribes speech. The humans
@@ -1306,22 +1369,38 @@ match these words against speech: the opposing monitor reports a violation.
                           // higher score wins (ties adding a whole rotation); "score" = the
                           // first team to `targetScore` wins, once both have had the same
                           // number of turns — never mid-turn, never one team ahead
-  "targetScore": 30       // points that win when endMode is "score" (at least 1)
+  "targetScore": 30,      // points that win when endMode is "score" (at least 1)
+  "mode": "teams"         // the seating: "teams" = two equal teams (the classic); "solo" =
+                          // everyone for themselves, the three roles rotating through the table
 }
 ```
 
-The house-rule codes this family exposes to the host are `forbiddenEndMode` (`"type": "choice"`,
-values `rounds` / `score`) and the numbers `forbiddenCycles`, `forbiddenTargetScore` and
-`forbiddenTurnSeconds`.
+The house-rule codes this family exposes to the host are `forbiddenMode` (`"type": "choice"`,
+values `teams` / `solo`), `forbiddenEndMode` (`"type": "choice"`, values `rounds` / `score`) and
+the numbers `forbiddenCycles`, `forbiddenTargetScore` and `forbiddenTurnSeconds`.
 
-Packages declare an even player range from 4 through 8 and enough tokens for `players.max`.
-The lobby forces exactly two equal, full teams before starting. Bots are not supported in this
-family.
+Packages declare a player range from 3 up to the engine's table limit of 16 and enough tokens for
+`players.max`. The range need not be even. A package that offers `forbiddenMode` has every size in
+its range offered by the lobby, and the player count decides the seating: a count that cannot
+split into two teams of at least two (three, or any odd table) locks the choice onto everyone for
+themselves, with the reason on the locked option; an even count of four or more leaves the choice
+to the host. In team play the lobby forces exactly two equal, full teams before starting; everyone
+for themselves has no teams to arrange, so the table starts like any other board's. A package that
+does not offer `forbiddenMode` is only ever seated in teams, so the lobby offers only its even sizes
+of four and up, whatever its minimum says. Bots are not supported in this family.
 
 ### Forbidden-word rules the engine implements
 
-- Teams alternate turns. Within the active team, the clue-giver rotates in team order and the next
-  teammate is the guesser; the opposing monitor rotates in the rival team's order.
+- In team play, teams alternate turns. Within the active team, the clue-giver rotates in team
+  order and the next teammate is the guesser; the opposing monitor rotates in the rival team's
+  order.
+- Everyone for themselves: the active player gives the clues, the next seat guesses and the one
+  after monitors. Over a complete rotation every player holds every role once. The guesser's
+  distance along the table grows by one seat with each rotation (two seats along in the second,
+  three in the third, round the table and back to one), and the monitor sits one seat beyond
+  that, so the same two players are not paired rotation after rotation. A correct guess
+  scores for the clue-giver **and** the guesser; a violation costs the clue-giver alone. Every
+  rule below reads "side" for "team": the match is decided and ranked by individual score.
 - Only the clue-giver may start the clock. They coordinate readiness through voice chat or in person;
   the engine does not require separate confirmations from the guesser or monitor.
 - During the timed phase, only the clue-giver may mark **Correct** or **Pass**; only the monitor may
@@ -1336,7 +1415,8 @@ family.
 - After `cycles` complete rotations, the higher team score wins. A tie adds another **complete**
   rotation for both teams, preserving equal opportunity.
 - If a player permanently leaves, their team forfeits because the equal-role rotation can no longer
-  continue truthfully. A temporary disconnection does not retire the seat.
+  continue truthfully; everyone for themselves, the match ends where it stands, the best remaining
+  score wins and the one who left finishes last. A temporary disconnection does not retire the seat.
 
 ### Hidden information and accessible card surface
 
@@ -1362,8 +1442,12 @@ Turn preparation and start: `forbidden_turn_preparing`, `forbidden_turn_started`
 variants where the listener is the actor). Card outcomes:
 `forbidden_correct`, `forbidden_passed`, `forbidden_violation` (with `_self`). Turn/match outcomes:
 `forbidden_time_up`, `forbidden_tie_breaker`, `forbidden_team_won`, `forbidden_forfeit`.
-Surfaces, roles, status, timer and active-rule text use `forbidden_*`; shared team names use
-`team_name` and the engine colour words.
+Everyone for themselves speaks in names rather than team colours through the `_solo` counterparts
+of the same lines: `forbidden_turn_preparing_solo`, `forbidden_turn_started_solo`,
+`forbidden_correct_solo` (which also carries `guesserScore`), `forbidden_violation_solo`,
+`forbidden_time_up_solo`, `forbidden_tie_breaker_solo`, `forbidden_won_solo` and
+`forbidden_forfeit_solo`. Surfaces, roles, status, timer and active-rule text use `forbidden_*`;
+shared team names use `team_name` and the engine colour words.
 
 ---
 

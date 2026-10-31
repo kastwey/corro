@@ -17,6 +17,8 @@ public class PackageContentBoundaryTests
 		"attack", "bus", "defuse", "favor", "nope", "shuffle", "skip",
 		// Engine UI / internal routing identifiers that happen to collide with content ids.
 		"f6", "b1", "b2", "circle", "die", "square", "wild",
+		// SVG vocabulary the package-art sanitiser names (attributes it rejects).
+		"mask",
 	};
 
 	[Fact]

@@ -105,20 +105,22 @@ test('the visual chat button exposes and toggles the panel, then restores focus'
 	assert.equal(button.getAttribute('aria-controls'), 'chat-panel');
 	assert.equal(button.getAttribute('aria-haspopup'), null, 'chat is a panel, not a dialog popup');
 	assert.equal(button.getAttribute('aria-keyshortcuts'), 'Control+Shift+H');
-	assert.equal(button.getAttribute('aria-expanded'), 'false');
 	assert.equal(button.getAttribute('aria-label'), 'game.chat_open');
+	// The label alone says whether the panel is open — "close the text chat" cannot mean
+	// anything else — so aria-expanded said it a second time in the same breath.
+	assert.equal(button.getAttribute('aria-expanded'), null);
 
 	button.focus();
 	button.click();
 	assert.equal(chatPanel.isOpen(), true);
-	assert.equal(button.getAttribute('aria-expanded'), 'true');
 	assert.equal(button.getAttribute('aria-label'), 'game.chat_close');
+	assert.equal(button.getAttribute('aria-expanded'), null);
 	assert.equal(document.activeElement, input(), 'the acknowledged panel opens ready to type');
 
 	button.focus();
 	button.click();
 	assert.equal(chatPanel.isOpen(), false);
-	assert.equal(button.getAttribute('aria-expanded'), 'false');
+	assert.equal(button.getAttribute('aria-label'), 'game.chat_open');
 	assert.equal(document.activeElement, button, 'closing returns focus to the visual opener');
 });
 

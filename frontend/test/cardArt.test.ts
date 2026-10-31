@@ -3,15 +3,18 @@ import assert from 'node:assert/strict';
 import {
 	cardArtStyle, cardArtHtml, genericCardArtHtml, genericCardBackHtml, genericEmptyCardHtml,
 	normalizeCardArtColor,
-	packageCardArtSvg, sanitizeCardPathData, setCardArtPackageToken,
+	packageCardArtSvg, setCardArtPackageToken,
 } from '../src/cardArt.js';
 
-test('package path-data is sanitized again and marked as the winning source', () => {
-	assert.equal(sanitizeCardPathData('M1 1h62v62z" onload="alert(1)'), 'M1 1h62v62z onloadalert1');
-	const html = packageCardArtSvg('M1 1h62v62z"><script>alert(1)</script>')!;
+test('package drawings are validated again and marked as the winning source', () => {
+	const html = packageCardArtSvg('<path d="M1 1h62v62z" fill="#b33434"/><circle cx="32" cy="32" r="8"/>')!;
 	assert.match(html, /data-card-art="package"/);
-	assert.doesNotMatch(html, /[<>]script|onload=/);
+	assert.match(html, /<path d="M1 1h62v62z" fill="#b33434"\/><circle cx="32" cy="32" r="8"\/>/);
 	assert.match(html, /viewBox="0 0 64 64"/);
+	assert.equal(packageCardArtSvg('<path d="M1 1h62v62z"/><script>alert(1)</script>'), null);
+	// Legacy path data from games saved before colour art still draws; legacy garbage does not.
+	assert.match(packageCardArtSvg('M1 1h62v62z')!, /<path d="M1 1h62v62z"\/>/);
+	assert.equal(packageCardArtSvg('M1 1h62v62z"><script>alert(1)</script>'), null);
 });
 
 test('package art wins and missing or unusable art receives a neutral mechanic drawing', () => {

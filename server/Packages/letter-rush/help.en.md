@@ -6,7 +6,7 @@ Everyone writes at the same time. A round deals one letter and twelve categories
 
 One player judges each round, and the job rotates so everybody judges the same number of times. The judge:
 
-- starts the clock when the table has read the letter and the categories;
+- starts the clock when the table has read the categories; the letter is dealt with the clock, never before it;
 - waits while the others write;
 - rules on every answer once the writing stops.
 
