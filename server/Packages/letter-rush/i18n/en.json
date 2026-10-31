@@ -3,9 +3,9 @@
     "categoriesPerRound": "Categories per round",
     "categoriesRoundSeconds": "Time to write, in seconds",
     "categoriesEndMode": "When the match ends",
-    "categoriesEndModeRounds": "After the rotations are played",
+    "categoriesEndModeRounds": "After the rounds are played",
     "categoriesEndModeScore": "On reaching the points",
-    "categoriesCycles": "Judge rotations played",
+    "categoriesCycles": "Rounds each judge takes (everybody judges the same number)",
     "categoriesTargetScore": "Points that win"
   },
   "tokens": {

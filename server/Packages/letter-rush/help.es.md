@@ -67,13 +67,13 @@ Al crear la mesa se ajustan:
 
 - cuántas categorías tiene cada ronda, de tres a doce;
 - cuánto dura la escritura, de medio minuto a cinco, en tramos de quince segundos;
-- cómo termina la partida: al jugar unas cuantas vueltas de juez, o en cuanto alguien llega a los puntos acordados.
+- cómo termina la partida: al jugar unas cuantas rondas por juez, o en cuanto alguien llega a los puntos acordados.
 
 **Ctrl+Mayús+F1** las lee dentro de la partida, así que nadie tiene que recordar lo que se acordó en la sala de espera.
 
 ## Ganar
 
-Cada respuesta válida suma un punto. La partida se decide siempre al terminar una vuelta completa de juez, porque a media vuelta unos han escrito más rondas que otros: según lo que eligiera el anfitrión, gana quien vaya en cabeza al completar las vueltas acordadas, o quien haya llegado a los puntos. Si hay empate en cabeza, la partida añade otra vuelta completa y sigue hasta que alguien gane sin empate.
+Cada respuesta válida suma un punto. La partida se decide siempre cuando todos han juzgado el mismo número de rondas, porque hasta entonces unos han escrito más que otros: según lo que eligiera el anfitrión, gana quien vaya en cabeza al jugarse las rondas acordadas, o quien haya llegado a los puntos. Si hay empate en cabeza, la partida da otra ronda a cada juez y sigue hasta que alguien gane sin empate.
 
 ## Si alguien se va
 

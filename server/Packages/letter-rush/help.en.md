@@ -67,13 +67,13 @@ Creating the table sets:
 
 - how many categories each round has, from three to twelve;
 - how long the writing lasts, from half a minute to five, in quarter-minute steps;
-- how the match ends: after a number of judge rotations, or as soon as somebody reaches the agreed points.
+- how the match ends: after a number of rounds per judge, or as soon as somebody reaches the agreed points.
 
 **Ctrl+Shift+F1** reads them out during the match, so nobody has to remember what the lobby agreed.
 
 ## Winning
 
-Each valid answer scores one point. The match is always decided at the end of a complete judge rotation, because mid-rotation some players have written more rounds than others: depending on what the host chose, it goes to whoever leads once the agreed rotations are played, or to whoever has reached the points. If the lead is tied, the match adds another complete rotation and plays on until somebody wins outright.
+Each valid answer scores one point. The match is always decided once everybody has judged the same number of rounds, because until then some players have written more than others: depending on what the host chose, it goes to whoever leads when the agreed rounds are played, or to whoever has reached the points. If the lead is tied, the match gives every judge one more round and plays on until somebody wins outright.
 
 ## Leaving
 
