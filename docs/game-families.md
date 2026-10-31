@@ -107,10 +107,13 @@ published (`GameService.NotifyStateChangedAsync`) and the end screen renders it;
 count nothing worth showing return null — the default — and the screen keeps its plain ranked
 list of names.
 
-Two rules hold across every family. The ORDER is `Player.FinishPlace`, never the number: a
-shedding match played with the penalty count is won by the LOWEST score. And the table is sealed
+Three rules hold across every family. The ORDER is `Player.FinishPlace`, never the number: a
+shedding match played with the penalty count is won by the LOWEST score. The table is sealed
 ONCE, not recomputed per client, because a hidden-information family hands every connection a
-different projection and tables built from those would disagree with each other.
+different projection and tables built from those would disagree with each other. And a row
+carries a team index only where the match ALREADY speaks in team colours: a side of one is a
+person, so it passes null and the row simply reads their name. The forbidden family is both,
+depending on its seating, which is why it asks the rules rather than the state.
 
 ## Movement pacing
 

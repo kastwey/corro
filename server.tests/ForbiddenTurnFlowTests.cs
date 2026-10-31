@@ -261,6 +261,52 @@ public class ForbiddenTurnFlowTests
 	}
 
 	[Fact]
+	public async Task The_final_table_of_a_solo_match_is_one_row_per_player_and_names_no_team()
+	{
+		// A side of one is a person, so its row carries NO team index: the client would otherwise
+		// be free to name it from the palette ("the red team"), which is not how this seating
+		// speaks — and StandingSide documents the index as absent for a lone player.
+		//
+		// Played to the end through the handlers. The one correct answer credits the clue-giver AND
+		// the guesser, so the reported slip is what leaves a lone leader: p1 keeps the point, p0
+		// gives its own back, and p2 never scored. Nobody breaks the tie behind the winner, which
+		// is why the places read 1, 2, 2 — a real table in this seating, and one the team rotation
+		// cannot produce.
+		var (context, state, rules) = await StartedSoloTurn();
+		await new ForbiddenCorrectHandler().HandleAsync(
+			new ForbiddenCorrectCommand { PlayerId = "p0", CardSequence = state.Turn.CardSequence }, context);
+		await new ForbiddenViolationHandler().HandleAsync(
+			new ForbiddenViolationCommand { PlayerId = "p2", CardSequence = state.Turn.CardSequence }, context);
+
+		var guard = 0;
+		while (!context.GameState.IsGameOver && guard++ < 10)
+		{
+			state.Turn.StartedAt = DateTime.UtcNow.AddMinutes(-10); // the clock ran out
+			await new ForbiddenExpireTurnHandler().HandleAsync(
+				new ForbiddenExpireTurnCommand { PlayerId = state.Turn.ClueGiverId }, context);
+			if (context.GameState.IsGameOver)
+			{
+				break;
+			}
+
+			await new ForbiddenStartHandler().HandleAsync(
+				new ForbiddenStartCommand { PlayerId = state.Turn.ClueGiverId }, context);
+		}
+
+		Assert.True(context.GameState.IsGameOver);
+		Assert.Equal("p1", context.GameState.WinnerId);
+		var standings = new ForbiddenFamily().FinalStandings(context.GameState);
+		StandingsSanity.AssertSane(context.GameState, standings);
+		Assert.Equal("game.end_measure_points", standings!.MeasureKey);
+		Assert.Equal(3, standings.Sides.Count);
+		Assert.All(standings.Sides, side => Assert.Single(side.MemberIds));
+		Assert.All(standings.Sides, side => Assert.Null(side.TeamIndex));
+		Assert.Equal(new[] { "p1", "p0", "p2" }, standings.Sides.Select(side => side.MemberIds[0]));
+		Assert.Equal(new[] { 1, 2, 2 }, standings.Sides.Select(side => side.Place));
+		Assert.Equal(new[] { rules.CorrectPoints, 0, 0 }, standings.Sides.Select(side => side.Value));
+	}
+
+	[Fact]
 	public async Task Timeout_rotates_team_and_roles_without_accepting_late_card_action()
 	{
 		var (context, state, _) = await StartedTurn();

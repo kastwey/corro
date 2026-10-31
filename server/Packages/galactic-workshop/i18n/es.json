@@ -21,6 +21,7 @@
     "assembly_pick_own_slot": "¿En qué módulo tuyo aplicas {{card}}?",
     "assembly_pick_give_slot": "¿Qué módulo tuyo entregas a cambio?",
     "assembly_status_progress": "{{count}} de {{goal}} sistemas operativos",
+    "end_measure_parts": "Sistemas operativos",
     "assembly_state_ok": "operativo",
     "assembly_state_afflicted": "averiado",
     "assembly_state_shielded": "blindado",
