@@ -143,15 +143,23 @@
 	transform: translateY(-1px);
 }
 
+/* The same tokens forms.css gives this button, because the board does not load forms.css and
+   this file is the only place styling it there. Hardcoded greys made it a light slab on the dark
+   page, and no Axe rule can catch that: the contrast inside the button was fine, it was the
+   button that belonged to the other theme. The lift on hover comes from `button:hover`. */
 .secondary-button {
-	background: #f3f4f6;
-	color: #374151;
-	border: 1px solid #d1d5db;
+	background: var(--surface);
+	color: var(--text);
+	border: 1px solid var(--border-strong);
 }
 
+/* The background is set again rather than left to the cascade: a button can carry BOTH classes
+   (the action list dresses every item as secondary and then adds the item's own), and with no
+   background here `.primary-button:hover` paints the accent underneath ink that is still
+   `--text`. Axe measured that as 2.52:1. */
 .secondary-button:hover {
-	background: #e5e7eb;
-	transform: translateY(-1px);
+	background: var(--surface-2);
+	border-color: var(--accent);
 }
 
 /* Accessible focus states */
@@ -552,14 +560,16 @@
 	width: 100%;
 	padding: 12px;
 	font-size: 1.1rem;
-	border: 2px solid #d1d5db;
+	border: 2px solid var(--border-strong);
 	border-radius: 6px;
 }
 
+/* The engine's own focus ring, so this field is marked like every other focusable thing rather
+   than in a blue of its own. */
 .dialog-unlock-input:focus {
-	border-color: #3b82f6;
+	border-color: var(--accent);
 	outline: none;
-	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+	box-shadow: var(--focus-ring);
 }
 
 /* ==========================================

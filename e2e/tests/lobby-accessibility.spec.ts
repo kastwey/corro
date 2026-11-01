@@ -892,3 +892,39 @@ test('every lobby hint reads alike, and a status line keeps its ink', async ({ b
 	}
 	await flushAxeAudit(page);
 });
+
+// A control that hardcodes its colours belongs to one theme and lies in the other, and no Axe
+// rule can say so: the contrast INSIDE the button was always fine. The secondary button painted
+// #f3f4f6 on the dark page, a light slab nobody measuring contrast would flag, and only a
+// sighted player ever saw it.
+test('the secondary button is dressed by the theme, not by a colour of its own', async ({ browser }) => {
+	const page = await newPlayerPage(browser, 'es-ES');
+	await gotoLobbyHome(page);
+	const button = page.locator('#go-join-btn');
+	const paint = () => button.evaluate(el => {
+		const style = getComputedStyle(el);
+		return { background: style.backgroundColor, ink: style.color, border: style.borderColor };
+	});
+
+	const light = await paint();
+	await page.locator('#theme-toggle').click();
+	await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+	const dark = await paint();
+
+	// Every one of the three: a button that kept any of them would be wearing half the other
+	// theme, which is how this started — the background moved and the ink did not.
+	expect(dark.background, 'the background follows the theme').not.toBe(light.background);
+	expect(dark.ink, 'the ink follows the theme').not.toBe(light.ink);
+	expect(dark.border, 'the border follows the theme').not.toBe(light.border);
+	// And it wears the SAME surface as the page's own panels rather than a shade of its own.
+	const surface = await page.evaluate(() => {
+		const probe = document.createElement('div');
+		probe.style.background = 'var(--surface)';
+		document.body.appendChild(probe);
+		const painted = getComputedStyle(probe).backgroundColor;
+		probe.remove();
+		return painted;
+	});
+	expect(dark.background, 'the button sits on the theme surface').toBe(surface);
+	await flushAxeAudit(page);
+});
