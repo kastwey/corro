@@ -295,3 +295,36 @@ test('a guest is not offered the rules, and a board that declares none offers th
 	await expect(berto.locator('#table-view')).toBeVisible();
 	await expect(berto.locator('#table-rules')).toBeHidden();
 });
+
+// The board does not load forms.css, so until now nothing dressed its fields: the table's invite
+// box and its language picker came out in the BROWSER's colours — pure black ink on white here,
+// #3b3b3b in the dark theme — beside panels wearing the app's. Axe says nothing, because the
+// browser's own pairing contrasts perfectly well; it is simply not this application's.
+test('the table\'s own fields are dressed by the theme, not by the browser', async ({ browser }) => {
+	const ana = await newPlayerPage(browser, 'es-ES');
+	await createGame(ana, 'Ana', TRACK_BOARD);
+	await expect(ana.locator('#table-view')).toBeVisible();
+
+	// What the page says a field should be, read from the theme itself rather than pinned to a
+	// hex that a palette change would turn into a lie.
+	const token = (name: string) => ana.evaluate((property) => {
+		const probe = document.createElement('div');
+		probe.style.color = `var(${property})`;
+		document.body.appendChild(probe);
+		const painted = getComputedStyle(probe).color;
+		probe.remove();
+		return painted;
+	}, name);
+	const ink = await token('--text');
+	const edge = await token('--border-strong');
+
+	for (const field of ['#table-invite-handle', '#table-content-language']) {
+		const paint = await ana.locator(field).evaluate(el => {
+			const style = getComputedStyle(el);
+			return { ink: style.color, border: style.borderColor };
+		});
+		expect(paint.ink, `${field} writes in the theme's ink`).toBe(ink);
+		expect(paint.border, `${field} is edged by the theme`).toBe(edge);
+	}
+	await flushAxeAudit(ana);
+});
