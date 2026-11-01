@@ -104,6 +104,19 @@ public interface IGameFamily
 	MatchDeal CardsDealt(GameState state) => MatchDeal.None;
 
 	/// <summary>
+	/// The final table of a FINISHED match, in the family's own measure, or null (the default)
+	/// when the family counts nothing worth showing — the property family ends with everyone but
+	/// the winner bankrupt, and the exploding one only records the order players fell in, both of
+	/// which the plain ranked list already says.
+	///
+	/// Called once, on the match that just ended, and sealed into
+	/// <see cref="GameState.FinalStandings"/>. Reads <see cref="Player.FinishPlace"/> for the
+	/// order — the families stamp it as they finish, so this never re-decides who won — and the
+	/// family's own sub-state for the number.
+	/// </summary>
+	MatchStandings? FinalStandings(GameState state) => null;
+
+	/// <summary>
 	/// The number of teams this family REQUIRES the lobby to arrange, or null (the default) when
 	/// team play is optional and the host picks. A family that answers N is only playable as N
 	/// equal teams: the lobby rejects any other team count, and any table size that cannot split

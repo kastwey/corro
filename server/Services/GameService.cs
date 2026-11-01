@@ -317,8 +317,26 @@ public class GameService : IGameService, IGamePresenter, IDisposable
 	{
 		if (_gameState != null)
 		{
+			SealFinalStandings(_gameState);
 			await OnGameStateChanged(_gameState);
 		}
+	}
+
+	/// <summary>
+	/// Fill in the final table the first time a state is published with the match over. Every
+	/// family ends the match in its own handler — there are a dozen such places — so the table is
+	/// built here instead, on the one path all of them travel to reach a client, and only once:
+	/// the state is published again as the match is retired, and a second pass would rebuild a
+	/// table from a state whose seats have already been folded.
+	/// </summary>
+	internal static void SealFinalStandings(GameState state)
+	{
+		if (!state.IsGameOver || state.FinalStandings != null)
+		{
+			return;
+		}
+
+		state.FinalStandings = GameFamilies.For(state.GameType).FinalStandings(state);
 	}
 
 	/// <summary>

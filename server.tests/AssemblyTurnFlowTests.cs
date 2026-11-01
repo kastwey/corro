@@ -134,4 +134,100 @@ public class AssemblyTurnFlowTests
 		Assert.DoesNotContain(announcements, a =>
 			a.Key == "game.turn_of" && !Equals(a.Vars["player"], "a"));
 	}
+
+	// ── The completed rack ────────────────────────────────────────────────────
+
+	private static readonly List<AssemblyCardDef> RackDeck = new()
+	{
+		new() { Id = "red", Type = "piece", Color = "red", Count = 4, NameKey = "cards.red" },
+		new() { Id = "blue", Type = "piece", Color = "blue", Count = 4, NameKey = "cards.blue" },
+		new() { Id = "green", Type = "piece", Color = "green", Count = 4, NameKey = "cards.green" },
+		new() { Id = "yellow", Type = "piece", Color = "yellow", Count = 4, NameKey = "cards.yellow" },
+		new() { Id = "hit", Type = "attack", Color = "green", Count = 4, NameKey = "cards.hit" },
+	};
+
+	private static AssemblySlot Slot(string owner, string color, bool afflicted = false)
+		=> new()
+		{
+			Color = color,
+			Piece = Card(color, $"{owner}-{color}"),
+			Afflictions = afflicted
+				? new List<AssemblyCardInstance> { Card("hit", $"{owner}-hit") }
+				: new List<AssemblyCardInstance>(),
+		};
+
+	/// <summary>Three racks a match could really be sitting on when it ends: one a single piece
+	/// short, one carrying an afflicted piece, one barely started.</summary>
+	private static (GameState State, GameContext Context) RackGame()
+	{
+		var assembly = new AssemblyState
+		{
+			Seats = new()
+			{
+				new()
+				{
+					PlayerId = "a",
+					Hand = new() { Card("yellow", "a-yellow#0") },
+					Slots = { Slot("a", "red"), Slot("a", "blue"), Slot("a", "green") },
+				},
+				new()
+				{
+					PlayerId = "b",
+					Slots = { Slot("b", "red"), Slot("b", "blue"), Slot("b", "green", afflicted: true) },
+				},
+				new() { PlayerId = "c", Slots = { Slot("c", "red") } },
+			},
+			DrawPile = Enumerable.Range(0, 4).Select(i => Card("red", $"draw#{i}")).ToList(),
+		};
+		AssemblyRulebook.SyncCounts(assembly);
+
+		var state = TestFixtures.NewState(new[]
+		{
+			TestFixtures.NewPlayer("a"),
+			TestFixtures.NewPlayer("b"),
+			TestFixtures.NewPlayer("c"),
+		});
+		state.GameType = "assembly";
+		state.Assembly = assembly;
+		state.AssemblyDeck = RackDeck;
+		state.AssemblyRules = Rules;
+
+		var baseContext = TestFixtures.NewContext(state);
+		var context = new GameContext
+		{
+			GameState = state,
+			Helper = baseContext.Helper,
+			Settings = baseContext.Settings,
+			FamilyRuntime = new AssemblyRuntime(AssemblyRulebook.Catalog(RackDeck), RackDeck, Rules),
+			Random = baseContext.Random,
+			Announce = baseContext.Announce,
+			Announcer = baseContext.Announcer,
+			Presenter = baseContext.Presenter,
+		};
+		return (state, context);
+	}
+
+	[Fact]
+	public async Task The_finished_rack_ends_the_match_and_the_table_counts_the_parts_that_still_work()
+	{
+		var (state, context) = RackGame();
+
+		var response = await AssemblyTurnFlow.PlayAsync(
+			new AssemblyPlayCommand { PlayerId = "a", InstanceId = "a-yellow#0" },
+			state.Players[0], context, new ScriptedRandomSource());
+
+		Assert.True(Assert.IsType<AssemblyActionResponse>(response).GameEnded);
+		Assert.True(state.IsGameOver);
+		Assert.Equal("a", state.WinnerId);
+
+		var standings = new AssemblyFamily().FinalStandings(state);
+		StandingsSanity.AssertSane(state, standings);
+		Assert.Equal("game.end_measure_parts", standings!.MeasureKey);
+		Assert.Equal(new[] { "a", "b", "c" }, standings.Sides.Select(side => side.MemberIds.Single()));
+		// b holds THREE pieces and is credited with two: the hit one is not helping anybody
+		// finish a rack, and the placings behind the winner are decided the same way. A table
+		// reading the rack size would show a bigger number above a worse place.
+		Assert.Equal(3, state.Assembly!.Seats[1].Slots.Count);
+		Assert.Equal(new[] { 4, 2, 1 }, standings.Sides.Select(side => side.Value));
+	}
 }

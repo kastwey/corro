@@ -238,4 +238,10 @@ public sealed class DraftFamily : IGameFamily
 		};
 		return state with { Draft = projected };
 	}
+
+	/// <summary>The points each seat banked across the rounds, desserts included — the same
+	/// total the scoreboard showed all match.</summary>
+	public MatchStandings? FinalStandings(GameState state)
+		=> FinalStandingsBuilder.ByPlayer(state, StandingsMeasure.Points, playerId =>
+			state.Draft?.Seats.FirstOrDefault(seat => seat.PlayerId == playerId)?.Score);
 }

@@ -43,6 +43,22 @@ public sealed class ForbiddenFamily : IGameFamily
 	public HouseRuleCondition? TeamsWaivedWhen
 		=> new() { Rule = HouseRuleCatalog.ForbiddenModeRule, Is = ForbiddenMode.Solo };
 
+	/// <summary>One row per side with the points it scored: the whole team named together in team
+	/// play (the individual columns would never say who was with whom), and one player per row when
+	/// everyone plays for themselves — a side of one is a person, so it carries no team colour,
+	/// exactly as the match's own voice names it (<see cref="SideVar"/>).</summary>
+	public MatchStandings? FinalStandings(GameState state)
+	{
+		if (state.Forbidden is not { } forbidden)
+		{
+			return null;
+		}
+		var solo = (state.ForbiddenRules ?? new ForbiddenRulesConfig()).PlaysSolo();
+		return FinalStandingsBuilder.ByTeam(state, StandingsMeasure.Points,
+			forbidden.Teams.Select(team =>
+				(solo ? null : (int?)team.TeamIndex, (IReadOnlyList<string>)team.MemberIds, team.Score)));
+	}
+
 	/// <summary>The real word decks a package can offer in the lobby, preserving manifest order.
 	/// A locale the manifest lists but has no words for is not a choice, so it never appears.</summary>
 	public IReadOnlyList<string> ContentLanguages(GameDefinition definition)

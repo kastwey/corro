@@ -503,6 +503,15 @@ public record GameState
 	/// <summary>The winning player's id / name, populated alongside <see cref="IsGameOver"/>.</summary>
 	public string? WinnerId { get; set; }
 	public string? WinnerName { get; set; }
+
+	/// <summary>
+	/// The final table, sealed once when the match ends (see
+	/// <see cref="Services.GameService.NotifyStateChangedAsync"/>): one row per side, with each
+	/// side's place and the number it ended on. Null while the match runs, in the two families
+	/// that count nothing worth showing, and in any match that finished before this existed —
+	/// the end screen then falls back to the ranked list of names it has always shown.
+	/// </summary>
+	public MatchStandings? FinalStandings { get; set; }
 }
 
 /// <summary>Persisted Bus choice, including authoritative rent previews for reconnect.</summary>

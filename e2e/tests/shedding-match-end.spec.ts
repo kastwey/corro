@@ -281,6 +281,14 @@ test('shedding: a rounds ending never also announces a loss on the target nobody
 	await expect(ana.locator('.end-screen')).toBeVisible();
 	await expect(berto.locator('.end-screen')).toBeVisible();
 	await expect(berto.locator('.end-screen__winner-row')).toContainText('Ana');
+
+	// The table shows what each hand ended on — and this is the ending that proves it must not be
+	// read as a ranking: the winner's row carries the LOWEST number on the screen.
+	const standings = berto.locator('.end-screen__standings');
+	await expect(standings.locator('thead th').nth(2)).toHaveText(appI18n('es').game.end_measure_points as string);
+	await expect(standings.locator('tbody tr').first()).toContainText('Ana');
+	await expect(standings.locator('tbody tr').first().locator('td').last()).toHaveText('0');
+	await expect(standings.locator('tbody tr').last().locator('td').last()).toHaveText('9');
 	await flushAxeAudit(ana);
 	await flushAxeAudit(berto);
 });

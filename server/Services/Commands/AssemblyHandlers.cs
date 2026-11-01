@@ -308,15 +308,8 @@ public static class AssemblyTurnFlow
 		var assembly = context.GameState.Assembly!;
 		var runtime = context.Family<AssemblyRuntime>();
 
-		int FunctionalColors(AssemblySeatState seat)
-		{
-			var functional = seat.Slots.Where(AssemblyRulebook.IsFunctional).Select(s => s.Color).ToList();
-			return functional.Where(c => c != AssemblyRulebook.Wild).Distinct().Count()
-				+ functional.Count(c => c == AssemblyRulebook.Wild);
-		}
-
 		var ordered = assembly.Seats
-			.OrderByDescending(s => s.PlayerId == winner.Id ? int.MaxValue : FunctionalColors(s))
+			.OrderByDescending(s => s.PlayerId == winner.Id ? int.MaxValue : AssemblyRulebook.FunctionalSlots(s))
 			.ThenByDescending(s => s.Slots.Count)
 			.ToList();
 		foreach (var (seat, index) in ordered.Select((s, i) => (s, i)))

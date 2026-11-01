@@ -1,4 +1,5 @@
 using CorroServer.Services.Corro;
+using CorroServer.Services.Corro.Families;
 using CorroServer.Services.Corro.Validation;
 using CorroServer.Services.Rules;
 using Xunit;
@@ -63,5 +64,23 @@ public class GalacticWorkshopPackageTests
 		Assert.Equal(2, def.Manifest.Players.Min);
 		Assert.Equal(6, def.Manifest.Players.Max);
 		Assert.Empty(def.Manifest.HouseRules); // the family declares no host-customizable rules yet
+	}
+
+	[Fact]
+	public async Task The_final_table_counts_in_the_board_s_own_words()
+	{
+		// The engine's neutral heading is "Working pieces", and this board calls that same figure
+		// "systems operational" all match long (assembly_status_progress, over the very number
+		// AssemblyRulebook.FunctionalSlots seals into the table). Two words for one fact is what
+		// the override exists to avoid, so the key is checked against the engine's CONSTANT: rename
+		// the measure and this fails, instead of the board quietly going back to speaking engine.
+		var def = await Loaded;
+
+		Assert.NotEmpty(def.I18n);
+		Assert.All(def.I18n, locale => Assert.True(
+			locale.Value.ContainsKey(StandingsMeasure.Parts),
+			$"{locale.Key} does not name the final table's measure in the board's own words"));
+		Assert.Equal("Operational systems", def.I18n["en"][StandingsMeasure.Parts]);
+		Assert.Equal("Sistemas operativos", def.I18n["es"][StandingsMeasure.Parts]);
 	}
 }

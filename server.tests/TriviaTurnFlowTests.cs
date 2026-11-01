@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using CorroServer.Models;
 using CorroServer.Models.Corro;
 using CorroServer.Services.Commands;
+using CorroServer.Services.Corro.Families;
 using CorroServer.Services.Rules;
 using Xunit;
 
@@ -195,5 +196,15 @@ public class TriviaTurnFlowTests
 		Assert.True(state.IsGameOver);
 		Assert.Equal("A", state.WinnerId);
 		Assert.Contains("game.trivia_won", Keys(ctx));
+
+		// This family stamps a place on the winner alone — the match just stops — so the rows
+		// behind them are ordered by wedges: the only thing separating a player who was one
+		// question away from one who never scored.
+		var standings = new TriviaFamily().FinalStandings(state);
+		StandingsSanity.AssertSane(state, standings);
+		Assert.Equal("game.end_measure_wedges", standings!.MeasureKey);
+		Assert.Equal("A", standings.Sides[0].MemberIds.Single());
+		Assert.Equal(6, standings.Sides[0].Value);
+		Assert.Equal(1, standings.Sides[0].Place);
 	}
 }

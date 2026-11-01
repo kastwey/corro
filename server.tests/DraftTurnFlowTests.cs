@@ -276,6 +276,13 @@ public class DraftTurnFlowTests
 		Assert.Equal("a", state.WinnerId);
 		Assert.Equal(1, state.Players.First(p => p.Id == "a").FinishPlace);
 		Assert.Equal(2, state.Players.First(p => p.Id == "b").FinishPlace);
+
+		// The final table carries those totals out of the family, where they were only ever
+		// spoken once and then lost with the board.
+		var standings = new DraftFamily().FinalStandings(state);
+		StandingsSanity.AssertSane(state, standings);
+		Assert.Equal(new[] { "a", "b" }, standings!.Sides.Select(side => side.MemberIds.Single()));
+		Assert.Equal(new[] { 6, 3 }, standings.Sides.Select(side => side.Value));
 	}
 
 	[Fact]

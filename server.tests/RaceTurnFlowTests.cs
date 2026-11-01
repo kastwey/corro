@@ -426,6 +426,18 @@ public class RaceTurnFlowTests
 		Assert.Equal(2, state.Players[1].FinishPlace); // B
 		Assert.Equal(2, state.Players[3].FinishPlace); // D
 		Assert.Contains(TestFixtures.Announcer(ctx).Sent, a => a.Key == "game.race_team_won");
+
+		// The final table pairs them the way the win did: two rows of two, each carrying the
+		// pieces that side got home between them — four separate rows would never say who was
+		// playing with whom. The row names the partners, not a colour, because that is how the
+		// announcement above names them too.
+		var standings = new RaceFamily().FinalStandings(state);
+		StandingsSanity.AssertSane(state, standings);
+		Assert.Equal(2, standings!.Sides.Count);
+		Assert.Equal(new[] { "A", "C" }, standings.Sides[0].MemberIds);
+		Assert.Equal(new[] { "B", "D" }, standings.Sides[1].MemberIds);
+		Assert.Equal(4, standings.Sides[0].Value); // two pieces each, all home
+		Assert.All(standings.Sides, side => Assert.Null(side.TeamIndex));
 	}
 
 	// ── Finishing places: the race continues until a single player remains ──────
@@ -455,6 +467,10 @@ public class RaceTurnFlowTests
 		state.GameType = "race";
 		state.Race = RaceRulebook.CreateInitialState(
 			board, new[] { ("A", "sa"), ("B", "sb"), ("C", "sc"), ("D", "sd") });
+		// The board travels IN the state for a real game (RaceFamily.CreateGame ships it to the
+		// client there), and anything reading the seating — the partners of a teams match — finds
+		// it there and nowhere else.
+		state.RaceBoard = board;
 		state.CurrentTurn = "A";
 		var ctx = TestFixtures.NewContext(state, raceBoard: board, raceRules: new RaceRulesConfig());
 		return (state, ctx);

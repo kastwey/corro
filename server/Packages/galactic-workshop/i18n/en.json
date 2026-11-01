@@ -21,6 +21,7 @@
     "assembly_pick_own_slot": "Which of your modules gets {{card}}?",
     "assembly_pick_give_slot": "Which of your modules do you give in exchange?",
     "assembly_status_progress": "{{count}} of {{goal}} systems operational",
+    "end_measure_parts": "Operational systems",
     "assembly_state_ok": "operational",
     "assembly_state_afflicted": "broken",
     "assembly_state_shielded": "shielded",

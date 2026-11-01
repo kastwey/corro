@@ -97,6 +97,24 @@ so the rules and the spoken voice of a timeout live in a handler like every othe
 
 Forbidden Words and Categories both use it, and neither has a line of timer code.
 
+## The final table
+
+A family that counts something answers `FinalStandings(state)` with one row per SIDE — a player,
+or a whole team named together — carrying that side's place and the number it ended on, plus the
+i18n key that names the measure (`game.end_measure_points`, `game.end_measure_square`…). The
+engine seals the answer into `GameState.FinalStandings` the first time a finished state is
+published (`GameService.NotifyStateChangedAsync`) and the end screen renders it; families that
+count nothing worth showing return null — the default — and the screen keeps its plain ranked
+list of names.
+
+Three rules hold across every family. The ORDER is `Player.FinishPlace`, never the number: a
+shedding match played with the penalty count is won by the LOWEST score. The table is sealed
+ONCE, not recomputed per client, because a hidden-information family hands every connection a
+different projection and tables built from those would disagree with each other. And a row
+carries a team index only where the match ALREADY speaks in team colours: a side of one is a
+person, so it passes null and the row simply reads their name. The forbidden family is both,
+depending on its seating, which is why it asks the rules rather than the state.
+
 ## Movement pacing
 
 Families with animated pieces coordinate narration and visuals through
