@@ -892,3 +892,32 @@ test('every lobby hint reads alike, and a status line keeps its ink', async ({ b
 	}
 	await flushAxeAudit(page);
 });
+
+// The theme is a setting somebody chose because they need it, and until now it lasted exactly
+// one page. Nothing applied it on load: the toggle only READS it, to decide what to call itself,
+// so a reload painted light over a saved dark AND left the button saying "switch to light theme"
+// on a light page. A player who cannot see that contradiction presses it to check, which stores
+// "light" over their own choice and changes nothing on screen.
+test('the chosen theme outlives a reload, and the toggle keeps telling the truth', async ({ browser }) => {
+	const page = await newPlayerPage(browser, 'es-ES');
+	await gotoLobbyHome(page);
+	const toggle = page.locator('#theme-toggle');
+	const background = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+
+	const light = await background();
+	await toggle.click();
+	await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+	const dark = await background();
+	expect(dark, 'the dark theme paints the page differently').not.toBe(light);
+	const saidInDark = await toggle.getAttribute('aria-label');
+
+	await page.reload();
+	await expect(page.locator('#your-games-empty, #your-games-list li').first()).toBeVisible();
+
+	// The attribute alone would only prove we wrote one: the colour proves the stylesheet took.
+	await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+	expect(await background(), 'the page reloaded in the theme it was left in').toBe(dark);
+	// And the one thing a screen reader has to go on still matches what is on screen.
+	await expect(toggle).toHaveAttribute('aria-label', saidInDark!);
+	await flushAxeAudit(page);
+});

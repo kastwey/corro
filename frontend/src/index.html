@@ -5,6 +5,20 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>All Welcome</title>
 
+	<script>
+		// Theme before first paint. It has to be inline and here: a module would run after the
+		// page is already on screen, and nothing else applies the stored theme at all — the
+		// toggle only reads it, to name itself.
+		(function () {
+			try {
+				var stored = localStorage.getItem('corro-theme');
+				var theme = stored === 'dark' || stored === 'light'
+					? stored
+					: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+				document.documentElement.setAttribute('data-theme', theme);
+			} catch (e) { /* a blocked storage must never cost the page */ }
+		})();
+	</script>
 
 	<!-- CSS Styles -->
 	<link rel="stylesheet" href="css/theme.css">
