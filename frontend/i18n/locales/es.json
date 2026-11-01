@@ -1121,6 +1121,7 @@
     "categories_rules_categories": "Categorías por ronda: {{count}}",
     "categories_rules_points": "Cada respuesta válida: {{points}} punto",
     "categories_rules_cycles": "Rotaciones completas de juez antes del recuento: {{count}}",
+    "categories_rules_target": "Gana quien llegue a {{score}} puntos",
     "help_cmd_categories_next_field": "Ir a la categoría siguiente y, desde la última, a «He terminado»",
     "help_cmd_categories_home": "Volver a tus respuestas, o a las que se están juzgando",
     "help_cmd_categories_timer": "Anunciar el tiempo que queda en el reloj",

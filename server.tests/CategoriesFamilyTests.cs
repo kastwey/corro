@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CorroServer.Models;
 using CorroServer.Models.Corro;
 using CorroServer.Services.Corro;
@@ -82,9 +83,13 @@ public class CategoriesFamilyTests
 
 	[Theory]
 	[InlineData(10, 6, 1, 1, "roundSeconds")]
+	// The ceiling is the longest the host's own selector offers.
+	[InlineData(400, 6, 1, 1, "roundSeconds")]
 	[InlineData(120, 2, 1, 1, "categoriesPerRound")]
 	[InlineData(120, 6, 0, 1, "pointsPerAnswer")]
-	[InlineData(120, 6, 1, 9, "cycles")]
+	// A match of no rotations has nothing to decide. There is no ceiling: how long the evening
+	// runs is the table's business.
+	[InlineData(120, 6, 1, 0, "cycles")]
 	public async Task Rules_outside_their_bounds_are_reported_with_the_offending_setting(
 		int seconds,
 		int perRound,
@@ -110,6 +115,121 @@ public class CategoriesFamilyTests
 		var problem = Assert.Throws<InvalidOperationException>(
 			() => new CategoriesFamily().ValidateDefinition(broken));
 		Assert.Contains(expected, problem.Message);
+	}
+
+	[Theory]
+	[InlineData("sudden-death", 30, "endMode")]
+	[InlineData("score", 0, "targetScore")]
+	public async Task An_ending_the_engine_cannot_play_is_reported_rather_than_ignored(
+		string endMode,
+		int targetScore,
+		string expected)
+	{
+		var definition = await LoadPackage();
+		var broken = definition with
+		{
+			Manifest = definition.Manifest with
+			{
+				CategoriesRules = new CategoriesRulesConfig { EndMode = endMode, TargetScore = targetScore },
+			},
+		};
+
+		var problem = Assert.Throws<InvalidOperationException>(
+			() => new CategoriesFamily().ValidateDefinition(broken));
+		Assert.Contains(expected, problem.Message);
+	}
+
+	[Fact]
+	public async Task A_house_rule_the_engine_does_not_implement_is_refused_at_load()
+	{
+		var definition = await LoadPackage();
+		var broken = definition with
+		{
+			Manifest = definition.Manifest with
+			{
+				HouseRules = new List<HouseRuleDef> { new() { Id = "categoriesTeams", Type = "toggle" } },
+			},
+		};
+
+		var problem = Assert.Throws<InvalidOperationException>(
+			() => new CategoriesFamily().ValidateDefinition(broken));
+		Assert.Contains("categoriesTeams", problem.Message);
+	}
+
+	[Fact]
+	public async Task The_shipped_package_offers_its_house_rules_to_the_host()
+	{
+		var definition = await LoadPackage();
+
+		var offered = definition.Manifest.HouseRules.Select(rule => rule.Id).ToList();
+
+		Assert.Equal(
+			new[]
+			{
+				"categoriesPerRound", "categoriesRoundSeconds",
+				"categoriesEndMode", "categoriesCycles", "categoriesTargetScore",
+			},
+			offered);
+		Assert.All(offered, id => Assert.True(HouseRuleCatalog.IsKnownCategories(id), id));
+		new CategoriesFamily().ValidateDefinition(definition);
+	}
+
+	/// <summary>The lobby's numbers reach the match. Ranges are the host's, so the seconds are
+	/// asserted at a value only a host could have chosen — the package ships 180.</summary>
+	[Fact]
+	public async Task The_rules_the_host_settled_on_are_the_ones_the_match_plays()
+	{
+		var definition = await LoadPackage();
+		var seats = Enumerable.Range(0, 3)
+			.Select(index => TestFixtures.NewPlayer($"p{index}", token: definition.Manifest.Tokens[index].Id))
+			.ToList();
+
+		var game = new CategoriesFamily().CreateGame(new FamilyStartContext
+		{
+			Players = seats,
+			Definition = definition,
+			Lang = "en",
+			RuleValues = new Dictionary<string, JsonElement>
+			{
+				["categoriesRoundSeconds"] = JsonDocument.Parse("45").RootElement,
+				["categoriesPerRound"] = JsonDocument.Parse("3").RootElement,
+				["categoriesEndMode"] = JsonDocument.Parse("\"score\"").RootElement,
+				["categoriesTargetScore"] = JsonDocument.Parse("12").RootElement,
+			},
+		});
+
+		var rules = game.State.CategoriesRules!;
+		Assert.Equal(45, rules.RoundSeconds);
+		Assert.Equal("score", rules.EndMode);
+		Assert.Equal(12, rules.TargetScore);
+		// The dealt round obeys them too, not just the record carried beside it.
+		Assert.Equal(3, game.State.Categories!.Round.Prompts.Count);
+		Assert.Equal(45, game.State.Categories.Round.DurationSeconds);
+	}
+
+	/// <summary>SetTableRules stores what it is sent, and an input's min/max is a courtesy to the
+	/// person typing rather than a promise to the server.</summary>
+	[Fact]
+	public async Task A_value_no_form_could_have_produced_stops_the_match_instead_of_starting_it()
+	{
+		var definition = await LoadPackage();
+		var seats = Enumerable.Range(0, 3)
+			.Select(index => TestFixtures.NewPlayer($"p{index}", token: definition.Manifest.Tokens[index].Id))
+			.ToList();
+
+		var problem = Assert.Throws<InvalidOperationException>(() => new CategoriesFamily().CreateGame(
+			new FamilyStartContext
+			{
+				Players = seats,
+				Definition = definition,
+				Lang = "en",
+				RuleValues = new Dictionary<string, JsonElement>
+				{
+					["categoriesRoundSeconds"] = JsonDocument.Parse("86400").RootElement,
+				},
+			}));
+
+		Assert.Contains("roundSeconds", problem.Message);
 	}
 
 	[Fact]

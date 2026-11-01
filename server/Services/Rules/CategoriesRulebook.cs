@@ -204,8 +204,15 @@ public static class CategoriesRulebook
 		return scores;
 	}
 
-	/// <summary>Close the scored round and either deal the next one or decide the match after a
-	/// complete judge rotation. A tie adds one whole rotation, so the winner always wins outright.</summary>
+	/// <summary>
+	/// Close the scored round and either deal the next one or decide the match. A tie adds one
+	/// whole rotation, so the winner always wins outright.
+	///
+	/// Both endings are read at the SAME moment: the end of a complete judge rotation. Playing to
+	/// a target score is not a race to cross it first — the judge of a round does not write in it,
+	/// so mid-rotation one player has always written more rounds than another, and calling the
+	/// match there would hand it to whoever had the most turns rather than the best answers.
+	/// </summary>
 	public static RoundAdvance CompleteRound(
 		CategoriesState state,
 		IReadOnlyList<string> seatOrder,
@@ -220,9 +227,12 @@ public static class CategoriesRulebook
 		var tieBreaker = false;
 		if (rotationComplete)
 		{
-			if (state.Cycle >= rules.Cycles)
+			var best = state.Players.Max(player => player.Score);
+			var decided = rules.EndMode == "score"
+				? best >= rules.TargetScore
+				: state.Cycle >= rules.Cycles;
+			if (decided)
 			{
-				var best = state.Players.Max(player => player.Score);
 				var leaders = state.Players.Where(player => player.Score == best).ToList();
 				if (leaders.Count == 1)
 				{

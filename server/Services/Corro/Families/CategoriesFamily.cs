@@ -74,28 +74,18 @@ public sealed class CategoriesFamily : IGameFamily
 			throw new InvalidOperationException(
 				$"players.max ({players.Max}) cannot exceed the number of tokens the package provides ({definition.Manifest.Tokens.Count}).");
 		}
-		if (definition.Manifest.HouseRules.Count > 0)
+		// House rules must reference CATEGORIES codes the engine implements — the same doctrine as
+		// every other family. A package can expose choices, never invent mechanics.
+		foreach (var rule in definition.Manifest.HouseRules)
 		{
-			throw new InvalidOperationException("categories packages do not support houseRules yet.");
+			if (!HouseRuleCatalog.IsKnownCategories(rule.Id))
+			{
+				throw new InvalidOperationException($"categories rule '{rule.Id}' is not a known categories rule code.");
+			}
 		}
 
 		var rules = definition.Manifest.CategoriesRules ?? new CategoriesRulesConfig();
-		if (rules.RoundSeconds is < 30 or > 600)
-		{
-			throw new InvalidOperationException("categoriesRules.roundSeconds must be between 30 and 600.");
-		}
-		if (rules.CategoriesPerRound is < 3 or > 12)
-		{
-			throw new InvalidOperationException("categoriesRules.categoriesPerRound must be between 3 and 12.");
-		}
-		if (rules.PointsPerAnswer is < 1 or > 10)
-		{
-			throw new InvalidOperationException("categoriesRules.pointsPerAnswer must be between 1 and 10.");
-		}
-		if (rules.Cycles is < 1 or > 5)
-		{
-			throw new InvalidOperationException("categoriesRules.cycles must be between 1 and 5.");
-		}
+		ValidateRules(rules, "categoriesRules");
 
 		if (definition.CategoryDecks is not { Count: > 0 })
 		{
@@ -110,6 +100,45 @@ public sealed class CategoriesFamily : IGameFamily
 					$"categories locale '{locale}' has no deck (categories.{locale}.json).");
 			}
 			ValidateDeck(locale, deck, rules);
+		}
+	}
+
+	/// <summary>
+	/// The bounds every effective rulebook must satisfy, whoever wrote it. It runs over the
+	/// package manifest AND over the rules the host settled on in the lobby, because
+	/// <c>SetTableRules</c> stores what it is sent: the form offers min/max/step, and an input's
+	/// attributes are a courtesy to the person typing, never a guarantee to the server.
+	/// </summary>
+	internal static void ValidateRules(CategoriesRulesConfig rules, string source)
+	{
+		// The floor is a round that can be written at all; the ceiling is the longest the host's
+		// own selector offers. Beyond it the round stops being a race and the table just waits.
+		if (rules.RoundSeconds is < 30 or > 300)
+		{
+			throw new InvalidOperationException($"{source}.roundSeconds must be between 30 and 300.");
+		}
+		if (rules.CategoriesPerRound is < 3 or > 12)
+		{
+			throw new InvalidOperationException($"{source}.categoriesPerRound must be between 3 and 12.");
+		}
+		if (rules.PointsPerAnswer is < 1 or > 10)
+		{
+			throw new InvalidOperationException($"{source}.pointsPerAnswer must be between 1 and 10.");
+		}
+		// One rotation is the floor: a match of none has nothing to decide. There is no ceiling —
+		// how long the evening runs is the table's business, not the package author's.
+		if (rules.Cycles < 1)
+		{
+			throw new InvalidOperationException($"{source}.cycles must be at least 1.");
+		}
+		if (!HouseRuleCatalog.CategoriesEndModes.Contains(rules.EndMode))
+		{
+			throw new InvalidOperationException(
+				$"{source}.endMode must be one of {string.Join(", ", HouseRuleCatalog.CategoriesEndModes)}.");
+		}
+		if (rules.TargetScore < 1)
+		{
+			throw new InvalidOperationException($"{source}.targetScore must be at least 1.");
 		}
 	}
 
@@ -171,6 +200,16 @@ public sealed class CategoriesFamily : IGameFamily
 
 		var definition = start.Definition;
 		var rules = definition.Manifest.CategoriesRules ?? new CategoriesRulesConfig();
+		// The host's lobby choices override the package defaults. The EFFECTIVE rules are stored
+		// on the state, so a restored match keeps the length the table agreed on.
+		if (start.RuleValues is { Count: > 0 } chosen)
+		{
+			foreach (var (id, value) in chosen)
+			{
+				rules = HouseRuleCatalog.ApplyCategories(rules, id, value);
+			}
+			ValidateRules(rules, "categories rules");
+		}
 		var resolved = definition.CategoryDecks?.GetValueOrDefault(start.Lang)
 			?? throw new InvalidOperationException(
 				$"categories deck does not provide the selected language '{start.Lang}'.");

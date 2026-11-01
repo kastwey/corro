@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import {
 	buildPropertyRulesLines, buildRaceRulesLines, buildTrackRulesLines,
 	buildJourneyRulesLines, buildAssemblyRulesLines, buildDraftRulesLines,
-	buildSheddingRulesLines, buildForbiddenRulesLines,
+	buildSheddingRulesLines, buildForbiddenRulesLines, buildCategoriesRulesLines,
 } from '../src/rulesSummaries.js';
 import type {
 	GameSettings, RaceRulesConfig, RaceBoardDef, TrackRulesConfig, TrackBoardDef,
 	JourneyRulesConfig, AssemblyRulesConfig, DraftRulesConfig, SheddingRulesConfig,
-	ForbiddenRulesConfig,
+	ForbiddenRulesConfig, CategoriesRulesConfig,
 } from '../src/models.js';
 
 // The in-game "active rules" dialog content (Ctrl+Shift+F1): each family's effective config
@@ -192,4 +192,33 @@ test('assembly + draft: their handful of tunables', () => {
 		'game.draft_rules_majority(6|3)',
 		'game.draft_rules_dessert(6|-6)',
 	]);
+});
+
+// ── Letter Rush (categories) ───────────────────────────────────────────────────
+
+test('categories: the clock, the sheet size and whichever ending is in force', () => {
+	const rules: CategoriesRulesConfig = {
+		roundSeconds: 45, categoriesPerRound: 8, pointsPerAnswer: 1, cycles: 3,
+	};
+	assert.deepEqual(buildCategoriesRulesLines(rules, t), [
+		'game.categories_rules_time(45)',
+		'game.categories_rules_categories(8)',
+		'game.categories_rules_points(1)',
+		'game.categories_rules_cycles(3)',
+	]);
+
+	// The target-score ending replaces the rotation line rather than sitting beside it: two
+	// numbers, only one of which decides the match, is a puzzle for the table to solve.
+	const toScore = { ...rules, endMode: 'score', targetScore: 25 };
+	const lines = buildCategoriesRulesLines(toScore, t);
+	assert.equal(lines[3], 'game.categories_rules_target(25)');
+	assert.ok(!lines.some(line => line.startsWith('game.categories_rules_cycles')));
+	// An ending the engine never heard of keeps the classic one.
+	assert.equal(
+		buildCategoriesRulesLines({ ...toScore, endMode: 'whenever' }, t)[3],
+		'game.categories_rules_cycles(3)');
+});
+
+test('categories: with no rules at all the package defaults still read', () => {
+	assert.equal(buildCategoriesRulesLines(null, t)[0], 'game.categories_rules_time(120)');
 });
