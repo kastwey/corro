@@ -493,3 +493,25 @@
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
+
+/* The board's own text fields and dropdowns, dressed by the theme.
+   This page does not load forms.css — and must not: that file styles the bare `button` element
+   with a full width, an accent gradient and a glow, which would repaint every button on a board
+   that builds thirty-nine of them. So the two colour facts it gives a field are said here, and
+   only those: a width or a padding would squeeze the trade dialog's fields, which set their own.
+   Without this the table's invite box and language picker came out in the BROWSER's colours —
+   white with pure black ink and a grey border in the light theme, #3b3b3b in the dark one — next
+   to panels wearing the app's. A class-based rule still wins, so the categories sheet, which
+   dresses its own boxes, is untouched. */
+/* :where() so this carries NO specificity of its own: a chained :not() would have measured
+   (0,2,1) and beaten every class, starting with the categories sheet, which dresses its own
+   boxes. A field with a class must always win here. */
+input:where(:not([type="checkbox"]):not([type="radio"])), select {
+	background: var(--surface);
+	color: var(--text);
+	border-color: var(--border-strong);
+}
+
+input:where(:focus), select:where(:focus) {
+	border-color: var(--accent);
+}
